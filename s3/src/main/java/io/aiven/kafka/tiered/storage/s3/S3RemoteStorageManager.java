@@ -59,6 +59,7 @@ public class S3RemoteStorageManager implements RemoteStorageManager {
     public S3RemoteStorageManager() {
     }
 
+
     // for testing
     S3RemoteStorageManager(final AwsClientBuilder.EndpointConfiguration endpointConfiguration) {
         Objects.requireNonNull(endpointConfiguration, "endpointConfiguration must not be null");
@@ -88,7 +89,7 @@ public class S3RemoteStorageManager implements RemoteStorageManager {
 
     @Override
     public void copyLogSegmentData(final RemoteLogSegmentMetadata remoteLogSegmentMetadata,
-                               final LogSegmentData logSegmentData) throws RemoteStorageException {
+                                   final LogSegmentData logSegmentData) throws RemoteStorageException {
         Objects.requireNonNull(remoteLogSegmentMetadata, "remoteLogSegmentId must not be null");
         Objects.requireNonNull(logSegmentData, "logSegmentData must not be null");
 
@@ -276,6 +277,7 @@ public class S3RemoteStorageManager implements RemoteStorageManager {
 
     /**
      * Parses a log segment file name and extracts the offset from it.
+     *
      * @implNote Taken from kafka.log.Log.offsetFromFileName
      */
     private static long offsetFromFileName(final String filename) {
@@ -284,6 +286,7 @@ public class S3RemoteStorageManager implements RemoteStorageManager {
 
     /**
      * Make the log segment file name from an offset.
+     *
      * @implNote Taken from kafka.log.Log.filenamePrefixFromOffset
      */
     static String filenamePrefixFromOffset(final long offset) {

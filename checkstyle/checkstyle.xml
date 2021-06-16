@@ -41,8 +41,6 @@
     <module name="RegexpHeader">
         <property name="fileExtensions" value="java"/>
         <property name="headerFile" value="${config_loc}/java.header" default="checkstyle/java.header"/>
-        <!-- Allow Confluent's part of the copyright note to be absent. -->
-        <property name="multiLines" value="3"/>
     </module>
 
     <!-- See http://checkstyle.sourceforge.net/config_whitespace.html#FileTabCharacter -->

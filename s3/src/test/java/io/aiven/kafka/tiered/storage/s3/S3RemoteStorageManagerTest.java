@@ -31,6 +31,7 @@ import java.util.HashMap;
 import java.util.List;
 import java.util.Locale;
 import java.util.Map;
+import java.util.Optional;
 import java.util.Random;
 import java.util.stream.Collectors;
 
@@ -73,8 +74,6 @@ import org.junit.jupiter.api.Test;
 import org.junit.jupiter.api.extension.ExtendWith;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
-import org.testcontainers.containers.KafkaContainer;
-import org.testcontainers.junit.jupiter.Container;
 import org.testcontainers.junit.jupiter.Testcontainers;
 
 import static java.nio.file.attribute.PosixFilePermission.OTHERS_READ;
@@ -103,9 +102,6 @@ public class S3RemoteStorageManagerTest {
 
     private List<LogSegment> createdSegments;
 
-    @Container
-    private final KafkaContainer kafka = new KafkaContainer()
-            .withEnv("KAFKA_AUTO_CREATE_TOPICS_ENABLE", "false");
     private static AmazonS3 s3Client;
 
     private String bucket;
@@ -190,8 +186,8 @@ public class S3RemoteStorageManagerTest {
         final Path producerSnapshotIndex = Files.createTempFile("", ".psi",
                 PosixFilePermissions.asFileAttribute(EnumSet.of(OTHERS_READ, OTHERS_WRITE)));
         return new LogSegmentData(segment.log().file().toPath(), segment.offsetIndex().file().toPath(),
-                segment.timeIndex().file().toPath(), segment.txnIndex().file().toPath(), producerSnapshotIndex,
-                ByteBuffer.wrap(new byte[] {1, 2, 3}));
+                segment.timeIndex().file().toPath(), Optional.of(segment.txnIndex().file().toPath()),
+                producerSnapshotIndex, ByteBuffer.wrap(new byte[] {1, 2, 3}));
     }
 
     @Test

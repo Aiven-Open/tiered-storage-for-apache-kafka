@@ -29,8 +29,10 @@ allprojects {
 
     repositories {
         // Use Maven Central for resolving dependencies.
-        mavenLocal()
         mavenCentral()
+        flatDir {
+            dirs rootProject.file('lib')
+        }
     }
 
     java {
@@ -42,7 +44,7 @@ allprojects {
     }
 
     checkstyle {
-        toolVersion "8.35"
+        toolVersion "8.44"
         getConfigDirectory().set(rootProject.file("checkstyle/"))
     }
 
@@ -56,12 +58,12 @@ allprojects {
     }
 
     dependencies {
-        implementation 'org.apache.kafka:kafka-storage-api:3.0.0-SNAPSHOT'
-        implementation 'org.apache.kafka:kafka-clients:3.0.0-SNAPSHOT'
-        implementation "org.slf4j:slf4j-api:1.7.5"
-        testRuntimeOnly 'org.junit.jupiter:junit-jupiter-engine'
-        testImplementation 'org.junit.jupiter:junit-jupiter-api:5.7.1'
-        testImplementation 'org.apache.kafka:kafka_2.13:3.0.0-SNAPSHOT'
+        implementation name: 'kafka-storage-api-3.0.0-SNAPSHOT'
+        implementation name: 'kafka-clients-3.0.0-SNAPSHOT'
+        implementation 'org.slf4j:slf4j-api:1.7.30'
+        testRuntimeOnly 'org.junit.jupiter:junit-jupiter-engine:5.7.2'
+        testImplementation 'org.junit.jupiter:junit-jupiter-api:5.7.2'
+        testImplementation 'org.apache.kafka:kafka_2.12:2.8.0'
         testImplementation "org.testcontainers:junit-jupiter:$testcontainersVersion"
         testImplementation "org.testcontainers:kafka:$testcontainersVersion" // this is not Kafka version
         testImplementation "org.assertj:assertj-core:3.19.0"

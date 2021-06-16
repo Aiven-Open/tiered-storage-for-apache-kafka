@@ -1,0 +1,58 @@
+# The workflow to create PRs with release commits.
+name: Create release PR
+on:
+  workflow_dispatch:
+    inputs:
+      release_version:
+        description: "Release version '0.1.2' (without 'v')"
+        required: true
+      snapshot_version:
+        description: "Snapshot version '0.2.0-SNAPSHOT' (without 'v')"
+        required: true
+
+jobs:
+  create_release_pr:
+    name: Create release PR (job)
+    runs-on: ubuntu-latest
+    steps:
+      - name: Check versions
+        run: |
+          echo "Checking release version..."
+          if echo ${{ github.event.inputs.release_version }} | grep --invert-match '^[0-9]\+\.[0-9]\+\.[0-9]\+$' > /dev/null; then
+            echo "Release version is invalid"
+            exit 1
+          fi
+
+          echo "Checking snapshot version..."
+          if echo ${{ github.event.inputs.snapshot_version }} | grep --invert-match '^[0-9]\+\.[0-9]\+\.[0-9]\+-SNAPSHOT$' > /dev/null; then
+            echo "Snapshot version is invalid"
+            exit 1
+          fi
+
+      - name: Checkout master
+        uses: actions/checkout@v2
+        with:
+          ref: master
+          fetch-depth: 0
+
+      - name: Create release commits
+        run: |
+          git config --local user.name "GitHub Action"
+          git config --local user.email "action@github.com"
+          sed -i -e "s/^version=.\+$/version=${{ github.event.inputs.release_version }}/g" gradle.properties
+          git add gradle.properties
+          git commit -m "Release version ${{ github.event.inputs.release_version }}"
+          sed -i -e "s/^version=.\+$/version=${{ github.event.inputs.snapshot_version }}/g" gradle.properties
+          git add gradle.properties
+          git commit -m "Bump version to ${{ github.event.inputs.snapshot_version }}"
+
+      - name: Create Pull Request
+        uses: peter-evans/create-pull-request@v3
+        with:
+          branch: release-${{ github.event.inputs.release_version }}
+          delete-branch: true
+          draft: true
+          title: Release version ${{ github.event.inputs.release_version }}
+          body: |
+            Proposed changelog:
+              - *fill in*
