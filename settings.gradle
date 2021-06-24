@@ -16,4 +16,5 @@
 
 rootProject.name = 'kafka-tiered-storage'
 include 's3'
+include 'commons'
 
