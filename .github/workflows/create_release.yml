@@ -1,0 +1,90 @@
+name: Create release
+
+on:
+  workflow_dispatch:
+    inputs:
+      commit_hash:
+        description: "Hash of 'Release version x.y.z' commit"
+        required: true
+
+jobs:
+  build:
+    name: Create Release
+    runs-on: ubuntu-latest
+    steps:
+      - name: Setup Java SDK
+        uses: actions/setup-java@v1.4.3
+        with:
+          java-version: 11
+
+      - name: Checkout code
+        uses: actions/checkout@v2
+        with:
+          ref: ${{ github.event.inputs.commit_hash }}
+
+      - name: Check commit title and extract version
+        run: |
+          export commit_title=$(git log --pretty=format:%s -1 ${{ github.event.inputs.commit_hash }})
+          echo "Commit title: $commit_title"
+          if [[ $commit_title =~ ^Release\ version\ [0-9]*\.[0-9]*\.[0-9]*$ ]]; then
+            echo "Valid commit title"
+          else
+            echo "Invalid commit title"
+            exit 1
+          fi
+          export version=$(echo ${commit_title} | sed s/^Release\ version\ //g)
+          echo "Will use version ${version}"
+          echo "version=${version}" >> $GITHUB_ENV
+
+      - name: Build
+        run: |
+          ./gradlew distTar distZip
+
+          export tar_file=$(ls ./build/distributions/ | grep tar)
+          export zip_file=$(ls ./build/distributions/ | grep zip)
+          echo tar_file=${tar_file} >> $GITHUB_ENV
+          echo zip_file=${zip_file} >> $GITHUB_ENV
+
+          echo tar_path=`realpath ./build/distributions/${tar_file}` >> $GITHUB_ENV
+          echo zip_path=`realpath ./build/distributions/${zip_file}` >> $GITHUB_ENV
+
+      - name: Create tag
+        run: |
+          git config --local user.name "GitHub Action"
+          git config --local user.email "action@github.com"
+          git tag -a "v${{ env.version }}" -m "Release version ${{ env.version }}"
+          git push origin "v${{ env.version }}"
+
+      - name: Create release draft
+        id: create_release
+        uses: actions/create-release@v1
+        env:
+          GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+        with:
+          tag_name: "v${{ env.version }}"
+          release_name: "v${{ env.version }}"
+          commitish: ${{ github.event.inputs.commit_hash }}
+          body: |
+            *Fill in*
+          draft: true
+          prerelease: false
+
+      - name: Upload tar
+        uses: actions/upload-release-asset@v1
+        env:
+          GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+        with:
+          upload_url: ${{ steps.create_release.outputs.upload_url }}
+          asset_path: ${{ env.tar_path }}
+          asset_name: ${{ env.tar_file }}
+          asset_content_type: application/tar
+
+      - name: Upload zip
+        uses: actions/upload-release-asset@v1
+        env:
+          GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+        with:
+          upload_url: ${{ steps.create_release.outputs.upload_url }}
+          asset_path: ${{ env.zip_path }}
+          asset_name: ${{ env.zip_file }}
+          asset_content_type: application/zip

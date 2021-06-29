@@ -1,0 +1,77 @@
+/*
+ * Copyright 2021 Aiven Oy
+ *
+ * Licensed under the Apache License, Version 2.0 (the "License");
+ * you may not use this file except in compliance with the License.
+ * You may obtain a copy of the License at
+ *
+ * http://www.apache.org/licenses/LICENSE-2.0
+ *
+ * Unless required by applicable law or agreed to in writing, software
+ * distributed under the License is distributed on an "AS IS" BASIS,
+ * WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
+ * See the License for the specific language governing permissions and
+ * limitations under the License.
+ */
+
+allprojects {
+    // https://docs.gradle.org/current/userguide/java_library_plugin.html
+    apply plugin: "java"
+
+    // https://docs.gradle.org/current/userguide/checkstyle_plugin.html
+    apply plugin: "checkstyle"
+
+    // https://docs.gradle.org/current/userguide/jacoco_plugin.html
+    apply plugin: "jacoco"
+
+    // https://docs.gradle.org/current/userguide/distribution_plugin.html
+    apply plugin: "distribution"
+
+    repositories {
+        // Use Maven Central for resolving dependencies.
+        mavenCentral()
+        flatDir {
+            dirs rootProject.file('lib')
+        }
+    }
+
+    java {
+        sourceCompatibility = JavaVersion.VERSION_11
+        targetCompatibility = JavaVersion.VERSION_11
+
+        withJavadocJar()
+        withSourcesJar()
+    }
+
+    checkstyle {
+        toolVersion "8.44"
+        getConfigDirectory().set(rootProject.file("checkstyle/"))
+    }
+
+    jacoco {
+        toolVersion = "0.8.5"
+    }
+
+    ext {
+        testcontainersVersion = "1.15.3"
+        slf4jVersion = "1.7.30"
+    }
+
+    dependencies {
+        implementation name: 'kafka-storage-api-3.0.0-SNAPSHOT'
+        implementation name: 'kafka-clients-3.0.0-SNAPSHOT'
+        implementation 'org.slf4j:slf4j-api:1.7.30'
+        testRuntimeOnly 'org.junit.jupiter:junit-jupiter-engine:5.7.2'
+        testImplementation 'org.junit.jupiter:junit-jupiter-api:5.7.2'
+        testImplementation 'org.apache.kafka:kafka_2.12:2.8.0'
+        testImplementation "org.testcontainers:junit-jupiter:$testcontainersVersion"
+        testImplementation "org.testcontainers:kafka:$testcontainersVersion" // this is not Kafka version
+        testImplementation "org.assertj:assertj-core:3.19.0"
+    }
+
+    tasks.named('test') {
+        // Use junit platform for unit tests.
+        useJUnitPlatform()
+    }
+}
+
