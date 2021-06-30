@@ -22,11 +22,8 @@ import java.io.IOException;
 import java.io.InputStream;
 import java.nio.ByteBuffer;
 import java.nio.file.Files;
-import java.nio.file.Path;
-import java.nio.file.attribute.PosixFilePermissions;
 import java.util.ArrayList;
 import java.util.Collections;
-import java.util.EnumSet;
 import java.util.HashMap;
 import java.util.List;
 import java.util.Locale;
@@ -50,6 +47,7 @@ import org.apache.kafka.server.log.remote.storage.LogSegmentData;
 import org.apache.kafka.server.log.remote.storage.RemoteLogSegmentId;
 import org.apache.kafka.server.log.remote.storage.RemoteLogSegmentMetadata;
 import org.apache.kafka.server.log.remote.storage.RemoteStorageException;
+import org.apache.kafka.server.log.remote.storage.RemoteStorageManager;
 
 import cloud.localstack.Localstack;
 import cloud.localstack.awssdkv1.TestUtils;
@@ -76,8 +74,6 @@ import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 import org.testcontainers.junit.jupiter.Testcontainers;
 
-import static java.nio.file.attribute.PosixFilePermission.OTHERS_READ;
-import static java.nio.file.attribute.PosixFilePermission.OTHERS_WRITE;
 import static org.assertj.core.api.Assertions.assertThat;
 
 
@@ -176,18 +172,25 @@ public class S3RemoteStorageManagerTest {
                 s3Key(TP0, segment1.log().file(), uuid1),
                 s3Key(TP0, segment1.offsetIndex().file(), uuid1),
                 s3Key(TP0, segment1.timeIndex().file(), uuid1),
+                s3Key(TP0, lsd1.producerSnapshotIndex().toFile(), uuid1),
+                s3Key(TP0, lsd1.transactionIndex().get().toFile(), uuid1),
+                s3Key(TP0, new File(String.format("%020d", segment1.baseOffset()) + ".leader-epoch-checkpoint"), uuid1),
                 s3Key(TP1, segment2.log().file(), uuid2),
                 s3Key(TP1, segment2.offsetIndex().file(), uuid2),
-                s3Key(TP1, segment2.timeIndex().file(), uuid2)
+                s3Key(TP1, segment2.timeIndex().file(), uuid2),
+                s3Key(TP1, lsd2.producerSnapshotIndex().toFile(), uuid2),
+                s3Key(TP1, lsd2.transactionIndex().get().toFile(), uuid2),
+                s3Key(TP1, new File(String.format("%020d", segment2.baseOffset()) + ".leader-epoch-checkpoint"), uuid2)
         );
     }
 
     private LogSegmentData createLogSegmentData(final LogSegment segment) throws IOException {
-        final Path producerSnapshotIndex = Files.createTempFile("", ".psi",
-                PosixFilePermissions.asFileAttribute(EnumSet.of(OTHERS_READ, OTHERS_WRITE)));
+        final File file = Log.producerSnapshotFile(logDir, segment.baseOffset());
+        file.createNewFile();
         return new LogSegmentData(segment.log().file().toPath(), segment.offsetIndex().file().toPath(),
                 segment.timeIndex().file().toPath(), Optional.of(segment.txnIndex().file().toPath()),
-                producerSnapshotIndex, ByteBuffer.wrap(new byte[] {1, 2, 3}));
+                file.toPath(),
+                ByteBuffer.wrap(new byte[] {1, 2, 3}));
     }
 
     @Test
@@ -250,7 +253,9 @@ public class S3RemoteStorageManagerTest {
                 new RemoteLogSegmentMetadata(segmentId, segment.baseOffset(), -1, -1, -1, 1L,
                         segment.log().sizeInBytes(),
                         Collections.singletonMap(1, 100L));
-        try (final InputStream remoteInputStream = remoteStorageManager.fetchOffsetIndex(metadata)) {
+
+        try (final InputStream remoteInputStream = remoteStorageManager.fetchIndex(metadata,
+                RemoteStorageManager.IndexType.OFFSET)) {
             assertStreamContentEqualToFile(segment.offsetIndex().file(), null, null, remoteInputStream);
         }
     }
@@ -269,7 +274,8 @@ public class S3RemoteStorageManagerTest {
         final RemoteLogSegmentMetadata metadata =
                 new RemoteLogSegmentMetadata(segmentId, segment.baseOffset(), -1, -1, -1, 1L,
                         segment.log().sizeInBytes(), Collections.singletonMap(1, 100L));
-        try (final InputStream remoteInputStream = remoteStorageManager.fetchTimestampIndex(metadata)) {
+        try (final InputStream remoteInputStream = remoteStorageManager.fetchIndex(metadata,
+                RemoteStorageManager.IndexType.TIMESTAMP)) {
             assertStreamContentEqualToFile(segment.timeIndex().file(), null, null, remoteInputStream);
         }
     }
@@ -407,7 +413,9 @@ public class S3RemoteStorageManagerTest {
                 LazyIndex.forOffset(Log.offsetIndexFile(logDir, offset, ""), offset, 1000, true);
         final LazyIndex<TimeIndex> timeIdx =
                 LazyIndex.forTime(Log.timeIndexFile(logDir, offset, ""), offset, 1500, true);
-        final TransactionIndex txnIndex = new TransactionIndex(offset, Log.transactionIndexFile(logDir, offset, ""));
+        final File file = Log.transactionIndexFile(logDir, offset, "");
+        file.createNewFile();
+        final TransactionIndex txnIndex = new TransactionIndex(offset, file);
 
         return new LogSegment(ms, idx, timeIdx, txnIndex, offset, indexIntervalBytes, 0, time);
     }

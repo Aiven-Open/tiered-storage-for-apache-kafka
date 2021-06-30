@@ -16,10 +16,12 @@
 
 package io.aiven.kafka.tiered.storage.s3;
 
+import java.io.ByteArrayInputStream;
 import java.io.InputStream;
 import java.text.NumberFormat;
 import java.util.Map;
 import java.util.Objects;
+import java.util.Optional;
 
 import org.apache.kafka.server.log.remote.storage.LogSegmentData;
 import org.apache.kafka.server.log.remote.storage.RemoteLogSegmentId;
@@ -32,12 +34,15 @@ import com.amazonaws.services.s3.AmazonS3;
 import com.amazonaws.services.s3.AmazonS3ClientBuilder;
 import com.amazonaws.services.s3.model.DeleteObjectsRequest;
 import com.amazonaws.services.s3.model.GetObjectRequest;
+import com.amazonaws.services.s3.model.ObjectMetadata;
 import com.amazonaws.services.s3.model.S3Object;
 import com.amazonaws.services.s3.transfer.TransferManager;
 import com.amazonaws.services.s3.transfer.TransferManagerBuilder;
 import com.amazonaws.services.s3.transfer.Upload;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
+
+import static com.amazonaws.services.s3.internal.Mimetypes.MIMETYPE_OCTET_STREAM;
 
 /**
  * AWS S3 RemoteStorageManager.
@@ -49,6 +54,10 @@ public class S3RemoteStorageManager implements RemoteStorageManager {
     private static final String LOG_FILE_SUFFIX = ".log";
     private static final String INDEX_FILE_SUFFIX = ".index";
     private static final String TIME_INDEX_FILE_SUFFIX = ".timeindex";
+    private static final String PRODUCER_SNAPSHOT_FILE_SUFFIX = ".snapshot";
+    private static final String TRANSACTION_INDEX_FILE_SUFFIX = ".txnindex";
+    private static final String LEADER_EPOCH_INDEX_FILE_SUFFIX = ".leader-epoch-checkpoint";
+    private static final int DEFAULT_PART_SIZE = 8_192;
 
     private AwsClientBuilder.EndpointConfiguration endpointConfiguration = null;
 
@@ -95,9 +104,15 @@ public class S3RemoteStorageManager implements RemoteStorageManager {
 
         final long baseOffset = offsetFromFileName(logSegmentData.logSegment().getFileName().toString());
         final RemoteLogSegmentId remoteLogSegmentId = remoteLogSegmentMetadata.remoteLogSegmentId();
-        final String logFileKey = logFileKey(remoteLogSegmentId, baseOffset);
-        final String offsetIndexFileKey = offsetIndexFileKey(remoteLogSegmentId, baseOffset);
-        final String timeIndexFileKey = timeIndexFileKey(remoteLogSegmentId, baseOffset);
+        final String logFileKey = getFileKey(remoteLogSegmentId, baseOffset, LOG_FILE_SUFFIX);
+        final String offsetIndexFileKey = getFileKey(remoteLogSegmentId, baseOffset, INDEX_FILE_SUFFIX);
+        final String timeIndexFileKey = getFileKey(remoteLogSegmentId, baseOffset, TIME_INDEX_FILE_SUFFIX);
+        final String producerSnapshotFileKey =
+                getFileKey(remoteLogSegmentId, baseOffset, PRODUCER_SNAPSHOT_FILE_SUFFIX);
+        final String transactionIndexFileKey =
+                getFileKey(remoteLogSegmentId, baseOffset, TRANSACTION_INDEX_FILE_SUFFIX);
+        final String leaderEpochIndexFileKey =
+                getFileKey(remoteLogSegmentId, baseOffset, LEADER_EPOCH_INDEX_FILE_SUFFIX);
         try {
             log.debug("Uploading log file: {}", logFileKey);
             final Upload logFileUpload =
@@ -111,9 +126,34 @@ public class S3RemoteStorageManager implements RemoteStorageManager {
             final Upload timeIndexFileUpload =
                     transferManager.upload(this.bucket, timeIndexFileKey, logSegmentData.timeIndex().toFile());
 
+            log.debug("Uploading producer snapshot file: {}", producerSnapshotFileKey);
+            final Upload producerSnapshotFileUpload =
+                    transferManager.upload(this.bucket, producerSnapshotFileKey,
+                            logSegmentData.producerSnapshotIndex().toFile());
+
+            final Optional<Upload> transactionIndexFileUpload = logSegmentData.transactionIndex().map(path -> {
+                log.debug("Uploading transaction index file: {}", transactionIndexFileKey);
+                return transferManager.upload(this.bucket, transactionIndexFileKey, path.toFile());
+            });
+
+
+            log.debug("Uploading leader epoch file: {}", leaderEpochIndexFileKey);
+            final byte[] leaderEpochIndex = logSegmentData.leaderEpochIndex().array();
+            final ObjectMetadata objectMetadata = new ObjectMetadata();
+            objectMetadata.setContentLength(leaderEpochIndex.length);
+            objectMetadata.setContentType(MIMETYPE_OCTET_STREAM);
+            final Upload leaderEpochIndexFileUpload =
+                    transferManager.upload(this.bucket, leaderEpochIndexFileKey,
+                            new ByteArrayInputStream(leaderEpochIndex), objectMetadata);
+
             logFileUpload.waitForUploadResult();
             offsetIndexFileUpload.waitForUploadResult();
             timeIndexFileUpload.waitForUploadResult();
+            producerSnapshotFileUpload.waitForUploadResult();
+            if (transactionIndexFileUpload.isPresent()) {
+                transactionIndexFileUpload.get().waitForUploadResult();
+            }
+            leaderEpochIndexFileUpload.waitForUploadResult();
 
         } catch (final Exception e) {
             final String message = "Error uploading remote log segment " + remoteLogSegmentMetadata;
@@ -149,7 +189,8 @@ public class S3RemoteStorageManager implements RemoteStorageManager {
         }
 
         final String logFileKey =
-                logFileKey(remoteLogSegmentMetadata.remoteLogSegmentId(), remoteLogSegmentMetadata.startOffset());
+                getFileKey(remoteLogSegmentMetadata.remoteLogSegmentId(), remoteLogSegmentMetadata.startOffset(),
+                        LOG_FILE_SUFFIX);
 
         try {
             final GetObjectRequest getObjectRequest =
@@ -171,7 +212,8 @@ public class S3RemoteStorageManager implements RemoteStorageManager {
         }
 
         final String logFileKey =
-                logFileKey(remoteLogSegmentMetadata.remoteLogSegmentId(), remoteLogSegmentMetadata.startOffset());
+                getFileKey(remoteLogSegmentMetadata.remoteLogSegmentId(), remoteLogSegmentMetadata.startOffset(),
+                        LOG_FILE_SUFFIX);
 
         try {
             final GetObjectRequest getObjectRequest = new GetObjectRequest(bucket, logFileKey).withRange(startPosition);
@@ -187,42 +229,33 @@ public class S3RemoteStorageManager implements RemoteStorageManager {
             throws RemoteStorageException {
         switch (indexType) {
             case OFFSET:
-                return fetchOffsetIndex(remoteLogSegmentMetadata);
+                return fetchIndex(remoteLogSegmentMetadata, INDEX_FILE_SUFFIX);
             case TIMESTAMP:
-                return fetchTimestampIndex(remoteLogSegmentMetadata);
+                return fetchIndex(remoteLogSegmentMetadata, TIME_INDEX_FILE_SUFFIX);
+            case TRANSACTION:
+                return fetchIndex(remoteLogSegmentMetadata, TRANSACTION_INDEX_FILE_SUFFIX);
+            case PRODUCER_SNAPSHOT:
+                return fetchIndex(remoteLogSegmentMetadata, PRODUCER_SNAPSHOT_FILE_SUFFIX);
+            case LEADER_EPOCH:
+                return fetchIndex(remoteLogSegmentMetadata, LEADER_EPOCH_INDEX_FILE_SUFFIX);
             default:
                 throw new RemoteStorageException("Index type unsupported");
         }
     }
 
-    public InputStream fetchOffsetIndex(final RemoteLogSegmentMetadata remoteLogSegmentMetadata)
+    private InputStream fetchIndex(final RemoteLogSegmentMetadata remoteLogSegmentMetadata,
+                                   final String indexFileSuffix)
             throws RemoteStorageException {
-
         Objects.requireNonNull(remoteLogSegmentMetadata, "remoteLogSegmentMetadata must not be null");
 
-        final String offsetIndexFileKey = offsetIndexFileKey(remoteLogSegmentMetadata.remoteLogSegmentId(),
-                remoteLogSegmentMetadata.startOffset());
+        final String offsetIndexFileKey = getFileKey(remoteLogSegmentMetadata.remoteLogSegmentId(),
+                remoteLogSegmentMetadata.startOffset(), indexFileSuffix);
 
         try {
             final S3Object s3Object = s3Client.getObject(bucket, offsetIndexFileKey);
             return s3Object.getObjectContent();
         } catch (final Exception e) {
-            throw new RemoteStorageException("Error fetching offset index from " + offsetIndexFileKey, e);
-        }
-    }
-
-    public InputStream fetchTimestampIndex(final RemoteLogSegmentMetadata remoteLogSegmentMetadata)
-            throws RemoteStorageException {
-        Objects.requireNonNull(remoteLogSegmentMetadata, "remoteLogSegmentMetadata must not be null");
-
-        final String timeIndexFileKey =
-                timeIndexFileKey(remoteLogSegmentMetadata.remoteLogSegmentId(), remoteLogSegmentMetadata.startOffset());
-
-        try {
-            final S3Object s3Object = s3Client.getObject(bucket, timeIndexFileKey);
-            return s3Object.getObjectContent();
-        } catch (final Exception e) {
-            throw new RemoteStorageException("Error fetching timestamp index from " + timeIndexFileKey, e);
+            throw new RemoteStorageException("Error fetching index for " + offsetIndexFileKey, e);
         }
     }
 
@@ -232,11 +265,13 @@ public class S3RemoteStorageManager implements RemoteStorageManager {
         Objects.requireNonNull(remoteLogSegmentMetadata, "remoteLogSegmentMetadata must not be null");
 
         final String logFileKey =
-                logFileKey(remoteLogSegmentMetadata.remoteLogSegmentId(), remoteLogSegmentMetadata.startOffset());
-        final String offsetIndexFileKey = offsetIndexFileKey(remoteLogSegmentMetadata.remoteLogSegmentId(),
-                remoteLogSegmentMetadata.startOffset());
+                getFileKey(remoteLogSegmentMetadata.remoteLogSegmentId(), remoteLogSegmentMetadata.startOffset(),
+                        LOG_FILE_SUFFIX);
+        final String offsetIndexFileKey = getFileKey(remoteLogSegmentMetadata.remoteLogSegmentId(),
+                remoteLogSegmentMetadata.startOffset(), INDEX_FILE_SUFFIX);
         final String timeIndexFileKey =
-                timeIndexFileKey(remoteLogSegmentMetadata.remoteLogSegmentId(), remoteLogSegmentMetadata.startOffset());
+                getFileKey(remoteLogSegmentMetadata.remoteLogSegmentId(), remoteLogSegmentMetadata.startOffset(),
+                        TIME_INDEX_FILE_SUFFIX);
 
         try {
             final DeleteObjectsRequest deleteObjectsRequest = new DeleteObjectsRequest(bucket)
@@ -255,19 +290,10 @@ public class S3RemoteStorageManager implements RemoteStorageManager {
         }
     }
 
-    private String logFileKey(final RemoteLogSegmentId remoteLogSegmentId, final long fileNameBaseOffset) {
+    private String getFileKey(final RemoteLogSegmentId remoteLogSegmentId, final long fileNameBaseOffset,
+                              final String suffix) {
         return fileNamePrefix(remoteLogSegmentId) + filenamePrefixFromOffset(fileNameBaseOffset)
-                + LOG_FILE_SUFFIX + "." + remoteLogSegmentId.id();
-    }
-
-    private String offsetIndexFileKey(final RemoteLogSegmentId remoteLogSegmentId, final long fileNameBaseOffset) {
-        return fileNamePrefix(remoteLogSegmentId) + filenamePrefixFromOffset(fileNameBaseOffset)
-                + INDEX_FILE_SUFFIX + "." + remoteLogSegmentId.id();
-    }
-
-    private String timeIndexFileKey(final RemoteLogSegmentId remoteLogSegmentId, final long fileNameBaseOffset) {
-        return fileNamePrefix(remoteLogSegmentId) + filenamePrefixFromOffset(fileNameBaseOffset)
-                + TIME_INDEX_FILE_SUFFIX + "." + remoteLogSegmentId.id();
+                + suffix + "." + remoteLogSegmentId.id();
     }
 
     private String fileNamePrefix(final RemoteLogSegmentId remoteLogSegmentId) {
