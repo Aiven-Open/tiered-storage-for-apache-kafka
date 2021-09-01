@@ -17,6 +17,11 @@
 buildscript {
     repositories {
         mavenCentral()
+        gradlePluginPortal()
+    }
+
+    dependencies {
+        classpath 'gradle.plugin.com.github.jengelman.gradle.plugins:shadow:7.0.0'
     }
 }
 
@@ -34,6 +39,8 @@ subprojects {
     apply plugin: "distribution"
 
     apply plugin: "idea"
+
+    apply plugin: 'com.github.johnrengelman.shadow'
 
     repositories {
         // Use Maven Central for resolving dependencies.
