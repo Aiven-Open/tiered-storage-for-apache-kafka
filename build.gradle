@@ -14,7 +14,13 @@
  * limitations under the License.
  */
 
-allprojects {
+buildscript {
+    repositories {
+        mavenCentral()
+    }
+}
+
+subprojects {
     // https://docs.gradle.org/current/userguide/java_library_plugin.html
     apply plugin: "java"
 
@@ -26,6 +32,8 @@ allprojects {
 
     // https://docs.gradle.org/current/userguide/distribution_plugin.html
     apply plugin: "distribution"
+
+    apply plugin: "idea"
 
     repositories {
         // Use Maven Central for resolving dependencies.
@@ -53,20 +61,21 @@ allprojects {
     }
 
     ext {
-        testcontainersVersion = "1.15.3"
-        slf4jVersion = "1.7.30"
+        testcontainersVersion = "1.16.0"
+        junitVersion = "5.7.2"
     }
 
     dependencies {
-        implementation name: 'kafka-storage-api-3.0.0-SNAPSHOT'
-        implementation name: 'kafka-clients-3.0.0-SNAPSHOT'
-        implementation 'org.slf4j:slf4j-api:1.7.30'
-        testRuntimeOnly 'org.junit.jupiter:junit-jupiter-engine:5.7.2'
-        testImplementation 'org.junit.jupiter:junit-jupiter-api:5.7.2'
-        testImplementation 'org.apache.kafka:kafka_2.12:2.8.0'
+        implementation name: "kafka-storage-api-3.1.0-SNAPSHOT"
+        implementation name: "kafka-clients-3.1.0-SNAPSHOT"
+        implementation "org.slf4j:slf4j-api:1.7.32"
+        implementation "org.bouncycastle:bcprov-jdk15on:1.69"
+        testRuntimeOnly "org.junit.jupiter:junit-jupiter-engine:$junitVersion"
+        testImplementation "org.junit.jupiter:junit-jupiter-api:$junitVersion"
+        testImplementation "org.apache.kafka:kafka_2.12:2.8.0"
         testImplementation "org.testcontainers:junit-jupiter:$testcontainersVersion"
         testImplementation "org.testcontainers:kafka:$testcontainersVersion" // this is not Kafka version
-        testImplementation "org.assertj:assertj-core:3.19.0"
+        testImplementation "org.assertj:assertj-core:3.20.2"
     }
 
     tasks.named('test') {
@@ -74,4 +83,3 @@ allprojects {
         useJUnitPlatform()
     }
 }
-
