@@ -23,7 +23,6 @@ import java.util.Map;
 import org.apache.kafka.common.KafkaException;
 import org.apache.kafka.common.config.ConfigException;
 
-import com.amazonaws.auth.AWSStaticCredentialsProvider;
 import com.amazonaws.auth.DefaultAWSCredentialsProviderChain;
 import com.amazonaws.regions.Regions;
 import org.junit.jupiter.api.Test;
@@ -118,13 +117,6 @@ class S3RemoteStorageManagerConfigTest {
             .hasMessage(
                 "Invalid value invalid_provider for configuration remote.log.storage.s3.credentials.provider.class: "
                     + "Class invalid_provider could not be found.");
-        properties.put("remote.log.storage.s3.credentials.provider.class",
-            AWSStaticCredentialsProvider.class.getName());
-
-        assertThatThrownBy(() -> new S3RemoteStorageManagerConfig(properties))
-            .isInstanceOf(KafkaException.class)
-            .hasMessage("Invalid value class com.amazonaws.auth.AWSStaticCredentialsProvider for configuration "
-                + "remote.log.storage.s3.credentials.provider.class: Class must have no args constructor");
     }
 
     @Test

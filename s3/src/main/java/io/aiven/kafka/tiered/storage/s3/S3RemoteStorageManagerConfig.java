@@ -16,21 +16,27 @@
 
 package io.aiven.kafka.tiered.storage.s3;
 
+import java.util.Collections;
+import java.util.List;
 import java.util.Map;
-import java.util.stream.Stream;
 
 import org.apache.kafka.common.KafkaException;
 import org.apache.kafka.common.config.AbstractConfig;
 import org.apache.kafka.common.config.ConfigDef;
 import org.apache.kafka.common.config.ConfigException;
 
+import com.amazonaws.auth.AWSCredentials;
 import com.amazonaws.auth.AWSCredentialsProvider;
+import com.amazonaws.auth.AWSStaticCredentialsProvider;
+import com.amazonaws.auth.BasicAWSCredentials;
 import com.amazonaws.regions.Regions;
 
 /**
  * A configuration for {@link S3RemoteStorageManager}.
  */
 public class S3RemoteStorageManagerConfig extends AbstractConfig {
+    private static final String GROUP_AWS = "AWS";
+
     private static final String REMOTE_STORAGE_MANAGER_CONFIG_PREFIX = "remote.log.storage.";
     public static final String S3_BUCKET_NAME_CONFIG = REMOTE_STORAGE_MANAGER_CONFIG_PREFIX + "s3.bucket.name";
     private static final String S3_BUCKET_NAME_DOC = "The S3 Bucket.";
@@ -66,6 +72,14 @@ public class S3RemoteStorageManagerConfig extends AbstractConfig {
     private static final int MULTIPART_UPLOAD_PART_SIZE_DEFAULT = 8_192;
     private static final String MULTIPART_UPLOAD_PART_SIZE_DOC = "S3 upload part size";
 
+    public static final String AWS_ACCESS_KEY_ID =
+            REMOTE_STORAGE_MANAGER_CONFIG_PREFIX + "s3.client.aws_access_key_id";
+    private static final String AWS_ACCESS_KEY_ID_DOC = "AWS Access Key ID";
+
+    public static final String AWS_SECRET_KEY_ID =
+            REMOTE_STORAGE_MANAGER_CONFIG_PREFIX + "s3.client.aws_secret_key_id";
+    private static final String AWS_SECRET_KEY_ID_DOC = "AWS Secret Access Key";
+
     private static final ConfigDef CONFIG;
 
 
@@ -88,15 +102,6 @@ public class S3RemoteStorageManagerConfig extends AbstractConfig {
             new RegionValidator(),
             ConfigDef.Importance.MEDIUM,
             S3_REGION_DOC
-        );
-
-        CONFIG.define(
-            S3_CREDENTIALS_PROVIDER_CLASS_CONFIG,
-            ConfigDef.Type.CLASS,
-            S3_CREDENTIALS_PROVIDER_CLASS_DEFAULT,
-            new CredentialsProviderValidator(),
-            ConfigDef.Importance.LOW,
-            S3_CREDENTIALS_PROVIDER_CLASS_DOC
         );
 
         CONFIG.define(
@@ -143,6 +148,68 @@ public class S3RemoteStorageManagerConfig extends AbstractConfig {
             ConfigDef.Importance.HIGH,
             MULTIPART_UPLOAD_PART_SIZE_DOC
         );
+
+        int awsGroupCounter = 0;
+        CONFIG.define(
+                S3_CREDENTIALS_PROVIDER_CLASS_CONFIG,
+                ConfigDef.Type.CLASS,
+                S3_CREDENTIALS_PROVIDER_CLASS_DEFAULT,
+                new CredentialsProviderValidator(),
+                ConfigDef.Importance.LOW,
+                S3_CREDENTIALS_PROVIDER_CLASS_DOC,
+                GROUP_AWS,
+                awsGroupCounter++,
+                ConfigDef.Width.NONE,
+                S3_CREDENTIALS_PROVIDER_CLASS_CONFIG,
+                new ConfigDef.Recommender() {
+                    @Override
+                    public List<Object> validValues(final String s, final Map<String, Object> map) {
+                        return Collections.emptyList();
+                    }
+
+                    @Override
+                    public boolean visible(final String s, final Map<String, Object> map) {
+                        final String credentialsProvider = (String) map.get("S3_CREDENTIALS_PROVIDER_CLASS_CONFIG");
+                        try {
+                            if (Class.forName(credentialsProvider)
+                                    .isAssignableFrom(AWSStaticCredentialsProvider.class)) {
+                                return s.equals(AWS_ACCESS_KEY_ID)
+                                        || s.equals(AWS_SECRET_KEY_ID);
+                            }
+                        } catch (final ClassNotFoundException e) {
+                            e.printStackTrace();
+                        }
+                        return false;
+                    }
+                }
+
+        );
+
+        CONFIG.define(
+                AWS_ACCESS_KEY_ID,
+                ConfigDef.Type.PASSWORD,
+                null,
+                new NonEmptyPassword(),
+                ConfigDef.Importance.MEDIUM,
+                AWS_ACCESS_KEY_ID_DOC,
+                GROUP_AWS,
+                awsGroupCounter++,
+                ConfigDef.Width.NONE,
+                AWS_ACCESS_KEY_ID
+        );
+
+        CONFIG.define(
+                AWS_SECRET_KEY_ID,
+                ConfigDef.Type.PASSWORD,
+                null,
+                new NonEmptyPassword(),
+                ConfigDef.Importance.MEDIUM,
+                AWS_SECRET_KEY_ID_DOC,
+                GROUP_AWS,
+                awsGroupCounter++,
+                ConfigDef.Width.NONE,
+                AWS_SECRET_KEY_ID
+        );
     }
 
     public S3RemoteStorageManagerConfig(final Map<String, ?> props) {
@@ -186,10 +253,17 @@ public class S3RemoteStorageManagerConfig extends AbstractConfig {
             if (providerClass == null) {
                 return null;
             }
+            if (providerClass.isAssignableFrom(AWSStaticCredentialsProvider.class)) {
+                return new AWSStaticCredentialsProvider(awsCredentials());
+            }
             return providerClass.getDeclaredConstructor().newInstance();
         } catch (final ReflectiveOperationException e) {
             throw new KafkaException(e);
         }
+    }
+
+    public AWSCredentials awsCredentials() {
+        return new BasicAWSCredentials(getPassword(AWS_ACCESS_KEY_ID).value(), getPassword(AWS_ACCESS_KEY_ID).value());
     }
 
     private static class RegionValidator implements ConfigDef.Validator {
@@ -214,11 +288,6 @@ public class S3RemoteStorageManagerConfig extends AbstractConfig {
             final Class<?> providerClass = (Class<?>) value;
             if (!AWSCredentialsProvider.class.isAssignableFrom(providerClass)) {
                 throw new ConfigException(name, value, "Class must extend " + AWSCredentialsProvider.class);
-            }
-
-            if (Stream.of(providerClass.getDeclaredConstructors())
-                    .noneMatch(constructor -> constructor.getParameterCount() == 0)) {
-                throw new ConfigException(name, value, "Class must have no args constructor");
             }
         }
     }
