@@ -263,7 +263,7 @@ public class S3RemoteStorageManagerConfig extends AbstractConfig {
     }
 
     public AWSCredentials awsCredentials() {
-        return new BasicAWSCredentials(getPassword(AWS_ACCESS_KEY_ID).value(), getPassword(AWS_ACCESS_KEY_ID).value());
+        return new BasicAWSCredentials(getPassword(AWS_ACCESS_KEY_ID).value(), getPassword(AWS_SECRET_KEY_ID).value());
     }
 
     private static class RegionValidator implements ConfigDef.Validator {

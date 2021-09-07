@@ -149,6 +149,7 @@ public class S3RemoteStorageManagerTest {
         final AwsClientBuilder.EndpointConfiguration endpointConfiguration = new AwsClientBuilder.EndpointConfiguration(
                 Localstack.INSTANCE.getEndpointS3(), "us-east-1");
         remoteStorageManager = new S3RemoteStorageManager(endpointConfiguration);
+        remoteStorageManager.configure(basicProps(bucket));
     }
 
     protected static void writePemFile(final Path path, final EncodedKeySpec encodedKeySpec) throws IOException {
@@ -188,8 +189,6 @@ public class S3RemoteStorageManagerTest {
 
     @Test
     public void testCopyLogSegment() throws Exception {
-        remoteStorageManager.configure(basicProps(bucket));
-
         final LogSegment segment1 = createLogSegment(0);
         final LogSegment segment2 = createLogSegment(5);
 
@@ -254,8 +253,6 @@ public class S3RemoteStorageManagerTest {
 
     @Test
     public void testFetchLogSegmentDataComplete() throws Exception {
-        remoteStorageManager.configure(basicProps(bucket));
-
         final LogSegment segment = createLogSegment(0);
 
         final RemoteLogSegmentId segmentId =
@@ -273,8 +270,6 @@ public class S3RemoteStorageManagerTest {
 
     @Test
     public void testFetchLogSegmentDataPartially() throws Exception {
-        remoteStorageManager.configure(basicProps(bucket));
-
         final LogSegment segment = createLogSegment(0);
 
         final RemoteLogSegmentId segmentId =
@@ -298,8 +293,6 @@ public class S3RemoteStorageManagerTest {
 
     @Test
     public void testFetchOffsetIndex() throws Exception {
-        remoteStorageManager.configure(basicProps(bucket));
-
         final LogSegment segment = createLogSegment(0);
 
         final RemoteLogSegmentId segmentId =
@@ -320,8 +313,6 @@ public class S3RemoteStorageManagerTest {
 
     @Test
     public void testFetchTimestampIndex() throws Exception {
-        remoteStorageManager.configure(basicProps(bucket));
-
         final LogSegment segment = createLogSegment(0);
 
         final RemoteLogSegmentId segmentId =
@@ -340,8 +331,6 @@ public class S3RemoteStorageManagerTest {
 
     @Test
     public void testDeleteLogSegment() throws Exception {
-        remoteStorageManager.configure(basicProps(bucket));
-
         final LogSegment segment1 = createLogSegment(0);
         final LogSegment segment2 = createLogSegment(5);
 
