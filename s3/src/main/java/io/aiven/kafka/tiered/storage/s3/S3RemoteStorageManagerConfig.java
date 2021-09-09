@@ -37,47 +37,45 @@ import com.amazonaws.regions.Regions;
 public class S3RemoteStorageManagerConfig extends AbstractConfig {
     private static final String GROUP_AWS = "AWS";
 
-    private static final String REMOTE_STORAGE_MANAGER_CONFIG_PREFIX = "remote.log.storage.";
-    public static final String S3_BUCKET_NAME_CONFIG = REMOTE_STORAGE_MANAGER_CONFIG_PREFIX + "s3.bucket.name";
+    public static final String S3_BUCKET_NAME_CONFIG = "s3.bucket.name";
     private static final String S3_BUCKET_NAME_DOC = "The S3 Bucket.";
 
-    public static final String S3_REGION_CONFIG = REMOTE_STORAGE_MANAGER_CONFIG_PREFIX + "s3.region";
+    public static final String S3_REGION_CONFIG = "s3.region";
     private static final String S3_REGION_DEFAULT = Regions.DEFAULT_REGION.getName();
     private static final String S3_REGION_DOC = "The AWS region.";
 
-    public static final String S3_CREDENTIALS_PROVIDER_CLASS_CONFIG =
-            REMOTE_STORAGE_MANAGER_CONFIG_PREFIX + "s3.credentials.provider.class";
+    public static final String S3_CREDENTIALS_PROVIDER_CLASS_CONFIG = "s3.credentials.provider.class";
     private static final Class<? extends AWSCredentialsProvider> S3_CREDENTIALS_PROVIDER_CLASS_DEFAULT = null;
     private static final String S3_CREDENTIALS_PROVIDER_CLASS_DOC = "The credentials provider to use for "
             + "authentication to AWS. If not set, AWS SDK uses the default "
             + "com.amazonaws.auth.DefaultAWSCredentialsProviderChain";
 
-    public static final String PUBLIC_KEY = REMOTE_STORAGE_MANAGER_CONFIG_PREFIX + "s3.public_key_pem";
+    public static final String PUBLIC_KEY = "s3.public_key_pem";
     private static final String PUBLIC_KEY_DOC = "Public key for storage encryption";
 
-    public static final String PRIVATE_KEY = REMOTE_STORAGE_MANAGER_CONFIG_PREFIX + "s3.private_key_pem";
+    public static final String PRIVATE_KEY = "s3.private_key_pem";
     private static final String PRIVATE_KEY_DOC = "Private key for storage encryption";
 
-    public static final String IO_BUFFER_SIZE = REMOTE_STORAGE_MANAGER_CONFIG_PREFIX + "s3.io.buffer.size";
+    public static final String IO_BUFFER_SIZE = "s3.io.buffer.size";
     private static final int IO_BUFFER_SIZE_DEFAULT = 8_192;
     private static final String IO_BUFFER_SIZE_DOC = "Buffer size for uploading";
 
     public static final String S3_STORAGE_UPLOAD_PART_SIZE =
-            REMOTE_STORAGE_MANAGER_CONFIG_PREFIX + "s3.upload.part.size";
+            "s3.upload.part.size";
     private static final int S3_STORAGE_UPLOAD_PART_SIZE_DEFAULT = 524288;
     private static final String S3_STORAGE_UPLOAD_PART_SIZE_DOC = "S3 upload part size";
 
     public static final String MULTIPART_UPLOAD_PART_SIZE =
-            REMOTE_STORAGE_MANAGER_CONFIG_PREFIX + "s3.multipart.upload.part.size";
+            "s3.multipart.upload.part.size";
     private static final int MULTIPART_UPLOAD_PART_SIZE_DEFAULT = 8_192;
     private static final String MULTIPART_UPLOAD_PART_SIZE_DOC = "S3 upload part size";
 
     public static final String AWS_ACCESS_KEY_ID =
-            REMOTE_STORAGE_MANAGER_CONFIG_PREFIX + "s3.client.aws_access_key_id";
+            "s3.client.aws_access_key_id";
     private static final String AWS_ACCESS_KEY_ID_DOC = "AWS Access Key ID";
 
     public static final String AWS_SECRET_KEY_ID =
-            REMOTE_STORAGE_MANAGER_CONFIG_PREFIX + "s3.client.aws_secret_key_id";
+            "s3.client.aws_secret_key_id";
     private static final String AWS_SECRET_KEY_ID_DOC = "AWS Secret Access Key";
 
     private static final ConfigDef CONFIG;

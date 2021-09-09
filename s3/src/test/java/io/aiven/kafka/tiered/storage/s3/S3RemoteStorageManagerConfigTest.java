@@ -37,9 +37,9 @@ class S3RemoteStorageManagerConfigTest {
     @Test
     void correctMinimalConfig() {
         final Map<String, String> properties = new HashMap<>();
-        properties.put("remote.log.storage.s3.bucket.name", "test_bucket");
-        properties.put("remote.log.storage.s3.public_key_pem", "test_public_key");
-        properties.put("remote.log.storage.s3.private_key_pem", "test_private_key");
+        properties.put("s3.bucket.name", "test_bucket");
+        properties.put("s3.public_key_pem", "test_public_key");
+        properties.put("s3.private_key_pem", "test_private_key");
 
         final S3RemoteStorageManagerConfig config = new S3RemoteStorageManagerConfig(properties);
 
@@ -56,15 +56,15 @@ class S3RemoteStorageManagerConfigTest {
     @Test
     void correctFullConfig() {
         final Map<String, String> properties = new HashMap<>();
-        properties.put("remote.log.storage.s3.bucket.name", "new_test_bucket");
-        properties.put("remote.log.storage.s3.region", Regions.EU_NORTH_1.getName());
-        properties.put("remote.log.storage.s3.credentials.provider.class",
+        properties.put("s3.bucket.name", "new_test_bucket");
+        properties.put("s3.region", Regions.EU_NORTH_1.getName());
+        properties.put("s3.credentials.provider.class",
                 DefaultAWSCredentialsProviderChain.class.getName());
-        properties.put("remote.log.storage.s3.public_key_pem", "new_test_public_key");
-        properties.put("remote.log.storage.s3.private_key_pem", "new_test_private_key");
-        properties.put("remote.log.storage.s3.io.buffer.size", "16384");
-        properties.put("remote.log.storage.s3.upload.part.size", String.valueOf(1 << 10));
-        properties.put("remote.log.storage.s3.multipart.upload.part.size", "16384");
+        properties.put("s3.public_key_pem", "new_test_public_key");
+        properties.put("s3.private_key_pem", "new_test_private_key");
+        properties.put("s3.io.buffer.size", "16384");
+        properties.put("s3.upload.part.size", String.valueOf(1 << 10));
+        properties.put("s3.multipart.upload.part.size", "16384");
 
         final S3RemoteStorageManagerConfig config = new S3RemoteStorageManagerConfig(properties);
 
@@ -84,7 +84,7 @@ class S3RemoteStorageManagerConfigTest {
 
         final Throwable t = assertThrows(ConfigException.class, () -> new S3RemoteStorageManagerConfig(properties));
         assertEquals(
-            "Missing required configuration \"remote.log.storage.s3.bucket.name\" which has no default value.",
+            "Missing required configuration \"s3.bucket.name\" which has no default value.",
             t.getMessage()
         );
     }
@@ -92,49 +92,49 @@ class S3RemoteStorageManagerConfigTest {
     @Test
     void invalidCredentialsProviderClass() {
         final Map<String, String> properties = new HashMap<>();
-        properties.put("remote.log.storage.s3.bucket.name", "test_bucket");
-        properties.put("remote.log.storage.s3.public_key_pem", "test_public_key");
-        properties.put("remote.log.storage.s3.private_key_pem", "test_private_key");
-        properties.put("remote.log.storage.s3.credentials.provider.class", ArrayList.class.getName());
+        properties.put("s3.bucket.name", "test_bucket");
+        properties.put("s3.public_key_pem", "test_public_key");
+        properties.put("s3.private_key_pem", "test_private_key");
+        properties.put("s3.credentials.provider.class", ArrayList.class.getName());
 
         assertThatThrownBy(() -> new S3RemoteStorageManagerConfig(properties))
                 .isInstanceOf(KafkaException.class)
                 .hasMessage(
                         "Invalid value class java.util.ArrayList for "
-                                + "configuration remote.log.storage.s3.credentials.provider.class: "
+                                + "configuration s3.credentials.provider.class: "
                                 + "Class must extend interface com.amazonaws.auth.AWSCredentialsProvider");
 
 
-        properties.put("remote.log.storage.s3.credentials.provider.class", null);
+        properties.put("s3.credentials.provider.class", null);
 
         final S3RemoteStorageManagerConfig s3RemoteStorageManagerConfig = new S3RemoteStorageManagerConfig(properties);
         assertThat(s3RemoteStorageManagerConfig.awsCredentialsProvider()).isNull();
 
-        properties.put("remote.log.storage.s3.credentials.provider.class", "invalid_provider");
+        properties.put("s3.credentials.provider.class", "invalid_provider");
 
         assertThatThrownBy(() -> new S3RemoteStorageManagerConfig(properties))
             .isInstanceOf(KafkaException.class)
             .hasMessage(
-                "Invalid value invalid_provider for configuration remote.log.storage.s3.credentials.provider.class: "
+                "Invalid value invalid_provider for configuration s3.credentials.provider.class: "
                     + "Class invalid_provider could not be found.");
     }
 
     @Test
     void invalidCredentialsProvider() {
         final Map<String, String> properties = new HashMap<>();
-        properties.put("remote.log.storage.s3.bucket.name", "test_bucket");
-        properties.put("remote.log.storage.s3.public_key_pem", "test_public_key");
-        properties.put("remote.log.storage.s3.private_key_pem", "test_private_key");
-        properties.put("remote.log.storage.s3.region", "test_string");
+        properties.put("s3.bucket.name", "test_bucket");
+        properties.put("s3.public_key_pem", "test_public_key");
+        properties.put("s3.private_key_pem", "test_private_key");
+        properties.put("s3.region", "test_string");
 
         assertThatThrownBy(() -> new S3RemoteStorageManagerConfig(properties))
                 .isInstanceOf(KafkaException.class)
-                .hasMessage("Invalid value test_string for configuration remote.log.storage.s3.region");
+                .hasMessage("Invalid value test_string for configuration s3.region");
 
-        properties.put("remote.log.storage.s3.region", null);
+        properties.put("s3.region", null);
 
         assertThatThrownBy(() -> new S3RemoteStorageManagerConfig(properties))
                 .isInstanceOf(KafkaException.class)
-            .hasMessage("Invalid value null for configuration remote.log.storage.s3.region");
+            .hasMessage("Invalid value null for configuration s3.region");
     }
 }
