@@ -22,6 +22,7 @@ import java.io.ByteArrayInputStream;
 import java.io.IOException;
 import java.io.InputStream;
 import java.nio.charset.StandardCharsets;
+import java.security.Security;
 
 import io.aiven.kafka.tiered.storage.commons.io.IOUtils;
 import io.aiven.kafka.tiered.storage.commons.metadata.EncryptedRepositoryMetadata;
@@ -29,6 +30,7 @@ import io.aiven.kafka.tiered.storage.commons.security.EncryptionKeyProvider;
 
 import com.amazonaws.AmazonClientException;
 import com.amazonaws.services.s3.AmazonS3;
+import org.bouncycastle.jce.provider.BouncyCastleProvider;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
@@ -38,6 +40,10 @@ public class S3EncryptionKeyProvider {
     private final AmazonS3 s3Client;
     private final S3RemoteStorageManagerConfig config;
     private final EncryptionKeyProvider encryptionKeyProvider;
+
+    static {
+        Security.addProvider(new BouncyCastleProvider());
+    }
 
     public S3EncryptionKeyProvider(final AmazonS3 s3Client, final S3RemoteStorageManagerConfig config) {
         this.s3Client = s3Client;
