@@ -39,7 +39,7 @@ public final class EncryptionKeyProvider
 
     public static final int KEY_SIZE = 256;
 
-    private static final String CIPHER_TRANSFORMATION = "RSA/NONE/OAEPWithSHA3-512AndMGF1Padding";
+    private static final String CIPHER_TRANSFORMATION = "RSA/ECB/OAEPWithSHA-256AndMGF1Padding";
 
     private final KeyGenerator aesKeyGenerator;
 
