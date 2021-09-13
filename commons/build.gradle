@@ -21,3 +21,14 @@ dependencies {
     // For now taking the version from kafka-clients
     compileOnly "com.github.luben:zstd-jni:1.5.0-2"
 }
+
+distributions {
+    main {
+        contents {
+            from jar
+            from sourcesJar
+            from configurations.runtimeClasspath
+        }
+    }
+}
+

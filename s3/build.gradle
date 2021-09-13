@@ -19,6 +19,16 @@ configurations {
     integrationTestRuntime.extendsFrom testRuntimeClasspath
 }
 
+distributions {
+    main {
+        contents {
+            from jar
+            from sourcesJar
+            from configurations.runtimeClasspath
+        }
+    }
+}
+
 dependencies {
     implementation project(':commons')
     implementation 'com.amazonaws:aws-java-sdk-s3:1.12.14'
