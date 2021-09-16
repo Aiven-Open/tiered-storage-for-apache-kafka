@@ -84,4 +84,14 @@ subprojects {
         // Use junit platform for unit tests.
         useJUnitPlatform()
     }
+
+    distributions {
+        main {
+            contents {
+                from jar
+                from sourcesJar
+                from configurations.runtimeClasspath
+            }
+        }
+    }
 }
