@@ -28,12 +28,15 @@ import org.apache.kafka.server.log.remote.storage.RemoteStorageManager;
 import com.amazonaws.client.builder.AwsClientBuilder;
 import com.amazonaws.services.s3.AmazonS3;
 import com.amazonaws.services.s3.AmazonS3ClientBuilder;
+import org.slf4j.Logger;
+import org.slf4j.LoggerFactory;
 
 /**
  * AWS S3 RemoteStorageManager.
  * Stores files as {@code {topic}-{partition}/{uuid}-00000000000000000123.{suffix}}.
  */
 public class S3RemoteStorageManager implements RemoteStorageManager {
+    private static final Logger log = LoggerFactory.getLogger(S3RemoteStorageManager.class);
     private AwsClientBuilder.EndpointConfiguration endpointConfiguration = null;
 
     private S3RemoteStorageManagerConfig config;
@@ -82,7 +85,8 @@ public class S3RemoteStorageManager implements RemoteStorageManager {
             final RemoteLogSegmentMetadata remoteLogSegmentMetadata,
             final int startPosition,
             final int endPosition) throws RemoteStorageException {
-
+        log.info("Fetching log segment from remote storage start position: {}, end position {}.", startPosition,
+                endPosition);
         Objects.requireNonNull(remoteLogSegmentMetadata, "remoteLogSegmentMetadata must not be null");
 
         if (startPosition < 0) {
@@ -98,6 +102,8 @@ public class S3RemoteStorageManager implements RemoteStorageManager {
     @Override
     public InputStream fetchLogSegment(final RemoteLogSegmentMetadata remoteLogSegmentMetadata,
                                        final int startPosition) throws RemoteStorageException {
+        log.info("Fetching log segment from remote storage starting from position {}.",
+                remoteLogSegmentMetadata.startOffset());
         Objects.requireNonNull(remoteLogSegmentMetadata, "remoteLogSegmentMetadata must not be null");
 
         if (startPosition < 0) {
@@ -111,12 +117,15 @@ public class S3RemoteStorageManager implements RemoteStorageManager {
     @Override
     public InputStream fetchIndex(final RemoteLogSegmentMetadata remoteLogSegmentMetadata, final IndexType indexType)
             throws RemoteStorageException {
+        log.info("Fetching {} index from remote storage for segment with offset {}.", indexType,
+                remoteLogSegmentMetadata.startOffset());
         return s3ClientWrapper.fetchIndexFile(remoteLogSegmentMetadata, indexType);
     }
 
     @Override
     public void deleteLogSegmentData(final RemoteLogSegmentMetadata remoteLogSegmentMetadata)
             throws RemoteStorageException {
+        log.info("Deleting log segment from remote storage for offset {}", remoteLogSegmentMetadata.startOffset());
         Objects.requireNonNull(remoteLogSegmentMetadata, "remoteLogSegmentMetadata must not be null");
 
         try {
