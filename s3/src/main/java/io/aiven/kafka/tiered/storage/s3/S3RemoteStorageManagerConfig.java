@@ -74,9 +74,9 @@ public class S3RemoteStorageManagerConfig extends AbstractConfig {
             "s3.client.aws_access_key_id";
     private static final String AWS_ACCESS_KEY_ID_DOC = "AWS Access Key ID";
 
-    public static final String AWS_SECRET_KEY_ID =
-            "s3.client.aws_secret_key_id";
-    private static final String AWS_SECRET_KEY_ID_DOC = "AWS Secret Access Key";
+    public static final String AWS_SECRET_ACCESS_KEY =
+            "s3.client.aws_secret_access_key";
+    private static final String AWS_SECRET_ACCESS_KEY_DOC = "AWS Secret Access Key";
 
     private static final ConfigDef CONFIG;
 
@@ -170,7 +170,7 @@ public class S3RemoteStorageManagerConfig extends AbstractConfig {
                     final String credentialsProvider = (String) map.get("S3_CREDENTIALS_PROVIDER_CLASS_CONFIG");
                     try {
                         if (Class.forName(credentialsProvider).isAssignableFrom(AWSStaticCredentialsProvider.class)) {
-                            return s.equals(AWS_ACCESS_KEY_ID) || s.equals(AWS_SECRET_KEY_ID);
+                            return s.equals(AWS_ACCESS_KEY_ID) || s.equals(AWS_SECRET_ACCESS_KEY);
                         }
                     } catch (final ClassNotFoundException e) {
                         e.printStackTrace();
@@ -194,16 +194,16 @@ public class S3RemoteStorageManagerConfig extends AbstractConfig {
         );
 
         CONFIG.define(
-                AWS_SECRET_KEY_ID,
+                AWS_SECRET_ACCESS_KEY,
                 ConfigDef.Type.PASSWORD,
                 null,
                 new NonEmptyPassword(),
                 ConfigDef.Importance.MEDIUM,
-                AWS_SECRET_KEY_ID_DOC,
+                AWS_SECRET_ACCESS_KEY_DOC,
                 GROUP_AWS,
                 awsGroupCounter++,
                 ConfigDef.Width.NONE,
-                AWS_SECRET_KEY_ID
+                AWS_SECRET_ACCESS_KEY
         );
     }
 
@@ -258,7 +258,8 @@ public class S3RemoteStorageManagerConfig extends AbstractConfig {
     }
 
     public AWSCredentials awsCredentials() {
-        return new BasicAWSCredentials(getPassword(AWS_ACCESS_KEY_ID).value(), getPassword(AWS_SECRET_KEY_ID).value());
+        return new BasicAWSCredentials(getPassword(AWS_ACCESS_KEY_ID).value(),
+                getPassword(AWS_SECRET_ACCESS_KEY).value());
     }
 
     private static class RegionValidator implements ConfigDef.Validator {
