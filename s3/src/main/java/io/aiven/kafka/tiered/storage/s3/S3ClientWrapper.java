@@ -34,6 +34,7 @@ import java.util.stream.Collectors;
 
 import org.apache.kafka.server.log.remote.storage.LogSegmentData;
 import org.apache.kafka.server.log.remote.storage.RemoteLogSegmentMetadata;
+import org.apache.kafka.server.log.remote.storage.RemoteResourceNotFoundException;
 import org.apache.kafka.server.log.remote.storage.RemoteStorageException;
 import org.apache.kafka.server.log.remote.storage.RemoteStorageManager;
 
@@ -230,7 +231,10 @@ public class S3ClientWrapper {
                 throw new RemoteStorageException(String.format("Error fetching index file %s", indexFileKey), e);
             }
         } else {
-            throw new RemoteStorageException(String.format("Failed to find file for key %s", indexFileKey));
+            if (objectSummaries.size() == 0 && indexType == TRANSACTION) {
+                return InputStream.nullInputStream();
+            }
+            throw new RemoteResourceNotFoundException(String.format("Failed to find file for key %s", indexFileKey));
         }
     }
 

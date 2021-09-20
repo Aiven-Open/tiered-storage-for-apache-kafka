@@ -22,6 +22,7 @@ import java.io.ByteArrayInputStream;
 import java.io.IOException;
 import java.io.InputStream;
 import java.nio.charset.StandardCharsets;
+import java.security.Security;
 
 import io.aiven.kafka.tiered.storage.commons.io.IOUtils;
 import io.aiven.kafka.tiered.storage.commons.metadata.EncryptedRepositoryMetadata;
@@ -29,15 +30,19 @@ import io.aiven.kafka.tiered.storage.commons.security.EncryptionKeyProvider;
 
 import com.amazonaws.AmazonClientException;
 import com.amazonaws.services.s3.AmazonS3;
+import org.bouncycastle.jce.provider.BouncyCastleProvider;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
 public class S3EncryptionKeyProvider {
     private static final Logger log = LoggerFactory.getLogger(S3RemoteStorageManager.class);
-    private static final String SEGMENT_METADATA_FILE_NAME = ".metadata.json";
     private final AmazonS3 s3Client;
     private final S3RemoteStorageManagerConfig config;
     private final EncryptionKeyProvider encryptionKeyProvider;
+
+    static {
+        Security.addProvider(new BouncyCastleProvider());
+    }
 
     public S3EncryptionKeyProvider(final AmazonS3 s3Client, final S3RemoteStorageManagerConfig config) {
         this.s3Client = s3Client;
@@ -54,7 +59,7 @@ public class S3EncryptionKeyProvider {
         final EncryptedRepositoryMetadata repositoryMetadata =
                 new EncryptedRepositoryMetadata(encryptionKeyProvider);
         if (s3Client.doesObjectExist(config.s3BucketName(), metadataFileKey)) {
-            log.info("Restore encryption key for repository. Path: {}", metadataFileKey);
+            log.info("Restoring encryption key from metadata file. Path: {}", metadataFileKey);
             try (final InputStream in = s3Client.getObject(config.s3BucketName(),
                     metadataFileKey).getObjectContent()) {
                 return repositoryMetadata.deserialize(in.readAllBytes());
@@ -62,7 +67,7 @@ public class S3EncryptionKeyProvider {
                 throw new RuntimeException("Couldn't read metadata file from bucket " + config.s3BucketName(), e);
             }
         } else {
-            log.info("Create new encryption key for repository. Path: {}", SEGMENT_METADATA_FILE_NAME);
+            log.info("Creating new metadata file. Path: {}", metadataFileKey);
             final SecretKey encryptionKey = encryptionKeyProvider.createKey();
             try {
                 uploadMetadata(repositoryMetadata.serialize(encryptionKey), metadataFileKey);
