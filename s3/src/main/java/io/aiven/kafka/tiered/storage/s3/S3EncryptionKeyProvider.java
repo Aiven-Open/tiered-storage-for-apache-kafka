@@ -21,7 +21,8 @@ import javax.crypto.SecretKey;
 import java.io.ByteArrayInputStream;
 import java.io.IOException;
 import java.io.InputStream;
-import java.nio.charset.StandardCharsets;
+import java.nio.file.Files;
+import java.nio.file.Path;
 import java.security.Security;
 
 import io.aiven.kafka.tiered.storage.commons.io.IOUtils;
@@ -47,12 +48,15 @@ public class S3EncryptionKeyProvider {
     public S3EncryptionKeyProvider(final AmazonS3 s3Client, final S3RemoteStorageManagerConfig config) {
         this.s3Client = s3Client;
         this.config = config;
-        final String publicKey = config.publicKey();
-        final String privateKey = config.privateKey();
-        encryptionKeyProvider = EncryptionKeyProvider.of(
-                new ByteArrayInputStream(publicKey.getBytes(StandardCharsets.UTF_8)),
-                new ByteArrayInputStream(privateKey.getBytes(StandardCharsets.UTF_8))
-        );
+        try {
+            encryptionKeyProvider = EncryptionKeyProvider.of(
+                    Files.newInputStream(Path.of(config.publicKey())),
+                    Files.newInputStream(Path.of(config.privateKey()))
+            );
+        } catch (final IOException e) {
+            throw new RuntimeException(
+                    "Failed to initialize encryption key provider: keys are not readable or do not exist", e);
+        }
     }
 
     public SecretKey createOrRestoreEncryptionKey(final String metadataFileKey) {
