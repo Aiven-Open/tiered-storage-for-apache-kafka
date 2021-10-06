@@ -393,13 +393,13 @@ public class S3RemoteStorageManagerTest {
         }
     }
 
-    private static Map<String, String> basicProps(final String bucket) throws IOException {
+    private static Map<String, String> basicProps(final String bucket) {
         final Map<String, String> props = new HashMap<>();
         props.put(S3RemoteStorageManagerConfig.S3_BUCKET_NAME_CONFIG, bucket);
         props.put(S3RemoteStorageManagerConfig.S3_CREDENTIALS_PROVIDER_CLASS_CONFIG,
                 AnonymousCredentialsProvider.class.getName());
-        props.put(S3RemoteStorageManagerConfig.PUBLIC_KEY, Files.readString(publicKeyPem));
-        props.put(S3RemoteStorageManagerConfig.PRIVATE_KEY, Files.readString(privateKeyPem));
+        props.put(S3RemoteStorageManagerConfig.PUBLIC_KEY, publicKeyPem.toString());
+        props.put(S3RemoteStorageManagerConfig.PRIVATE_KEY, privateKeyPem.toString());
         props.put(S3RemoteStorageManagerConfig.IO_BUFFER_SIZE, "8192");
         props.put(S3RemoteStorageManagerConfig.S3_STORAGE_UPLOAD_PART_SIZE, String.valueOf(1 << 19));
         props.put(S3RemoteStorageManagerConfig.MULTIPART_UPLOAD_PART_SIZE, "8192");
