@@ -98,8 +98,10 @@ public class S3RemoteStorageManagerTest {
     private static final Logger log = LoggerFactory.getLogger(S3RemoteStorageManagerTest.class);
 
     static final String TOPIC = "connect-log";
-    static final TopicPartition TP0 = new TopicPartition(TOPIC, 0);
-    static final TopicPartition TP1 = new TopicPartition(TOPIC, 1);
+    static final TopicIdPartition TP0 = new TopicIdPartition(Uuid.randomUuid(),
+            new TopicPartition(TOPIC, 0));
+    static final TopicIdPartition TP1 = new TopicIdPartition(Uuid.randomUuid(),
+            new TopicPartition(TOPIC, 1));
 
     public static final String LETTERS = "ABCDEFGHIJKLMNOPQRSTUVWXYZabcdefghijklmnopqrstuvwxyz";
     public static final String DIGITS = "0123456789";
@@ -193,15 +195,13 @@ public class S3RemoteStorageManagerTest {
         final LogSegment segment2 = createLogSegment(5);
 
         final Uuid uuid1 = Uuid.randomUuid();
-        final TopicIdPartition topicIdPartition = new TopicIdPartition(uuid1, TP0);
-        final RemoteLogSegmentId segmentId1 = new RemoteLogSegmentId(topicIdPartition, uuid1);
+        final RemoteLogSegmentId segmentId1 = new RemoteLogSegmentId(TP0, uuid1);
 
         final LogSegmentData lsd1 = createLogSegmentData(segment1);
         remoteStorageManager.copyLogSegmentData(createLogSegmentMetadata(segmentId1, segment1), lsd1);
 
         final Uuid uuid2 = Uuid.randomUuid();
-        final TopicIdPartition topicIdPartition1 = new TopicIdPartition(uuid2, TP1);
-        final RemoteLogSegmentId segmentId2 = new RemoteLogSegmentId(topicIdPartition1, uuid2);
+        final RemoteLogSegmentId segmentId2 = new RemoteLogSegmentId(TP1, uuid2);
         final LogSegmentData lsd2 = createLogSegmentData(segment2);
         remoteStorageManager.copyLogSegmentData(createLogSegmentMetadata(segmentId2, segment2), lsd2);
 
@@ -255,8 +255,7 @@ public class S3RemoteStorageManagerTest {
     public void testFetchLogSegmentDataComplete() throws Exception {
         final LogSegment segment = createLogSegment(0);
 
-        final RemoteLogSegmentId segmentId =
-                new RemoteLogSegmentId(new TopicIdPartition(Uuid.randomUuid(), TP0), Uuid.randomUuid());
+        final RemoteLogSegmentId segmentId = new RemoteLogSegmentId(TP0, Uuid.randomUuid());
         final LogSegmentData lsd = createLogSegmentData(segment);
         remoteStorageManager.copyLogSegmentData(createLogSegmentMetadata(segmentId, segment), lsd);
 
@@ -272,8 +271,7 @@ public class S3RemoteStorageManagerTest {
     public void testFetchLogSegmentDataPartially() throws Exception {
         final LogSegment segment = createLogSegment(0);
 
-        final RemoteLogSegmentId segmentId =
-                new RemoteLogSegmentId(new TopicIdPartition(Uuid.randomUuid(), TP0), Uuid.randomUuid());
+        final RemoteLogSegmentId segmentId = new RemoteLogSegmentId(TP0, Uuid.randomUuid());
         final LogSegmentData lsd = createLogSegmentData(segment);
         remoteStorageManager.copyLogSegmentData(createLogSegmentMetadata(segmentId, segment), lsd);
 
@@ -295,8 +293,7 @@ public class S3RemoteStorageManagerTest {
     public void testFetchOffsetIndex() throws Exception {
         final LogSegment segment = createLogSegment(0);
 
-        final RemoteLogSegmentId segmentId =
-                new RemoteLogSegmentId(new TopicIdPartition(Uuid.randomUuid(), TP0), Uuid.randomUuid());
+        final RemoteLogSegmentId segmentId = new RemoteLogSegmentId(TP0, Uuid.randomUuid());
         final LogSegmentData lsd = createLogSegmentData(segment);
         remoteStorageManager.copyLogSegmentData(createLogSegmentMetadata(segmentId, segment), lsd);
 
@@ -315,8 +312,7 @@ public class S3RemoteStorageManagerTest {
     public void testFetchTimestampIndex() throws Exception {
         final LogSegment segment = createLogSegment(0);
 
-        final RemoteLogSegmentId segmentId =
-                new RemoteLogSegmentId(new TopicIdPartition(Uuid.randomUuid(), TP0), Uuid.randomUuid());
+        final RemoteLogSegmentId segmentId = new RemoteLogSegmentId(TP0, Uuid.randomUuid());
         final LogSegmentData lsd = createLogSegmentData(segment);
         remoteStorageManager.copyLogSegmentData(createLogSegmentMetadata(segmentId, segment), lsd);
 
@@ -334,14 +330,12 @@ public class S3RemoteStorageManagerTest {
         final LogSegment segment1 = createLogSegment(0);
         final LogSegment segment2 = createLogSegment(5);
 
-        final RemoteLogSegmentId segmentId1 =
-                new RemoteLogSegmentId(new TopicIdPartition(Uuid.randomUuid(), TP0), Uuid.randomUuid());
+        final RemoteLogSegmentId segmentId1 = new RemoteLogSegmentId(TP0, Uuid.randomUuid());
         final LogSegmentData lsd1 = createLogSegmentData(segment1);
         remoteStorageManager.copyLogSegmentData(createLogSegmentMetadata(segmentId1, segment1), lsd1);
 
         final Uuid uuid2 = Uuid.randomUuid();
-        final RemoteLogSegmentId segmentId2 =
-                new RemoteLogSegmentId(new TopicIdPartition(Uuid.randomUuid(), TP1), uuid2);
+        final RemoteLogSegmentId segmentId2 = new RemoteLogSegmentId(TP1, uuid2);
         final LogSegmentData lsd2 = createLogSegmentData(segment2);
         remoteStorageManager.copyLogSegmentData(createLogSegmentMetadata(segmentId2, segment2), lsd2);
 
@@ -447,8 +441,9 @@ public class S3RemoteStorageManagerTest {
         return objects.stream().map(S3ObjectSummary::getKey).collect(Collectors.toList());
     }
 
-    private static String s3Key(final TopicPartition topicPartition, final String name) {
-        return topicPartition.toString() + "/" + name;
+    private static String s3Key(final TopicIdPartition topicIdPartition, final String name) {
+        return topicIdPartition.topicPartition().topic() + "-" + topicIdPartition.topicId() + "/"
+                + topicIdPartition.topicPartition().partition() + "/" + name;
     }
 
     static class AnonymousCredentialsProvider implements AWSCredentialsProvider {
