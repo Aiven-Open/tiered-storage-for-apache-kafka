@@ -18,6 +18,7 @@ package io.aiven.kafka.tiered.storage.s3;
 
 import java.text.NumberFormat;
 
+import org.apache.kafka.common.TopicIdPartition;
 import org.apache.kafka.server.log.remote.storage.RemoteLogSegmentId;
 import org.apache.kafka.server.log.remote.storage.RemoteLogSegmentMetadata;
 
@@ -31,7 +32,9 @@ public class S3StorageUtils {
     }
 
     private static String fileNamePrefix(final RemoteLogSegmentId remoteLogSegmentId) {
-        return remoteLogSegmentId.topicIdPartition().topicPartition().toString() + "/";
+        final TopicIdPartition topicIdPartition = remoteLogSegmentId.topicIdPartition();
+        return topicIdPartition.topicPartition().topic() + "-" + topicIdPartition.topicId() + "/"
+                + topicIdPartition.topicPartition().partition() + "/";
     }
 
     /**
