@@ -16,6 +16,8 @@
 
 package io.aiven.kafka.tiered.storage.commons.security;
 
+import javax.crypto.spec.SecretKeySpec;
+
 import java.io.IOException;
 import java.nio.file.Files;
 
@@ -23,8 +25,7 @@ import io.aiven.kafka.tiered.storage.commons.RsaKeyAwareTest;
 
 import org.junit.jupiter.api.Test;
 
-import static org.junit.jupiter.api.Assertions.assertEquals;
-import static org.junit.jupiter.api.Assertions.assertNotEquals;
+import static org.assertj.core.api.Assertions.assertThat;
 
 public class EncryptionKeyProviderTest extends RsaKeyAwareTest {
 
@@ -39,7 +40,7 @@ public class EncryptionKeyProviderTest extends RsaKeyAwareTest {
         final var key1 = ekp.createKey();
         final var key2 = ekp.createKey();
 
-        assertNotEquals(key1, key2);
+        assertThat(key1).isNotEqualTo(key2);
     }
 
     @Test
@@ -53,7 +54,7 @@ public class EncryptionKeyProviderTest extends RsaKeyAwareTest {
         final var encryptedKey = ekProvider.encryptKey(secretKey);
         final var restoredKey = ekProvider.decryptKey(encryptedKey);
 
-        assertEquals(secretKey, restoredKey);
+        assertThat(new SecretKeySpec(restoredKey, "AES")).isEqualTo(secretKey);
     }
 
 }

@@ -17,6 +17,7 @@
 package io.aiven.kafka.tiered.storage.s3;
 
 import javax.crypto.SecretKey;
+import javax.crypto.spec.SecretKeySpec;
 
 import java.io.ByteArrayInputStream;
 import java.io.IOException;
@@ -60,6 +61,20 @@ public class S3EncryptionKeyProvider {
     }
 
     public SecretKey createOrRestoreEncryptionKey(final String metadataFileKey) {
+        final byte[] secretKey = createOrRestoreEncryptionMetadata(metadataFileKey);
+        final byte[] encryptionKey = new byte[32];
+        System.arraycopy(secretKey, 0, encryptionKey, 0, 32);
+        return new SecretKeySpec(encryptionKey, "AES");
+    }
+
+    public byte[] createOrRestoreAAD(final String metadataFileKey) {
+        final byte[] secretKey = createOrRestoreEncryptionMetadata(metadataFileKey);
+        final byte[] aad = new byte[32];
+        System.arraycopy(secretKey, 32, aad, 0, 32);
+        return aad;
+    }
+
+    private byte[] createOrRestoreEncryptionMetadata(final String metadataFileKey) {
         final EncryptedRepositoryMetadata repositoryMetadata =
                 new EncryptedRepositoryMetadata(encryptionKeyProvider);
         if (s3Client.doesObjectExist(config.s3BucketName(), metadataFileKey)) {
@@ -78,7 +93,7 @@ public class S3EncryptionKeyProvider {
             } catch (final IOException e) {
                 throw new RuntimeException("Failed to create new metadata file", e);
             }
-            return encryptionKey;
+            return encryptionKey.getEncoded();
         }
     }
 

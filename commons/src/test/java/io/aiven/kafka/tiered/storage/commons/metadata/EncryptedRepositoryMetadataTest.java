@@ -16,7 +16,7 @@
 
 package io.aiven.kafka.tiered.storage.commons.metadata;
 
-import javax.crypto.SecretKey;
+import javax.crypto.spec.SecretKeySpec;
 
 import java.io.IOException;
 import java.nio.charset.StandardCharsets;
@@ -30,13 +30,14 @@ import com.fasterxml.jackson.databind.ObjectMapper;
 import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.Test;
 
+import static org.assertj.core.api.Assertions.assertThat;
 import static org.junit.jupiter.api.Assertions.assertEquals;
 import static org.junit.jupiter.api.Assertions.assertThrows;
 
 class EncryptedRepositoryMetadataTest extends RsaKeyAwareTest {
 
     static final String METADATA_JSON_PATTERN =
-        "{ \"key\": \"%s\", \"version\": %s }";
+        "{ \"encryptionMetadata\": \"%s\", \"version\": %s }";
 
     EncryptionKeyProvider encryptionKeyProvider;
 
@@ -54,12 +55,12 @@ class EncryptedRepositoryMetadataTest extends RsaKeyAwareTest {
         final var encKey = encryptionKeyProvider.createKey();
         final var bytes = new EncryptedRepositoryMetadata(encryptionKeyProvider).serialize(encKey);
 
-        final var encKeyMetadata = new ObjectMapper().readValue(bytes, EncryptionKeyMetadata.class);
+        final var encKeyMetadata = new ObjectMapper().readValue(bytes, EncryptionMetadata.class);
 
-        final var encryptedKey = Base64.getDecoder().decode(encKeyMetadata.key());
+        final var encryptedKey = Base64.getDecoder().decode(encKeyMetadata.encryptionMetadata());
 
-        assertEquals(encKey, encryptionKeyProvider.decryptKey(encryptedKey));
-        assertEquals(EncryptedRepositoryMetadata.VERSION, encKeyMetadata.version());
+        assertThat(new SecretKeySpec(encryptionKeyProvider.decryptKey(encryptedKey), "AES")).isEqualTo(encKey);
+        assertThat(encKeyMetadata.version()).isEqualTo(EncryptedRepositoryMetadata.VERSION);
     }
 
     @Test
@@ -75,7 +76,7 @@ class EncryptedRepositoryMetadataTest extends RsaKeyAwareTest {
 
         final var savedKey = deserializeMetadata(json);
 
-        assertEquals(encKey, savedKey);
+        assertThat(new SecretKeySpec(savedKey, "AES")).isEqualTo(encKey);
     }
 
     @Test
@@ -129,7 +130,7 @@ class EncryptedRepositoryMetadataTest extends RsaKeyAwareTest {
     }
 
 
-    private SecretKey deserializeMetadata(final String json) throws IOException {
+    private byte[] deserializeMetadata(final String json) throws IOException {
         return new EncryptedRepositoryMetadata(encryptionKeyProvider)
             .deserialize(json.getBytes(StandardCharsets.UTF_8));
     }
