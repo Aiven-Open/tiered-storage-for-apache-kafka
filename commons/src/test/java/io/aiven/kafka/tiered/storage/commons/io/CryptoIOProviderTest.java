@@ -16,6 +16,8 @@
 
 package io.aiven.kafka.tiered.storage.commons.io;
 
+import javax.crypto.spec.SecretKeySpec;
+
 import java.nio.ByteBuffer;
 import java.nio.file.Files;
 import java.nio.file.Path;
@@ -44,8 +46,12 @@ public class CryptoIOProviderTest extends RsaKeyAwareTest {
                 Files.newInputStream(publicKeyPem),
                 Files.newInputStream(privateKeyPem)
         );
-        final var encryptionKey = encProvider.createKey();
-        cryptoIOProvider = new CryptoIOProvider(encryptionKey, BUFFER_SIZE);
+        final var key = encProvider.createKey();
+        final byte[] encryptionKey = new byte[32];
+        System.arraycopy(key.getEncoded(), 0, encryptionKey, 0, 32);
+        final byte[] aad = new byte[32];
+        System.arraycopy(key.getEncoded(), 32, encryptionKey, 0, 32);
+        cryptoIOProvider = new CryptoIOProvider(new SecretKeySpec(encryptionKey, "AES"), aad, BUFFER_SIZE);
     }
 
     @Test

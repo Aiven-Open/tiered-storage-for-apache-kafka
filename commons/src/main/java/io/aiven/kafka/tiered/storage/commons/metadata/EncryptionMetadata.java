@@ -21,21 +21,21 @@ import com.fasterxml.jackson.annotation.JsonCreator;
 import com.fasterxml.jackson.annotation.JsonProperty;
 
 @JsonAutoDetect(fieldVisibility = JsonAutoDetect.Visibility.ANY)
-class EncryptionKeyMetadata {
+class EncryptionMetadata {
 
-    private final String key;
+    private final String encryptionMetadata;
 
     private final int version;
 
     @JsonCreator
-    public EncryptionKeyMetadata(@JsonProperty("key") final String key,
-                                 @JsonProperty("version") final int version) {
-        this.key = key;
+    public EncryptionMetadata(@JsonProperty("encryptionMetadata") final String encryptionMetadata,
+                              @JsonProperty("version") final int version) {
+        this.encryptionMetadata = encryptionMetadata;
         this.version = version;
     }
 
-    public String key() {
-        return key;
+    public String encryptionMetadata() {
+        return encryptionMetadata;
     }
 
     public int version() {

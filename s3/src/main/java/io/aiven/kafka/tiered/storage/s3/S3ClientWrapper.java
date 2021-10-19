@@ -86,7 +86,8 @@ public class S3ClientWrapper {
         }
         final String metadataFileKey = getFileKey(remoteLogSegmentMetadata, METADATA_FILE_SUFFIX);
         final SecretKey encryptionKey = s3EncryptionKeyProvider.createOrRestoreEncryptionKey(metadataFileKey);
-        final CryptoIOProvider cryptoIOProvider = new CryptoIOProvider(encryptionKey, config.ioBufferSize());
+        final byte[] aad = s3EncryptionKeyProvider.createOrRestoreAAD(metadataFileKey);
+        final CryptoIOProvider cryptoIOProvider = new CryptoIOProvider(encryptionKey, aad, config.ioBufferSize());
         final ArrayList<InputStream> inputStreams = new ArrayList<>();
         for (int i = firstPart; i < lastPart - 1; i++) {
             final String key = logFileKey + "_" + i;
@@ -123,7 +124,8 @@ public class S3ClientWrapper {
         final String leaderEpochIndexFileKey = getFileKey(remoteLogSegmentMetadata, LEADER_EPOCH.name());
         final String metadataFileKey = getFileKey(remoteLogSegmentMetadata, METADATA_FILE_SUFFIX);
         final SecretKey encryptionKey = s3EncryptionKeyProvider.createOrRestoreEncryptionKey(metadataFileKey);
-        final CryptoIOProvider cryptoIOProvider = new CryptoIOProvider(encryptionKey, config.ioBufferSize());
+        final byte[] aad = s3EncryptionKeyProvider.createOrRestoreAAD(metadataFileKey);
+        final CryptoIOProvider cryptoIOProvider = new CryptoIOProvider(encryptionKey, aad, config.ioBufferSize());
         try {
             log.debug("Uploading log file: {}", logFileKey);
             uploadLogFile(cryptoIOProvider, logFileKey, logSegmentData.logSegment());
@@ -223,7 +225,8 @@ public class S3ClientWrapper {
                     new GetObjectRequest(config.s3BucketName(), objectSummaries.get(0).getKey());
             final String metadataFileKey = getFileKey(remoteLogSegmentMetadata, METADATA_FILE_SUFFIX);
             final SecretKey encryptionKey = s3EncryptionKeyProvider.createOrRestoreEncryptionKey(metadataFileKey);
-            final CryptoIOProvider cryptoIOProvider = new CryptoIOProvider(encryptionKey, config.ioBufferSize());
+            final byte[] aad = s3EncryptionKeyProvider.createOrRestoreAAD(metadataFileKey);
+            final CryptoIOProvider cryptoIOProvider = new CryptoIOProvider(encryptionKey, aad, config.ioBufferSize());
             final S3Object s3Object = s3Client.getObject(getObjectRequest);
             try {
                 return cryptoIOProvider.decryptAndDecompress(s3Object.getObjectContent());

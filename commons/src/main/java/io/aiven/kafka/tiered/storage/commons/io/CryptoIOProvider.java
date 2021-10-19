@@ -33,22 +33,26 @@ import com.github.luben.zstd.ZstdOutputStream;
 
 public class CryptoIOProvider implements Encryption, Decryption {
 
-    static final String CIPHER_TRANSFORMATION = "AES/CTR/NoPadding";
+    static final String CIPHER_TRANSFORMATION = "AES/GCM/NoPadding";
 
-    static final int NONCE_LENGTH = 16;
+    static final int NONCE_LENGTH = 12;
 
     private final SecretKey encryptionKey;
 
     private final int bufferSize;
 
-    public CryptoIOProvider(final SecretKey encryptionKey, final int bufferSize) {
+    private final byte[] aad;
+
+    public CryptoIOProvider(final SecretKey encryptionKey, final byte[] aad, final int bufferSize) {
         this.encryptionKey = encryptionKey;
+        this.aad = aad;
         this.bufferSize = bufferSize;
     }
 
     public long compressAndEncrypt(final InputStream in,
                                    final OutputStream out) throws IOException {
         final var cipher = createEncryptingCipher(encryptionKey, CIPHER_TRANSFORMATION);
+        cipher.updateAAD(aad);
         out.write(cipher.getIV());
         try (final ZstdOutputStream encrypted = new ZstdOutputStream(new CipherOutputStream(out, cipher))) {
             return IOUtils.copy(in, encrypted, bufferSize);
@@ -60,6 +64,7 @@ public class CryptoIOProvider implements Encryption, Decryption {
                 encryptionKey,
                 new IvParameterSpec(in.readNBytes(NONCE_LENGTH)),
                 CIPHER_TRANSFORMATION);
+        cipher.updateAAD(aad);
         return new ZstdInputStream(new CipherInputStream(in, cipher));
     }
 }

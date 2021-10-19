@@ -23,6 +23,7 @@ import java.util.Base64;
 
 import io.aiven.kafka.tiered.storage.commons.security.EncryptionKeyProvider;
 
+import com.fasterxml.jackson.core.JsonProcessingException;
 import com.fasterxml.jackson.databind.ObjectMapper;
 
 public class EncryptedRepositoryMetadata {
@@ -38,25 +39,25 @@ public class EncryptedRepositoryMetadata {
         this.objectMapper = new ObjectMapper();
     }
 
-    public byte[] serialize(final SecretKey encryptionKey) throws IOException {
+    public byte[] serialize(final SecretKey encryptionKey) throws JsonProcessingException {
         final var encryptedKey =
             Base64.getEncoder()
                 .encodeToString(encryptionKeyProvider.encryptKey(encryptionKey));
-        return objectMapper.writeValueAsBytes(new EncryptionKeyMetadata(encryptedKey, VERSION));
+        return objectMapper.writeValueAsBytes(new EncryptionMetadata(encryptedKey, VERSION));
     }
 
-    public SecretKey deserialize(final byte[] metadata) throws IOException {
-        final EncryptionKeyMetadata encryptionKeyMetadata;
+    public byte[] deserialize(final byte[] metadata) throws IOException {
+        final EncryptionMetadata encryptionMetadata;
         try {
-            encryptionKeyMetadata = objectMapper.readValue(metadata, EncryptionKeyMetadata.class);
+            encryptionMetadata = objectMapper.readValue(metadata, EncryptionMetadata.class);
         } catch (final Exception e) {
             throw new IOException("Couldn't read JSON metadata", e);
         }
-        if (encryptionKeyMetadata.version() != VERSION) {
+        if (encryptionMetadata.version() != VERSION) {
             throw new IOException("Unsupported metadata version");
         }
         final var encryptedKey =
-            Base64.getDecoder().decode(encryptionKeyMetadata.key());
+            Base64.getDecoder().decode(encryptionMetadata.encryptionMetadata());
         return encryptionKeyProvider.decryptKey(encryptedKey);
     }
 
