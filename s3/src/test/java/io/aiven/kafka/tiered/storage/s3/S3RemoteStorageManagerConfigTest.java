@@ -51,6 +51,8 @@ class S3RemoteStorageManagerConfigTest {
         assertThat(config.ioBufferSize()).isEqualTo(8_192);
         assertThat(config.s3StorageUploadPartSize()).isEqualTo(1 << 19);
         assertThat(config.multiPartUploadPartSize()).isEqualTo(8_192);
+        assertThat(config.encryptionMetadataCacheSize()).isEqualTo(1000);
+        assertThat(config.encryptionMetadataCacheRetentionMs()).isEqualTo(1_800_000);
     }
 
     @Test
@@ -65,6 +67,8 @@ class S3RemoteStorageManagerConfigTest {
         properties.put("s3.io.buffer.size", "16384");
         properties.put("s3.upload.part.size", String.valueOf(1 << 10));
         properties.put("s3.multipart.upload.part.size", "16384");
+        properties.put("s3.encryption.metadata.cache.size", "2000");
+        properties.put("s3.encryption.metadata.cache.retention.ms", String.valueOf(3_600_000));
 
         final S3RemoteStorageManagerConfig config = new S3RemoteStorageManagerConfig(properties);
 
@@ -76,6 +80,8 @@ class S3RemoteStorageManagerConfigTest {
         assertThat(config.ioBufferSize()).isEqualTo(16_384);
         assertThat(config.s3StorageUploadPartSize()).isEqualTo(1 << 10);
         assertThat(config.multiPartUploadPartSize()).isEqualTo(16_384);
+        assertThat(config.encryptionMetadataCacheSize()).isEqualTo(2000);
+        assertThat(config.encryptionMetadataCacheRetentionMs()).isEqualTo(3_600_000);
     }
 
     @Test

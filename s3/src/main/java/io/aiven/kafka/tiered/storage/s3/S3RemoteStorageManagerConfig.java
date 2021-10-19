@@ -60,22 +60,27 @@ public class S3RemoteStorageManagerConfig extends AbstractConfig {
     private static final int IO_BUFFER_SIZE_DEFAULT = 8_192;
     private static final String IO_BUFFER_SIZE_DOC = "Buffer size for uploading";
 
-    public static final String S3_STORAGE_UPLOAD_PART_SIZE =
-            "s3.upload.part.size";
+    public static final String S3_STORAGE_UPLOAD_PART_SIZE = "s3.upload.part.size";
     private static final int S3_STORAGE_UPLOAD_PART_SIZE_DEFAULT = 524288;
     private static final String S3_STORAGE_UPLOAD_PART_SIZE_DOC = "S3 upload part size";
 
-    public static final String MULTIPART_UPLOAD_PART_SIZE =
-            "s3.multipart.upload.part.size";
+    public static final String MULTIPART_UPLOAD_PART_SIZE = "s3.multipart.upload.part.size";
     private static final int MULTIPART_UPLOAD_PART_SIZE_DEFAULT = 8_192;
     private static final String MULTIPART_UPLOAD_PART_SIZE_DOC = "S3 upload part size";
 
-    public static final String AWS_ACCESS_KEY_ID =
-            "s3.client.aws_access_key_id";
+    public static final String ENCRYPTION_METADATA_CACHE_SIZE = "s3.encryption.metadata.cache.size";
+    public static final long ENCRYPTION_METADATA_CACHE_SIZE_DEFAULT = 1000;
+    private static final String ENCRYPTION_METADATA_CACHE_SIZE_DOC = "Size of encryption metadata cache";
+
+    public static final String ENCRYPTION_METADATA_CACHE_RETENTION_MS = "s3.encryption.metadata.cache.retention.ms";
+    public static final long ENCRYPTION_METADATA_CACHE_RETENTION_MS_DEFAULT = 1_800_000;
+    private static final String ENCRYPTION_METADATA_CACHE_RETENTION_MS_DOC =
+            "Retention time for encryption metadata cache";
+
+    public static final String AWS_ACCESS_KEY_ID = "s3.client.aws_access_key_id";
     private static final String AWS_ACCESS_KEY_ID_DOC = "AWS Access Key ID";
 
-    public static final String AWS_SECRET_ACCESS_KEY =
-            "s3.client.aws_secret_access_key";
+    public static final String AWS_SECRET_ACCESS_KEY = "s3.client.aws_secret_access_key";
     private static final String AWS_SECRET_ACCESS_KEY_DOC = "AWS Secret Access Key";
 
     private static final ConfigDef CONFIG;
@@ -145,6 +150,24 @@ public class S3RemoteStorageManagerConfig extends AbstractConfig {
             ConfigDef.Range.between(1024, Integer.MAX_VALUE),
             ConfigDef.Importance.HIGH,
             MULTIPART_UPLOAD_PART_SIZE_DOC
+        );
+
+        CONFIG.define(
+                ENCRYPTION_METADATA_CACHE_SIZE,
+                ConfigDef.Type.LONG,
+                ENCRYPTION_METADATA_CACHE_SIZE_DEFAULT,
+                ConfigDef.Range.between(0, Long.MAX_VALUE),
+                ConfigDef.Importance.LOW,
+                ENCRYPTION_METADATA_CACHE_SIZE_DOC
+        );
+
+        CONFIG.define(
+                ENCRYPTION_METADATA_CACHE_RETENTION_MS,
+                ConfigDef.Type.LONG,
+                ENCRYPTION_METADATA_CACHE_RETENTION_MS_DEFAULT,
+                ConfigDef.Range.between(0, Long.MAX_VALUE),
+                ConfigDef.Importance.LOW,
+                ENCRYPTION_METADATA_CACHE_RETENTION_MS_DOC
         );
 
         int awsGroupCounter = 0;
@@ -238,6 +261,14 @@ public class S3RemoteStorageManagerConfig extends AbstractConfig {
 
     public int multiPartUploadPartSize() {
         return getInt(MULTIPART_UPLOAD_PART_SIZE);
+    }
+
+    public long encryptionMetadataCacheSize() {
+        return getLong(ENCRYPTION_METADATA_CACHE_SIZE);
+    }
+
+    public long encryptionMetadataCacheRetentionMs() {
+        return getLong(ENCRYPTION_METADATA_CACHE_RETENTION_MS);
     }
 
     public AWSCredentialsProvider awsCredentialsProvider() {

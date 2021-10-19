@@ -25,6 +25,7 @@ import java.io.InputStream;
 import java.nio.file.Files;
 import java.nio.file.Path;
 import java.security.Security;
+import java.util.concurrent.TimeUnit;
 
 import io.aiven.kafka.tiered.storage.commons.io.IOUtils;
 import io.aiven.kafka.tiered.storage.commons.metadata.EncryptedRepositoryMetadata;
@@ -32,6 +33,8 @@ import io.aiven.kafka.tiered.storage.commons.security.EncryptionKeyProvider;
 
 import com.amazonaws.AmazonClientException;
 import com.amazonaws.services.s3.AmazonS3;
+import com.github.benmanes.caffeine.cache.Cache;
+import com.github.benmanes.caffeine.cache.Caffeine;
 import org.bouncycastle.jce.provider.BouncyCastleProvider;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
@@ -41,6 +44,7 @@ public class S3EncryptionKeyProvider {
     private final AmazonS3 s3Client;
     private final S3RemoteStorageManagerConfig config;
     private final EncryptionKeyProvider encryptionKeyProvider;
+    private final Cache<String, byte[]> encryptionMetadataCache;
 
     static {
         Security.addProvider(new BouncyCastleProvider());
@@ -49,6 +53,10 @@ public class S3EncryptionKeyProvider {
     public S3EncryptionKeyProvider(final AmazonS3 s3Client, final S3RemoteStorageManagerConfig config) {
         this.s3Client = s3Client;
         this.config = config;
+        this.encryptionMetadataCache = Caffeine.newBuilder()
+                .expireAfterWrite(config.encryptionMetadataCacheRetentionMs(), TimeUnit.MILLISECONDS)
+                .maximumSize(config.encryptionMetadataCacheSize())
+                .build();
         try {
             encryptionKeyProvider = EncryptionKeyProvider.of(
                     Files.newInputStream(Path.of(config.publicKey())),
@@ -77,24 +85,26 @@ public class S3EncryptionKeyProvider {
     private byte[] createOrRestoreEncryptionMetadata(final String metadataFileKey) {
         final EncryptedRepositoryMetadata repositoryMetadata =
                 new EncryptedRepositoryMetadata(encryptionKeyProvider);
-        if (s3Client.doesObjectExist(config.s3BucketName(), metadataFileKey)) {
-            log.info("Restoring encryption key from metadata file. Path: {}", metadataFileKey);
-            try (final InputStream in = s3Client.getObject(config.s3BucketName(),
-                    metadataFileKey).getObjectContent()) {
-                return repositoryMetadata.deserialize(in.readAllBytes());
-            } catch (final AmazonClientException | IOException e) {
-                throw new RuntimeException("Couldn't read metadata file from bucket " + config.s3BucketName(), e);
+        return encryptionMetadataCache.get(metadataFileKey, key -> {
+            if (s3Client.doesObjectExist(config.s3BucketName(), metadataFileKey)) {
+                log.info("Restoring encryption key from metadata file. Path: {}", metadataFileKey);
+                try (final InputStream in = s3Client.getObject(config.s3BucketName(),
+                        metadataFileKey).getObjectContent()) {
+                    return repositoryMetadata.deserialize(in.readAllBytes());
+                } catch (final AmazonClientException | IOException e) {
+                    throw new RuntimeException("Couldn't read metadata file from bucket " + config.s3BucketName(), e);
+                }
+            } else {
+                log.info("Creating new metadata file. Path: {}", metadataFileKey);
+                final SecretKey encryptionKey = encryptionKeyProvider.createKey();
+                try {
+                    uploadMetadata(repositoryMetadata.serialize(encryptionKey), metadataFileKey);
+                } catch (final IOException e) {
+                    throw new RuntimeException("Failed to create new metadata file", e);
+                }
+                return encryptionKey.getEncoded();
             }
-        } else {
-            log.info("Creating new metadata file. Path: {}", metadataFileKey);
-            final SecretKey encryptionKey = encryptionKeyProvider.createKey();
-            try {
-                uploadMetadata(repositoryMetadata.serialize(encryptionKey), metadataFileKey);
-            } catch (final IOException e) {
-                throw new RuntimeException("Failed to create new metadata file", e);
-            }
-            return encryptionKey.getEncoded();
-        }
+        });
     }
 
     private void uploadMetadata(final byte[] repositoryMetadata, final String metadataFileKey)
