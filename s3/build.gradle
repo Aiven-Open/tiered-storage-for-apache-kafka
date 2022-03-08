@@ -30,7 +30,7 @@ dependencies {
     runtimeOnly "com.github.luben:zstd-jni:1.5.2-2"
     testImplementation 'org.mockito:mockito-core:3.12.1'
     testImplementation 'org.mockito:mockito-junit-jupiter:4.3.1'
-    integrationTestImplementation 'cloud.localstack:localstack-utils:0.2.14'
+    integrationTestImplementation 'cloud.localstack:localstack-utils:0.2.20'
 }
 
 sourceSets {
