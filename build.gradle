@@ -68,7 +68,7 @@ subprojects {
     dependencies {
         compileOnly name: "kafka-storage-api-3.1.0-SNAPSHOT"
         compileOnly name: "kafka-clients-3.1.0-SNAPSHOT"
-        compileOnly "org.slf4j:slf4j-api:1.7.32"
+        compileOnly "org.slf4j:slf4j-api:1.7.36"
         implementation "org.bouncycastle:bcprov-jdk15on:1.69"
         testRuntimeOnly "org.junit.jupiter:junit-jupiter-engine:$junitVersion"
         testImplementation name: "kafka-storage-api-3.1.0-SNAPSHOT"
