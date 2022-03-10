@@ -23,7 +23,7 @@ dependencies {
     implementation project(':commons')
     implementation 'com.amazonaws:aws-java-sdk-s3:1.12.175'
     implementation 'commons-io:commons-io:2.11.0'
-    implementation 'com.github.ben-manes.caffeine:caffeine:3.0.4'
+    implementation 'com.github.ben-manes.caffeine:caffeine:3.0.5'
     // Temporary. Will be later provided as transitive from kafka-storage-api
     runtimeOnly 'com.fasterxml.jackson.core:jackson-databind:2.13.2'
     // Temporary. Will be later provided as transitive from kafka-clients.
