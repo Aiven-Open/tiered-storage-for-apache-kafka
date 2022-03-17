@@ -21,7 +21,7 @@ configurations {
 
 dependencies {
     implementation project(':commons')
-    implementation 'com.amazonaws:aws-java-sdk-s3:1.12.178'
+    implementation 'com.amazonaws:aws-java-sdk-s3:1.12.180'
     implementation 'commons-io:commons-io:2.11.0'
     implementation 'com.github.ben-manes.caffeine:caffeine:3.0.5'
     // Temporary. Will be later provided as transitive from kafka-storage-api
