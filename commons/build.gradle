@@ -16,7 +16,7 @@
 
 dependencies {
     // The client of a library should provide a runtime dependency. For now taking the version from kafka-storage-api
-    compileOnly 'com.fasterxml.jackson.core:jackson-databind:2.13.2'
+    compileOnly 'com.fasterxml.jackson.core:jackson-databind:2.13.2.1'
     // The client of a library should provide a runtime dependency.
     // For now taking the version from kafka-clients
     compileOnly "com.github.luben:zstd-jni:1.5.2-2"
