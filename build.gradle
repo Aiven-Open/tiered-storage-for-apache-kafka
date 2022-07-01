@@ -61,7 +61,7 @@ subprojects {
     }
 
     ext {
-        testcontainersVersion = "1.17.2"
+        testcontainersVersion = "1.17.3"
         junitVersion = "5.8.2"
     }
 
