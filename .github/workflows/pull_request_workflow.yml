@@ -1,9 +1,9 @@
-# The workflow to check pull requests into master.
+# The workflow to check pull requests into main.
 # This checks the source in the state as if after the merge.
 name: Pull request checks
 on:
   pull_request:
-    branches: [ master ]
+    branches: [main]
 jobs:
   build:
     name: Build

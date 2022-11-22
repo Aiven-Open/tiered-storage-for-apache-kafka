@@ -1,8 +1,8 @@
-# The workflow to check master after push.
-name: Master checks after push
+# The workflow to check main after push.
+name: Main checks after push
 on:
   push:
-    branches: [ master ]
+    branches: [main]
 jobs:
   build:
     name: Build

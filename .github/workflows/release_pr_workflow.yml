@@ -29,10 +29,10 @@ jobs:
             exit 1
           fi
 
-      - name: Checkout master
+      - name: Checkout main
         uses: actions/checkout@v2
         with:
-          ref: master
+          ref: main
           fetch-depth: 0
 
       - name: Create release commits
