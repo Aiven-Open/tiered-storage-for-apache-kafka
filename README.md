@@ -33,6 +33,6 @@ All product and service names used in this page are for identification purposes 
 
 This project is maintained by, [Aiven](https://aiven.io/) open source developers.
 
-Recent contributors are listed on the GitHub project page, <https://github.com/aiven/klaw/graphs/contributors>.
+Recent contributors are listed on the GitHub project page, <https://github.com/aiven/tiered-storage-for-apache-kafka/graphs/contributors>.
 
 Copyright (c) 2022 Aiven Oy and project contributors.
