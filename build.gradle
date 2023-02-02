@@ -20,6 +20,15 @@ buildscript {
     }
 }
 
+wrapper {
+    distributionType = 'ALL'
+    doLast {
+        def sha256Sum = new String(new URL("${distributionUrl}.sha256").bytes)
+        propertiesFile << "distributionSha256Sum=${sha256Sum}\n"
+        println "Added checksum to wrapper properties"
+    }
+}
+
 subprojects {
     // https://docs.gradle.org/current/userguide/java_library_plugin.html
     apply plugin: "java"
