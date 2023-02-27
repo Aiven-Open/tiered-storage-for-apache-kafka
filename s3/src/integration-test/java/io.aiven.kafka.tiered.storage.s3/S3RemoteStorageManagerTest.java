@@ -59,15 +59,13 @@ import org.apache.kafka.server.log.remote.storage.RemoteLogSegmentId;
 import org.apache.kafka.server.log.remote.storage.RemoteLogSegmentMetadata;
 import org.apache.kafka.server.log.remote.storage.RemoteStorageManager;
 
-import cloud.localstack.Localstack;
-import cloud.localstack.awssdkv1.TestUtils;
-import cloud.localstack.docker.LocalstackDockerExtension;
-import cloud.localstack.docker.annotation.LocalstackDockerProperties;
 import com.amazonaws.auth.AWSCredentials;
 import com.amazonaws.auth.AWSCredentialsProvider;
+import com.amazonaws.auth.AWSStaticCredentialsProvider;
 import com.amazonaws.auth.BasicAWSCredentials;
 import com.amazonaws.client.builder.AwsClientBuilder;
 import com.amazonaws.services.s3.AmazonS3;
+import com.amazonaws.services.s3.AmazonS3ClientBuilder;
 import com.amazonaws.services.s3.model.S3ObjectSummary;
 import kafka.log.LazyIndex;
 import kafka.log.Log;
@@ -82,17 +80,17 @@ import org.junit.jupiter.api.AfterEach;
 import org.junit.jupiter.api.BeforeAll;
 import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.Test;
-import org.junit.jupiter.api.extension.ExtendWith;
 import org.junit.jupiter.api.io.TempDir;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
+import org.testcontainers.containers.localstack.LocalStackContainer;
+import org.testcontainers.junit.jupiter.Container;
 import org.testcontainers.junit.jupiter.Testcontainers;
+import org.testcontainers.utility.DockerImageName;
 
 import static org.assertj.core.api.Assertions.assertThat;
 
 
-@ExtendWith(LocalstackDockerExtension.class)
-@LocalstackDockerProperties(services = {"s3"})
 @Testcontainers
 public class S3RemoteStorageManagerTest {
     private static final Logger log = LoggerFactory.getLogger(S3RemoteStorageManagerTest.class);
@@ -109,6 +107,12 @@ public class S3RemoteStorageManagerTest {
 
     /* A consistent random number generator to make tests repeatable */
     public static final Random SEEDED_RANDOM = new Random(192348092834L);
+
+    @Container
+    public static final LocalStackContainer LOCALSTACK = new LocalStackContainer(
+        DockerImageName.parse("localstack/localstack:0.11.3")
+    ).withServices(LocalStackContainer.Service.S3);
+
     private static Path publicKeyPem;
     private static Path privateKeyPem;
 
@@ -128,7 +132,20 @@ public class S3RemoteStorageManagerTest {
     @BeforeAll
     public static void setUpClass(@TempDir final Path tmpFolder)
             throws NoSuchAlgorithmException, NoSuchProviderException, IOException {
-        s3Client = TestUtils.getClientS3();
+        s3Client = AmazonS3ClientBuilder
+            .standard()
+            .withEndpointConfiguration(
+                new AwsClientBuilder.EndpointConfiguration(
+                    LOCALSTACK.getEndpointOverride(LocalStackContainer.Service.S3).toString(),
+                    LOCALSTACK.getRegion()
+                )
+            )
+            .withCredentials(
+                new AWSStaticCredentialsProvider(
+                    new BasicAWSCredentials(LOCALSTACK.getAccessKey(), LOCALSTACK.getSecretKey())
+                )
+            )
+            .build();
         final KeyPairGenerator keyPairGenerator = KeyPairGenerator.getInstance("RSA", "BC");
         keyPairGenerator.initialize(2048, SecureRandom.getInstanceStrong());
         final KeyPair rsaKeyPair = keyPairGenerator.generateKeyPair();
@@ -149,7 +166,9 @@ public class S3RemoteStorageManagerTest {
         bucket = randomString(10).toLowerCase(Locale.ROOT);
         s3Client.createBucket(bucket);
         final AwsClientBuilder.EndpointConfiguration endpointConfiguration = new AwsClientBuilder.EndpointConfiguration(
-                Localstack.INSTANCE.getEndpointS3(), "us-east-1");
+            LOCALSTACK.getEndpointOverride(LocalStackContainer.Service.S3).toString(),
+            LOCALSTACK.getRegion()
+        );
         remoteStorageManager = new S3RemoteStorageManager(endpointConfiguration);
         remoteStorageManager.configure(basicProps(bucket));
     }
