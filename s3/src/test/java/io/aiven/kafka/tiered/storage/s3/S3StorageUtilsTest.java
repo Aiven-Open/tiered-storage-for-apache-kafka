@@ -39,22 +39,27 @@ class S3StorageUtilsTest {
         final TopicIdPartition topicIdPartition = new TopicIdPartition(Uuid.randomUuid(), topicPartition);
         final Uuid id = Uuid.randomUuid();
         final RemoteLogSegmentId remoteLogSegmentId = new RemoteLogSegmentId(topicIdPartition, id);
+        final String prefix = "path";
         final String suffix = "log";
 
         final RemoteLogSegmentMetadata metadata =
                 new RemoteLogSegmentMetadata(remoteLogSegmentId, 1, -1, -1, -1, 1L,
                         1, Collections.singletonMap(1, 100L));
 
-        assertThat(S3StorageUtils.getFileKey(metadata, suffix))
-                .isEqualTo(TOPIC + "-" + topicIdPartition.topicId() + "/"
+        assertThat(S3StorageUtils.getFileKey(metadata, "", suffix))
+            .isEqualTo(TOPIC + "-" + topicIdPartition.topicId() + "/"
+                + topicPartition.partition() + "/" + id + "-00000000000000000001." + suffix);
+
+        assertThat(S3StorageUtils.getFileKey(metadata, prefix, suffix))
+                .isEqualTo(prefix + "/" + TOPIC + "-" + topicIdPartition.topicId() + "/"
                         + topicPartition.partition() + "/" + id + "-00000000000000000001." + suffix);
 
         final RemoteLogSegmentMetadata metadata2 =
                 new RemoteLogSegmentMetadata(remoteLogSegmentId, Long.MAX_VALUE, -1, -1, -1, 1L,
                         1, Collections.singletonMap(1, 100L));
 
-        assertThat(S3StorageUtils.getFileKey(metadata2, suffix))
-                .isEqualTo(TOPIC + "-" + topicIdPartition.topicId() + "/"
-                        + topicPartition.partition() + "/" + id + "-09223372036854775807." + suffix);
+        assertThat(S3StorageUtils.getFileKey(metadata2, prefix, suffix))
+                .isEqualTo(prefix + "/" + TOPIC + "-" + topicIdPartition.topicId() + "/"
+                    + topicPartition.partition() + "/" + id + "-09223372036854775807." + suffix);
     }
 }

@@ -25,10 +25,10 @@ import org.apache.kafka.server.log.remote.storage.RemoteLogSegmentMetadata;
 public class S3StorageUtils {
 
     public static String getFileKey(final RemoteLogSegmentMetadata remoteLogSegmentMetadata,
-                                    final String suffix) {
+                                     final String prefix, final String suffix) {
         final RemoteLogSegmentId remoteLogSegmentId = remoteLogSegmentMetadata.remoteLogSegmentId();
-        return fileNamePrefix(remoteLogSegmentId) + remoteLogSegmentId.id() + "-"
-                + filenamePrefixFromOffset(remoteLogSegmentMetadata.startOffset()) + "." + suffix;
+        return (prefix.isBlank() ? "" : prefix + "/") + fileNamePrefix(remoteLogSegmentId) + remoteLogSegmentId.id()
+            + "-" + filenamePrefixFromOffset(remoteLogSegmentMetadata.startOffset()) + "." + suffix;
     }
 
     private static String fileNamePrefix(final RemoteLogSegmentId remoteLogSegmentId) {

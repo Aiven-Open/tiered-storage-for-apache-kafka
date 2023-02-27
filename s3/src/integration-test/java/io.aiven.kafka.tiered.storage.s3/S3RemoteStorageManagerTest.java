@@ -88,6 +88,7 @@ import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 import org.testcontainers.junit.jupiter.Testcontainers;
 
+import static io.aiven.kafka.tiered.storage.s3.S3StorageUtils.filenamePrefixFromOffset;
 import static org.assertj.core.api.Assertions.assertThat;
 
 
@@ -119,6 +120,7 @@ public class S3RemoteStorageManagerTest {
     private static AmazonS3 s3Client;
 
     private String bucket;
+    private String s3PathPrefix;
     private S3RemoteStorageManager remoteStorageManager;
 
     static {
@@ -148,10 +150,11 @@ public class S3RemoteStorageManagerTest {
 
         bucket = randomString(10).toLowerCase(Locale.ROOT);
         s3Client.createBucket(bucket);
+        s3PathPrefix = randomString(10).toLowerCase(Locale.ROOT);
         final AwsClientBuilder.EndpointConfiguration endpointConfiguration = new AwsClientBuilder.EndpointConfiguration(
                 Localstack.INSTANCE.getEndpointS3(), "us-east-1");
         remoteStorageManager = new S3RemoteStorageManager(endpointConfiguration);
-        remoteStorageManager.configure(basicProps(bucket));
+        remoteStorageManager.configure(basicProps(bucket, s3PathPrefix));
     }
 
     protected static void writePemFile(final Path path, final EncodedKeySpec encodedKeySpec) throws IOException {
@@ -213,13 +216,13 @@ public class S3RemoteStorageManagerTest {
                 s3Key(TP0, uuid1 + "-" + baseLogFileName1) + "_1",
                 s3Key(TP0, uuid1 + "-" + baseLogFileName1) + "_2",
                 s3Key(TP0, uuid1 + "-" + baseLogFileName1) + "_3",
-                s3Key(TP0, uuid1 + "-" + S3StorageUtils.filenamePrefixFromOffset(segment1.baseOffset()) + "."
+                s3Key(TP0, uuid1 + "-" + filenamePrefixFromOffset(segment1.baseOffset()) + "."
                         + RemoteStorageManager.IndexType.OFFSET),
-                s3Key(TP0, uuid1 + "-" + S3StorageUtils.filenamePrefixFromOffset(segment1.baseOffset()) + "."
+                s3Key(TP0, uuid1 + "-" + filenamePrefixFromOffset(segment1.baseOffset()) + "."
                         + RemoteStorageManager.IndexType.TIMESTAMP),
-                s3Key(TP0, uuid1 + "-" + S3StorageUtils.filenamePrefixFromOffset(segment1.baseOffset()) + "."
+                s3Key(TP0, uuid1 + "-" + filenamePrefixFromOffset(segment1.baseOffset()) + "."
                         + RemoteStorageManager.IndexType.PRODUCER_SNAPSHOT),
-                s3Key(TP0, uuid1 + "-" + S3StorageUtils.filenamePrefixFromOffset(segment1.baseOffset()) + "."
+                s3Key(TP0, uuid1 + "-" + filenamePrefixFromOffset(segment1.baseOffset()) + "."
                         + RemoteStorageManager.IndexType.TRANSACTION),
                 s3Key(TP0, uuid1 + "-" + String.format("%020d", segment1.baseOffset()) + "."
                         + RemoteStorageManager.IndexType.LEADER_EPOCH),
@@ -228,15 +231,15 @@ public class S3RemoteStorageManagerTest {
                 s3Key(TP1, uuid2 + "-" + baseLogFileName2) + "_1",
                 s3Key(TP1, uuid2 + "-" + baseLogFileName2) + "_2",
                 s3Key(TP1, uuid2 + "-" + baseLogFileName2) + "_3",
-                s3Key(TP1, uuid2 + "-" + S3StorageUtils.filenamePrefixFromOffset(segment2.baseOffset()) + "."
+                s3Key(TP1, uuid2 + "-" + filenamePrefixFromOffset(segment2.baseOffset()) + "."
                         + RemoteStorageManager.IndexType.OFFSET),
-                s3Key(TP1, uuid2 + "-" + S3StorageUtils.filenamePrefixFromOffset(segment2.baseOffset()) + "."
+                s3Key(TP1, uuid2 + "-" + filenamePrefixFromOffset(segment2.baseOffset()) + "."
                         + RemoteStorageManager.IndexType.TIMESTAMP),
-                s3Key(TP1, uuid2 + "-" + S3StorageUtils.filenamePrefixFromOffset(segment2.baseOffset()) + "."
+                s3Key(TP1, uuid2 + "-" + filenamePrefixFromOffset(segment2.baseOffset()) + "."
                         + RemoteStorageManager.IndexType.PRODUCER_SNAPSHOT),
-                s3Key(TP1, uuid2 + "-" + S3StorageUtils.filenamePrefixFromOffset(segment2.baseOffset()) + "."
+                s3Key(TP1, uuid2 + "-" + filenamePrefixFromOffset(segment2.baseOffset()) + "."
                         + RemoteStorageManager.IndexType.TRANSACTION),
-                s3Key(TP1, uuid2 + "-" + S3StorageUtils.filenamePrefixFromOffset(segment2.baseOffset()) + "."
+                s3Key(TP1, uuid2 + "-" + filenamePrefixFromOffset(segment2.baseOffset()) + "."
                         + RemoteStorageManager.IndexType.LEADER_EPOCH),
                 s3Key(TP1, uuid2 + "-" + String.format("%020d", segment2.baseOffset()) + ".metadata.json")
         );
@@ -351,15 +354,15 @@ public class S3RemoteStorageManagerTest {
                 s3Key(TP1, uuid2 + "-" + baseLogFileName2) + "_1",
                 s3Key(TP1, uuid2 + "-" + baseLogFileName2) + "_2",
                 s3Key(TP1, uuid2 + "-" + baseLogFileName2) + "_3",
-                s3Key(TP1, uuid2 + "-" + S3StorageUtils.filenamePrefixFromOffset(segment2.baseOffset()) + "."
+                s3Key(TP1, uuid2 + "-" + filenamePrefixFromOffset(segment2.baseOffset()) + "."
                         + RemoteStorageManager.IndexType.OFFSET),
-                s3Key(TP1, uuid2 + "-" + S3StorageUtils.filenamePrefixFromOffset(segment2.baseOffset()) + "."
+                s3Key(TP1, uuid2 + "-" + filenamePrefixFromOffset(segment2.baseOffset()) + "."
                         + RemoteStorageManager.IndexType.TIMESTAMP),
-                s3Key(TP1, uuid2 + "-" + S3StorageUtils.filenamePrefixFromOffset(segment2.baseOffset()) + "."
+                s3Key(TP1, uuid2 + "-" + filenamePrefixFromOffset(segment2.baseOffset()) + "."
                         + RemoteStorageManager.IndexType.PRODUCER_SNAPSHOT),
-                s3Key(TP1, uuid2 + "-" + S3StorageUtils.filenamePrefixFromOffset(segment2.baseOffset()) + "."
+                s3Key(TP1, uuid2 + "-" + filenamePrefixFromOffset(segment2.baseOffset()) + "."
                         + RemoteStorageManager.IndexType.TRANSACTION),
-                s3Key(TP1, uuid2 + "-" + S3StorageUtils.filenamePrefixFromOffset(segment2.baseOffset()) + "."
+                s3Key(TP1, uuid2 + "-" + filenamePrefixFromOffset(segment2.baseOffset()) + "."
                         + RemoteStorageManager.IndexType.LEADER_EPOCH),
                 s3Key(TP1, uuid2 + "-" + String.format("%020d", segment2.baseOffset()) + ".metadata.json")
         );
@@ -387,9 +390,10 @@ public class S3RemoteStorageManagerTest {
         }
     }
 
-    private static Map<String, String> basicProps(final String bucket) {
+    private static Map<String, String> basicProps(final String bucket, final String prefix) {
         final Map<String, String> props = new HashMap<>();
         props.put(S3RemoteStorageManagerConfig.S3_BUCKET_NAME_CONFIG, bucket);
+        props.put(S3RemoteStorageManagerConfig.S3_PREFIX, prefix);
         props.put(S3RemoteStorageManagerConfig.S3_CREDENTIALS_PROVIDER_CLASS_CONFIG,
                 AnonymousCredentialsProvider.class.getName());
         props.put(S3RemoteStorageManagerConfig.PUBLIC_KEY, publicKeyPem.toString());
@@ -441,9 +445,9 @@ public class S3RemoteStorageManagerTest {
         return objects.stream().map(S3ObjectSummary::getKey).collect(Collectors.toList());
     }
 
-    private static String s3Key(final TopicIdPartition topicIdPartition, final String name) {
-        return topicIdPartition.topicPartition().topic() + "-" + topicIdPartition.topicId() + "/"
-                + topicIdPartition.topicPartition().partition() + "/" + name;
+    private String s3Key(final TopicIdPartition topicIdPartition, final String name) {
+        return s3PathPrefix + "/" + topicIdPartition.topicPartition().topic() + "-" + topicIdPartition.topicId() + "/"
+            + topicIdPartition.topicPartition().partition() + "/" + name;
     }
 
     static class AnonymousCredentialsProvider implements AWSCredentialsProvider {

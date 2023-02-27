@@ -75,7 +75,7 @@ public class S3ClientWrapper {
     public InputStream fetchLogFile(final RemoteLogSegmentMetadata remoteLogSegmentMetadata,
                                     final int startPosition,
                                     final int endPosition) throws RemoteStorageException {
-        final String logFileKey = getFileKey(remoteLogSegmentMetadata, LOG_FILE_SUFFIX);
+        final String logFileKey = getFileKey(remoteLogSegmentMetadata, config.s3Prefix(), LOG_FILE_SUFFIX);
 
         final int firstPart = startPosition / config.s3StorageUploadPartSize();
         final int lastPart;
@@ -84,7 +84,7 @@ public class S3ClientWrapper {
         } else {
             lastPart = endPosition / config.s3StorageUploadPartSize() + 1;
         }
-        final String metadataFileKey = getFileKey(remoteLogSegmentMetadata, METADATA_FILE_SUFFIX);
+        final String metadataFileKey = getFileKey(remoteLogSegmentMetadata, config.s3Prefix(), METADATA_FILE_SUFFIX);
         final SecretKey encryptionKey = s3EncryptionKeyProvider.createOrRestoreEncryptionKey(metadataFileKey);
         final byte[] aad = s3EncryptionKeyProvider.createOrRestoreAAD(metadataFileKey);
         final CryptoIOProvider cryptoIOProvider = new CryptoIOProvider(encryptionKey, aad, config.ioBufferSize());
@@ -116,13 +116,16 @@ public class S3ClientWrapper {
     public void uploadLogSegmentData(final RemoteLogSegmentMetadata remoteLogSegmentMetadata,
                                      final LogSegmentData logSegmentData) throws RemoteStorageException {
 
-        final String logFileKey = getFileKey(remoteLogSegmentMetadata, LOG_FILE_SUFFIX);
-        final String offsetIndexFileKey = getFileKey(remoteLogSegmentMetadata, OFFSET.name());
-        final String timeIndexFileKey = getFileKey(remoteLogSegmentMetadata, TIMESTAMP.name());
-        final String producerSnapshotFileKey = getFileKey(remoteLogSegmentMetadata, PRODUCER_SNAPSHOT.name());
-        final String transactionIndexFileKey = getFileKey(remoteLogSegmentMetadata, TRANSACTION.name());
-        final String leaderEpochIndexFileKey = getFileKey(remoteLogSegmentMetadata, LEADER_EPOCH.name());
-        final String metadataFileKey = getFileKey(remoteLogSegmentMetadata, METADATA_FILE_SUFFIX);
+        final String logFileKey = getFileKey(remoteLogSegmentMetadata, config.s3Prefix(), LOG_FILE_SUFFIX);
+        final String offsetIndexFileKey = getFileKey(remoteLogSegmentMetadata, config.s3Prefix(), OFFSET.name());
+        final String timeIndexFileKey = getFileKey(remoteLogSegmentMetadata, config.s3Prefix(), TIMESTAMP.name());
+        final String producerSnapshotFileKey =
+            getFileKey(remoteLogSegmentMetadata, config.s3Prefix(), PRODUCER_SNAPSHOT.name());
+        final String transactionIndexFileKey =
+            getFileKey(remoteLogSegmentMetadata, config.s3Prefix(), TRANSACTION.name());
+        final String leaderEpochIndexFileKey =
+            getFileKey(remoteLogSegmentMetadata, config.s3Prefix(), LEADER_EPOCH.name());
+        final String metadataFileKey = getFileKey(remoteLogSegmentMetadata, config.s3Prefix(), METADATA_FILE_SUFFIX);
         final SecretKey encryptionKey = s3EncryptionKeyProvider.createOrRestoreEncryptionKey(metadataFileKey);
         final byte[] aad = s3EncryptionKeyProvider.createOrRestoreAAD(metadataFileKey);
         final CryptoIOProvider cryptoIOProvider = new CryptoIOProvider(encryptionKey, aad, config.ioBufferSize());
@@ -217,13 +220,14 @@ public class S3ClientWrapper {
 
         Objects.requireNonNull(remoteLogSegmentMetadata, "remoteLogSegmentMetadata must not be null");
 
-        final String indexFileKey = getFileKey(remoteLogSegmentMetadata, indexType.name());
+        final String indexFileKey = getFileKey(remoteLogSegmentMetadata, config.s3Prefix(), indexType.name());
         final List<S3ObjectSummary> objectSummaries =
                 s3Client.listObjects(config.s3BucketName(), indexFileKey).getObjectSummaries();
         if (objectSummaries.size() == 1) {
             final GetObjectRequest getObjectRequest =
                     new GetObjectRequest(config.s3BucketName(), objectSummaries.get(0).getKey());
-            final String metadataFileKey = getFileKey(remoteLogSegmentMetadata, METADATA_FILE_SUFFIX);
+            final String metadataFileKey =
+                getFileKey(remoteLogSegmentMetadata, config.s3Prefix(), METADATA_FILE_SUFFIX);
             final SecretKey encryptionKey = s3EncryptionKeyProvider.createOrRestoreEncryptionKey(metadataFileKey);
             final byte[] aad = s3EncryptionKeyProvider.createOrRestoreAAD(metadataFileKey);
             final CryptoIOProvider cryptoIOProvider = new CryptoIOProvider(encryptionKey, aad, config.ioBufferSize());
@@ -243,7 +247,7 @@ public class S3ClientWrapper {
 
     public void deleteSegmentData(final RemoteLogSegmentMetadata remoteLogSegmentMetadata) {
         final List<String> filesToDelete =
-                s3Client.listObjects(config.s3BucketName(), getFileKey(remoteLogSegmentMetadata, ""))
+                s3Client.listObjects(config.s3BucketName(), getFileKey(remoteLogSegmentMetadata, config.s3Prefix(), ""))
                         .getObjectSummaries()
                         .stream()
                         .map(S3ObjectSummary::getKey)
