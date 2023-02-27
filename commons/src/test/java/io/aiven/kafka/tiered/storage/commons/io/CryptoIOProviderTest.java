@@ -30,7 +30,7 @@ import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.Test;
 import org.junit.jupiter.api.io.TempDir;
 
-import static org.junit.jupiter.api.Assertions.assertArrayEquals;
+import static org.assertj.core.api.Assertions.assertThat;
 
 public class CryptoIOProviderTest extends RsaKeyAwareTest {
 
@@ -93,7 +93,7 @@ public class CryptoIOProviderTest extends RsaKeyAwareTest {
             }
         }
 
-        assertArrayEquals(expectedBytes.array(), decryptedBytes.array());
+        assertThat(decryptedBytes.array()).isEqualTo(expectedBytes.array());
     }
 
 }

@@ -29,8 +29,6 @@ import org.junit.jupiter.api.Test;
 
 import static org.assertj.core.api.Assertions.assertThat;
 import static org.assertj.core.api.Assertions.assertThatThrownBy;
-import static org.junit.jupiter.api.Assertions.assertEquals;
-import static org.junit.jupiter.api.Assertions.assertThrows;
 
 class S3RemoteStorageManagerConfigTest {
 
@@ -88,11 +86,9 @@ class S3RemoteStorageManagerConfigTest {
     void missingConfigPath() {
         final Map<String, String> properties = new HashMap<>();
 
-        final Throwable t = assertThrows(ConfigException.class, () -> new S3RemoteStorageManagerConfig(properties));
-        assertEquals(
-            "Missing required configuration \"s3.bucket.name\" which has no default value.",
-            t.getMessage()
-        );
+        assertThatThrownBy(() -> new S3RemoteStorageManagerConfig(properties))
+            .isInstanceOf(ConfigException.class)
+            .hasMessage("Missing required configuration \"s3.bucket.name\" which has no default value.");
     }
 
     @Test

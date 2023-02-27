@@ -31,8 +31,7 @@ import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.Test;
 
 import static org.assertj.core.api.Assertions.assertThat;
-import static org.junit.jupiter.api.Assertions.assertEquals;
-import static org.junit.jupiter.api.Assertions.assertThrows;
+import static org.assertj.core.api.Assertions.assertThatThrownBy;
 
 class EncryptedRepositoryMetadataTest extends RsaKeyAwareTest {
 
@@ -86,29 +85,21 @@ class EncryptedRepositoryMetadataTest extends RsaKeyAwareTest {
             encryptionKeyProvider
                 .encryptKey(encryptionKeyProvider.createKey());
 
-        assertThrows(
-            IOException.class,
-            () -> deserializeMetadata(""));
-
-        assertThrows(
-            IOException.class,
-            () -> deserializeMetadata("some_text"));
-
-        assertThrows(
-            IOException.class,
-            () -> deserializeMetadata("\"asd\": 1"));
-
-        assertThrows(
-            IOException.class,
-            () -> deserializeMetadata("{\"asd\": \"asd\""));
+        assertThatThrownBy(() -> deserializeMetadata(""))
+            .isInstanceOf(IOException.class);
+        assertThatThrownBy(() -> deserializeMetadata("some_text"))
+            .isInstanceOf(IOException.class);
+        assertThatThrownBy(() -> deserializeMetadata("\"asd\": 1"))
+            .isInstanceOf(IOException.class);
+        assertThatThrownBy(() -> deserializeMetadata("{\"asd\": \"asd\""))
+            .isInstanceOf(IOException.class);
 
         final var badJsonObjectDefinitionWithKey =
             String.format(
                 "{\"key\": \"%s\"",
                 Base64.getEncoder().encodeToString(encryptedKey));
-        assertThrows(
-            IOException.class,
-            () -> deserializeMetadata(badJsonObjectDefinitionWithKey));
+        assertThatThrownBy(() -> deserializeMetadata(badJsonObjectDefinitionWithKey))
+            .isInstanceOf(IOException.class);
 
     }
 
@@ -122,11 +113,9 @@ class EncryptedRepositoryMetadataTest extends RsaKeyAwareTest {
             String.format(
                 METADATA_JSON_PATTERN,
                 Base64.getEncoder().encodeToString(encryptedKey), 100);
-        final var e = assertThrows(
-            IOException.class,
-            () -> deserializeMetadata(jsonWithWrongVersion));
-
-        assertEquals("Unsupported metadata version", e.getMessage());
+        assertThatThrownBy(() -> deserializeMetadata(jsonWithWrongVersion))
+            .isInstanceOf(IOException.class)
+            .hasMessage("Unsupported metadata version");
     }
 
 

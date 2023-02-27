@@ -29,20 +29,18 @@ import io.aiven.kafka.tiered.storage.commons.RsaKeyAwareTest;
 import org.junit.jupiter.api.Test;
 import org.junit.jupiter.api.io.TempDir;
 
-import static org.junit.jupiter.api.Assertions.assertEquals;
-import static org.junit.jupiter.api.Assertions.assertThrows;
+import static org.assertj.core.api.Assertions.assertThatThrownBy;
 
 class RsaKeysReaderTest extends RsaKeyAwareTest {
 
     @Test
     public void failsForUnknownPaths() {
-
-        assertThrows(
-                IllegalArgumentException.class, () ->
-                        RsaKeysReader.readRsaKeyPair(
-                                Files.newInputStream(Paths.get(".")),
-                                Files.newInputStream(Paths.get(".")))
-        );
+        assertThatThrownBy(
+            () ->
+                RsaKeysReader.readRsaKeyPair(
+                    Files.newInputStream(Paths.get(".")),
+                    Files.newInputStream(Paths.get("."))))
+            .isInstanceOf(IllegalArgumentException.class);
     }
 
     @Test
@@ -54,18 +52,13 @@ class RsaKeysReaderTest extends RsaKeyAwareTest {
         writePemFile(dsaPublicKeyPem, new X509EncodedKeySpec(dsaKeyPair.getPublic().getEncoded()));
         writePemFile(dsaPrivateKeyPem, new PKCS8EncodedKeySpec(dsaKeyPair.getPrivate().getEncoded()));
 
-        final var e =
-                assertThrows(IllegalArgumentException.class, () ->
-                        RsaKeysReader.readRsaKeyPair(
-                                Files.newInputStream(dsaPublicKeyPem),
-                                Files.newInputStream(dsaPrivateKeyPem)
-                        ));
-
-        assertEquals(
-            "Couldn't generate RSA key pair",
-            e.getMessage()
-        );
-
+        assertThatThrownBy(
+            () ->
+                RsaKeysReader.readRsaKeyPair(
+                    Files.newInputStream(dsaPublicKeyPem),
+                    Files.newInputStream(dsaPrivateKeyPem)))
+            .isInstanceOf(IllegalArgumentException.class)
+            .hasMessage("Couldn't generate RSA key pair");
     }
 
     @Test
@@ -73,17 +66,13 @@ class RsaKeysReaderTest extends RsaKeyAwareTest {
         final var emptyPublicKeyPemFile =
             Files.createFile(tmpDir.resolve("empty_public_key.pem"));
 
-        final var e = assertThrows(
-                IllegalArgumentException.class, () ->
-                        RsaKeysReader.readRsaKeyPair(
-                                Files.newInputStream(emptyPublicKeyPemFile),
-                                Files.newInputStream(privateKeyPem))
-        );
-
-        assertEquals(
-                "Couldn't read PEM file",
-                e.getMessage()
-        );
+        assertThatThrownBy(
+            () ->
+                RsaKeysReader.readRsaKeyPair(
+                    Files.newInputStream(emptyPublicKeyPemFile),
+                    Files.newInputStream(privateKeyPem)))
+            .isInstanceOf(IllegalArgumentException.class)
+            .hasMessage("Couldn't read PEM file");
     }
 
     @Test
@@ -91,17 +80,13 @@ class RsaKeysReaderTest extends RsaKeyAwareTest {
         final var emptyPrivateKeyPemFile =
             Files.createFile(tmpDir.resolve("empty_private_key.pem"));
 
-        final var e = assertThrows(
-                IllegalArgumentException.class, () ->
-                        RsaKeysReader.readRsaKeyPair(
-                                Files.newInputStream(publicKeyPem),
-                                Files.newInputStream(emptyPrivateKeyPemFile))
-        );
-
-        assertEquals(
-            "Couldn't read PEM file",
-            e.getMessage()
-        );
+        assertThatThrownBy(
+            () ->
+                RsaKeysReader.readRsaKeyPair(
+                    Files.newInputStream(publicKeyPem),
+                    Files.newInputStream(emptyPrivateKeyPemFile)))
+            .isInstanceOf(IllegalArgumentException.class)
+            .hasMessage("Couldn't read PEM file");
     }
 
 }
