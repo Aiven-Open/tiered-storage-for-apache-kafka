@@ -40,6 +40,10 @@ public class S3RemoteStorageManagerConfig extends AbstractConfig {
     public static final String S3_BUCKET_NAME_CONFIG = "s3.bucket.name";
     private static final String S3_BUCKET_NAME_DOC = "The S3 Bucket.";
 
+    public static final String S3_PREFIX = "s3.prefix";
+
+    private static final String S3_PREFIX_DOC = "The S3 prefix";
+
     public static final String S3_REGION_CONFIG = "s3.region";
     private static final String S3_REGION_DEFAULT = Regions.DEFAULT_REGION.getName();
     private static final String S3_REGION_DOC = "The AWS region.";
@@ -96,6 +100,14 @@ public class S3RemoteStorageManagerConfig extends AbstractConfig {
             new ConfigDef.NonEmptyString(),
             ConfigDef.Importance.HIGH,
             S3_BUCKET_NAME_DOC
+        );
+
+        CONFIG.define(
+            S3_PREFIX,
+            ConfigDef.Type.STRING,
+            "",
+            ConfigDef.Importance.MEDIUM,
+            S3_PREFIX_DOC
         );
 
         CONFIG.define(
@@ -236,6 +248,10 @@ public class S3RemoteStorageManagerConfig extends AbstractConfig {
 
     public String s3BucketName() {
         return getString(S3_BUCKET_NAME_CONFIG);
+    }
+
+    public String s3Prefix() {
+        return getString(S3_PREFIX);
     }
 
     public Regions s3Region() {
