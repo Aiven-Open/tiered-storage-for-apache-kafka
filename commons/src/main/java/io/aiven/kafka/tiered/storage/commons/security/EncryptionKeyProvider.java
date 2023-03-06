@@ -83,7 +83,7 @@ public final class EncryptionKeyProvider
             final var cipher = createDecryptingCipher(rsaKeyPair.getPrivate(), CIPHER_TRANSFORMATION);
             return cipher.doFinal(bytes);
         } catch (final IllegalBlockSizeException | BadPaddingException e) {
-            throw new RuntimeException("Couldn't encrypt AES key", e);
+            throw new RuntimeException("Couldn't decrypt AES key", e);
         }
     }
 
