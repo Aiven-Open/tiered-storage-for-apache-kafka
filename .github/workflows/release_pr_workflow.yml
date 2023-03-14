@@ -16,15 +16,18 @@ jobs:
     runs-on: ubuntu-latest
     steps:
       - name: Check versions
+        env:
+          RELEASE_VERSION: ${{ github.event.inputs.release_version }}
+          SNAPSHOT_VERSION: ${{ github.event.inputs.snapshot_version }}
         run: |
           echo "Checking release version..."
-          if echo ${{ github.event.inputs.release_version }} | grep --invert-match '^[0-9]\+\.[0-9]\+\.[0-9]\+$' > /dev/null; then
+          if echo $RELEASE_VERSION | grep --invert-match '^[0-9]\+\.[0-9]\+\.[0-9]\+$' > /dev/null; then
             echo "Release version is invalid"
             exit 1
           fi
 
           echo "Checking snapshot version..."
-          if echo ${{ github.event.inputs.snapshot_version }} | grep --invert-match '^[0-9]\+\.[0-9]\+\.[0-9]\+-SNAPSHOT$' > /dev/null; then
+          if echo $SNAPSHOT_VERSION | grep --invert-match '^[0-9]\+\.[0-9]\+\.[0-9]\+-SNAPSHOT$' > /dev/null; then
             echo "Snapshot version is invalid"
             exit 1
           fi
@@ -36,15 +39,18 @@ jobs:
           fetch-depth: 0
 
       - name: Create release commits
+        env:
+          RELEASE_VERSION: ${{ github.event.inputs.release_version }}
+          SNAPSHOT_VERSION: ${{ github.event.inputs.snapshot_version }}
         run: |
           git config --local user.name "GitHub Action"
           git config --local user.email "action@github.com"
-          sed -i -e "s/^version=.\+$/version=${{ github.event.inputs.release_version }}/g" gradle.properties
+          sed -i -e "s/^version=.\+$/version=$RELEASE_VERSION/g" gradle.properties
           git add gradle.properties
-          git commit -m "Release version ${{ github.event.inputs.release_version }}"
-          sed -i -e "s/^version=.\+$/version=${{ github.event.inputs.snapshot_version }}/g" gradle.properties
+          git commit -m "Release version $RELEASE_VERSION"
+          sed -i -e "s/^version=.\+$/version=$SNAPSHOT_VERSION/g" gradle.properties
           git add gradle.properties
-          git commit -m "Bump version to ${{ github.event.inputs.snapshot_version }}"
+          git commit -m "Bump version to $SNAPSHOT_VERSION"
 
       - name: Create Pull Request
         uses: peter-evans/create-pull-request@v4
