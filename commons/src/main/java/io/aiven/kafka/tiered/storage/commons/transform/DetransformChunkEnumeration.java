@@ -1,5 +1,5 @@
 /*
- * Copyright 2021 Aiven Oy
+ * Copyright 2023 Aiven Oy
  *
  * Licensed under the Apache License, Version 2.0 (the "License");
  * you may not use this file except in compliance with the License.
@@ -14,15 +14,16 @@
  * limitations under the License.
  */
 
-ext {
-    zstdVersion = "1.5.4-2"
-}
+package io.aiven.kafka.tiered.storage.commons.transform;
 
-dependencies {
-    // The client of a library should provide a runtime dependency. For now taking the version from kafka-storage-api
-    compileOnly 'com.fasterxml.jackson.core:jackson-databind:2.15.0'
-    // The client of a library should provide a runtime dependency.
-    // For now taking the version from kafka-clients
-    compileOnly "com.github.luben:zstd-jni:$zstdVersion"
-    testImplementation "com.github.luben:zstd-jni:$zstdVersion"
+import java.util.Enumeration;
+
+/**
+ * The enumeration of chunks being de-transformed.
+ *
+ * <p>There are supposed to be multiple implementation doing different de-transformations
+ * (like decompression and decryption).
+ * These implementations are supposed to be composable.
+ */
+public interface DetransformChunkEnumeration extends Enumeration<byte[]> {
 }
