@@ -18,6 +18,9 @@ package io.aiven.kafka.tiered.storage.commons.chunkindex;
 
 import java.util.List;
 
+import com.fasterxml.jackson.annotation.JsonCreator;
+import com.fasterxml.jackson.annotation.JsonProperty;
+
 /**
  * The chunk index for transformed chunks of fixed size.
  *
@@ -37,15 +40,26 @@ import java.util.List;
  * <p>Once constructed, the object remains immutable.
  */
 public class FixedSizeChunkIndex extends AbstractChunkIndex {
-    private final int transformedChunkSize;
+    @JsonProperty("transformedChunkSize")
+    final int transformedChunkSize;
+
+    @JsonProperty("finalTransformedChunkSize")
+    private int finalTransformedChunkSize() {
+        return finalTransformedChunkSize;
+    }
 
     // This only a materialization for convenience and performance,
     // it should not be persisted.
     private final List<Chunk> chunks;
 
-    public FixedSizeChunkIndex(final int originalChunkSize,
+    @JsonCreator
+    public FixedSizeChunkIndex(@JsonProperty("originalChunkSize")
+                               final int originalChunkSize,
+                               @JsonProperty("originalFileSize")
                                final int originalFileSize,
+                               @JsonProperty("transformedChunkSize")
                                final int transformedChunkSize,
+                               @JsonProperty("finalTransformedChunkSize")
                                final int finalTransformedChunkSize) {
         super(originalChunkSize, originalFileSize, finalTransformedChunkSize,
             chunkCount(originalChunkSize, originalFileSize));
