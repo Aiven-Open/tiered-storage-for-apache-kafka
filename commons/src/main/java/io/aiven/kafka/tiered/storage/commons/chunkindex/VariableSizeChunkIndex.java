@@ -19,6 +19,14 @@ package io.aiven.kafka.tiered.storage.commons.chunkindex;
 import java.util.List;
 import java.util.Objects;
 
+import io.aiven.kafka.tiered.storage.commons.chunkindex.serde.TransformedChunksDeserializer;
+import io.aiven.kafka.tiered.storage.commons.chunkindex.serde.TransformedChunksSerializer;
+
+import com.fasterxml.jackson.annotation.JsonCreator;
+import com.fasterxml.jackson.annotation.JsonProperty;
+import com.fasterxml.jackson.databind.annotation.JsonDeserialize;
+import com.fasterxml.jackson.databind.annotation.JsonSerialize;
+
 /**
  * The chunk index for transformed chunks of variable size.
  *
@@ -38,14 +46,23 @@ import java.util.Objects;
  * <p>Once constructed, the object remains immutable.
  */
 public class VariableSizeChunkIndex extends AbstractChunkIndex {
+    @JsonProperty("transformedChunks")
+    @JsonSerialize(using = TransformedChunksSerializer.class)
     private final List<Integer> transformedChunks;
 
     // This only a materialization for convenience and performance,
     // it should not be persisted.
     private final List<Chunk> chunks;
 
-    public VariableSizeChunkIndex(final int originalChunkSize,
+    // TODO consider storing and caching chunks encoded when they are fetched from remote storage
+    // This will have smaller memory footprint than boxed integers.
+    @JsonCreator
+    public VariableSizeChunkIndex(@JsonProperty("originalChunkSize")
+                                  final int originalChunkSize,
+                                  @JsonProperty("originalFileSize")
                                   final int originalFileSize,
+                                  @JsonProperty("transformedChunks")
+                                  @JsonDeserialize(using = TransformedChunksDeserializer.class)
                                   final List<Integer> transformedChunks) {
         super(originalChunkSize, originalFileSize,
             finalTransformedChunkSize(Objects.requireNonNull(transformedChunks, "transformedChunks cannot be null")),

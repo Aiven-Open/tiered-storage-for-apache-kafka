@@ -56,9 +56,15 @@ It's important to keep the size of these indices small. One technique is to keep
 
 ##### Index encoding
 
-Non-trivial binary encoding could reduce the index size further.
+Binary encoding could reduce the index size further. Values are encoded as a difference from a common base and the encoding uses the minimum number of bytes per value. See the [javadoc](java/io/aiven/kafka/tiered/storage/commons/chunkindex/serde/ChunkSizesBinaryCodec.java) for `ChunkSizesBinaryCodec` for details. We could expect 1-2 bytes per value on average.
 
-TBD
+A 2 GB file chunked into 1 MB chunks produce about 2000 index entries, which is 2-4 KB.
+
+The index could be compressed with Zstd after that and have to be Base64-encoded (about 30% overhead). This results in 2.7-3.7 KB.
+
+This encoding scheme allows indices to be stored (cached) in memory and accessed with little overhead.
+
+**Rejected alternative**: An alternative approach may be to just write values as integers (4 byte per value) and rely on Zstd to compress it significantly. Despite this produces similar results size-wise (3.6-4.2 KB, i.e. a little worse), it's difficult to store indices in memory in the encoded form, because this would require decompression on each access.
 
 ### Compression
 
