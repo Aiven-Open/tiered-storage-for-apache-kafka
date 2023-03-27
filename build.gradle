@@ -80,6 +80,7 @@ subprojects {
         compileOnly "org.slf4j:slf4j-api:1.7.36"
         implementation "org.bouncycastle:bcprov-jdk15on:1.70"
         testRuntimeOnly "org.junit.jupiter:junit-jupiter-engine:$junitVersion"
+        testRuntimeOnly "org.slf4j:slf4j-log4j12:1.7.36"
         testImplementation group: "org.apache.kafka", name: "kafka-storage-api", version: kafkaVersion
         testImplementation group: "org.apache.kafka", name: "kafka-clients", version: kafkaVersion
         testImplementation "org.junit.jupiter:junit-jupiter-api:$junitVersion"

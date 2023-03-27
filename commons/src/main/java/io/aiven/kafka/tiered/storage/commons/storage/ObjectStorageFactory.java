@@ -1,5 +1,5 @@
 /*
- * Copyright 2021 Aiven Oy
+ * Copyright 2023 Aiven Oy
  *
  * Licensed under the Apache License, Version 2.0 (the "License");
  * you may not use this file except in compliance with the License.
@@ -14,16 +14,14 @@
  * limitations under the License.
  */
 
-ext {
-    zstdVersion = "1.5.4-2"
-}
+package io.aiven.kafka.tiered.storage.commons.storage;
 
-dependencies {
-    // The client of a library should provide a runtime dependency. For now taking the version from kafka-storage-api
-    compileOnly 'com.fasterxml.jackson.core:jackson-databind:2.14.2'
-    // The client of a library should provide a runtime dependency.
-    // For now taking the version from kafka-clients
-    compileOnly "com.github.luben:zstd-jni:$zstdVersion"
-    testImplementation "com.github.luben:zstd-jni:$zstdVersion"
-    implementation "commons-io:commons-io:2.11.0"
+import org.apache.kafka.common.Configurable;
+
+public interface ObjectStorageFactory extends Configurable {
+    FileUploader fileUploader();
+
+    FileFetcher fileFetcher();
+
+    FileDeleter fileDeleter();
 }
