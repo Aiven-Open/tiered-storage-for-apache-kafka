@@ -65,10 +65,6 @@ subprojects {
         getConfigDirectory().set(rootProject.file("checkstyle/"))
     }
 
-    jacoco {
-        toolVersion = "0.8.5"
-    }
-
     ext {
         testcontainersVersion = "1.17.6"
         junitVersion = "5.9.2"
