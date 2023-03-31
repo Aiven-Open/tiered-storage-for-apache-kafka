@@ -52,11 +52,15 @@ services:
       - remote.log.metadata.manager.class.name=org.apache.kafka.server.log.remote.metadata.storage.TopicBasedRemoteLogMetadataManager
       # Tiered storage S3 plugin
       - --override
-      - rsm.config.s3.bucket.name=kafka-ts-us-east-1
+      - rsm.config.s3.bucket.name=kafka-ts-v1
       - --override
       - rsm.config.s3.region=us-east-1
-      #- --override
-      #- rsm.config.s3.endpoint.url=http://minio:9090
+      # For Localstack
+      # - --override
+      # - rsm.config.s3.endpoint.url=http://localstack:4566
+      # For MinIO
+      - --override
+      - rsm.config.s3.endpoint.url=http://minio:9000
       - --override
       - rsm.config.s3.credentials.provider.class=com.amazonaws.auth.AWSStaticCredentialsProvider
       - --override
@@ -67,6 +71,10 @@ services:
       - rsm.config.s3.public_key_pem=/kafka/plugins/public.pem
       - --override
       - rsm.config.s3.private_key_pem=/kafka/plugins/private.pem
+      - --override
+      - rsm.config.s3.multipart.upload.part.size=5000000
+      - --override
+      - rsm.config.s3.upload.part.size=10000000
       # Tiered Storage: RLMM config
       - --override
       - rlmm.config.remote.log.metadata.common.client.bootstrap.servers=kafka:29092

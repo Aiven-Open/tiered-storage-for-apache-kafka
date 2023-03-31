@@ -15,9 +15,17 @@ topic:
 	${KAFKA_HOME}/bin/kafka-topics.sh \
 		--bootstrap-server localhost:9092 \
 		--create \
-		--config segment.bytes=1000000 \
-		--config retention.bytes=100000000 \
+		--config segment.bytes=10000000 \
+		--config retention.bytes=500000000 \
 		--config remote.storage.enable=true \
-		--config local.retention.bytes=2000000 \
+		--config local.retention.bytes=50000000 \
 		--partitions 6 \
 		--topic t1
+
+localstack: localstack_profile localstack_s3_bucket
+
+localstack_profile:
+	aws configure --profile localstack
+
+localstack_s3_bucket:
+	aws s3 --endpoint-url http://localhost:4566 --profile localstack mb s3://kafka-ts-v1
