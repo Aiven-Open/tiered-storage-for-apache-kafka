@@ -2,6 +2,8 @@
 
 Docker compose environment to try out tiered storage plugins.
 
+> NOTE: Consider this playground environments unstable until future releases.
+
 ## Structure
 
 - A [docker image](./kafka/Dockerfile) is built from a Kafka repository branch
