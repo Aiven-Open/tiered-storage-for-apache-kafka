@@ -1,0 +1,94 @@
+version: '3.8'
+services:
+  zookeeper:
+    image: kafka
+    build:
+      context: ../kafka/.
+      args:
+        - AK_REPO=https://github.com/aiven/kafka
+        - AK_BRANCH=3.3-2022-10-06-tiered-storage
+        - KAFKA_VERSION=3.3.2-SNAPSHOT
+    command:
+      - zookeeper-server-start.sh
+      - config/zookeeper.properties
+
+  kafka:
+    image: kafka
+    build:
+      context: ../kafka/.
+      args:
+        - AK_REPO=https://github.com/aiven/kafka
+        - AK_BRANCH=3.3-2022-10-06-tiered-storage
+        - KAFKA_VERSION=3.3.2-SNAPSHOT
+    ports:
+      - "9092:9092"
+    volumes:
+      # mount plugin
+      - ./../../s3/build/install/s3:/kafka/plugins/tiered-storage-s3
+      # encryption keys
+      - ./private.pem:/kafka/plugins/private.pem
+      - ./public.pem:/kafka/plugins/public.pem
+    command:
+      - kafka-server-start.sh
+      - config/server.properties
+      - --override
+      - zookeeper.connect=zookeeper:2181
+      - --override
+      - listeners=BROKER://kafka:29092,EXTERNAL://kafka:9092
+      - --override
+      - advertised.listeners=BROKER://kafka:29092,EXTERNAL://localhost:9092
+      - --override
+      - listener.security.protocol.map=BROKER:PLAINTEXT,EXTERNAL:PLAINTEXT
+      - --override
+      - inter.broker.listener.name=BROKER
+      # Enable Tiered storage
+      - --override
+      - remote.log.storage.system.enable=true
+      - --override
+      - remote.log.storage.manager.class.name=io.aiven.kafka.tiered.storage.s3.S3RemoteStorageManager
+      - --override
+      - remote.log.storage.manager.class.path=/kafka/plugins/tiered-storage-s3/*
+      - --override
+      - remote.log.metadata.manager.class.name=org.apache.kafka.server.log.remote.metadata.storage.TopicBasedRemoteLogMetadataManager
+      # Tiered storage S3 plugin
+      - --override
+      - rsm.config.s3.bucket.name=kafka-ts-us-east-1
+      - --override
+      - rsm.config.s3.region=us-east-1
+      #- --override
+      #- rsm.config.s3.endpoint.url=http://minio:9090
+      - --override
+      - rsm.config.s3.credentials.provider.class=com.amazonaws.auth.AWSStaticCredentialsProvider
+      - --override
+      - rsm.config.s3.client.aws_access_key_id=${AWS_ACCESS_KEY_ID}
+      - --override
+      - rsm.config.s3.client.aws_secret_access_key=${AWS_SECRET_ACCESS_KEY}
+      - --override
+      - rsm.config.s3.public_key_pem=/kafka/plugins/public.pem
+      - --override
+      - rsm.config.s3.private_key_pem=/kafka/plugins/private.pem
+      # Tiered Storage: RLMM config
+      - --override
+      - rlmm.config.remote.log.metadata.common.client.bootstrap.servers=kafka:29092
+      - --override
+      - rlmm.config.remote.log.metadata.topic.replication.factor=1
+
+  # Experimental services
+  localstack:
+    image: localstack/localstack:2.0.0
+    environment:
+      - SERVICES=s3
+    ports:
+      - "4566:4566"
+
+  minio:
+    image: quay.io/minio/minio
+    environment:
+      - MINIO_ROOT_USER=admin
+      - MINIO_ROOT_PASSWORD=password
+    ports:
+      - "9000:9000"
+      - "9090:9090"
+    volumes:
+      - ./minio/data:/data
+    command: server /data --console-address ":9090"
