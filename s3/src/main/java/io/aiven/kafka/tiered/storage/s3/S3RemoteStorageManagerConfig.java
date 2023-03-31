@@ -20,6 +20,7 @@ import java.util.Collections;
 import java.util.List;
 import java.util.Map;
 
+import java.util.Optional;
 import org.apache.kafka.common.KafkaException;
 import org.apache.kafka.common.config.AbstractConfig;
 import org.apache.kafka.common.config.ConfigDef;
@@ -39,6 +40,9 @@ public class S3RemoteStorageManagerConfig extends AbstractConfig {
 
     public static final String S3_BUCKET_NAME_CONFIG = "s3.bucket.name";
     private static final String S3_BUCKET_NAME_DOC = "The S3 Bucket.";
+
+    public static final String S3_ENDPOINT_URL_CONFIG = "s3.endpoint.url";
+    private static final String S3_ENDPOINT_URL_DOC = "Custom S3 endpoint URL. When null (default), AWS S3 default endpoint is used.";
 
     public static final String S3_PREFIX = "s3.prefix";
 
@@ -100,6 +104,13 @@ public class S3RemoteStorageManagerConfig extends AbstractConfig {
             new ConfigDef.NonEmptyString(),
             ConfigDef.Importance.HIGH,
             S3_BUCKET_NAME_DOC
+        );
+        CONFIG.define(
+            S3_ENDPOINT_URL_CONFIG,
+            ConfigDef.Type.STRING,
+            null,
+            ConfigDef.Importance.LOW,
+            S3_ENDPOINT_URL_DOC
         );
 
         CONFIG.define(
@@ -257,6 +268,10 @@ public class S3RemoteStorageManagerConfig extends AbstractConfig {
     public Regions s3Region() {
         final String regionStr = getString(S3_REGION_CONFIG);
         return Regions.fromName(regionStr);
+    }
+
+    public Optional<String> s3EndpointUrl() {
+        return Optional.ofNullable(getString(S3_ENDPOINT_URL_CONFIG));
     }
 
     public String publicKey() {
