@@ -172,8 +172,10 @@ public class S3RemoteStorageManagerTest {
             LOCALSTACK.getEndpointOverride(LocalStackContainer.Service.S3).toString(),
             LOCALSTACK.getRegion()
         );
-        remoteStorageManager = new S3RemoteStorageManager(endpointConfiguration);
-        remoteStorageManager.configure(basicProps(bucket, s3PathPrefix));
+        remoteStorageManager = new S3RemoteStorageManager();
+        Map<String, String> configs = basicProps(bucket, s3PathPrefix);
+        configs.put(S3RemoteStorageManagerConfig.S3_ENDPOINT_URL_CONFIG, endpointConfiguration.getServiceEndpoint());
+        remoteStorageManager.configure(configs);
     }
 
     protected static void writePemFile(final Path path, final EncodedKeySpec encodedKeySpec) throws IOException {
