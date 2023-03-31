@@ -37,7 +37,6 @@ import org.slf4j.LoggerFactory;
  */
 public class S3RemoteStorageManager implements RemoteStorageManager {
     private static final Logger log = LoggerFactory.getLogger(S3RemoteStorageManager.class);
-    private AwsClientBuilder.EndpointConfiguration endpointConfiguration = null;
 
     private S3RemoteStorageManagerConfig config;
 
@@ -46,35 +45,26 @@ public class S3RemoteStorageManager implements RemoteStorageManager {
     public S3RemoteStorageManager() {
     }
 
-    // for testing
-    S3RemoteStorageManager(final AwsClientBuilder.EndpointConfiguration endpointConfiguration) {
-        Objects.requireNonNull(endpointConfiguration, "endpointConfiguration must not be null");
-        this.endpointConfiguration = endpointConfiguration;
-    }
-
     @Override
     public void configure(final Map<String, ?> configs) {
         Objects.requireNonNull(configs, "configs must not be null");
         config = new S3RemoteStorageManagerConfig(configs);
-        final AmazonS3 s3Client = initS3Client(endpointConfiguration);
+        final AmazonS3 s3Client = initS3Client();
         final S3EncryptionKeyProvider s3EncryptionKeyProvider = new S3EncryptionKeyProvider(s3Client, config);
         s3ClientWrapper = new S3ClientWrapper(config, s3Client, s3EncryptionKeyProvider);
     }
 
-    private AmazonS3 initS3Client(final AwsClientBuilder.EndpointConfiguration endpointConfiguration) {
+    private AmazonS3 initS3Client() {
         AmazonS3ClientBuilder s3ClientBuilder = AmazonS3ClientBuilder.standard();
-        if (endpointConfiguration == null) {
-            if (config.s3EndpointUrl().isEmpty()) {
-                s3ClientBuilder = s3ClientBuilder.withRegion(config.s3Region());
-            } else {
-                final AwsClientBuilder.EndpointConfiguration endpointConfig =
-                    new AwsClientBuilder.EndpointConfiguration(
-                        config.s3EndpointUrl().get(),
-                        config.s3Region().getName());
-                s3ClientBuilder = s3ClientBuilder.withEndpointConfiguration(endpointConfig);
-            }
+        if (config.s3EndpointUrl().isEmpty()) {
+            s3ClientBuilder = s3ClientBuilder.withRegion(config.s3Region());
         } else {
-            s3ClientBuilder = s3ClientBuilder.withEndpointConfiguration(endpointConfiguration);
+            final AwsClientBuilder.EndpointConfiguration endpointConfig =
+                new AwsClientBuilder.EndpointConfiguration(
+                    config.s3EndpointUrl().get(),
+                    config.s3Region().getName());
+            s3ClientBuilder = s3ClientBuilder.withEndpointConfiguration(endpointConfig)
+                .withPathStyleAccessEnabled(true); // TODO: check if need to be expose as config
         }
         s3ClientBuilder.setCredentials(config.awsCredentialsProvider());
         return s3ClientBuilder.build();
