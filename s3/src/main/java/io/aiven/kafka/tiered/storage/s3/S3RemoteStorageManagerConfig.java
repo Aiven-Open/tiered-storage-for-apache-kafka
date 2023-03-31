@@ -19,8 +19,8 @@ package io.aiven.kafka.tiered.storage.s3;
 import java.util.Collections;
 import java.util.List;
 import java.util.Map;
-
 import java.util.Optional;
+
 import org.apache.kafka.common.KafkaException;
 import org.apache.kafka.common.config.AbstractConfig;
 import org.apache.kafka.common.config.ConfigDef;
@@ -42,7 +42,8 @@ public class S3RemoteStorageManagerConfig extends AbstractConfig {
     private static final String S3_BUCKET_NAME_DOC = "The S3 Bucket.";
 
     public static final String S3_ENDPOINT_URL_CONFIG = "s3.endpoint.url";
-    private static final String S3_ENDPOINT_URL_DOC = "Custom S3 endpoint URL. When null (default), AWS S3 default endpoint is used.";
+    private static final String S3_ENDPOINT_URL_DOC =
+        "Custom S3 endpoint URL. When null (default), AWS S3 default endpoint is used.";
 
     public static final String S3_PREFIX = "s3.prefix";
 
@@ -55,8 +56,8 @@ public class S3RemoteStorageManagerConfig extends AbstractConfig {
     public static final String S3_CREDENTIALS_PROVIDER_CLASS_CONFIG = "s3.credentials.provider.class";
     private static final Class<? extends AWSCredentialsProvider> S3_CREDENTIALS_PROVIDER_CLASS_DEFAULT = null;
     private static final String S3_CREDENTIALS_PROVIDER_CLASS_DOC = "The credentials provider to use for "
-            + "authentication to AWS. If not set, AWS SDK uses the default "
-            + "com.amazonaws.auth.DefaultAWSCredentialsProviderChain";
+        + "authentication to AWS. If not set, AWS SDK uses the default "
+        + "com.amazonaws.auth.DefaultAWSCredentialsProviderChain";
 
     public static final String PUBLIC_KEY = "s3.public_key_pem";
     private static final String PUBLIC_KEY_DOC = "Public key for storage encryption";
@@ -83,7 +84,7 @@ public class S3RemoteStorageManagerConfig extends AbstractConfig {
     public static final String ENCRYPTION_METADATA_CACHE_RETENTION_MS = "s3.encryption.metadata.cache.retention.ms";
     public static final long ENCRYPTION_METADATA_CACHE_RETENTION_MS_DEFAULT = 1_800_000;
     private static final String ENCRYPTION_METADATA_CACHE_RETENTION_MS_DOC =
-            "Retention time for encryption metadata cache";
+        "Retention time for encryption metadata cache";
 
     public static final String AWS_ACCESS_KEY_ID = "s3.client.aws_access_key_id";
     private static final String AWS_ACCESS_KEY_ID_DOC = "AWS Access Key ID";
@@ -176,21 +177,21 @@ public class S3RemoteStorageManagerConfig extends AbstractConfig {
         );
 
         CONFIG.define(
-                ENCRYPTION_METADATA_CACHE_SIZE,
-                ConfigDef.Type.LONG,
-                ENCRYPTION_METADATA_CACHE_SIZE_DEFAULT,
-                ConfigDef.Range.between(0, Long.MAX_VALUE),
-                ConfigDef.Importance.LOW,
-                ENCRYPTION_METADATA_CACHE_SIZE_DOC
+            ENCRYPTION_METADATA_CACHE_SIZE,
+            ConfigDef.Type.LONG,
+            ENCRYPTION_METADATA_CACHE_SIZE_DEFAULT,
+            ConfigDef.Range.between(0, Long.MAX_VALUE),
+            ConfigDef.Importance.LOW,
+            ENCRYPTION_METADATA_CACHE_SIZE_DOC
         );
 
         CONFIG.define(
-                ENCRYPTION_METADATA_CACHE_RETENTION_MS,
-                ConfigDef.Type.LONG,
-                ENCRYPTION_METADATA_CACHE_RETENTION_MS_DEFAULT,
-                ConfigDef.Range.between(0, Long.MAX_VALUE),
-                ConfigDef.Importance.LOW,
-                ENCRYPTION_METADATA_CACHE_RETENTION_MS_DOC
+            ENCRYPTION_METADATA_CACHE_RETENTION_MS,
+            ConfigDef.Type.LONG,
+            ENCRYPTION_METADATA_CACHE_RETENTION_MS_DEFAULT,
+            ConfigDef.Range.between(0, Long.MAX_VALUE),
+            ConfigDef.Importance.LOW,
+            ENCRYPTION_METADATA_CACHE_RETENTION_MS_DOC
         );
 
         int awsGroupCounter = 0;
@@ -227,29 +228,29 @@ public class S3RemoteStorageManagerConfig extends AbstractConfig {
         );
 
         CONFIG.define(
-                AWS_ACCESS_KEY_ID,
-                ConfigDef.Type.PASSWORD,
-                null,
-                new NonEmptyPassword(),
-                ConfigDef.Importance.MEDIUM,
-                AWS_ACCESS_KEY_ID_DOC,
-                GROUP_AWS,
-                awsGroupCounter++,
-                ConfigDef.Width.NONE,
-                AWS_ACCESS_KEY_ID
+            AWS_ACCESS_KEY_ID,
+            ConfigDef.Type.PASSWORD,
+            null,
+            new NonEmptyPassword(),
+            ConfigDef.Importance.MEDIUM,
+            AWS_ACCESS_KEY_ID_DOC,
+            GROUP_AWS,
+            awsGroupCounter++,
+            ConfigDef.Width.NONE,
+            AWS_ACCESS_KEY_ID
         );
 
         CONFIG.define(
-                AWS_SECRET_ACCESS_KEY,
-                ConfigDef.Type.PASSWORD,
-                null,
-                new NonEmptyPassword(),
-                ConfigDef.Importance.MEDIUM,
-                AWS_SECRET_ACCESS_KEY_DOC,
-                GROUP_AWS,
-                awsGroupCounter++,
-                ConfigDef.Width.NONE,
-                AWS_SECRET_ACCESS_KEY
+            AWS_SECRET_ACCESS_KEY,
+            ConfigDef.Type.PASSWORD,
+            null,
+            new NonEmptyPassword(),
+            ConfigDef.Importance.MEDIUM,
+            AWS_SECRET_ACCESS_KEY_DOC,
+            GROUP_AWS,
+            awsGroupCounter++,
+            ConfigDef.Width.NONE,
+            AWS_SECRET_ACCESS_KEY
         );
     }
 
@@ -304,9 +305,9 @@ public class S3RemoteStorageManagerConfig extends AbstractConfig {
 
     public AWSCredentialsProvider awsCredentialsProvider() {
         try {
-            @SuppressWarnings("unchecked")
-            final Class<? extends AWSCredentialsProvider> providerClass = (Class<? extends AWSCredentialsProvider>)
-                getClass(S3_CREDENTIALS_PROVIDER_CLASS_CONFIG);
+            @SuppressWarnings("unchecked") final Class<? extends AWSCredentialsProvider> providerClass =
+                (Class<? extends AWSCredentialsProvider>)
+                    getClass(S3_CREDENTIALS_PROVIDER_CLASS_CONFIG);
             if (providerClass == null) {
                 return null;
             }
@@ -321,7 +322,7 @@ public class S3RemoteStorageManagerConfig extends AbstractConfig {
 
     public AWSCredentials awsCredentials() {
         return new BasicAWSCredentials(getPassword(AWS_ACCESS_KEY_ID).value(),
-                getPassword(AWS_SECRET_ACCESS_KEY).value());
+            getPassword(AWS_SECRET_ACCESS_KEY).value());
     }
 
     private static class RegionValidator implements ConfigDef.Validator {
