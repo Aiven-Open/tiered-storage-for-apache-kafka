@@ -1,0 +1,8 @@
+# Credentials
+.env
+
+# Demo keys
+*.pem
+
+# Backend volumes
+minio/
