@@ -31,7 +31,7 @@ import static org.mockito.Mockito.when;
 @ExtendWith(MockitoExtension.class)
 class DecompressionChunkEnumerationTest {
     @Mock
-    DetransformChunkEnumeration inner;
+    OutboundTransform inner;
 
     @Test
     void nullInnerEnumeration() {

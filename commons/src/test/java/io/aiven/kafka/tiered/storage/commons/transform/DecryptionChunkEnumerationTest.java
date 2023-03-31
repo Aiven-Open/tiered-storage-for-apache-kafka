@@ -37,7 +37,7 @@ import static org.mockito.Mockito.when;
 @ExtendWith(MockitoExtension.class)
 class DecryptionChunkEnumerationTest extends AesKeyAwareTest {
     @Mock
-    DetransformChunkEnumeration inner;
+    OutboundTransform inner;
 
     @Mock
     Cipher cipher;

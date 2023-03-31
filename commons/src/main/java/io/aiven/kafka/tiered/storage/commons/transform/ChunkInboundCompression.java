@@ -23,10 +23,10 @@ import com.github.luben.zstd.ZstdCompressCtx;
 /**
  * The chunk transformation that does Zstd compression.
  */
-public class CompressionChunkEnumeration implements TransformChunkEnumeration {
-    private final TransformChunkEnumeration inner;
+public class ChunkInboundCompression implements ChunkInboundTransform {
+    private final ChunkInboundTransform inner;
 
-    public CompressionChunkEnumeration(final TransformChunkEnumeration inner) {
+    public ChunkInboundCompression(final ChunkInboundTransform inner) {
         this.inner = Objects.requireNonNull(inner, "inner cannot be null");
     }
 

@@ -23,10 +23,10 @@ import com.github.luben.zstd.Zstd;
 /**
  * The chunk de-transformation that does Zstd decompression.
  */
-public class DecompressionChunkEnumeration implements DetransformChunkEnumeration {
-    private final DetransformChunkEnumeration inner;
+public class DecompressionChunkEnumeration implements OutboundTransform {
+    private final OutboundTransform inner;
 
-    public DecompressionChunkEnumeration(final DetransformChunkEnumeration inner) {
+    public DecompressionChunkEnumeration(final OutboundTransform inner) {
         this.inner = Objects.requireNonNull(inner, "inner cannot be null");
     }
 

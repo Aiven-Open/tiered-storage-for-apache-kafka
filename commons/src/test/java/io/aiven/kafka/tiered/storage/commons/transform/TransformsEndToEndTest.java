@@ -71,32 +71,43 @@ public class TransformsEndToEndTest extends AesKeyAwareTest {
 
     private void test(final int chunkSize, final boolean compression, final boolean encryption) throws IOException {
         // Transform.
-        TransformChunkEnumeration transformEnum = new BaseTransformChunkEnumeration(
-            new ByteArrayInputStream(original), chunkSize);
+        ChunkInboundTransform
+            transformEnum = new ChunkInboundTransformSlicer(new ByteArrayInputStream(original), chunkSize);
+        InboundChain chain = new InboundChain(original, chunkSize);
         if (compression) {
-            transformEnum = new CompressionChunkEnumeration(transformEnum);
+            transformEnum = new ChunkInboundCompression(transformEnum);
+            chain.chain(ChunkInboundCompression::new);
         }
         if (encryption) {
-            transformEnum = new EncryptionChunkEnumeration(transformEnum, AesKeyAwareTest::encryptionCipherSupplier);
+            transformEnum = new ChunkInboundEncryption(transformEnum, AesKeyAwareTest::encryptionCipherSupplier);
+            chain.chain(transform -> new ChunkInboundEncryption(transform, AesKeyAwareTest::encryptionCipherSupplier));
         }
-        final var transformFinisher = new TransformFinisher(transformEnum, ORIGINAL_SIZE);
+        final var completed = new InboundResult(transformEnum, ORIGINAL_SIZE);
+        final var finisher = chain.complete();
         final byte[] uploadedData;
         final ChunkIndex chunkIndex;
-        try (final var sis = new SequenceInputStream(transformFinisher)) {
+        try (final var sis = new SequenceInputStream(completed)) {
             uploadedData = sis.readAllBytes();
-            chunkIndex = transformFinisher.chunkIndex();
+            chunkIndex = completed.chunkIndex();
         }
 
         // Detransform.
-        DetransformChunkEnumeration detransformEnum = new BaseDetransformChunkEnumeration(
+        OutboundTransform detransformEnum = new OutboundJoiner(
             new ByteArrayInputStream(uploadedData), chunkIndex.chunks());
+        OutboundChain outboundChain = new OutboundChain(uploadedData, chunkIndex);
         if (encryption) {
             assert secretKey != null;
             detransformEnum = new DecryptionChunkEnumeration(
                 detransformEnum, ivSize, AesKeyAwareTest::decryptionCipherSupplier);
+            outboundChain.chain(transform -> new DecryptionChunkEnumeration(
+                transform,
+                ivSize,
+                AesKeyAwareTest::decryptionCipherSupplier
+            ));
         }
         if (compression) {
             detransformEnum = new DecompressionChunkEnumeration(detransformEnum);
+            outboundChain.chain(DecompressionChunkEnumeration::new);
         }
         final var detransformFinisher = new DetransformFinisher(detransformEnum);
         try (final var sis = new SequenceInputStream(detransformFinisher)) {

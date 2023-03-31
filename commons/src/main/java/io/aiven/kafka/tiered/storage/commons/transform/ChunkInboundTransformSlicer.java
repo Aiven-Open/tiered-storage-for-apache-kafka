@@ -18,30 +18,38 @@ package io.aiven.kafka.tiered.storage.commons.transform;
 
 import java.io.IOException;
 import java.io.InputStream;
-import java.util.Iterator;
-import java.util.List;
 import java.util.NoSuchElementException;
 import java.util.Objects;
 
-import io.aiven.kafka.tiered.storage.commons.chunkindex.Chunk;
-
 /**
- * The base chunk de-transformation that does the initial chunking of the input stream of bytes.
- *
- * <p>An important quality of this class is that when we use it we know already the chunk positions and sizes,
- * both transformed and not. We rely on this information for determining the transformed chunks borders
- * in the input stream. We also can tell if the input stream has too few bytes.
+ * The base chunk transformation that does the initial chunking of the input stream of bytes.
  */
-public class BaseDetransformChunkEnumeration implements DetransformChunkEnumeration {
+public class ChunkInboundTransformSlicer implements ChunkInboundTransform {
     private final InputStream inputStream;
-    private final Iterator<Chunk> chunksIter;
+    private final int originalChunkSize;
 
     private byte[] chunk = null;
 
-    public BaseDetransformChunkEnumeration(final InputStream inputStream,
-                                           final List<Chunk> chunks) {
+    public ChunkInboundTransformSlicer(final InputStream inputStream,
+                                       final int originalChunkSize) {
         this.inputStream = Objects.requireNonNull(inputStream, "inputStream cannot be null");
-        this.chunksIter = Objects.requireNonNull(chunks, "chunks cannot be null").iterator();
+
+        if (originalChunkSize < 0) {
+            throw new IllegalArgumentException(
+                "originalChunkSize must be non-negative, " + originalChunkSize + " given");
+        }
+        this.originalChunkSize = originalChunkSize;
+    }
+
+    @Override
+    public int originalChunkSize() {
+        return originalChunkSize;
+    }
+
+    @Override
+    public Integer transformedChunkSize() {
+        // No real transformation done, no size changes.
+        return originalChunkSize;
     }
 
     @Override
@@ -67,17 +75,8 @@ public class BaseDetransformChunkEnumeration implements DetransformChunkEnumerat
             return;
         }
 
-        if (!chunksIter.hasNext()) {
-            chunk = new byte[0];
-            return;
-        }
-
         try {
-            final int expectedTransformedSize = chunksIter.next().transformedSize;
-            chunk = inputStream.readNBytes(expectedTransformedSize);
-            if (chunk.length < expectedTransformedSize) {
-                throw new RuntimeException("Stream has fewer bytes than expected");
-            }
+            chunk = inputStream.readNBytes(originalChunkSize);
         } catch (final IOException e) {
             throw new RuntimeException(e);
         }

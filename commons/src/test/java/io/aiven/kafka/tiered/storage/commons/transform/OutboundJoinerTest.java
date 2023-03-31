@@ -29,17 +29,17 @@ import org.junit.jupiter.api.Test;
 import static org.assertj.core.api.Assertions.assertThat;
 import static org.assertj.core.api.Assertions.assertThatThrownBy;
 
-class BaseDetransformChunkEnumerationTest {
+class OutboundJoinerTest {
     @Test
     void nullInputStream() {
-        assertThatThrownBy(() -> new BaseDetransformChunkEnumeration(null, List.of()))
+        assertThatThrownBy(() -> new OutboundJoiner(null, List.of()))
             .isInstanceOf(NullPointerException.class)
             .hasMessage("inputStream cannot be null");
     }
 
     @Test
     void nullChunks() {
-        assertThatThrownBy(() -> new BaseDetransformChunkEnumeration(InputStream.nullInputStream(), null))
+        assertThatThrownBy(() -> new OutboundJoiner(InputStream.nullInputStream(), null))
             .isInstanceOf(NullPointerException.class)
             .hasMessage("chunks cannot be null");
     }
@@ -54,7 +54,7 @@ class BaseDetransformChunkEnumerationTest {
             new Chunk(1, 1, 1, 1, 1)
         );
 
-        final var transform = new BaseDetransformChunkEnumeration(bais, chunks);
+        final var transform = new OutboundJoiner(bais, chunks);
         assertThat(transform.hasMoreElements()).isTrue();
         transform.nextElement();
         assertThatThrownBy(() -> transform.hasMoreElements())
@@ -70,7 +70,7 @@ class BaseDetransformChunkEnumerationTest {
         final List<Chunk> chunks = List.of(
             new Chunk(0, 0, 10, 0, 10)
         );
-        final var transform = new BaseDetransformChunkEnumeration(new ByteArrayInputStream(data), chunks);
+        final var transform = new OutboundJoiner(new ByteArrayInputStream(data), chunks);
         assertThat(transform.hasMoreElements()).isTrue();
         // Only the expected range is read.
         assertThat(transform.nextElement()).isEqualTo(Arrays.copyOfRange(data, 0, 10));
@@ -88,7 +88,7 @@ class BaseDetransformChunkEnumerationTest {
         final List<Chunk> chunks = List.of(
             new Chunk(0, 0, 10, 0, 10)
         );
-        final var transform = new BaseDetransformChunkEnumeration(new ByteArrayInputStream(data), chunks);
+        final var transform = new OutboundJoiner(new ByteArrayInputStream(data), chunks);
         assertThat(transform.hasMoreElements()).isTrue();
         assertThat(transform.nextElement()).isEqualTo(data);
 
@@ -108,7 +108,7 @@ class BaseDetransformChunkEnumerationTest {
             new Chunk(2, 6, 3, 6, 3),
             new Chunk(3, 9, 3, 9, 1)
         );
-        final var transform = new BaseDetransformChunkEnumeration(new ByteArrayInputStream(data), chunks);
+        final var transform = new OutboundJoiner(new ByteArrayInputStream(data), chunks);
         assertThat(transform.hasMoreElements()).isTrue();
         assertThat(transform.nextElement()).isEqualTo(new byte[] {0, 1, 2});
         assertThat(transform.hasMoreElements()).isTrue();

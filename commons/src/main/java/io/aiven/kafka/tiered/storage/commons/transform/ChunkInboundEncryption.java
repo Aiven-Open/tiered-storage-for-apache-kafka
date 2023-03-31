@@ -27,14 +27,14 @@ import java.util.function.Supplier;
 /**
  * The chunk transformation that does encryption.
  */
-public class EncryptionChunkEnumeration implements TransformChunkEnumeration {
-    private final TransformChunkEnumeration inner;
+public class ChunkInboundEncryption implements ChunkInboundTransform {
+    private final ChunkInboundTransform inner;
     private final Supplier<Cipher> cipherSupplier;
 
     private final Integer transformedChunkSize;
 
-    public EncryptionChunkEnumeration(final TransformChunkEnumeration inner,
-                                      final Supplier<Cipher> cipherSupplier) {
+    public ChunkInboundEncryption(final ChunkInboundTransform inner,
+                                  final Supplier<Cipher> cipherSupplier) {
         this.inner = Objects.requireNonNull(inner, "inner cannot be null");
         this.cipherSupplier = Objects.requireNonNull(cipherSupplier, "cipherSupplier cannot be null");
 

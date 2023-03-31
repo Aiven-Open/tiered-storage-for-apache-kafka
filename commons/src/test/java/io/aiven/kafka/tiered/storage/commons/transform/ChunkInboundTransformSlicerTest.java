@@ -27,36 +27,36 @@ import org.junit.jupiter.params.provider.ValueSource;
 import static org.assertj.core.api.Assertions.assertThat;
 import static org.assertj.core.api.Assertions.assertThatThrownBy;
 
-class BaseTransformChunkEnumerationTest {
+class ChunkInboundTransformSlicerTest {
     @Test
     void nullInputStream() {
-        assertThatThrownBy(() -> new BaseTransformChunkEnumeration(null, 10))
+        assertThatThrownBy(() -> new ChunkInboundTransformSlicer(null, 10))
             .isInstanceOf(NullPointerException.class)
             .hasMessage("inputStream cannot be null");
     }
 
     @Test
     void negativeOriginalChunkSize() {
-        assertThatThrownBy(() -> new BaseTransformChunkEnumeration(new ByteArrayInputStream(new byte[1]), -1))
+        assertThatThrownBy(() -> new ChunkInboundTransformSlicer(new ByteArrayInputStream(new byte[1]), -1))
             .isInstanceOf(IllegalArgumentException.class)
             .hasMessage("originalChunkSize must be non-negative, -1 given");
     }
 
     @Test
     void originalChunkSize() {
-        final var transform = new BaseTransformChunkEnumeration(new ByteArrayInputStream(new byte[1]), 123);
+        final var transform = new ChunkInboundTransformSlicer(new ByteArrayInputStream(new byte[1]), 123);
         assertThat(transform.originalChunkSize()).isEqualTo(123);
     }
 
     @Test
     void transformedChunkSizeEqualsToOriginal() {
-        final var transform = new BaseTransformChunkEnumeration(new ByteArrayInputStream(new byte[1]), 123);
+        final var transform = new ChunkInboundTransformSlicer(new ByteArrayInputStream(new byte[1]), 123);
         assertThat(transform.transformedChunkSize()).isEqualTo(transform.originalChunkSize());
     }
 
     @Test
     void emptyInputStream() {
-        final var transform = new BaseTransformChunkEnumeration(InputStream.nullInputStream(), 123);
+        final var transform = new ChunkInboundTransformSlicer(InputStream.nullInputStream(), 123);
         assertThat(transform.hasMoreElements()).isFalse();
         assertThatThrownBy(transform::nextElement)
             .isInstanceOf(NoSuchElementException.class);
@@ -66,7 +66,7 @@ class BaseTransformChunkEnumerationTest {
     @ValueSource(ints = {10, 100})
     void inOneChunk(final int originalChunkSize) {
         final byte[] data = {0, 1, 2, 3, 4, 5, 6, 7, 8, 9};
-        final var transform = new BaseTransformChunkEnumeration(new ByteArrayInputStream(data), originalChunkSize);
+        final var transform = new ChunkInboundTransformSlicer(new ByteArrayInputStream(data), originalChunkSize);
         assertThat(transform.hasMoreElements()).isTrue();
         assertThat(transform.nextElement()).isEqualTo(data);
 
@@ -78,7 +78,7 @@ class BaseTransformChunkEnumerationTest {
     @Test
     void inManyChunks() {
         final byte[] data = {0, 1, 2, 3, 4, 5, 6, 7, 8, 9};
-        final var transform = new BaseTransformChunkEnumeration(new ByteArrayInputStream(data), 3);
+        final var transform = new ChunkInboundTransformSlicer(new ByteArrayInputStream(data), 3);
         assertThat(transform.hasMoreElements()).isTrue();
         assertThat(transform.nextElement()).isEqualTo(new byte[] {0, 1, 2});
         assertThat(transform.hasMoreElements()).isTrue();

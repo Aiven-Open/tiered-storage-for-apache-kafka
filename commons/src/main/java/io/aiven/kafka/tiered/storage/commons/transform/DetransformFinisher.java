@@ -28,9 +28,9 @@ import java.util.Enumeration;
  * so that it could be used in {@link SequenceInputStream}.
  */
 public class DetransformFinisher implements Enumeration<InputStream> {
-    private final DetransformChunkEnumeration inner;
+    private final OutboundTransform inner;
 
-    public DetransformFinisher(final DetransformChunkEnumeration inner) {
+    public DetransformFinisher(final OutboundTransform inner) {
         this.inner = inner;
     }
 

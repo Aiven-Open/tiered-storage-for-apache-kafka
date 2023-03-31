@@ -31,11 +31,11 @@ import static org.mockito.Mockito.when;
 @ExtendWith(MockitoExtension.class)
 class CompressionChunkEnumerationTest {
     @Mock
-    TransformChunkEnumeration inner;
+    ChunkInboundTransform inner;
 
     @Test
     void nullInnerEnumeration() {
-        assertThatThrownBy(() -> new CompressionChunkEnumeration(null))
+        assertThatThrownBy(() -> new ChunkInboundCompression(null))
             .isInstanceOf(NullPointerException.class)
             .hasMessage("inner cannot be null");
     }
@@ -43,20 +43,20 @@ class CompressionChunkEnumerationTest {
     @Test
     void originalChunkSizePropagated() {
         when(inner.originalChunkSize()).thenReturn(123);
-        final var transform = new CompressionChunkEnumeration(inner);
+        final var transform = new ChunkInboundCompression(inner);
         assertThat(transform.originalChunkSize()).isEqualTo(123);
         verify(inner).originalChunkSize();
     }
 
     @Test
     void transformedChunkSize() {
-        final var transform = new CompressionChunkEnumeration(inner);
+        final var transform = new ChunkInboundCompression(inner);
         assertThat(transform.transformedChunkSize()).isNull();
     }
 
     @Test
     void hasMoreElementsPropagated() {
-        final var transform = new CompressionChunkEnumeration(inner);
+        final var transform = new ChunkInboundCompression(inner);
         when(inner.hasMoreElements())
             .thenReturn(true)
             .thenReturn(false);
@@ -68,7 +68,7 @@ class CompressionChunkEnumerationTest {
     @Test
     void compress() {
         final byte[] data = {0, 1, 2, 3, 4, 5, 6, 7, 8, 9};
-        final var transform = new CompressionChunkEnumeration(inner);
+        final var transform = new ChunkInboundCompression(inner);
         when(inner.nextElement()).thenReturn(data);
 
         final byte[] compressed = transform.nextElement();
