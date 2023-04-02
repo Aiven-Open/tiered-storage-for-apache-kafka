@@ -28,7 +28,7 @@ dependencies {
     runtimeOnly 'com.fasterxml.jackson.core:jackson-databind:2.14.2'
     // Temporary. Will be later provided as transitive from kafka-clients.
     runtimeOnly "com.github.luben:zstd-jni:1.5.4-2"
-    testImplementation 'org.mockito:mockito-core:5.1.1'
+    testImplementation 'org.mockito:mockito-core:5.2.0'
     testImplementation 'org.mockito:mockito-junit-jupiter:5.1.1'
     testRuntimeOnly "org.slf4j:slf4j-log4j12:1.7.36"
     integrationTestImplementation "org.testcontainers:localstack:$testcontainersVersion"
