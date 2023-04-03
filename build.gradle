@@ -68,6 +68,7 @@ subprojects {
     ext {
         testcontainersVersion = "1.17.6"
         junitVersion = "5.9.2"
+        mockitoVersion = "5.1.1"
 
         // Don't bump this version without need, as this is the min supported version for the plugin.
         kafkaVersion = "3.0.0"
@@ -82,10 +83,13 @@ subprojects {
         testImplementation group: "org.apache.kafka", name: "kafka-storage-api", version: kafkaVersion
         testImplementation group: "org.apache.kafka", name: "kafka-clients", version: kafkaVersion
         testImplementation "org.junit.jupiter:junit-jupiter-api:$junitVersion"
+        testImplementation "org.junit.jupiter:junit-jupiter-params:$junitVersion"
         testImplementation "org.apache.kafka:kafka_2.12:2.8.0"
         testImplementation "org.testcontainers:junit-jupiter:$testcontainersVersion"
         testImplementation "org.testcontainers:kafka:$testcontainersVersion" // this is not Kafka version
         testImplementation "org.assertj:assertj-core:3.24.2"
+        testImplementation group: 'org.mockito', name: 'mockito-core', version: mockitoVersion
+        testImplementation group: 'org.mockito', name: 'mockito-junit-jupiter', version: mockitoVersion
     }
 
     tasks.named('test') {
