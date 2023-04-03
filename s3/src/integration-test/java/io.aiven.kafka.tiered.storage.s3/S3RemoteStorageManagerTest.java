@@ -98,9 +98,9 @@ public class S3RemoteStorageManagerTest {
 
     static final String TOPIC = "connect-log";
     static final TopicIdPartition TP0 = new TopicIdPartition(Uuid.randomUuid(),
-            new TopicPartition(TOPIC, 0));
+        new TopicPartition(TOPIC, 0));
     static final TopicIdPartition TP1 = new TopicIdPartition(Uuid.randomUuid(),
-            new TopicPartition(TOPIC, 1));
+        new TopicPartition(TOPIC, 1));
 
     public static final String LETTERS = "ABCDEFGHIJKLMNOPQRSTUVWXYZabcdefghijklmnopqrstuvwxyz";
     public static final String DIGITS = "0123456789";
@@ -133,7 +133,7 @@ public class S3RemoteStorageManagerTest {
 
     @BeforeAll
     public static void setUpClass(@TempDir final Path tmpFolder)
-            throws NoSuchAlgorithmException, NoSuchProviderException, IOException {
+        throws NoSuchAlgorithmException, NoSuchProviderException, IOException {
         s3Client = AmazonS3ClientBuilder
             .standard()
             .withEndpointConfiguration(
@@ -172,8 +172,10 @@ public class S3RemoteStorageManagerTest {
             LOCALSTACK.getEndpointOverride(LocalStackContainer.Service.S3).toString(),
             LOCALSTACK.getRegion()
         );
-        remoteStorageManager = new S3RemoteStorageManager(endpointConfiguration);
-        remoteStorageManager.configure(basicProps(bucket, s3PathPrefix));
+        remoteStorageManager = new S3RemoteStorageManager();
+        final Map<String, String> configs = basicProps(bucket, s3PathPrefix);
+        configs.put(S3RemoteStorageManagerConfig.S3_ENDPOINT_URL_CONFIG, endpointConfiguration.getServiceEndpoint());
+        remoteStorageManager.configure(configs);
     }
 
     protected static void writePemFile(final Path path, final EncodedKeySpec encodedKeySpec) throws IOException {
@@ -231,36 +233,36 @@ public class S3RemoteStorageManagerTest {
         final String baseLogFileName1 = segment1.log().file().getName();
         final String baseLogFileName2 = segment2.log().file().getName();
         assertThat(keys).containsExactlyInAnyOrder(
-                s3Key(TP0, uuid1 + "-" + baseLogFileName1) + "_0",
-                s3Key(TP0, uuid1 + "-" + baseLogFileName1) + "_1",
-                s3Key(TP0, uuid1 + "-" + baseLogFileName1) + "_2",
-                s3Key(TP0, uuid1 + "-" + baseLogFileName1) + "_3",
-                s3Key(TP0, uuid1 + "-" + filenamePrefixFromOffset(segment1.baseOffset()) + "."
-                        + RemoteStorageManager.IndexType.OFFSET),
-                s3Key(TP0, uuid1 + "-" + filenamePrefixFromOffset(segment1.baseOffset()) + "."
-                        + RemoteStorageManager.IndexType.TIMESTAMP),
-                s3Key(TP0, uuid1 + "-" + filenamePrefixFromOffset(segment1.baseOffset()) + "."
-                        + RemoteStorageManager.IndexType.PRODUCER_SNAPSHOT),
-                s3Key(TP0, uuid1 + "-" + filenamePrefixFromOffset(segment1.baseOffset()) + "."
-                        + RemoteStorageManager.IndexType.TRANSACTION),
-                s3Key(TP0, uuid1 + "-" + String.format("%020d", segment1.baseOffset()) + "."
-                        + RemoteStorageManager.IndexType.LEADER_EPOCH),
-                s3Key(TP0, uuid1 + "-" + String.format("%020d", segment1.baseOffset()) + ".metadata.json"),
-                s3Key(TP1, uuid2 + "-" + baseLogFileName2) + "_0",
-                s3Key(TP1, uuid2 + "-" + baseLogFileName2) + "_1",
-                s3Key(TP1, uuid2 + "-" + baseLogFileName2) + "_2",
-                s3Key(TP1, uuid2 + "-" + baseLogFileName2) + "_3",
-                s3Key(TP1, uuid2 + "-" + filenamePrefixFromOffset(segment2.baseOffset()) + "."
-                        + RemoteStorageManager.IndexType.OFFSET),
-                s3Key(TP1, uuid2 + "-" + filenamePrefixFromOffset(segment2.baseOffset()) + "."
-                        + RemoteStorageManager.IndexType.TIMESTAMP),
-                s3Key(TP1, uuid2 + "-" + filenamePrefixFromOffset(segment2.baseOffset()) + "."
-                        + RemoteStorageManager.IndexType.PRODUCER_SNAPSHOT),
-                s3Key(TP1, uuid2 + "-" + filenamePrefixFromOffset(segment2.baseOffset()) + "."
-                        + RemoteStorageManager.IndexType.TRANSACTION),
-                s3Key(TP1, uuid2 + "-" + filenamePrefixFromOffset(segment2.baseOffset()) + "."
-                        + RemoteStorageManager.IndexType.LEADER_EPOCH),
-                s3Key(TP1, uuid2 + "-" + String.format("%020d", segment2.baseOffset()) + ".metadata.json")
+            s3Key(TP0, uuid1 + "-" + baseLogFileName1) + "_0",
+            s3Key(TP0, uuid1 + "-" + baseLogFileName1) + "_1",
+            s3Key(TP0, uuid1 + "-" + baseLogFileName1) + "_2",
+            s3Key(TP0, uuid1 + "-" + baseLogFileName1) + "_3",
+            s3Key(TP0, uuid1 + "-" + filenamePrefixFromOffset(segment1.baseOffset()) + "."
+                + RemoteStorageManager.IndexType.OFFSET),
+            s3Key(TP0, uuid1 + "-" + filenamePrefixFromOffset(segment1.baseOffset()) + "."
+                + RemoteStorageManager.IndexType.TIMESTAMP),
+            s3Key(TP0, uuid1 + "-" + filenamePrefixFromOffset(segment1.baseOffset()) + "."
+                + RemoteStorageManager.IndexType.PRODUCER_SNAPSHOT),
+            s3Key(TP0, uuid1 + "-" + filenamePrefixFromOffset(segment1.baseOffset()) + "."
+                + RemoteStorageManager.IndexType.TRANSACTION),
+            s3Key(TP0, uuid1 + "-" + String.format("%020d", segment1.baseOffset()) + "."
+                + RemoteStorageManager.IndexType.LEADER_EPOCH),
+            s3Key(TP0, uuid1 + "-" + String.format("%020d", segment1.baseOffset()) + ".metadata.json"),
+            s3Key(TP1, uuid2 + "-" + baseLogFileName2) + "_0",
+            s3Key(TP1, uuid2 + "-" + baseLogFileName2) + "_1",
+            s3Key(TP1, uuid2 + "-" + baseLogFileName2) + "_2",
+            s3Key(TP1, uuid2 + "-" + baseLogFileName2) + "_3",
+            s3Key(TP1, uuid2 + "-" + filenamePrefixFromOffset(segment2.baseOffset()) + "."
+                + RemoteStorageManager.IndexType.OFFSET),
+            s3Key(TP1, uuid2 + "-" + filenamePrefixFromOffset(segment2.baseOffset()) + "."
+                + RemoteStorageManager.IndexType.TIMESTAMP),
+            s3Key(TP1, uuid2 + "-" + filenamePrefixFromOffset(segment2.baseOffset()) + "."
+                + RemoteStorageManager.IndexType.PRODUCER_SNAPSHOT),
+            s3Key(TP1, uuid2 + "-" + filenamePrefixFromOffset(segment2.baseOffset()) + "."
+                + RemoteStorageManager.IndexType.TRANSACTION),
+            s3Key(TP1, uuid2 + "-" + filenamePrefixFromOffset(segment2.baseOffset()) + "."
+                + RemoteStorageManager.IndexType.LEADER_EPOCH),
+            s3Key(TP1, uuid2 + "-" + String.format("%020d", segment2.baseOffset()) + ".metadata.json")
         );
     }
 
@@ -268,9 +270,9 @@ public class S3RemoteStorageManagerTest {
         final File file = Log.producerSnapshotFile(logDir, segment.baseOffset());
         file.createNewFile();
         return new LogSegmentData(segment.log().file().toPath(), segment.offsetIndex().file().toPath(),
-                segment.timeIndex().file().toPath(), Optional.of(segment.txnIndex().file().toPath()),
-                file.toPath(),
-                ByteBuffer.wrap(new byte[] {1, 2, 3}));
+            segment.timeIndex().file().toPath(), Optional.of(segment.txnIndex().file().toPath()),
+            file.toPath(),
+            ByteBuffer.wrap(new byte[] {1, 2, 3}));
     }
 
     @Test
@@ -282,8 +284,8 @@ public class S3RemoteStorageManagerTest {
         remoteStorageManager.copyLogSegmentData(createLogSegmentMetadata(segmentId, segment), lsd);
 
         final RemoteLogSegmentMetadata metadata =
-                new RemoteLogSegmentMetadata(segmentId, segment.baseOffset(), -1, -1, -1, 1L,
-                        segment.size(), Collections.singletonMap(1, 100L));
+            new RemoteLogSegmentMetadata(segmentId, segment.baseOffset(), -1, -1, -1, 1L,
+                segment.size(), Collections.singletonMap(1, 100L));
         try (final InputStream remoteInputStream = remoteStorageManager.fetchLogSegment(metadata, 0)) {
             assertStreamContentEqualToFile(segment.log().file(), 0, null, remoteInputStream);
         }
@@ -298,15 +300,15 @@ public class S3RemoteStorageManagerTest {
         remoteStorageManager.copyLogSegmentData(createLogSegmentMetadata(segmentId, segment), lsd);
 
         final RemoteLogSegmentMetadata metadata =
-                new RemoteLogSegmentMetadata(segmentId, segment.baseOffset(), -1, -1, -1, 1L,
-                        segment.log().sizeInBytes(), Collections.singletonMap(1, 100L));
+            new RemoteLogSegmentMetadata(segmentId, segment.baseOffset(), -1, -1, -1, 1L,
+                segment.log().sizeInBytes(), Collections.singletonMap(1, 100L));
 
         final int skipBeginning = 23;
         final int startPosition = skipBeginning;
         final long skipEnd = 42L;
         final long endPosition = segment.log().file().length() - skipEnd;
         try (final InputStream remoteInputStream = remoteStorageManager.fetchLogSegment(metadata, startPosition,
-                (int) endPosition)) {
+            (int) endPosition)) {
             assertStreamContentEqualToFile(segment.log().file(), skipBeginning, skipEnd, remoteInputStream);
         }
     }
@@ -320,12 +322,12 @@ public class S3RemoteStorageManagerTest {
         remoteStorageManager.copyLogSegmentData(createLogSegmentMetadata(segmentId, segment), lsd);
 
         final RemoteLogSegmentMetadata metadata =
-                new RemoteLogSegmentMetadata(segmentId, segment.baseOffset(), -1, -1, -1, 1L,
-                        segment.log().sizeInBytes(),
-                        Collections.singletonMap(1, 100L));
+            new RemoteLogSegmentMetadata(segmentId, segment.baseOffset(), -1, -1, -1, 1L,
+                segment.log().sizeInBytes(),
+                Collections.singletonMap(1, 100L));
 
         try (final InputStream remoteInputStream = remoteStorageManager.fetchIndex(metadata,
-                RemoteStorageManager.IndexType.OFFSET)) {
+            RemoteStorageManager.IndexType.OFFSET)) {
             assertStreamContentEqualToFile(segment.offsetIndex().file(), 0, null, remoteInputStream);
         }
     }
@@ -339,10 +341,10 @@ public class S3RemoteStorageManagerTest {
         remoteStorageManager.copyLogSegmentData(createLogSegmentMetadata(segmentId, segment), lsd);
 
         final RemoteLogSegmentMetadata metadata =
-                new RemoteLogSegmentMetadata(segmentId, segment.baseOffset(), -1, -1, -1, 1L,
-                        segment.log().sizeInBytes(), Collections.singletonMap(1, 100L));
+            new RemoteLogSegmentMetadata(segmentId, segment.baseOffset(), -1, -1, -1, 1L,
+                segment.log().sizeInBytes(), Collections.singletonMap(1, 100L));
         try (final InputStream remoteInputStream = remoteStorageManager.fetchIndex(metadata,
-                RemoteStorageManager.IndexType.TIMESTAMP)) {
+            RemoteStorageManager.IndexType.TIMESTAMP)) {
             assertStreamContentEqualToFile(segment.timeIndex().file(), 0, null, remoteInputStream);
         }
     }
@@ -362,28 +364,28 @@ public class S3RemoteStorageManagerTest {
         remoteStorageManager.copyLogSegmentData(createLogSegmentMetadata(segmentId2, segment2), lsd2);
 
         final RemoteLogSegmentMetadata metadata1 =
-                new RemoteLogSegmentMetadata(segmentId1, 0, -1, -1, -1, 1L, segment1.log().sizeInBytes(),
-                        Collections.singletonMap(1, 100L));
+            new RemoteLogSegmentMetadata(segmentId1, 0, -1, -1, -1, 1L, segment1.log().sizeInBytes(),
+                Collections.singletonMap(1, 100L));
         remoteStorageManager.deleteLogSegmentData(metadata1);
 
         final List<String> keys = listS3Keys();
         final String baseLogFileName2 = segment2.log().file().getName();
         assertThat(keys).containsOnly(
-                s3Key(TP1, uuid2 + "-" + baseLogFileName2) + "_0",
-                s3Key(TP1, uuid2 + "-" + baseLogFileName2) + "_1",
-                s3Key(TP1, uuid2 + "-" + baseLogFileName2) + "_2",
-                s3Key(TP1, uuid2 + "-" + baseLogFileName2) + "_3",
-                s3Key(TP1, uuid2 + "-" + filenamePrefixFromOffset(segment2.baseOffset()) + "."
-                        + RemoteStorageManager.IndexType.OFFSET),
-                s3Key(TP1, uuid2 + "-" + filenamePrefixFromOffset(segment2.baseOffset()) + "."
-                        + RemoteStorageManager.IndexType.TIMESTAMP),
-                s3Key(TP1, uuid2 + "-" + filenamePrefixFromOffset(segment2.baseOffset()) + "."
-                        + RemoteStorageManager.IndexType.PRODUCER_SNAPSHOT),
-                s3Key(TP1, uuid2 + "-" + filenamePrefixFromOffset(segment2.baseOffset()) + "."
-                        + RemoteStorageManager.IndexType.TRANSACTION),
-                s3Key(TP1, uuid2 + "-" + filenamePrefixFromOffset(segment2.baseOffset()) + "."
-                        + RemoteStorageManager.IndexType.LEADER_EPOCH),
-                s3Key(TP1, uuid2 + "-" + String.format("%020d", segment2.baseOffset()) + ".metadata.json")
+            s3Key(TP1, uuid2 + "-" + baseLogFileName2) + "_0",
+            s3Key(TP1, uuid2 + "-" + baseLogFileName2) + "_1",
+            s3Key(TP1, uuid2 + "-" + baseLogFileName2) + "_2",
+            s3Key(TP1, uuid2 + "-" + baseLogFileName2) + "_3",
+            s3Key(TP1, uuid2 + "-" + filenamePrefixFromOffset(segment2.baseOffset()) + "."
+                + RemoteStorageManager.IndexType.OFFSET),
+            s3Key(TP1, uuid2 + "-" + filenamePrefixFromOffset(segment2.baseOffset()) + "."
+                + RemoteStorageManager.IndexType.TIMESTAMP),
+            s3Key(TP1, uuid2 + "-" + filenamePrefixFromOffset(segment2.baseOffset()) + "."
+                + RemoteStorageManager.IndexType.PRODUCER_SNAPSHOT),
+            s3Key(TP1, uuid2 + "-" + filenamePrefixFromOffset(segment2.baseOffset()) + "."
+                + RemoteStorageManager.IndexType.TRANSACTION),
+            s3Key(TP1, uuid2 + "-" + filenamePrefixFromOffset(segment2.baseOffset()) + "."
+                + RemoteStorageManager.IndexType.LEADER_EPOCH),
+            s3Key(TP1, uuid2 + "-" + String.format("%020d", segment2.baseOffset()) + ".metadata.json")
         );
     }
 
@@ -398,12 +400,12 @@ public class S3RemoteStorageManagerTest {
         try (final InputStream fileInputStream = new FileInputStream(expectedFile)) {
             final long skipped = fileInputStream.skip(skipBeginning);
             assertThat(skipped)
-                    .withFailMessage("Failed tp skip the beginning of the excepted file <%s>", expectedFile.getName())
-                    .isEqualTo(skipBeginning);
+                .withFailMessage("Failed tp skip the beginning of the excepted file <%s>", expectedFile.getName())
+                .isEqualTo(skipBeginning);
             final long skip = actual.skip(skipBeginning);
             assertThat(skip)
-                    .withFailMessage("Failed tp skip the beginning of the actual stream")
-                    .isEqualTo(skipBeginning);
+                .withFailMessage("Failed tp skip the beginning of the actual stream")
+                .isEqualTo(skipBeginning);
             length -= skipBeginning;
             assertThat(actual.readAllBytes()).isEqualTo(fileInputStream.readNBytes(length));
         }
@@ -414,7 +416,7 @@ public class S3RemoteStorageManagerTest {
         props.put(S3RemoteStorageManagerConfig.S3_BUCKET_NAME_CONFIG, bucket);
         props.put(S3RemoteStorageManagerConfig.S3_PREFIX, prefix);
         props.put(S3RemoteStorageManagerConfig.S3_CREDENTIALS_PROVIDER_CLASS_CONFIG,
-                AnonymousCredentialsProvider.class.getName());
+            AnonymousCredentialsProvider.class.getName());
         props.put(S3RemoteStorageManagerConfig.PUBLIC_KEY, publicKeyPem.toString());
         props.put(S3RemoteStorageManagerConfig.PRIVATE_KEY, privateKeyPem.toString());
         props.put(S3RemoteStorageManagerConfig.IO_BUFFER_SIZE, "8192");
@@ -426,8 +428,8 @@ public class S3RemoteStorageManagerTest {
     private static RemoteLogSegmentMetadata createLogSegmentMetadata(final RemoteLogSegmentId remoteLogSegmentId,
                                                                      final LogSegment logSegment) {
         return new RemoteLogSegmentMetadata(remoteLogSegmentId, logSegment.baseOffset(),
-                logSegment.readNextOffset() - 1, logSegment.largestTimestamp(),
-                0, logSegment.time().milliseconds(), logSegment.size(), Collections.singletonMap(1, 100L));
+            logSegment.readNextOffset() - 1, logSegment.largestTimestamp(),
+            0, logSegment.time().milliseconds(), logSegment.size(), Collections.singletonMap(1, 100L));
     }
 
     private LogSegment createLogSegment(final long offset) throws IOException {
@@ -455,7 +457,7 @@ public class S3RemoteStorageManagerTest {
         }
         final long lastOffset = offset + numRecords - 1;
         final MemoryRecords memoryRecords = MemoryRecords.withRecords(
-                RecordBatch.CURRENT_MAGIC_VALUE, offset, CompressionType.NONE, TimestampType.CREATE_TIME, records);
+            RecordBatch.CURRENT_MAGIC_VALUE, offset, CompressionType.NONE, TimestampType.CREATE_TIME, records);
         segment.append(lastOffset, timestamp, offset, memoryRecords);
     }
 
@@ -490,9 +492,9 @@ public class S3RemoteStorageManagerTest {
                                     final Time time) throws IOException {
         final FileRecords ms = FileRecords.open(Log.logFile(logDir, offset, ""));
         final LazyIndex<OffsetIndex> idx =
-                LazyIndex.forOffset(Log.offsetIndexFile(logDir, offset, ""), offset, 1000, true);
+            LazyIndex.forOffset(Log.offsetIndexFile(logDir, offset, ""), offset, 1000, true);
         final LazyIndex<TimeIndex> timeIdx =
-                LazyIndex.forTime(Log.timeIndexFile(logDir, offset, ""), offset, 1500, true);
+            LazyIndex.forTime(Log.timeIndexFile(logDir, offset, ""), offset, 1500, true);
         final File file = Log.transactionIndexFile(logDir, offset, "");
         file.createNewFile();
         final TransactionIndex txnIndex = new TransactionIndex(offset, file);
