@@ -85,4 +85,23 @@ public class VariableSizeChunkIndex extends AbstractChunkIndex {
     protected final int transformedChunkSize(final int chunkI) {
         return transformedChunks.get(chunkI);
     }
+
+    @Override
+    public boolean equals(final Object o) {
+        if (this == o) {
+            return true;
+        }
+        if (o == null || getClass() != o.getClass()) {
+            return false;
+        }
+        final VariableSizeChunkIndex that = (VariableSizeChunkIndex) o;
+        return originalChunkSize == that.originalChunkSize
+            && originalFileSize == that.originalFileSize
+            && Objects.equals(transformedChunks, that.transformedChunks);
+    }
+
+    @Override
+    public int hashCode() {
+        return Objects.hash(originalChunkSize, originalFileSize, transformedChunks);
+    }
 }

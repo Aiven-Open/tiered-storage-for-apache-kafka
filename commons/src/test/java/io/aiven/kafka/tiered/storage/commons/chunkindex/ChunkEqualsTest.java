@@ -20,7 +20,7 @@ import org.junit.jupiter.api.Test;
 
 import static org.assertj.core.api.Assertions.assertThat;
 
-public class ChunkTest {
+public class ChunkEqualsTest {
     @Test
     void identical() {
         final var c1 = new Chunk(0, 20, 30, 100, 120);
