@@ -11,6 +11,44 @@ Docker compose environment to try out tiered storage plugins.
 
 ## How to use
 
+### Test Local Storage
+
+Using test implementation from https://github.com/aiven/kafka/blob/93ae220db12e8294b2cfe8871a2583b53de8b775/storage/src/test/java/org/apache/kafka/server/log/remote/storage/LocalTieredStorage.java
+
+> on [./test](./test) directory
+
+```shell
+docker-compose build
+# docker-compose build --no-cache # to build again from latest commits
+docker-compose up -d
+```
+
+Plugin is available on Kafka storage test jars, so this flag is required:
+
+```yaml
+kafka:
+  # ...
+  environment:
+    - INCLUDE_TEST_JARS=true
+```
+
+Local directory is mounted:
+
+```yaml
+kafka:
+  # ...
+  volumes:
+    # mount local dir for second tier
+    - ./data:/kafka/kafka-tiered-storage/data
+  command:
+    # ...
+    # Tiered storage S3 plugin
+    - --override
+    - rsm.config.dir=/data
+```
+
+> Internally, `LocalTieredStorage` maps config to internal directory for tiered-storage, yielding `/kafka/kafka-tiered-storage/data`
+
 ### S3
 
 > on [./s3](./s3) directory
@@ -35,6 +73,8 @@ kafka:
 and then:
 
 ```shell
+docker-compose build
+# docker-compose build --no-cache # to build again from latest commits
 docker-compose up -d
 ```
 
@@ -99,10 +139,22 @@ and set paths on `compose.yml` file:
 
 Creating topics with Tiered storage:
 
+> on current directory
+
 ```shell
-make topic
+make ts-topic
 ```
 
-creates a topic t1 with 6 partitions, 10MB segments, retention bytes 100MB, and 20MB local retention.
+creates by default a topic `t1` with 6 partitions, `10MB` segments, retention bytes `500MB`, and `50MB` local retention.
 
+```
+|-----...----------| partition: 500M
+         |-------|-| local: 50M
+ |-|-|-|-|-|-|-|-|-| segments: 10M
+```
 
+Use Makefile variables to customize topic creation:
+
+```shell
+make ts-topic t=t2 segment=1000000
+```

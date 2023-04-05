@@ -1,0 +1,59 @@
+version: '3.8'
+services:
+  zookeeper:
+    image: kafka
+    build:
+      context: ../kafka/.
+      args:
+        - AK_REPO=https://github.com/aiven/kafka
+        - AK_BRANCH=3.3-2022-10-06-tiered-storage
+        - KAFKA_VERSION=3.3.2-SNAPSHOT
+    command:
+      - zookeeper-server-start.sh
+      - config/zookeeper.properties
+
+  kafka:
+    image: kafka
+    build:
+      context: ../kafka/.
+      args:
+        - AK_REPO=https://github.com/aiven/kafka
+        - AK_BRANCH=3.3-2022-10-06-tiered-storage
+        - KAFKA_VERSION=3.3.2-SNAPSHOT
+    ports:
+      - "9092:9092"
+    volumes:
+      # mount local dir for second tier
+      - ./data:/kafka/kafka-tiered-storage/data
+    environment: 
+      - INCLUDE_TEST_JARS=true
+    command:
+      - kafka-server-start.sh
+      - config/server.properties
+      - --override
+      - zookeeper.connect=zookeeper:2181
+      - --override
+      - listeners=BROKER://kafka:29092,EXTERNAL://kafka:9092
+      - --override
+      - advertised.listeners=BROKER://kafka:29092,EXTERNAL://localhost:9092
+      - --override
+      - listener.security.protocol.map=BROKER:PLAINTEXT,EXTERNAL:PLAINTEXT
+      - --override
+      - inter.broker.listener.name=BROKER
+      # Enable Tiered storage
+      - --override
+      - remote.log.storage.system.enable=true
+      - --override
+      - remote.log.storage.manager.class.name=org.apache.kafka.server.log.remote.storage.LocalTieredStorage
+      - --override
+      - remote.log.storage.manager.class.path=
+      # Tiered storage S3 plugin
+      - --override
+      - rsm.config.dir=/data
+      # Tiered Storage: RLMM config
+      - --override
+      - remote.log.metadata.manager.class.name=org.apache.kafka.server.log.remote.metadata.storage.TopicBasedRemoteLogMetadataManager
+      - --override
+      - rlmm.config.remote.log.metadata.common.client.bootstrap.servers=kafka:29092
+      - --override
+      - rlmm.config.remote.log.metadata.topic.replication.factor=1
