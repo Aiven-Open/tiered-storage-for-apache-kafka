@@ -24,8 +24,9 @@ services:
       - "9092:9092"
     volumes:
       # mount local dir for second tier
-      - ./data:/kafka/kafka-tiered-storage/data
-    environment: 
+      - ./data/tiered-storage:/kafka/kafka-tiered-storage/data
+      - ./data/kafka:/kafka/data
+    environment:
       - INCLUDE_TEST_JARS=true
     command:
       - kafka-server-start.sh
@@ -40,6 +41,8 @@ services:
       - listener.security.protocol.map=BROKER:PLAINTEXT,EXTERNAL:PLAINTEXT
       - --override
       - inter.broker.listener.name=BROKER
+      - --override
+      - log.dirs=/kafka/data
       # Enable Tiered storage
       - --override
       - remote.log.storage.system.enable=true
