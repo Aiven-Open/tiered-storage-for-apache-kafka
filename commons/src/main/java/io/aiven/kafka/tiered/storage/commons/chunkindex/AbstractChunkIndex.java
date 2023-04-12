@@ -19,8 +19,12 @@ package io.aiven.kafka.tiered.storage.commons.chunkindex;
 import java.util.ArrayList;
 import java.util.List;
 
+import com.fasterxml.jackson.annotation.JsonProperty;
+
 public abstract class AbstractChunkIndex implements ChunkIndex {
+    @JsonProperty("originalChunkSize")
     protected final int originalChunkSize;
+    @JsonProperty("originalFileSize")
     protected final int originalFileSize;
     protected final int finalTransformedChunkSize;
     protected final int chunkCount;

@@ -18,6 +18,9 @@ package io.aiven.kafka.tiered.storage.commons.chunkindex;
 
 import java.util.List;
 
+import com.fasterxml.jackson.annotation.JsonSubTypes;
+import com.fasterxml.jackson.annotation.JsonTypeInfo;
+
 /**
  * An index that maps chunks in original and transformed files.
  *
@@ -27,6 +30,13 @@ import java.util.List;
  * <p>The original file is supposed to be split into chunks
  * of constant size (apart from the final one).
  */
+@JsonTypeInfo(
+    use = JsonTypeInfo.Id.NAME,
+    property = "type")
+@JsonSubTypes({
+    @JsonSubTypes.Type(value = FixedSizeChunkIndex.class, name = "fixed"),
+    @JsonSubTypes.Type(value = VariableSizeChunkIndex.class, name = "variable"),
+})
 public interface ChunkIndex {
     /**
      * For a given offset in the original file, finds the corresponding chunk.
