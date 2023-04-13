@@ -17,6 +17,7 @@
 package io.aiven.kafka.tiered.storage.commons.chunkindex;
 
 import java.util.List;
+import java.util.Objects;
 
 import com.fasterxml.jackson.annotation.JsonCreator;
 import com.fasterxml.jackson.annotation.JsonProperty;
@@ -86,5 +87,25 @@ public class FixedSizeChunkIndex extends AbstractChunkIndex {
     protected final int transformedChunkSize(final int chunkI) {
         final boolean isFinalChunk = chunkI == chunkCount - 1;
         return isFinalChunk ? finalTransformedChunkSize : transformedChunkSize;
+    }
+
+    @Override
+    public boolean equals(final Object o) {
+        if (this == o) {
+            return true;
+        }
+        if (o == null || getClass() != o.getClass()) {
+            return false;
+        }
+        final FixedSizeChunkIndex that = (FixedSizeChunkIndex) o;
+        return originalChunkSize == that.originalChunkSize
+            && originalFileSize == that.originalFileSize
+            && transformedChunkSize == that.transformedChunkSize
+            && finalTransformedChunkSize == that.finalTransformedChunkSize;
+    }
+
+    @Override
+    public int hashCode() {
+        return Objects.hash(originalChunkSize, originalFileSize, transformedChunkSize, finalTransformedChunkSize);
     }
 }
