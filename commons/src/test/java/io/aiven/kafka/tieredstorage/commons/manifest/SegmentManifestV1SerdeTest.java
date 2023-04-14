@@ -14,7 +14,7 @@
  * limitations under the License.
  */
 
-package io.aiven.kafka.tieredstorage.commons.index.manifest;
+package io.aiven.kafka.tieredstorage.commons.manifest;
 
 import javax.crypto.SecretKey;
 import javax.crypto.spec.SecretKeySpec;
@@ -26,8 +26,8 @@ import java.util.Base64;
 
 import io.aiven.kafka.tieredstorage.commons.RsaKeyAwareTest;
 import io.aiven.kafka.tieredstorage.commons.index.FixedSizeChunkIndex;
-import io.aiven.kafka.tieredstorage.commons.index.manifest.serde.SecretKeyDeserializer;
-import io.aiven.kafka.tieredstorage.commons.index.manifest.serde.SecretKeySerializer;
+import io.aiven.kafka.tieredstorage.commons.manifest.serde.SecretKeyDeserializer;
+import io.aiven.kafka.tieredstorage.commons.manifest.serde.SecretKeySerializer;
 import io.aiven.kafka.tieredstorage.commons.security.EncryptionKeyProvider;
 
 import com.fasterxml.jackson.core.JsonProcessingException;

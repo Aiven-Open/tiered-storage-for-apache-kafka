@@ -14,7 +14,7 @@
  * limitations under the License.
  */
 
-package io.aiven.kafka.tieredstorage.commons.index.manifest;
+package io.aiven.kafka.tieredstorage.commons.manifest;
 
 import javax.crypto.SecretKey;
 
