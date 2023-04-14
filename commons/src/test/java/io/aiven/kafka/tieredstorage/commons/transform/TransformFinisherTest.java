@@ -21,9 +21,9 @@ import java.util.Iterator;
 import java.util.List;
 
 import io.aiven.kafka.tieredstorage.commons.Chunk;
-import io.aiven.kafka.tieredstorage.commons.index.ChunkIndex;
-import io.aiven.kafka.tieredstorage.commons.index.FixedSizeChunkIndex;
-import io.aiven.kafka.tieredstorage.commons.index.VariableSizeChunkIndex;
+import io.aiven.kafka.tieredstorage.commons.manifest.index.ChunkIndex;
+import io.aiven.kafka.tieredstorage.commons.manifest.index.FixedSizeChunkIndex;
+import io.aiven.kafka.tieredstorage.commons.manifest.index.VariableSizeChunkIndex;
 
 import org.junit.jupiter.api.Test;
 import org.junit.jupiter.api.extension.ExtendWith;

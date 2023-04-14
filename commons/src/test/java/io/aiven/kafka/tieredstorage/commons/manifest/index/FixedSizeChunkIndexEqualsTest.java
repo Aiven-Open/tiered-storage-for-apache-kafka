@@ -14,28 +14,26 @@
  * limitations under the License.
  */
 
-package io.aiven.kafka.tieredstorage.commons.index;
-
-import java.util.List;
+package io.aiven.kafka.tieredstorage.commons.manifest.index;
 
 import org.junit.jupiter.api.Test;
 
 import static org.assertj.core.api.Assertions.assertThat;
 
-class VariableSizeChunkIndexEqualsTest {
+class FixedSizeChunkIndexEqualsTest {
     @Test
     void identical() {
-        final var i1 = new VariableSizeChunkIndex(100, 1000, List.of(10, 20, 30));
-        final var i2 = new VariableSizeChunkIndex(100, 1000, List.of(10, 20, 30));
+        final var i1 = new FixedSizeChunkIndex(100, 1000, 110, 10);
+        final var i2 = new FixedSizeChunkIndex(100, 1000, 110, 10);
         assertThat(i1).isEqualTo(i2);
         assertThat(i2).isEqualTo(i1);
         assertThat(i1).hasSameHashCodeAs(i2);
     }
-
+    
     @Test
     void differentOriginalChunkSize() {
-        final var i1 = new VariableSizeChunkIndex(100, 1000, List.of(10, 20, 30));
-        final var i2 = new VariableSizeChunkIndex(101, 1000, List.of(10, 20, 30));
+        final var i1 = new FixedSizeChunkIndex(100, 1000, 110, 10);
+        final var i2 = new FixedSizeChunkIndex(101, 1000, 110, 10);
         assertThat(i1).isNotEqualTo(i2);
         assertThat(i2).isNotEqualTo(i1);
         assertThat(i1).doesNotHaveSameHashCodeAs(i2);
@@ -43,17 +41,26 @@ class VariableSizeChunkIndexEqualsTest {
 
     @Test
     void differentOriginalFileSize() {
-        final var i1 = new VariableSizeChunkIndex(100, 1000, List.of(10, 20, 30));
-        final var i2 = new VariableSizeChunkIndex(100, 1001, List.of(10, 20, 30));
+        final var i1 = new FixedSizeChunkIndex(100, 1000, 110, 10);
+        final var i2 = new FixedSizeChunkIndex(100, 1001, 110, 10);
         assertThat(i1).isNotEqualTo(i2);
         assertThat(i2).isNotEqualTo(i1);
         assertThat(i1).doesNotHaveSameHashCodeAs(i2);
     }
 
     @Test
-    void differentTransformedChunks() {
-        final var i1 = new VariableSizeChunkIndex(100, 1000, List.of(10, 20, 30));
-        final var i2 = new VariableSizeChunkIndex(100, 1000, List.of(10, 20, 31));
+    void differentTransformedChunkSize() {
+        final var i1 = new FixedSizeChunkIndex(100, 1000, 110, 10);
+        final var i2 = new FixedSizeChunkIndex(100, 1000, 111, 10);
+        assertThat(i1).isNotEqualTo(i2);
+        assertThat(i2).isNotEqualTo(i1);
+        assertThat(i1).doesNotHaveSameHashCodeAs(i2);
+    }
+
+    @Test
+    void differentFinalTransformedChunkSize() {
+        final var i1 = new FixedSizeChunkIndex(100, 1000, 110, 10);
+        final var i2 = new FixedSizeChunkIndex(100, 1000, 110, 11);
         assertThat(i1).isNotEqualTo(i2);
         assertThat(i2).isNotEqualTo(i1);
         assertThat(i1).doesNotHaveSameHashCodeAs(i2);

@@ -22,7 +22,7 @@ import java.io.SequenceInputStream;
 import java.util.Random;
 
 import io.aiven.kafka.tieredstorage.commons.AesKeyAwareTest;
-import io.aiven.kafka.tieredstorage.commons.index.ChunkIndex;
+import io.aiven.kafka.tieredstorage.commons.manifest.index.ChunkIndex;
 
 import org.junit.jupiter.api.BeforeAll;
 import org.junit.jupiter.params.ParameterizedTest;

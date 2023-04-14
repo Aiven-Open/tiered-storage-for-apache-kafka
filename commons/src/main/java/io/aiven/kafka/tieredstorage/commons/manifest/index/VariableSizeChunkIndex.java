@@ -14,14 +14,14 @@
  * limitations under the License.
  */
 
-package io.aiven.kafka.tieredstorage.commons.index;
+package io.aiven.kafka.tieredstorage.commons.manifest.index;
 
 import java.util.List;
 import java.util.Objects;
 
 import io.aiven.kafka.tieredstorage.commons.Chunk;
-import io.aiven.kafka.tieredstorage.commons.index.serde.TransformedChunksDeserializer;
-import io.aiven.kafka.tieredstorage.commons.index.serde.TransformedChunksSerializer;
+import io.aiven.kafka.tieredstorage.commons.manifest.index.serde.TransformedChunksDeserializer;
+import io.aiven.kafka.tieredstorage.commons.manifest.index.serde.TransformedChunksSerializer;
 
 import com.fasterxml.jackson.annotation.JsonCreator;
 import com.fasterxml.jackson.annotation.JsonProperty;

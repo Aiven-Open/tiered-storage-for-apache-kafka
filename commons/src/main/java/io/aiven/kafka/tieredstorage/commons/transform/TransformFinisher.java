@@ -22,10 +22,10 @@ import java.io.SequenceInputStream;
 import java.util.Enumeration;
 import java.util.Objects;
 
-import io.aiven.kafka.tieredstorage.commons.index.AbstractChunkIndexBuilder;
-import io.aiven.kafka.tieredstorage.commons.index.ChunkIndex;
-import io.aiven.kafka.tieredstorage.commons.index.FixedSizeChunkIndexBuilder;
-import io.aiven.kafka.tieredstorage.commons.index.VariableSizeChunkIndexBuilder;
+import io.aiven.kafka.tieredstorage.commons.manifest.index.AbstractChunkIndexBuilder;
+import io.aiven.kafka.tieredstorage.commons.manifest.index.ChunkIndex;
+import io.aiven.kafka.tieredstorage.commons.manifest.index.FixedSizeChunkIndexBuilder;
+import io.aiven.kafka.tieredstorage.commons.manifest.index.VariableSizeChunkIndexBuilder;
 
 // TODO test transforms and detransforms with property-based tests
 /**

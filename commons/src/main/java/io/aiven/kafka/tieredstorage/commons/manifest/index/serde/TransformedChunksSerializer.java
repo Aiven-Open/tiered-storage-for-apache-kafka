@@ -14,7 +14,7 @@
  * limitations under the License.
  */
 
-package io.aiven.kafka.tieredstorage.commons.index.serde;
+package io.aiven.kafka.tieredstorage.commons.manifest.index.serde;
 
 import java.io.IOException;
 import java.util.Base64;
@@ -25,8 +25,6 @@ import com.fasterxml.jackson.databind.JsonSerializer;
 import com.fasterxml.jackson.databind.SerializerProvider;
 import com.github.luben.zstd.ZstdCompressCtx;
 
-import static io.aiven.kafka.tieredstorage.commons.index.serde.TransformedChunksDeserializer.MAX_DECOMPRESSED_SIZE;
-
 public class TransformedChunksSerializer extends JsonSerializer<List<Integer>> {
     @Override
     public void serialize(final List<Integer> value,
@@ -34,7 +32,7 @@ public class TransformedChunksSerializer extends JsonSerializer<List<Integer>> {
                           final SerializerProvider serializers) throws IOException {
         final byte[] binEncoded = ChunkSizesBinaryCodec.encode(value);
 
-        if (binEncoded.length > MAX_DECOMPRESSED_SIZE) {
+        if (binEncoded.length > TransformedChunksDeserializer.MAX_DECOMPRESSED_SIZE) {
             throw new IllegalArgumentException(
                 "Encoded index is too big (" + binEncoded.length + "), cannot serialize");
         }

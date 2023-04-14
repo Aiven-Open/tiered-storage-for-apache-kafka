@@ -14,7 +14,7 @@
  * limitations under the License.
  */
 
-package io.aiven.kafka.tieredstorage.commons.index;
+package io.aiven.kafka.tieredstorage.commons.manifest.index;
 
 public abstract class AbstractChunkIndexBuilder {
     protected final int originalChunkSize;
