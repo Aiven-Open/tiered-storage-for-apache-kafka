@@ -38,7 +38,7 @@ import org.apache.kafka.server.log.remote.storage.RemoteResourceNotFoundExceptio
 import org.apache.kafka.server.log.remote.storage.RemoteStorageException;
 import org.apache.kafka.server.log.remote.storage.RemoteStorageManager;
 
-import io.aiven.kafka.tiered.storage.commons.io.CryptoIOProvider;
+import io.aiven.kafka.tieredstorage.commons.io.CryptoIOProvider;
 
 import com.amazonaws.services.s3.AmazonS3;
 import com.amazonaws.services.s3.model.DeleteObjectsRequest;
