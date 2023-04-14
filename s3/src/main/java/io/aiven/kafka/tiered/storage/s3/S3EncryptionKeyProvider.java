@@ -27,9 +27,9 @@ import java.nio.file.Path;
 import java.security.Security;
 import java.util.concurrent.TimeUnit;
 
-import io.aiven.kafka.tiered.storage.commons.io.IOUtils;
-import io.aiven.kafka.tiered.storage.commons.metadata.EncryptedRepositoryMetadata;
-import io.aiven.kafka.tiered.storage.commons.security.EncryptionKeyProvider;
+import io.aiven.kafka.tieredstorage.commons.io.IOUtils;
+import io.aiven.kafka.tieredstorage.commons.security.EncryptionKeyProvider;
+import io.aiven.kafka.tieredstorage.commons.security.metadata.EncryptedRepositoryMetadata;
 
 import com.amazonaws.AmazonClientException;
 import com.amazonaws.services.s3.AmazonS3;
