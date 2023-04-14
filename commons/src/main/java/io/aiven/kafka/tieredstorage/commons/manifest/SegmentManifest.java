@@ -18,7 +18,7 @@ package io.aiven.kafka.tieredstorage.commons.manifest;
 
 import java.util.Optional;
 
-import io.aiven.kafka.tieredstorage.commons.index.ChunkIndex;
+import io.aiven.kafka.tieredstorage.commons.manifest.index.ChunkIndex;
 
 import com.fasterxml.jackson.annotation.JsonSubTypes;
 import com.fasterxml.jackson.annotation.JsonTypeInfo;

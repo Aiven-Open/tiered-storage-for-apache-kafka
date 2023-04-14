@@ -14,7 +14,7 @@
  * limitations under the License.
  */
 
-package io.aiven.kafka.tieredstorage.commons.index;
+package io.aiven.kafka.tieredstorage.commons.manifest.index;
 
 import java.io.IOException;
 import java.nio.ByteBuffer;

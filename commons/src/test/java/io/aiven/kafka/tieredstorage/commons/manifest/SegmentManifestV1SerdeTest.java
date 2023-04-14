@@ -25,7 +25,7 @@ import java.nio.file.Files;
 import java.util.Base64;
 
 import io.aiven.kafka.tieredstorage.commons.RsaKeyAwareTest;
-import io.aiven.kafka.tieredstorage.commons.index.FixedSizeChunkIndex;
+import io.aiven.kafka.tieredstorage.commons.manifest.index.FixedSizeChunkIndex;
 import io.aiven.kafka.tieredstorage.commons.manifest.serde.SecretKeyDeserializer;
 import io.aiven.kafka.tieredstorage.commons.manifest.serde.SecretKeySerializer;
 import io.aiven.kafka.tieredstorage.commons.security.EncryptionKeyProvider;

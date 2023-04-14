@@ -14,7 +14,7 @@
  * limitations under the License.
  */
 
-package io.aiven.kafka.tieredstorage.commons.index.serde;
+package io.aiven.kafka.tieredstorage.commons.manifest.index.serde;
 
 import java.io.IOException;
 import java.util.Base64;
