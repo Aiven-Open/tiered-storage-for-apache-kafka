@@ -20,6 +20,7 @@ import javax.crypto.BadPaddingException;
 import javax.crypto.IllegalBlockSizeException;
 import javax.crypto.KeyGenerator;
 import javax.crypto.SecretKey;
+import javax.crypto.spec.SecretKeySpec;
 
 import java.io.InputStream;
 import java.security.KeyPair;
@@ -37,6 +38,7 @@ public final class EncryptionKeyProvider
     private static final Logger LOGGER = LoggerFactory.getLogger(EncryptionKeyProvider.class);
 
     public static final int KEY_SIZE = 512;
+    public static final int KEY_AND_AAD_SIZE_BYTES = KEY_SIZE / 8 / 2;
 
     private static final String CIPHER_TRANSFORMATION = "RSA/NONE/OAEPWithSHA3-512AndMGF1Padding";
 
@@ -67,6 +69,15 @@ public final class EncryptionKeyProvider
 
     public SecretKey createKey() {
         return aesKeyGenerator.generateKey();
+    }
+
+    public EncryptionKeyAndAAD createKeyAndAAD() {
+        final byte[] keyAndAAD = createKey().getEncoded();
+        final byte[] encryptionKey = new byte[KEY_AND_AAD_SIZE_BYTES];
+        System.arraycopy(keyAndAAD, 0, encryptionKey, 0, 32);
+        final byte[] aad = new byte[KEY_AND_AAD_SIZE_BYTES];
+        System.arraycopy(keyAndAAD, 32, aad, 0, 32);
+        return new EncryptionKeyAndAAD(new SecretKeySpec(encryptionKey, "AES"), aad);
     }
 
     public byte[] encryptKey(final SecretKey secretKey) {
