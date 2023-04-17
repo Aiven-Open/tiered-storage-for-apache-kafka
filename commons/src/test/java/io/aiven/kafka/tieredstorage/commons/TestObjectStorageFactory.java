@@ -22,15 +22,17 @@ import io.aiven.kafka.tieredstorage.commons.storage.FileDeleter;
 import io.aiven.kafka.tieredstorage.commons.storage.FileFetcher;
 import io.aiven.kafka.tieredstorage.commons.storage.FileUploader;
 import io.aiven.kafka.tieredstorage.commons.storage.ObjectStorageFactory;
+import org.apache.kafka.common.config.AbstractConfig;
+import org.apache.kafka.common.config.ConfigDef;
 
 public class TestObjectStorageFactory implements ObjectStorageFactory {
     public boolean configureCalled = false;
-    public Map<String, ?> configuredWith;
+    public Config configuredWith;
 
     @Override
     public void configure(final Map<String, ?> configs) {
         configureCalled = true;
-        this.configuredWith = configs;
+        this.configuredWith = new Config(configs);
     }
 
     @Override
@@ -46,5 +48,17 @@ public class TestObjectStorageFactory implements ObjectStorageFactory {
     @Override
     public FileDeleter fileDeleter() {
         return null;
+    }
+
+    static class Config extends AbstractConfig {
+
+        static ConfigDef CONFIG = new ConfigDef()
+            .define("config1", ConfigDef.Type.STRING, "", ConfigDef.Importance.HIGH, "config1")
+            .define("config2", ConfigDef.Type.INT, -1, ConfigDef.Importance.MEDIUM, "config2")
+            .define("config3", ConfigDef.Type.BOOLEAN, false, ConfigDef.Importance.LOW, "config3");
+
+        public Config(Map<String, ?> configs) {
+            super(CONFIG, configs);
+        }
     }
 }
