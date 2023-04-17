@@ -23,4 +23,5 @@
     <suppress checks="ClassFanOutComplexity" files="S3ClientWrapper.java"/>
     <suppress checks="ClassDataAbstractionCoupling" files="S3ClientWrapper.java"/>
     <suppress checks="ClassDataAbstractionCoupling" files="S3RemoteStorageManagerConfig.java"/>
+    <suppress checks="AbbreviationAsWordInName" files="EncryptionKeyAndAADEqualsTest"/>
 </suppressions>
