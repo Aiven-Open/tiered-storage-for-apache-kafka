@@ -18,12 +18,13 @@ package io.aiven.kafka.tieredstorage.commons;
 
 import java.util.Map;
 
+import org.apache.kafka.common.config.AbstractConfig;
+import org.apache.kafka.common.config.ConfigDef;
+
 import io.aiven.kafka.tieredstorage.commons.storage.FileDeleter;
 import io.aiven.kafka.tieredstorage.commons.storage.FileFetcher;
 import io.aiven.kafka.tieredstorage.commons.storage.FileUploader;
 import io.aiven.kafka.tieredstorage.commons.storage.ObjectStorageFactory;
-import org.apache.kafka.common.config.AbstractConfig;
-import org.apache.kafka.common.config.ConfigDef;
 
 public class TestObjectStorageFactory implements ObjectStorageFactory {
     public boolean configureCalled = false;
@@ -52,13 +53,13 @@ public class TestObjectStorageFactory implements ObjectStorageFactory {
 
     static class Config extends AbstractConfig {
 
-        static ConfigDef CONFIG = new ConfigDef()
+        static ConfigDef config = new ConfigDef()
             .define("config1", ConfigDef.Type.STRING, "", ConfigDef.Importance.HIGH, "config1")
             .define("config2", ConfigDef.Type.INT, -1, ConfigDef.Importance.MEDIUM, "config2")
             .define("config3", ConfigDef.Type.BOOLEAN, false, ConfigDef.Importance.LOW, "config3");
 
-        public Config(Map<String, ?> configs) {
-            super(CONFIG, configs);
+        public Config(final Map<String, ?> configs) {
+            super(config, configs);
         }
     }
 }

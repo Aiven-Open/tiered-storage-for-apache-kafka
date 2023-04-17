@@ -132,12 +132,12 @@ class UniversalRemoteStorageManagerConfigTest {
         );
         final TestObjectStorageFactory factory = (TestObjectStorageFactory) config.objectStorageFactory();
         assertThat(factory.configureCalled).isTrue();
-        assertThat(factory.configuredWith).isEqualTo(Map.of(
+        assertThat(factory.configuredWith).isEqualTo(new TestObjectStorageFactory.Config(Map.of(
             "factory", TestObjectStorageFactory.class.getCanonicalName(),
             "config1", "aaa",
             "config2", "123",
             "config3", "true"
-        ));
+        )));
     }
 
     @Test
