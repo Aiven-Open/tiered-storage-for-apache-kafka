@@ -115,8 +115,23 @@ class UniversalRemoteStorageManagerConfigTest {
                     put("key.prefix", null);
                 }}
         )).isInstanceOf(ConfigException.class)
-            .hasMessage("Invalid value null for configuration object.storage.key.prefix: entry must be non null");
+            .hasMessage("Invalid value null for configuration key.prefix: entry must be non null");
     }
+
+    @Test
+    void validKeyPrefix() {
+        final String testPrefix = "test_prefix";
+        final UniversalRemoteStorageManagerConfig config =
+            new UniversalRemoteStorageManagerConfig(
+                new HashMap<>() {{
+                        put("object.storage.factory", TestObjectStorageFactory.class);
+                        put("chunk.size", "123");
+                        put("key.prefix", testPrefix);
+                    }}
+            );
+        assertThat(config.keyPrefix()).isEqualTo(testPrefix);
+    }
+
 
     @Test
     void requiredFields() {
