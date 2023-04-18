@@ -29,30 +29,50 @@ import org.junit.jupiter.api.Test;
 import static org.assertj.core.api.Assertions.assertThat;
 
 class ObjectKeyTest {
+    static final Uuid TOPIC_ID = Uuid.METADATA_TOPIC_ID;  // string representation: AAAAAAAAAAAAAAAAAAAAAQ
+    static final Uuid SEGMENT_ID = Uuid.ZERO_UUID;  // string representation: AAAAAAAAAAAAAAAAAAAAAA
+    static final TopicIdPartition TOPIC_ID_PARTITION = new TopicIdPartition(TOPIC_ID, new TopicPartition("topic", 7));
+    static final RemoteLogSegmentId REMOTE_LOG_SEGMENT_ID = new RemoteLogSegmentId(TOPIC_ID_PARTITION, SEGMENT_ID);
+    static final RemoteLogSegmentMetadata REMOTE_LOG_SEGMENT_METADATA = new RemoteLogSegmentMetadata(
+        REMOTE_LOG_SEGMENT_ID, 1234L, 2000L,
+        0, 0, 0, 0, Map.of(0, 0L));
+
     @Test
     void test() {
-        final Uuid topicId = Uuid.METADATA_TOPIC_ID;  // string representation: AAAAAAAAAAAAAAAAAAAAAQ
-        final TopicIdPartition topicIdPartition = new TopicIdPartition(topicId, new TopicPartition("topic", 7));
-        final Uuid segmentId = Uuid.ZERO_UUID;  // string representation: AAAAAAAAAAAAAAAAAAAAAA
-        final RemoteLogSegmentId remoteLogSegmentId = new RemoteLogSegmentId(topicIdPartition, segmentId);
-        final RemoteLogSegmentMetadata remoteLogSegmentMetadata = new RemoteLogSegmentMetadata(
-            remoteLogSegmentId, 1234L, 2000L,
-            0, 0, 0, 0, Map.of(0, 0L));
-
-        assertThat(ObjectKey.key(remoteLogSegmentMetadata, ObjectKey.Suffix.LOG))
-            .isEqualTo("topic-AAAAAAAAAAAAAAAAAAAAAQ/7/00000000000000001234-AAAAAAAAAAAAAAAAAAAAAA.log");
-        assertThat(ObjectKey.key(remoteLogSegmentMetadata, ObjectKey.Suffix.OFFSET_INDEX))
-            .isEqualTo("topic-AAAAAAAAAAAAAAAAAAAAAQ/7/00000000000000001234-AAAAAAAAAAAAAAAAAAAAAA.index");
-        assertThat(ObjectKey.key(remoteLogSegmentMetadata, ObjectKey.Suffix.TIME_INDEX))
-            .isEqualTo("topic-AAAAAAAAAAAAAAAAAAAAAQ/7/00000000000000001234-AAAAAAAAAAAAAAAAAAAAAA.timeindex");
-        assertThat(ObjectKey.key(remoteLogSegmentMetadata, ObjectKey.Suffix.PRODUCER_SNAPSHOT))
-            .isEqualTo("topic-AAAAAAAAAAAAAAAAAAAAAQ/7/00000000000000001234-AAAAAAAAAAAAAAAAAAAAAA.snapshot");
-        assertThat(ObjectKey.key(remoteLogSegmentMetadata, ObjectKey.Suffix.TXN_INDEX))
-            .isEqualTo("topic-AAAAAAAAAAAAAAAAAAAAAQ/7/00000000000000001234-AAAAAAAAAAAAAAAAAAAAAA.txnindex");
-        assertThat(ObjectKey.key(remoteLogSegmentMetadata, ObjectKey.Suffix.LEADER_EPOCH_CHECKPOINT))
+        assertThat(ObjectKey.key("prefix/", REMOTE_LOG_SEGMENT_METADATA, ObjectKey.Suffix.LOG))
             .isEqualTo(
-                "topic-AAAAAAAAAAAAAAAAAAAAAQ/7/00000000000000001234-AAAAAAAAAAAAAAAAAAAAAA.leader-epoch-checkpoint");
-        assertThat(ObjectKey.key(remoteLogSegmentMetadata, ObjectKey.Suffix.MANIFEST))
-            .isEqualTo("topic-AAAAAAAAAAAAAAAAAAAAAQ/7/00000000000000001234-AAAAAAAAAAAAAAAAAAAAAA.rsm-manifest");
+                "prefix/topic-AAAAAAAAAAAAAAAAAAAAAQ/7/"
+                + "00000000000000001234-AAAAAAAAAAAAAAAAAAAAAA.log");
+        assertThat(ObjectKey.key("prefix/", REMOTE_LOG_SEGMENT_METADATA, ObjectKey.Suffix.OFFSET_INDEX))
+            .isEqualTo(
+                "prefix/topic-AAAAAAAAAAAAAAAAAAAAAQ/7/"
+                    + "00000000000000001234-AAAAAAAAAAAAAAAAAAAAAA.index");
+        assertThat(ObjectKey.key("prefix/", REMOTE_LOG_SEGMENT_METADATA, ObjectKey.Suffix.TIME_INDEX))
+            .isEqualTo(
+                "prefix/topic-AAAAAAAAAAAAAAAAAAAAAQ/7/"
+                    + "00000000000000001234-AAAAAAAAAAAAAAAAAAAAAA.timeindex");
+        assertThat(ObjectKey.key("prefix/", REMOTE_LOG_SEGMENT_METADATA, ObjectKey.Suffix.PRODUCER_SNAPSHOT))
+            .isEqualTo(
+                "prefix/topic-AAAAAAAAAAAAAAAAAAAAAQ/7/"
+                    + "00000000000000001234-AAAAAAAAAAAAAAAAAAAAAA.snapshot");
+        assertThat(ObjectKey.key("prefix/", REMOTE_LOG_SEGMENT_METADATA, ObjectKey.Suffix.TXN_INDEX))
+            .isEqualTo(
+                "prefix/topic-AAAAAAAAAAAAAAAAAAAAAQ/7/"
+                    + "00000000000000001234-AAAAAAAAAAAAAAAAAAAAAA.txnindex");
+        assertThat(ObjectKey.key("prefix/", REMOTE_LOG_SEGMENT_METADATA, ObjectKey.Suffix.LEADER_EPOCH_CHECKPOINT))
+            .isEqualTo(
+                "prefix/topic-AAAAAAAAAAAAAAAAAAAAAQ/7/"
+                    + "00000000000000001234-AAAAAAAAAAAAAAAAAAAAAA.leader-epoch-checkpoint");
+        assertThat(ObjectKey.key("prefix/", REMOTE_LOG_SEGMENT_METADATA, ObjectKey.Suffix.MANIFEST))
+            .isEqualTo(
+                "prefix/topic-AAAAAAAAAAAAAAAAAAAAAQ/7/"
+                    + "00000000000000001234-AAAAAAAAAAAAAAAAAAAAAA.rsm-manifest");
+    }
+
+    @Test
+    void nullPrefix() {
+        assertThat(ObjectKey.key(null, REMOTE_LOG_SEGMENT_METADATA, ObjectKey.Suffix.LOG))
+            .isEqualTo(
+                "topic-AAAAAAAAAAAAAAAAAAAAAQ/7/00000000000000001234-AAAAAAAAAAAAAAAAAAAAAA.log");
     }
 }

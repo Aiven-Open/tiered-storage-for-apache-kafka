@@ -52,18 +52,22 @@ public final class ObjectKey {
      * Creates the object key/path in the following format:
      *
      * <pre>
-     * $(topic_name)-$(topic_uuid)/$(partition)/$(000+start_offset length=20)-$(segment_uuid).$(suffix)
+     * $(prefix)$(topic_name)-$(topic_uuid)/$(partition)/$(000+start_offset length=20)-$(segment_uuid).$(suffix)
      * </pre>
      *
-     * <p>For example: <code>topic-MWJ6FHTfRYy67jzwZdeqSQ/7/00000000000000001234-tqimKeZwStOEOwRzT3L5oQ.log</code>
+     * <p>For example:
+     * <code>someprefix/topic-MWJ6FHTfRYy67jzwZdeqSQ/7/00000000000000001234-tqimKeZwStOEOwRzT3L5oQ.log</code>
      */
-    public static String key(final RemoteLogSegmentMetadata remoteLogSegmentMetadata,
+    public static String key(final String prefix,
+                             final RemoteLogSegmentMetadata remoteLogSegmentMetadata,
                              final Suffix suffix) {
         Objects.requireNonNull(remoteLogSegmentMetadata, "remoteLogSegmentMetadata cannot be null");
         Objects.requireNonNull(suffix, "suffix cannot be null");
+
         final RemoteLogSegmentId remoteLogSegmentId = remoteLogSegmentMetadata.remoteLogSegmentId();
         final TopicIdPartition topicIdPartition = remoteLogSegmentId.topicIdPartition();
-        return topicIdPartition.topicPartition().topic() + "-" + topicIdPartition.topicId()
+        return (prefix == null ? "" : prefix)
+            + topicIdPartition.topicPartition().topic() + "-" + topicIdPartition.topicId()
             + "/" + topicIdPartition.topicPartition().partition()
             + "/" + filenamePrefixFromOffset(remoteLogSegmentMetadata.startOffset()) + "-" + remoteLogSegmentId.id()
             + "." + suffix.value;
