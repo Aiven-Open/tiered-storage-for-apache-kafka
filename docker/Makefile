@@ -1,15 +1,10 @@
-all: build up
-
-build:
-	docker compose build
-
-up:
-	docker compose up -d
+all:
 
 # Generate keys for S3 plugin
 rsa-keys:
 	openssl genrsa -out private.pem 512
 	openssl rsa -in private.pem -outform PEM -out public.pem -pubout
+<<<<<<<< HEAD:docker/Makefile
 
 # Topic Defaults
 t=t1
@@ -27,3 +22,5 @@ kafka-topic:
 		--config local.retention.bytes=$(local_retention) \
 		--partitions $(p) \
 		--topic $(t)
+========
+>>>>>>>> ff77535 (feat: add local tiered storage impl to docker options):docker/s3/Makefile
