@@ -17,6 +17,7 @@
 package io.aiven.kafka.tieredstorage.commons;
 
 import java.nio.file.Path;
+import java.util.HashMap;
 import java.util.Map;
 
 import org.apache.kafka.common.config.ConfigException;
@@ -43,6 +44,7 @@ class UniversalRemoteStorageManagerConfigTest {
         assertThat(config.encryptionEnabled()).isFalse();
         assertThat(config.encryptionPrivateKeyFile()).isNull();
         assertThat(config.encryptionPublicKeyFile()).isNull();
+        assertThat(config.keyPrefix()).isEmpty();
     }
 
     @Test
@@ -104,6 +106,32 @@ class UniversalRemoteStorageManagerConfigTest {
         )).isInstanceOf(ConfigException.class)
             .hasMessage("Invalid value x for configuration object.storage.factory: Class x could not be found.");
     }
+
+    @Test
+    void invalidKeyPrefix() {
+        assertThatThrownBy(() -> new UniversalRemoteStorageManagerConfig(
+            new HashMap<>() {{
+                    put("object.storage.factory", TestObjectStorageFactory.class);
+                    put("key.prefix", null);
+                }}
+        )).isInstanceOf(ConfigException.class)
+            .hasMessage("Invalid value null for configuration key.prefix: entry must be non null");
+    }
+
+    @Test
+    void validKeyPrefix() {
+        final String testPrefix = "test_prefix";
+        final UniversalRemoteStorageManagerConfig config =
+            new UniversalRemoteStorageManagerConfig(
+                new HashMap<>() {{
+                        put("object.storage.factory", TestObjectStorageFactory.class);
+                        put("chunk.size", "123");
+                        put("key.prefix", testPrefix);
+                    }}
+            );
+        assertThat(config.keyPrefix()).isEqualTo(testPrefix);
+    }
+
 
     @Test
     void requiredFields() {
