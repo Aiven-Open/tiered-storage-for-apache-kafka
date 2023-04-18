@@ -32,6 +32,9 @@ public class UniversalRemoteStorageManagerConfig extends AbstractConfig {
     private static final String OBJECT_STORAGE_FACTORY_CONFIG = OBJECT_STORAGE_PREFIX + "factory";
     private static final String OBJECT_STORAGE_FACTORY_DOC = "The factory of an object storage implementation";
 
+    private static final String OBJECT_STORAGE_KEY_PREFIX_CONFIG = "key.prefix";
+    private static final String OBJECT_STORAGE_KEY_PREFIX_DOC = "The object storage path prefix";
+
     private static final String CHUNK_SIZE_CONFIG = "chunk.size";
     private static final String CHUNK_SIZE_DOC = "The chunk size of log files";
 
@@ -59,6 +62,15 @@ public class UniversalRemoteStorageManagerConfig extends AbstractConfig {
             ConfigDef.NO_DEFAULT_VALUE,
             ConfigDef.Importance.HIGH,
             OBJECT_STORAGE_FACTORY_DOC
+        );
+
+        CONFIG.define(
+            OBJECT_STORAGE_KEY_PREFIX_CONFIG,
+            ConfigDef.Type.STRING,
+            "",
+            new ConfigDef.NonNullValidator(),
+            ConfigDef.Importance.HIGH,
+            OBJECT_STORAGE_KEY_PREFIX_DOC
         );
 
         CONFIG.define(
@@ -123,6 +135,10 @@ public class UniversalRemoteStorageManagerConfig extends AbstractConfig {
             getClass(OBJECT_STORAGE_FACTORY_CONFIG), ObjectStorageFactory.class);
         objectFactory.configure(this.originalsWithPrefix(OBJECT_STORAGE_PREFIX));
         return objectFactory;
+    }
+
+    String keyPrefix() {
+        return getString(OBJECT_STORAGE_KEY_PREFIX_CONFIG);
     }
 
     int chunkSize() {
