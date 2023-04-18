@@ -105,7 +105,7 @@ and use variables on `compose.yml`:
 Creating topics with Tiered storage:
 
 ```shell
-make topic
+make kafka-topic
 ```
 
 creates a topic t1 with 6 partitions, 10MB segments, retention bytes 100MB, and 20MB local retention.
