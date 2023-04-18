@@ -22,6 +22,7 @@ import java.util.Objects;
 import org.apache.kafka.common.TopicIdPartition;
 import org.apache.kafka.server.log.remote.storage.RemoteLogSegmentId;
 import org.apache.kafka.server.log.remote.storage.RemoteLogSegmentMetadata;
+import org.apache.kafka.server.log.remote.storage.RemoteStorageManager;
 
 /**
  * Maps Kafka segment files to object paths/keys in the storage backend.
@@ -45,6 +46,18 @@ public final class ObjectKey {
 
         Suffix(final String value) {
             this.value = value;
+        }
+
+        static Suffix fromIndexType(final RemoteStorageManager.IndexType indexType) {
+            switch (indexType) {
+                case OFFSET: return OFFSET_INDEX;
+                case TIMESTAMP: return TIME_INDEX;
+                case PRODUCER_SNAPSHOT: return PRODUCER_SNAPSHOT;
+                case TRANSACTION: return TXN_INDEX;
+                case LEADER_EPOCH: return LEADER_EPOCH_CHECKPOINT;
+                default:
+                    throw new IllegalArgumentException("Unknown index type " + indexType);
+            }
         }
     }
 

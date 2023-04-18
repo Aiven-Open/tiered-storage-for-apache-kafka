@@ -23,6 +23,7 @@ import org.apache.kafka.common.TopicPartition;
 import org.apache.kafka.common.Uuid;
 import org.apache.kafka.server.log.remote.storage.RemoteLogSegmentId;
 import org.apache.kafka.server.log.remote.storage.RemoteLogSegmentMetadata;
+import org.apache.kafka.server.log.remote.storage.RemoteStorageManager;
 
 import org.junit.jupiter.api.Test;
 
@@ -42,7 +43,7 @@ class ObjectKeyTest {
         assertThat(ObjectKey.key("prefix/", REMOTE_LOG_SEGMENT_METADATA, ObjectKey.Suffix.LOG))
             .isEqualTo(
                 "prefix/topic-AAAAAAAAAAAAAAAAAAAAAQ/7/"
-                + "00000000000000001234-AAAAAAAAAAAAAAAAAAAAAA.log");
+                    + "00000000000000001234-AAAAAAAAAAAAAAAAAAAAAA.log");
         assertThat(ObjectKey.key("prefix/", REMOTE_LOG_SEGMENT_METADATA, ObjectKey.Suffix.OFFSET_INDEX))
             .isEqualTo(
                 "prefix/topic-AAAAAAAAAAAAAAAAAAAAAQ/7/"
@@ -74,5 +75,29 @@ class ObjectKeyTest {
         assertThat(ObjectKey.key(null, REMOTE_LOG_SEGMENT_METADATA, ObjectKey.Suffix.LOG))
             .isEqualTo(
                 "topic-AAAAAAAAAAAAAAAAAAAAAQ/7/00000000000000001234-AAAAAAAAAAAAAAAAAAAAAA.log");
+    }
+
+    @Test
+    void suffixForIndexTypes() {
+        assertThat(ObjectKey.Suffix.fromIndexType(RemoteStorageManager.IndexType.OFFSET))
+            .isEqualTo(ObjectKey.Suffix.OFFSET_INDEX)
+            .extracting("value")
+            .isEqualTo("index");
+        assertThat(ObjectKey.Suffix.fromIndexType(RemoteStorageManager.IndexType.TIMESTAMP))
+            .isEqualTo(ObjectKey.Suffix.TIME_INDEX)
+            .extracting("value")
+            .isEqualTo("timeindex");
+        assertThat(ObjectKey.Suffix.fromIndexType(RemoteStorageManager.IndexType.PRODUCER_SNAPSHOT))
+            .isEqualTo(ObjectKey.Suffix.PRODUCER_SNAPSHOT)
+            .extracting("value")
+            .isEqualTo("snapshot");
+        assertThat(ObjectKey.Suffix.fromIndexType(RemoteStorageManager.IndexType.TRANSACTION))
+            .isEqualTo(ObjectKey.Suffix.TXN_INDEX)
+            .extracting("value")
+            .isEqualTo("txnindex");
+        assertThat(ObjectKey.Suffix.fromIndexType(RemoteStorageManager.IndexType.LEADER_EPOCH))
+            .isEqualTo(ObjectKey.Suffix.LEADER_EPOCH_CHECKPOINT)
+            .extracting("value")
+            .isEqualTo("leader-epoch-checkpoint");
     }
 }
