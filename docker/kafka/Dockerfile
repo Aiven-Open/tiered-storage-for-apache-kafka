@@ -1,6 +1,6 @@
 FROM fedora:37 AS base
 
-ENV JAVA_VERSION 17
+ENV JAVA_VERSION 11
 RUN dnf install -y java-${JAVA_VERSION}-openjdk-devel git
 
 ENV JAVA_HOME /usr/lib/jvm/java-${JAVA_VERSION}-openjdk
@@ -12,11 +12,12 @@ RUN git clone ${AK_REPO}
 WORKDIR /kafka
 RUN git checkout ${AK_BRANCH}
 
-RUN ./gradlew releaseTarGz
+ENV SCALA_VERSION 2.12
+RUN ./gradlew -PscalaVersion=${SCALA_VERSION} releaseTarGz
 
 FROM eclipse-temurin:17-jre AS kafka
 
-ENV SCALA_VERSION 2.13
+ENV SCALA_VERSION 2.12
 ARG KAFKA_VERSION=3.4.1-SNAPSHOT
 
 COPY --from=base /kafka/core/build/distributions/kafka_${SCALA_VERSION}-${KAFKA_VERSION}.tgz ./kafka.tgz
