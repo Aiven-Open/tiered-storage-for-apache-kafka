@@ -20,8 +20,8 @@ services:
       # mount plugin
       - ./../../s3/build/install/s3:/kafka/plugins/tiered-storage-s3
       # encryption keys
-      - ./private.pem:/kafka/plugins/private.pem
-      - ./public.pem:/kafka/plugins/public.pem
+      - ./../private.pem:/kafka/plugins/private.pem
+      - ./../public.pem:/kafka/plugins/public.pem
     command:
       - kafka-server-start.sh
       - config/server.properties
@@ -40,16 +40,16 @@ services:
       - remote.log.storage.system.enable=true
       # Tiered Storage: RLMM config
       - --override
-      - remote.log.storage.manager.class.name=io.aiven.kafka.tiered.storage.s3.S3RemoteStorageManager
-      - --override
-      - remote.log.storage.manager.class.path=/kafka/plugins/tiered-storage-s3/*
-      - --override
       - remote.log.metadata.manager.class.name=org.apache.kafka.server.log.remote.metadata.storage.TopicBasedRemoteLogMetadataManager
       - --override
       - rlmm.config.remote.log.metadata.common.client.bootstrap.servers=kafka:29092
       - --override
       - rlmm.config.remote.log.metadata.topic.replication.factor=1
       # Tiered storage S3 plugin
+      - --override
+      - remote.log.storage.manager.class.name=io.aiven.kafka.tiered.storage.s3.S3RemoteStorageManager
+      - --override
+      - remote.log.storage.manager.class.path=/kafka/plugins/tiered-storage-s3/*
       - --override
       - rsm.config.s3.bucket.name=kafka-ts-us-east-1
       - --override

@@ -11,13 +11,20 @@ rsa-keys:
 	openssl genrsa -out private.pem 512
 	openssl rsa -in private.pem -outform PEM -out public.pem -pubout
 
-topic:
+# Topic Defaults
+t=t1
+p=6
+segment=100000000 # 100M
+retention=1000000000 # 1G
+local_retention=300000000 # 300M
+
+ts-topic:
 	${KAFKA_HOME}/bin/kafka-topics.sh \
 		--bootstrap-server localhost:9092 \
 		--create \
-		--config segment.bytes=1000000 \
-		--config retention.bytes=100000000 \
 		--config remote.storage.enable=true \
-		--config local.retention.bytes=2000000 \
-		--partitions 6 \
-		--topic t1
+		--config segment.bytes=$(segment) \
+		--config retention.bytes=$(retention) \
+		--config local.retention.bytes=$(local_retention) \
+		--partitions $(p) \
+		--topic $(t)
