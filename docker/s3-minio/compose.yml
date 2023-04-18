@@ -1,13 +1,13 @@
 version: '3.8'
 services:
   zookeeper:
-    image: kafka-ts-s3-aws
+    image: kafka-ts-s3-minio
     command:
       - zookeeper-server-start.sh
       - config/zookeeper.properties
 
   kafka:
-    image: kafka-ts-s3-aws
+    image: kafka-ts-s3-minio
     build:
       context: ../kafka/.
       args:
@@ -19,9 +19,6 @@ services:
     volumes:
       # mount plugin
       - ./../../s3/build/install/s3:/kafka/plugins/tiered-storage-s3
-      # encryption keys
-      - ./private.pem:/kafka/plugins/private.pem
-      - ./public.pem:/kafka/plugins/public.pem
     command:
       - kafka-server-start.sh
       - config/server.properties
@@ -40,10 +37,6 @@ services:
       - remote.log.storage.system.enable=true
       # Tiered Storage: RLMM config
       - --override
-      - remote.log.storage.manager.class.name=io.aiven.kafka.tiered.storage.s3.S3RemoteStorageManager
-      - --override
-      - remote.log.storage.manager.class.path=/kafka/plugins/tiered-storage-s3/*
-      - --override
       - remote.log.metadata.manager.class.name=org.apache.kafka.server.log.remote.metadata.storage.TopicBasedRemoteLogMetadataManager
       - --override
       - rlmm.config.remote.log.metadata.common.client.bootstrap.servers=kafka:29092
@@ -55,6 +48,8 @@ services:
       - --override
       - rsm.config.s3.region=us-east-1
       - --override
+      - rsm.config.s3.endpoint.url=http://minio:9000
+      - --override
       - rsm.config.s3.credentials.provider.class=com.amazonaws.auth.AWSStaticCredentialsProvider
       - --override
       - rsm.config.s3.client.aws_access_key_id=${AWS_ACCESS_KEY_ID}
@@ -64,3 +59,14 @@ services:
       - rsm.config.s3.public_key_pem=/kafka/plugins/public.pem
       - --override
       - rsm.config.s3.private_key_pem=/kafka/plugins/private.pem
+
+  minio:
+    image: quay.io/minio/minio
+    environment:
+      - MINIO_ROOT_USER=admin
+      - MINIO_ROOT_PASSWORD=password
+      - MINIO_DOMAIN=minio
+    ports:
+      - "9000:9000"
+      - "9090:9090"
+    command: server /data --console-address ":9090"
