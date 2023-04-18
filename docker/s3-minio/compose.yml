@@ -18,10 +18,7 @@ services:
       - "9092:9092"
     volumes:
       # mount plugin
-      - ./../../s3/build/install/s3:/kafka/plugins/tiered-storage-s3
-      # encryption keys
-      - ./../private.pem:/kafka/plugins/private.pem
-      - ./../public.pem:/kafka/plugins/public.pem
+      - ./../../s3-minimal/build/install/s3-minimal:/kafka/plugins/tiered-storage-s3
     command:
       - kafka-server-start.sh
       - config/server.properties
@@ -47,25 +44,19 @@ services:
       - rlmm.config.remote.log.metadata.topic.replication.factor=1
       # Tiered storage S3 plugin
       - --override
-      - remote.log.storage.manager.class.name=io.aiven.kafka.tiered.storage.s3.S3RemoteStorageManager
+      - remote.log.storage.manager.class.name=io.aiven.kafka.tieredstorage.s3.S3TieredStorage
       - --override
       - remote.log.storage.manager.class.path=/kafka/plugins/tiered-storage-s3/*
       - --override
-      - rsm.config.s3.bucket.name=kafka-ts-us-east-1
-      - --override
-      - rsm.config.s3.region=us-east-1
+      - rsm.config.s3.bucket.name=kafka-ts-v1
       - --override
       - rsm.config.s3.endpoint.url=http://minio:9000
       - --override
-      - rsm.config.s3.credentials.provider.class=com.amazonaws.auth.AWSStaticCredentialsProvider
+      - rsm.config.s3.aws.credentials.provider.class=com.amazonaws.auth.AWSStaticCredentialsProvider
       - --override
-      - rsm.config.s3.client.aws_access_key_id=admin
+      - rsm.config.s3.aws.access.key.id=admin
       - --override
-      - rsm.config.s3.client.aws_secret_access_key=password
-      - --override
-      - rsm.config.s3.public_key_pem=/kafka/plugins/public.pem
-      - --override
-      - rsm.config.s3.private_key_pem=/kafka/plugins/private.pem
+      - rsm.config.s3.aws.secret.access.key=password
 
   minio:
     image: quay.io/minio/minio
