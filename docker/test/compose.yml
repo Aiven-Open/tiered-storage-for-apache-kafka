@@ -16,10 +16,6 @@ services:
         - KAFKA_VERSION=3.3.2-SNAPSHOT
     ports:
       - "9092:9092"
-    volumes:
-      # mount local dir for second tier
-      - ./data/tiered-storage:/kafka/kafka-tiered-storage/data
-      - ./data/kafka:/kafka/data
     environment:
       - INCLUDE_TEST_JARS=true
     command:
@@ -53,4 +49,5 @@ services:
       - rlmm.config.remote.log.metadata.topic.replication.factor=1
       # Tiered storage S3 plugin
       - --override
+      # dir at /kafka/kafka-tiered-storage/data
       - rsm.config.dir=/data
