@@ -75,6 +75,10 @@ public class TransformFinisher implements Enumeration<InputStream> {
         return new ByteArrayInputStream(chunk);
     }
 
+    public InputStream sequence() {
+        return new SequenceInputStream(this);
+    }
+
     public ChunkIndex chunkIndex() {
         if (chunkIndex == null) {
             throw new IllegalStateException("Chunk index was not built, was finisher used?");
