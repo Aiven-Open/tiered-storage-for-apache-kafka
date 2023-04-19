@@ -16,8 +16,13 @@
 
 package io.aiven.kafka.tieredstorage.commons;
 
+import io.aiven.kafka.tieredstorage.commons.storage.ObjectStorageFactory;
+import io.aiven.kafka.tieredstorage.commons.transform.TransformFinisher;
+import io.aiven.kafka.tieredstorage.commons.transform.TransformPipeline;
 import java.io.IOException;
 import java.io.InputStream;
+import java.io.SequenceInputStream;
+import java.nio.file.Files;
 import java.util.Map;
 
 import org.apache.kafka.server.log.remote.storage.LogSegmentData;
@@ -26,14 +31,34 @@ import org.apache.kafka.server.log.remote.storage.RemoteStorageException;
 import org.apache.kafka.server.log.remote.storage.RemoteStorageManager;
 
 public class UniversalRemoteStorageManager implements RemoteStorageManager {
+    ObjectStorageFactory storage;
+    TransformPipeline pipeline;
+    UniversalRemoteStorageManagerConfig config;
+
     @Override
     public void configure(final Map<String, ?> configs) {
+        config = new UniversalRemoteStorageManagerConfig(configs);
+        try {
+            pipeline = TransformPipeline.newBuilder().fromConfig(config).build();
+        } catch (IOException e) {
+            throw new RuntimeException(e);
+        }
+        storage = config.objectStorageFactory();
         throw new UnsupportedOperationException();
     }
 
     @Override
     public void copyLogSegmentData(final RemoteLogSegmentMetadata remoteLogSegmentMetadata,
                                    final LogSegmentData logSegmentData) throws RemoteStorageException {
+        try {
+            final byte[] original = Files.readAllBytes(logSegmentData.logSegment());
+            final TransformFinisher result = pipeline.inboundChain(original).complete();
+            final String key = ObjectKey.key(config.keyPrefix(), remoteLogSegmentMetadata, ObjectKey.Suffix.LOG);
+            storage.fileUploader().upload(new SequenceInputStream(result), key);
+            //...
+        } catch (IOException e) {
+            throw new RemoteStorageException(e);
+        }
         throw new UnsupportedOperationException();
     }
 

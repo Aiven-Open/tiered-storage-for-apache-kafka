@@ -16,10 +16,13 @@
 
 package io.aiven.kafka.tieredstorage.commons.security;
 
+import java.security.spec.AlgorithmParameterSpec;
 import javax.crypto.BadPaddingException;
+import javax.crypto.Cipher;
 import javax.crypto.IllegalBlockSizeException;
 import javax.crypto.KeyGenerator;
 import javax.crypto.SecretKey;
+import javax.crypto.spec.IvParameterSpec;
 import javax.crypto.spec.SecretKeySpec;
 
 import java.io.InputStream;
@@ -82,20 +85,29 @@ public final class EncryptionKeyProvider
 
     public byte[] encryptKey(final SecretKey secretKey) {
         try {
-            final var cipher = createEncryptingCipher(rsaKeyPair.getPublic(), CIPHER_TRANSFORMATION);
+            final var cipher = getEncryptingCipher();
             return cipher.doFinal(secretKey.getEncoded());
         } catch (final IllegalBlockSizeException | BadPaddingException e) {
             throw new RuntimeException("Couldn't encrypt AES key", e);
         }
     }
 
+    public Cipher getEncryptingCipher() {
+        return createEncryptingCipher(rsaKeyPair.getPublic(), CIPHER_TRANSFORMATION);
+    }
+
     public byte[] decryptKey(final byte[] bytes) {
         try {
-            final var cipher = createDecryptingCipher(rsaKeyPair.getPrivate(), CIPHER_TRANSFORMATION);
+            final Cipher cipher = getDecryptionCipher(bytes, getEncryptingCipher().getIV().length);
             return cipher.doFinal(bytes);
         } catch (final IllegalBlockSizeException | BadPaddingException e) {
             throw new RuntimeException("Couldn't decrypt AES key", e);
         }
+    }
+
+    public Cipher getDecryptionCipher(byte[] bytes, int ivSize) {
+        final AlgorithmParameterSpec params = new IvParameterSpec(bytes, 0, ivSize);
+        return createDecryptingCipher(rsaKeyPair.getPrivate(), params, CIPHER_TRANSFORMATION);
     }
 
 }

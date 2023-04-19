@@ -81,13 +81,13 @@ class DecryptionChunkEnumerationTest extends AesKeyAwareTest {
     @Test
     void decrypt() throws IllegalBlockSizeException, BadPaddingException, ShortBufferException {
         final byte[] data = {0, 1, 2, 3, 4, 5, 6, 7, 8, 9};
-        final Cipher encryptionCipher = encryptionCipherSupplier();
+        final Cipher encryptionCipher = AesKeyAwareTest.encryptionCipher();
         final byte[] iv = encryptionCipher.getIV();
         final byte[] encrypted = new byte[iv.length + encryptionCipher.getOutputSize(data.length)];
         System.arraycopy(iv, 0, encrypted, 0, iv.length);
         encryptionCipher.doFinal(data, 0, data.length, encrypted, iv.length);
 
-        final var transform = new DecryptionChunkEnumeration(inner, ivSize, AesKeyAwareTest::decryptionCipherSupplier);
+        final var transform = new DecryptionChunkEnumeration(inner, ivSize, AesKeyAwareTest::decryptionCipher);
         when(inner.nextElement()).thenReturn(encrypted);
         final byte[] decrypted = transform.nextElement();
 

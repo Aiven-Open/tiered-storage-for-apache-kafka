@@ -81,25 +81,25 @@ public class TransformPipeline {
             return this;
         }
 
-//        public Builder fromConfig(UniversalRemoteStorageManagerConfig config) throws IOException {
-//            withChunkSize(config.chunkSize());
-//            if (config.compressionEnabled()) {
-//                withCompression();
-//            }
-//            if (config.encryptionEnabled()) {
-//                final EncryptionKeyProvider keyProvider = EncryptionKeyProvider.of(
-//                    Files.newInputStream(config.encryptionPublicKeyFile()),
-//                    Files.newInputStream(config.encryptionPrivateKeyFile())
-//                );
-//                final int ivSize = keyProvider.getEncryptingCipher().getIV().length;
-//                withEncryption(
-//                    ivSize,
-//                    keyProvider::getEncryptingCipher,
-//                    bytes -> keyProvider.getDecryptionCipher(bytes, ivSize)
-//                );
-//            }
-//            return this;
-//        }
+        public Builder fromConfig(UniversalRemoteStorageManagerConfig config) throws IOException {
+            withChunkSize(config.chunkSize());
+            if (config.compressionEnabled()) {
+                withCompression();
+            }
+            if (config.encryptionEnabled()) {
+                final EncryptionKeyProvider keyProvider = EncryptionKeyProvider.of(
+                    Files.newInputStream(config.encryptionPublicKeyFile()),
+                    Files.newInputStream(config.encryptionPrivateKeyFile())
+                );
+                final int ivSize = keyProvider.getEncryptingCipher().getIV().length;
+                withEncryption(
+                    ivSize,
+                    keyProvider::getEncryptingCipher,
+                    bytes -> keyProvider.getDecryptionCipher(bytes, ivSize)
+                );
+            }
+            return this;
+        }
 
         public TransformPipeline build() {
             final Function<InboundTransformChain, InboundTransformChain> inboundFunction = inboundTransformChain -> {
