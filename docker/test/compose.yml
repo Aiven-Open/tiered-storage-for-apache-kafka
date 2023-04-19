@@ -10,10 +10,11 @@ services:
     image: kafka-ts-test
     build:
       context: ../kafka/.
-      args:
-        - AK_REPO=https://github.com/aiven/kafka
-        - AK_BRANCH=3.3-2022-10-06-tiered-storage
-        - KAFKA_VERSION=3.3.2-SNAPSHOT
+      # Override branch used to build docker image
+      # args:
+      #   - AK_REPO=https://github.com/aiven/kafka
+      #   - AK_BRANCH=3.0-2022-03-31-tiered-storage
+      #   - KAFKA_VERSION=3.0.1-SNAPSHOT
     ports:
       - "9092:9092"
     environment:
