@@ -3,6 +3,3 @@
 
 # Demo keys
 *.pem
-
-# Backend volumes
-minio/
