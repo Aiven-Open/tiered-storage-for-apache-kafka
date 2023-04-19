@@ -22,17 +22,17 @@ import java.util.function.Function;
 import io.aiven.kafka.tieredstorage.commons.manifest.index.ChunkIndex;
 
 public final class OutboundTransformChain {
-    DetransformChunkEnumeration inner;
+    OutboundTransform inner;
 
     OutboundTransformChain(final byte[] uploadedData, final ChunkIndex chunkIndex) {
-        this.inner = new BaseDetransformChunkEnumeration(new ByteArrayInputStream(uploadedData), chunkIndex.chunks());
+        this.inner = new OutboundJoiner(new ByteArrayInputStream(uploadedData), chunkIndex.chunks());
     }
 
-    public void chain(final Function<DetransformChunkEnumeration, DetransformChunkEnumeration> transform) {
+    public void chain(final Function<OutboundTransform, OutboundTransform> transform) {
         this.inner = transform.apply(this.inner);
     }
 
-    public DetransformFinisher complete() {
-        return new DetransformFinisher(inner);
+    public OutboundResult complete() {
+        return new OutboundResult(inner);
     }
 }

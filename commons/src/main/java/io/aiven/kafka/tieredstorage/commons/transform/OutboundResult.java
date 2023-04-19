@@ -16,18 +16,22 @@
 
 package io.aiven.kafka.tieredstorage.commons.transform;
 
-import java.util.Objects;
-
-import com.github.luben.zstd.Zstd;
+import java.io.ByteArrayInputStream;
+import java.io.InputStream;
+import java.io.SequenceInputStream;
+import java.util.Enumeration;
 
 /**
- * The chunk de-transformation that does Zstd decompression.
+ * The detransformation finisher.
+ *
+ * <p>It converts enumeration of {@code byte[]} into enumeration of {@link InputStream},
+ * so that it could be used in {@link SequenceInputStream}.
  */
-public class DecompressionChunkEnumeration implements DetransformChunkEnumeration {
-    private final DetransformChunkEnumeration inner;
+public class OutboundResult implements Enumeration<InputStream> {
+    private final OutboundTransform inner;
 
-    public DecompressionChunkEnumeration(final DetransformChunkEnumeration inner) {
-        this.inner = Objects.requireNonNull(inner, "inner cannot be null");
+    OutboundResult(final OutboundTransform inner) {
+        this.inner = inner;
     }
 
     @Override
@@ -36,12 +40,12 @@ public class DecompressionChunkEnumeration implements DetransformChunkEnumeratio
     }
 
     @Override
-    public byte[] nextElement() {
-        final byte[] chunk = inner.nextElement();
-        final long decompressedSize = Zstd.decompressedSize(chunk);
-        if (decompressedSize < 0) {
-            throw new RuntimeException("Invalid decompressed size: " + decompressedSize);
-        }
-        return Zstd.decompress(chunk, (int) decompressedSize);
+    public InputStream nextElement() {
+        final var chunk = inner.nextElement();
+        return new ByteArrayInputStream(chunk);
+    }
+
+    public InputStream sequence() {
+        return new SequenceInputStream(this);
     }
 }

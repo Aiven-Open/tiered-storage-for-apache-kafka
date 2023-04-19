@@ -35,9 +35,9 @@ import static org.mockito.Mockito.verify;
 import static org.mockito.Mockito.when;
 
 @ExtendWith(MockitoExtension.class)
-class DecryptionChunkEnumerationTest extends AesKeyAwareTest {
+class DecryptionOutboundTest extends AesKeyAwareTest {
     @Mock
-    DetransformChunkEnumeration inner;
+    OutboundTransform inner;
 
     @Mock
     Cipher cipher;
@@ -48,28 +48,28 @@ class DecryptionChunkEnumerationTest extends AesKeyAwareTest {
 
     @Test
     void nullInnerEnumeration() {
-        assertThatThrownBy(() -> new DecryptionChunkEnumeration(null, 10, this::cipherSupplier))
+        assertThatThrownBy(() -> new DecryptionOutbound(null, 10, this::cipherSupplier))
             .isInstanceOf(NullPointerException.class)
             .hasMessage("inner cannot be null");
     }
 
     @Test
     void zeroIvSize() {
-        assertThatThrownBy(() -> new DecryptionChunkEnumeration(inner, 0, this::cipherSupplier))
+        assertThatThrownBy(() -> new DecryptionOutbound(inner, 0, this::cipherSupplier))
             .isInstanceOf(IllegalArgumentException.class)
             .hasMessage("ivSize must be positive");
     }
 
     @Test
     void nullCipherSupplier() {
-        assertThatThrownBy(() -> new DecryptionChunkEnumeration(inner, ivSize, null))
+        assertThatThrownBy(() -> new DecryptionOutbound(inner, ivSize, null))
             .isInstanceOf(NullPointerException.class)
             .hasMessage("cipherSupplier cannot be null");
     }
 
     @Test
     void hasMoreElementsPropagated() {
-        final var transform = new DecryptionChunkEnumeration(inner, ivSize, this::cipherSupplier);
+        final var transform = new DecryptionOutbound(inner, ivSize, this::cipherSupplier);
         when(inner.hasMoreElements())
             .thenReturn(true)
             .thenReturn(false);
@@ -87,7 +87,7 @@ class DecryptionChunkEnumerationTest extends AesKeyAwareTest {
         System.arraycopy(iv, 0, encrypted, 0, iv.length);
         encryptionCipher.doFinal(data, 0, data.length, encrypted, iv.length);
 
-        final var transform = new DecryptionChunkEnumeration(inner, ivSize, AesKeyAwareTest::decryptionCipher);
+        final var transform = new DecryptionOutbound(inner, ivSize, AesKeyAwareTest::decryptionCipher);
         when(inner.nextElement()).thenReturn(encrypted);
         final byte[] decrypted = transform.nextElement();
 

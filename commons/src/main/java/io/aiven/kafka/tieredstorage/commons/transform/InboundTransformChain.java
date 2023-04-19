@@ -21,18 +21,18 @@ import java.util.function.Function;
 
 public final class InboundTransformChain {
     int originalSize;
-    TransformChunkEnumeration inner;
+    InboundTransform inner;
 
     InboundTransformChain(final byte[] original, final int chunkSize) {
         originalSize = original.length;
-        this.inner = new BaseTransformChunkEnumeration(new ByteArrayInputStream(original), chunkSize);
+        this.inner = new InboundSplitter(new ByteArrayInputStream(original), chunkSize);
     }
 
-    public void chain(final Function<TransformChunkEnumeration, TransformChunkEnumeration> transformSupplier) {
+    public void chain(final Function<InboundTransform, InboundTransform> transformSupplier) {
         this.inner = transformSupplier.apply(this.inner);
     }
 
-    public TransformFinisher complete() {
-        return new TransformFinisher(inner, originalSize);
+    public InboundResult complete() {
+        return new InboundResult(inner, originalSize);
     }
 }

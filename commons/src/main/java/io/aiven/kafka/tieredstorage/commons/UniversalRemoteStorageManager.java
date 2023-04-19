@@ -17,7 +17,7 @@
 package io.aiven.kafka.tieredstorage.commons;
 
 import io.aiven.kafka.tieredstorage.commons.storage.ObjectStorageFactory;
-import io.aiven.kafka.tieredstorage.commons.transform.TransformFinisher;
+import io.aiven.kafka.tieredstorage.commons.transform.InboundResult;
 import io.aiven.kafka.tieredstorage.commons.transform.TransformPipeline;
 import java.io.IOException;
 import java.io.InputStream;
@@ -52,7 +52,7 @@ public class UniversalRemoteStorageManager implements RemoteStorageManager {
                                    final LogSegmentData logSegmentData) throws RemoteStorageException {
         try {
             final byte[] original = Files.readAllBytes(logSegmentData.logSegment());
-            final TransformFinisher result = pipeline.inboundChain(original).complete();
+            final InboundResult result = pipeline.inboundChain(original).complete();
             final String key = ObjectKey.key(config.keyPrefix(), remoteLogSegmentMetadata, ObjectKey.Suffix.LOG);
             storage.fileUploader().upload(new SequenceInputStream(result), key);
             //...

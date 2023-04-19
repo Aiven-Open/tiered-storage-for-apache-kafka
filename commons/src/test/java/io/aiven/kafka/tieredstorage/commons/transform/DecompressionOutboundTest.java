@@ -16,7 +16,7 @@
 
 package io.aiven.kafka.tieredstorage.commons.transform;
 
-import com.github.luben.zstd.Zstd;
+import com.github.luben.zstd.ZstdCompressCtx;
 import org.junit.jupiter.api.Test;
 import org.junit.jupiter.api.extension.ExtendWith;
 import org.mockito.Mock;
@@ -29,34 +29,20 @@ import static org.mockito.Mockito.verify;
 import static org.mockito.Mockito.when;
 
 @ExtendWith(MockitoExtension.class)
-class CompressionChunkEnumerationTest {
+class DecompressionOutboundTest {
     @Mock
-    TransformChunkEnumeration inner;
+    OutboundTransform inner;
 
     @Test
     void nullInnerEnumeration() {
-        assertThatThrownBy(() -> new CompressionChunkEnumeration(null))
+        assertThatThrownBy(() -> new DecompressionOutbound(null))
             .isInstanceOf(NullPointerException.class)
             .hasMessage("inner cannot be null");
     }
 
     @Test
-    void originalChunkSizePropagated() {
-        when(inner.originalChunkSize()).thenReturn(123);
-        final var transform = new CompressionChunkEnumeration(inner);
-        assertThat(transform.originalChunkSize()).isEqualTo(123);
-        verify(inner).originalChunkSize();
-    }
-
-    @Test
-    void transformedChunkSize() {
-        final var transform = new CompressionChunkEnumeration(inner);
-        assertThat(transform.transformedChunkSize()).isNull();
-    }
-
-    @Test
     void hasMoreElementsPropagated() {
-        final var transform = new CompressionChunkEnumeration(inner);
+        final var transform = new DecompressionOutbound(inner);
         when(inner.hasMoreElements())
             .thenReturn(true)
             .thenReturn(false);
@@ -66,14 +52,17 @@ class CompressionChunkEnumerationTest {
     }
 
     @Test
-    void compress() {
+    void decompress() {
         final byte[] data = {0, 1, 2, 3, 4, 5, 6, 7, 8, 9};
-        final var transform = new CompressionChunkEnumeration(inner);
-        when(inner.nextElement()).thenReturn(data);
+        final byte[] compressed;
+        try (final ZstdCompressCtx compressCtx = new ZstdCompressCtx()) {
+            compressCtx.setContentSize(true);
+            compressed = compressCtx.compress(data);
+        }
 
-        final byte[] compressed = transform.nextElement();
-        final byte[] decompressed = new byte[data.length];
-        Zstd.decompress(decompressed, compressed);
-        assertThat(decompressed).isEqualTo(data);
+        final var transform = new DecompressionOutbound(inner);
+        when(inner.nextElement()).thenReturn(compressed);
+
+        assertThat(transform.nextElement()).isEqualTo(data);
     }
 }

@@ -19,23 +19,11 @@ package io.aiven.kafka.tieredstorage.commons.transform;
 import java.util.Enumeration;
 
 /**
- * The enumeration of chunks being transformed.
+ * The enumeration of chunks being de-transformed.
  *
- * <p>There are supposed to be multiple implementation doing different transformations
- * (like compression and encryption).
+ * <p>There are supposed to be multiple implementation doing different de-transformations
+ * (like decompression and decryption).
  * These implementations are supposed to be composable.
  */
-public interface TransformChunkEnumeration extends Enumeration<byte[]> {
-    /**
-     * Returns the original (i.e. before all the transformations) chunk size.
-     *
-     * <p>Normally it should be propagated through the chain of transformations.
-     */
-    int originalChunkSize();
-
-    /**
-     * Returns a transformed chunk size if it's known.
-     * @return a transformed chunk size; or {@code null} if unknown.
-     */
-    Integer transformedChunkSize();
+public interface OutboundTransform extends Enumeration<byte[]> {
 }

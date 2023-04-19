@@ -36,13 +36,13 @@ import static org.assertj.core.api.Assertions.assertThat;
 import static org.assertj.core.api.Assertions.assertThatThrownBy;
 
 @ExtendWith(MockitoExtension.class)
-class TransformFinisherTest {
+class InboundResultTest {
     @Mock
-    TransformChunkEnumeration inner;
+    InboundTransform inner;
 
     @Test
     void getIndexBeforeUsing() {
-        final TransformFinisher finisher = new TransformFinisher(new FakeDataEnumerator(3), 7);
+        final InboundResult finisher = new InboundResult(new FakeDataEnumerator(3), 7);
         assertThatThrownBy(() -> finisher.chunkIndex())
             .isInstanceOf(IllegalStateException.class)
             .hasMessage("Chunk index was not built, was finisher used?");
@@ -50,14 +50,14 @@ class TransformFinisherTest {
 
     @Test
     void nullInnerEnumeration() {
-        assertThatThrownBy(() -> new TransformFinisher(null, 100))
+        assertThatThrownBy(() -> new InboundResult(null, 100))
             .isInstanceOf(NullPointerException.class)
             .hasMessage("inner cannot be null");
     }
 
     @Test
     void negativeOriginalFileSize() {
-        assertThatThrownBy(() -> new TransformFinisher(inner, -1))
+        assertThatThrownBy(() -> new InboundResult(inner, -1))
             .isInstanceOf(IllegalArgumentException.class)
             .hasMessage("originalFileSize must be non-negative, -1 given");
     }
@@ -66,7 +66,7 @@ class TransformFinisherTest {
     @MethodSource("provideForBuildIndexAndReturnCorrectInputStreams")
     void buildIndexAndReturnCorrectInputStreams(final Integer transformedChunkSize,
                                                 final Class<ChunkIndex> indexType) throws IOException {
-        final TransformFinisher finisher = new TransformFinisher(new FakeDataEnumerator(transformedChunkSize), 7);
+        final InboundResult finisher = new InboundResult(new FakeDataEnumerator(transformedChunkSize), 7);
         assertThat(finisher.hasMoreElements()).isTrue();
         assertThat(finisher.nextElement().readAllBytes()).isEqualTo(new byte[] {0, 1, 2});
         assertThat(finisher.hasMoreElements()).isTrue();
@@ -91,7 +91,7 @@ class TransformFinisherTest {
         };
     }
 
-    private static class FakeDataEnumerator implements TransformChunkEnumeration {
+    private static class FakeDataEnumerator implements InboundTransform {
         private final Integer transformedChunkSize;
 
         private final Iterator<byte[]> iter = List.of(

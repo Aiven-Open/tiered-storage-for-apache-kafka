@@ -104,10 +104,10 @@ public class TransformPipeline {
         public TransformPipeline build() {
             final Function<InboundTransformChain, InboundTransformChain> inboundFunction = inboundTransformChain -> {
                 if (withCompression) {
-                    inboundTransformChain.chain(CompressionChunkEnumeration::new);
+                    inboundTransformChain.chain(CompressionInbound::new);
                 }
                 if (withEncryption) {
-                    inboundTransformChain.chain(inboundTransform -> new EncryptionChunkEnumeration(inboundTransform,
+                    inboundTransformChain.chain(inboundTransform -> new EncryptionInbound(inboundTransform,
                         inboundCipherSupplier));
                 }
                 return inboundTransformChain;
@@ -116,11 +116,11 @@ public class TransformPipeline {
                 outboundTransformChain -> {
                     if (withEncryption) {
                         outboundTransformChain.chain(
-                            outboundTransform -> new DecryptionChunkEnumeration(outboundTransform, ivSize,
+                            outboundTransform -> new DecryptionOutbound(outboundTransform, ivSize,
                                 outboundCipherSupplier));
                     }
                     if (withCompression) {
-                        outboundTransformChain.chain(DecompressionChunkEnumeration::new);
+                        outboundTransformChain.chain(DecompressionOutbound::new);
                     }
                     return outboundTransformChain;
                 };

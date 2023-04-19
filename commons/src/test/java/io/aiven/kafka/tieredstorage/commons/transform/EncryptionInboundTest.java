@@ -34,9 +34,9 @@ import static org.mockito.Mockito.verify;
 import static org.mockito.Mockito.when;
 
 @ExtendWith(MockitoExtension.class)
-class EncryptionChunkEnumerationTest extends AesKeyAwareTest {
+class EncryptionInboundTest extends AesKeyAwareTest {
     @Mock
-    TransformChunkEnumeration inner;
+    InboundTransform inner;
 
     @Mock
     Cipher cipher;
@@ -47,14 +47,14 @@ class EncryptionChunkEnumerationTest extends AesKeyAwareTest {
 
     @Test
     void nullInnerEnumeration() {
-        assertThatThrownBy(() -> new EncryptionChunkEnumeration(null, this::cipherSupplier))
+        assertThatThrownBy(() -> new EncryptionInbound(null, this::cipherSupplier))
             .isInstanceOf(NullPointerException.class)
             .hasMessage("inner cannot be null");
     }
 
     @Test
     void nullCipherSupplier() {
-        assertThatThrownBy(() -> new EncryptionChunkEnumeration(inner, null))
+        assertThatThrownBy(() -> new EncryptionInbound(inner, null))
             .isInstanceOf(NullPointerException.class)
             .hasMessage("cipherSupplier cannot be null");
     }
@@ -63,7 +63,7 @@ class EncryptionChunkEnumerationTest extends AesKeyAwareTest {
     void originalChunkSizePropagated() {
         when(inner.originalChunkSize()).thenReturn(100);
         when(cipher.getIV()).thenReturn(new byte[ivSize]);
-        final var transform = new EncryptionChunkEnumeration(inner, this::cipherSupplier);
+        final var transform = new EncryptionInbound(inner, this::cipherSupplier);
         assertThat(transform.originalChunkSize()).isEqualTo(100);
         verify(inner).originalChunkSize();
     }
@@ -71,7 +71,7 @@ class EncryptionChunkEnumerationTest extends AesKeyAwareTest {
     @Test
     void transformedChunkSizeIsPropagatedWhenNull() {
         when(inner.transformedChunkSize()).thenReturn(null);
-        final var transform = new EncryptionChunkEnumeration(inner, this::cipherSupplier);
+        final var transform = new EncryptionInbound(inner, this::cipherSupplier);
         assertThat(transform.transformedChunkSize()).isNull();
         verify(inner).transformedChunkSize();
     }
@@ -81,14 +81,14 @@ class EncryptionChunkEnumerationTest extends AesKeyAwareTest {
         when(inner.transformedChunkSize()).thenReturn(100);
         when(cipher.getIV()).thenReturn(new byte[ivSize]);
         when(cipher.getOutputSize(100)).thenReturn(100);
-        final var transform = new EncryptionChunkEnumeration(inner, this::cipherSupplier);
+        final var transform = new EncryptionInbound(inner, this::cipherSupplier);
         assertThat(transform.transformedChunkSize()).isEqualTo(100 + ivSize);
     }
 
     @Test
     void hasMoreElementsPropagated() {
         when(inner.transformedChunkSize()).thenReturn(null);
-        final var transform = new EncryptionChunkEnumeration(inner, this::cipherSupplier);
+        final var transform = new EncryptionInbound(inner, this::cipherSupplier);
         when(inner.hasMoreElements())
             .thenReturn(true)
             .thenReturn(false);
@@ -101,7 +101,7 @@ class EncryptionChunkEnumerationTest extends AesKeyAwareTest {
     void encrypt() throws IllegalBlockSizeException, BadPaddingException {
         final byte[] data = {0, 1, 2, 3, 4, 5, 6, 7, 8, 9};
 
-        final var transform = new EncryptionChunkEnumeration(inner, AesKeyAwareTest::encryptionCipher);
+        final var transform = new EncryptionInbound(inner, AesKeyAwareTest::encryptionCipher);
         when(inner.nextElement()).thenReturn(data);
         final byte[] encrypted = transform.nextElement();
 

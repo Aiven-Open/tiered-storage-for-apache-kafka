@@ -36,12 +36,12 @@ import io.aiven.kafka.tieredstorage.commons.manifest.index.VariableSizeChunkInde
  *
  * <p>It's responsible for building the chunk index.
  */
-public class TransformFinisher implements Enumeration<InputStream> {
-    private final TransformChunkEnumeration inner;
+public class InboundResult implements Enumeration<InputStream> {
+    private final InboundTransform inner;
     private final AbstractChunkIndexBuilder chunkIndexBuilder;
     private ChunkIndex chunkIndex = null;
 
-    public TransformFinisher(final TransformChunkEnumeration inner, final int originalFileSize) {
+    InboundResult(final InboundTransform inner, final int originalFileSize) {
         this.inner = Objects.requireNonNull(inner, "inner cannot be null");
 
         if (originalFileSize < 0) {

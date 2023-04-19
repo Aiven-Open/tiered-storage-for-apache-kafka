@@ -26,17 +26,17 @@ import java.util.function.Function;
 /**
  * The chunk de-transformation that does decryption.
  */
-public class DecryptionChunkEnumeration implements DetransformChunkEnumeration {
-    private final DetransformChunkEnumeration inner;
+public class DecryptionOutbound implements OutboundTransform {
+    private final OutboundTransform inner;
     private final int ivSize;
     private final Function<byte[], Cipher> cipherSupplier;
 
     /**
      * @param cipherSupplier a function that takes an encrypted chunk and returns the decryption cypher for it
      */
-    public DecryptionChunkEnumeration(final DetransformChunkEnumeration inner,
-                                      final int ivSize,
-                                      final Function<byte[], Cipher> cipherSupplier) {
+    DecryptionOutbound(final OutboundTransform inner,
+                              final int ivSize,
+                              final Function<byte[], Cipher> cipherSupplier) {
         this.inner = Objects.requireNonNull(inner, "inner cannot be null");
         if (ivSize <= 0) {
             throw new IllegalArgumentException("ivSize must be positive");

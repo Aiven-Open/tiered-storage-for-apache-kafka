@@ -32,14 +32,14 @@ import io.aiven.kafka.tieredstorage.commons.Chunk;
  * both transformed and not. We rely on this information for determining the transformed chunks borders
  * in the input stream. We also can tell if the input stream has too few bytes.
  */
-public class BaseDetransformChunkEnumeration implements DetransformChunkEnumeration {
+public class OutboundJoiner implements OutboundTransform {
     private final InputStream inputStream;
     private final Iterator<Chunk> chunksIter;
 
     private byte[] chunk = null;
 
-    public BaseDetransformChunkEnumeration(final InputStream inputStream,
-                                           final List<Chunk> chunks) {
+    OutboundJoiner(final InputStream inputStream,
+                   final List<Chunk> chunks) {
         this.inputStream = Objects.requireNonNull(inputStream, "inputStream cannot be null");
         this.chunksIter = Objects.requireNonNull(chunks, "chunks cannot be null").iterator();
     }

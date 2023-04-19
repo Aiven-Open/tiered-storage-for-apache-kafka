@@ -24,14 +24,14 @@ import java.util.Objects;
 /**
  * The base chunk transformation that does the initial chunking of the input stream of bytes.
  */
-public class BaseTransformChunkEnumeration implements TransformChunkEnumeration {
+public class InboundSplitter implements InboundTransform {
     private final InputStream inputStream;
     private final int originalChunkSize;
 
     private byte[] chunk = null;
 
-    public BaseTransformChunkEnumeration(final InputStream inputStream,
-                                         final int originalChunkSize) {
+    InboundSplitter(final InputStream inputStream,
+                           final int originalChunkSize) {
         this.inputStream = Objects.requireNonNull(inputStream, "inputStream cannot be null");
 
         if (originalChunkSize < 0) {
