@@ -1,4 +1,4 @@
-\version: '3.8'
+version: '3.8'
 services:
   zookeeper:
     image: kafka
@@ -6,7 +6,7 @@ services:
       context: ../kafka/.
       args:
         - AK_REPO=https://github.com/aiven/kafka
-        - AK_BRANCH=tchary-freshness-measurement
+        - AK_BRANCH=tchary-freshness-test
         - KAFKA_VERSION=3.3.2-SNAPSHOT
     command:
       - zookeeper-server-start.sh
@@ -18,7 +18,7 @@ services:
       context: ../kafka/.
       args:
         - AK_REPO=https://github.com/aiven/kafka
-        - AK_BRANCH=tchary-freshness-measurement
+        - AK_BRANCH=tchary-freshness-test
         - KAFKA_VERSION=3.3.2-SNAPSHOT
     ports:
       - "9092:9092"
