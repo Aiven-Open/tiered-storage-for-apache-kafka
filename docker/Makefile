@@ -1,10 +1,4 @@
-all: build up
-
-build:
-	docker compose build
-
-up:
-	docker compose up -d
+all:
 
 # Generate keys for S3 plugin
 rsa-keys:
