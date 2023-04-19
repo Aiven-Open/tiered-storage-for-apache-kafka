@@ -1,19 +1,13 @@
 version: '3.8'
 services:
   zookeeper:
-    image: kafka
-    build:
-      context: ../kafka/.
-      args:
-        - AK_REPO=https://github.com/aiven/kafka
-        - AK_BRANCH=3.3-2022-10-06-tiered-storage
-        - KAFKA_VERSION=3.3.2-SNAPSHOT
+    image: kafka-ts-test
     command:
       - zookeeper-server-start.sh
       - config/zookeeper.properties
 
   kafka:
-    image: kafka
+    image: kafka-ts-test
     build:
       context: ../kafka/.
       args:
@@ -46,17 +40,17 @@ services:
       # Enable Tiered storage
       - --override
       - remote.log.storage.system.enable=true
+      # Tiered Storage: RLMM config
       - --override
       - remote.log.storage.manager.class.name=org.apache.kafka.server.log.remote.storage.LocalTieredStorage
       - --override
       - remote.log.storage.manager.class.path=
-      # Tiered storage S3 plugin
-      - --override
-      - rsm.config.dir=/data
-      # Tiered Storage: RLMM config
       - --override
       - remote.log.metadata.manager.class.name=org.apache.kafka.server.log.remote.metadata.storage.TopicBasedRemoteLogMetadataManager
       - --override
       - rlmm.config.remote.log.metadata.common.client.bootstrap.servers=kafka:29092
       - --override
       - rlmm.config.remote.log.metadata.topic.replication.factor=1
+      # Tiered storage S3 plugin
+      - --override
+      - rsm.config.dir=/data
