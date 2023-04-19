@@ -1,13 +1,13 @@
 version: '3.8'
 services:
   zookeeper:
-    image: kafka-ts-s3-aws
+    image: kafka-ts-test
     command:
       - zookeeper-server-start.sh
       - config/zookeeper.properties
 
   kafka:
-    image: kafka-ts-s3-aws
+    image: kafka-ts-test
     build:
       context: ../kafka/.
       # Override branch used to build docker image
@@ -17,12 +17,8 @@ services:
       #   - KAFKA_VERSION=3.0.1-SNAPSHOT
     ports:
       - "9092:9092"
-    volumes:
-      # mount plugin
-      - ./../../s3/build/install/s3:/kafka/plugins/tiered-storage-s3
-      # encryption keys
-      - ./../private.pem:/kafka/plugins/private.pem
-      - ./../public.pem:/kafka/plugins/public.pem
+    environment:
+      - INCLUDE_TEST_JARS=true
     command:
       - kafka-server-start.sh
       - config/server.properties
@@ -36,10 +32,16 @@ services:
       - listener.security.protocol.map=BROKER:PLAINTEXT,EXTERNAL:PLAINTEXT
       - --override
       - inter.broker.listener.name=BROKER
+      - --override
+      - log.dirs=/kafka/data
       # Enable Tiered storage
       - --override
       - remote.log.storage.system.enable=true
       # Tiered Storage: RLMM config
+      - --override
+      - remote.log.storage.manager.class.name=org.apache.kafka.server.log.remote.storage.LocalTieredStorage
+      - --override
+      - remote.log.storage.manager.class.path=
       - --override
       - remote.log.metadata.manager.class.name=org.apache.kafka.server.log.remote.metadata.storage.TopicBasedRemoteLogMetadataManager
       - --override
@@ -48,20 +50,5 @@ services:
       - rlmm.config.remote.log.metadata.topic.replication.factor=1
       # Tiered storage S3 plugin
       - --override
-      - remote.log.storage.manager.class.name=io.aiven.kafka.tiered.storage.s3.S3RemoteStorageManager
-      - --override
-      - remote.log.storage.manager.class.path=/kafka/plugins/tiered-storage-s3/*
-      - --override
-      - rsm.config.s3.bucket.name=kafka-ts-us-east-1
-      - --override
-      - rsm.config.s3.region=us-east-1
-      - --override
-      - rsm.config.s3.credentials.provider.class=com.amazonaws.auth.AWSStaticCredentialsProvider
-      - --override
-      - rsm.config.s3.client.aws_access_key_id=${AWS_ACCESS_KEY_ID}
-      - --override
-      - rsm.config.s3.client.aws_secret_access_key=${AWS_SECRET_ACCESS_KEY}
-      - --override
-      - rsm.config.s3.public_key_pem=/kafka/plugins/public.pem
-      - --override
-      - rsm.config.s3.private_key_pem=/kafka/plugins/private.pem
+      # dir at /kafka/kafka-tiered-storage/data
+      - rsm.config.dir=/data
