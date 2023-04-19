@@ -8,20 +8,26 @@ ARG AK_REPO=https://github.com/apache/kafka
 ARG AK_BRANCH=3.4
 
 RUN git clone ${AK_REPO}
-
 WORKDIR /kafka
 RUN git checkout ${AK_BRANCH}
 
-ENV SCALA_VERSION 2.12
-RUN ./gradlew -PscalaVersion=${SCALA_VERSION} releaseTarGz
-
-FROM eclipse-temurin:17-jre AS kafka
-
-ENV SCALA_VERSION 2.12
+ARG SCALA_VERSION=2.12
 ARG KAFKA_VERSION=3.4.1-SNAPSHOT
 
-COPY --from=base /kafka/core/build/distributions/kafka_${SCALA_VERSION}-${KAFKA_VERSION}.tgz ./kafka.tgz
-RUN tar xf kafka.tgz; mv /kafka_${SCALA_VERSION}-${KAFKA_VERSION} /kafka
+RUN ./gradlew -PscalaVersion=${SCALA_VERSION} testJar releaseTarGz
+WORKDIR /kafka/core/build/distributions
+RUN tar xf kafka_${SCALA_VERSION}-${KAFKA_VERSION}.tgz;
+
+FROM eclipse-temurin:11-jre AS kafka
+
+ARG SCALA_VERSION=2.12
+ARG KAFKA_VERSION=3.4.1-SNAPSHOT
+
+COPY --from=base /kafka/core/build/distributions/kafka_${SCALA_VERSION}-${KAFKA_VERSION} /kafka
+# Adding test jars with local implementations
+COPY --from=base /kafka/clients/build/libs/kafka-clients-${KAFKA_VERSION}-test.jar /kafka/libs/
+COPY --from=base /kafka/storage/build/libs/kafka-storage-${KAFKA_VERSION}-test.jar /kafka/libs/
+COPY --from=base /kafka/storage/api/build/libs/kafka-storage-api-${KAFKA_VERSION}-test.jar /kafka/libs/
 
 ENV KAFKA_HOME /kafka
 WORKDIR ${KAFKA_HOME}

@@ -22,6 +22,7 @@ kafka-topic:
 	${KAFKA_HOME}/bin/kafka-topics.sh \
 		--bootstrap-server localhost:9092 \
 		--create \
+		--config remote.storage.enable=true \
 		--config segment.bytes=$(segment) \
 		--config retention.bytes=$(retention) \
 		--config local.retention.bytes=$(local_retention) \
