@@ -61,6 +61,12 @@ public final class ObjectKey {
         }
     }
 
+    private final String prefix;
+
+    public ObjectKey(final String prefix) {
+        this.prefix = prefix;
+    }
+
     /**
      * Creates the object key/path in the following format:
      *
@@ -69,11 +75,9 @@ public final class ObjectKey {
      * </pre>
      *
      * <p>For example:
-     * <code>someprefix/topic-MWJ6FHTfRYy67jzwZdeqSQ/7/00000000000000001234-tqimKeZwStOEOwRzT3L5oQ.log</code>
+     * {@code someprefix/topic-MWJ6FHTfRYy67jzwZdeqSQ/7/00000000000000001234-tqimKeZwStOEOwRzT3L5oQ.log}
      */
-    public static String key(final String prefix,
-                             final RemoteLogSegmentMetadata remoteLogSegmentMetadata,
-                             final Suffix suffix) {
+    public String key(final RemoteLogSegmentMetadata remoteLogSegmentMetadata, final Suffix suffix) {
         Objects.requireNonNull(remoteLogSegmentMetadata, "remoteLogSegmentMetadata cannot be null");
         Objects.requireNonNull(suffix, "suffix cannot be null");
 
