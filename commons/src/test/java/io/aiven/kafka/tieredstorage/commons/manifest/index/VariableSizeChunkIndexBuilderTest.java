@@ -46,9 +46,9 @@ public class VariableSizeChunkIndexBuilderTest extends ChunkIndexBuilderCommonTe
     void threeChunks() {
         /*
         Original file:        |  Transformed file:
-        [0-101   - size 101)  |  [0-33  - size 33)
-        [101-202 - size 101)  |  [33-55 - size 22)
-        [202-253 - size 51)   |  [55-60 - size 5)
+        [0-101)   - size 101  |  [0-33)  - size 33
+        [101-202) - size 101  |  [33-55) - size 22
+        [202-253) - size 51   |  [55-60) - size 5
         */
         final var builder = new VariableSizeChunkIndexBuilder(101, 253);
         builder.addChunk(33);
