@@ -21,11 +21,11 @@ import javax.crypto.SecretKey;
 import java.util.Arrays;
 import java.util.Objects;
 
-public class EncryptionKeyAndAAD {
+public class SecretKeyAndAAD {
     public final SecretKey key;
     public final byte[] aad;
 
-    public EncryptionKeyAndAAD(final SecretKey key, final byte[] aad) {
+    public SecretKeyAndAAD(final SecretKey key, final byte[] aad) {
         this.key = key;
         this.aad = aad;
     }
@@ -38,7 +38,7 @@ public class EncryptionKeyAndAAD {
         if (o == null || getClass() != o.getClass()) {
             return false;
         }
-        final EncryptionKeyAndAAD that = (EncryptionKeyAndAAD) o;
+        final SecretKeyAndAAD that = (SecretKeyAndAAD) o;
         return Objects.equals(key, that.key) && Arrays.equals(aad, that.aad);
     }
 

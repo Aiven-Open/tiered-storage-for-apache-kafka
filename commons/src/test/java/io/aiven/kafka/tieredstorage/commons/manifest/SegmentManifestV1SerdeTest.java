@@ -28,7 +28,7 @@ import io.aiven.kafka.tieredstorage.commons.RsaKeyAwareTest;
 import io.aiven.kafka.tieredstorage.commons.manifest.index.FixedSizeChunkIndex;
 import io.aiven.kafka.tieredstorage.commons.manifest.serde.SecretKeyDeserializer;
 import io.aiven.kafka.tieredstorage.commons.manifest.serde.SecretKeySerializer;
-import io.aiven.kafka.tieredstorage.commons.security.EncryptionKeyProvider;
+import io.aiven.kafka.tieredstorage.commons.security.RsaEncryptionProvider;
 
 import com.fasterxml.jackson.core.JsonProcessingException;
 import com.fasterxml.jackson.databind.ObjectMapper;
@@ -58,7 +58,7 @@ class SegmentManifestV1SerdeTest extends RsaKeyAwareTest {
             + "\"compression\":false}";
 
     ObjectMapper mapper;
-    EncryptionKeyProvider encryptionKeyProvider;
+    RsaEncryptionProvider encryptionKeyProvider;
 
     @BeforeEach
     void init() throws IOException {
@@ -67,7 +67,7 @@ class SegmentManifestV1SerdeTest extends RsaKeyAwareTest {
 
         try (final InputStream publicKeyFis = Files.newInputStream(publicKeyPem);
              final InputStream privateKeyFis = Files.newInputStream(privateKeyPem)) {
-            encryptionKeyProvider = EncryptionKeyProvider.of(publicKeyFis, privateKeyFis);
+            encryptionKeyProvider = RsaEncryptionProvider.of(publicKeyFis, privateKeyFis);
         }
 
         final SimpleModule simpleModule = new SimpleModule();

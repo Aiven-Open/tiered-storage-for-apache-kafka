@@ -16,6 +16,9 @@
 
 package io.aiven.kafka.tiered.storage.s3;
 
+import io.aiven.kafka.tieredstorage.commons.security.AesEncryptionProvider;
+import java.security.NoSuchAlgorithmException;
+import java.security.NoSuchProviderException;
 import javax.crypto.SecretKey;
 import javax.crypto.spec.SecretKeySpec;
 
@@ -28,7 +31,7 @@ import java.security.Security;
 import java.util.concurrent.TimeUnit;
 
 import io.aiven.kafka.tieredstorage.commons.io.IOUtils;
-import io.aiven.kafka.tieredstorage.commons.security.EncryptionKeyProvider;
+import io.aiven.kafka.tieredstorage.commons.security.RsaEncryptionProvider;
 import io.aiven.kafka.tieredstorage.commons.security.metadata.EncryptedRepositoryMetadata;
 
 import com.amazonaws.AmazonClientException;
@@ -43,7 +46,8 @@ public class S3EncryptionKeyProvider {
     private static final Logger log = LoggerFactory.getLogger(S3RemoteStorageManager.class);
     private final AmazonS3 s3Client;
     private final S3RemoteStorageManagerConfig config;
-    private final EncryptionKeyProvider encryptionKeyProvider;
+    private final RsaEncryptionProvider encryptionKeyProvider;
+    private final AesEncryptionProvider aesEncryptionProvider;
     private final Cache<String, byte[]> encryptionMetadataCache;
 
     static {
@@ -58,11 +62,12 @@ public class S3EncryptionKeyProvider {
                 .maximumSize(config.encryptionMetadataCacheSize())
                 .build();
         try {
-            encryptionKeyProvider = EncryptionKeyProvider.of(
+            encryptionKeyProvider = RsaEncryptionProvider.of(
                     Files.newInputStream(Path.of(config.publicKey())),
                     Files.newInputStream(Path.of(config.privateKey()))
             );
-        } catch (final IOException e) {
+            aesEncryptionProvider = new AesEncryptionProvider(encryptionKeyProvider.keyGenerator());
+        } catch (final IOException | NoSuchAlgorithmException | NoSuchProviderException e) {
             throw new RuntimeException(
                     "Failed to initialize encryption key provider: keys are not readable or do not exist", e);
         }
@@ -96,7 +101,7 @@ public class S3EncryptionKeyProvider {
                 }
             } else {
                 log.info("Creating new metadata file. Path: {}", metadataFileKey);
-                final SecretKey encryptionKey = encryptionKeyProvider.createKey();
+                final SecretKey encryptionKey = aesEncryptionProvider.createKey();
                 try {
                     uploadMetadata(repositoryMetadata.serialize(encryptionKey), metadataFileKey);
                 } catch (final IOException e) {

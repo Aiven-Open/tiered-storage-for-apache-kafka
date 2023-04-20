@@ -16,6 +16,8 @@
 
 package io.aiven.kafka.tieredstorage.commons.security;
 
+import java.security.NoSuchAlgorithmException;
+import java.security.NoSuchProviderException;
 import javax.crypto.spec.SecretKeySpec;
 
 import java.io.IOException;
@@ -27,30 +29,32 @@ import org.junit.jupiter.api.Test;
 
 import static org.assertj.core.api.Assertions.assertThat;
 
-public class EncryptionKeyProviderTest extends RsaKeyAwareTest {
+public class RsaEncryptionProviderTest extends RsaKeyAwareTest {
 
     @Test
-    void alwaysGeneratesNewKey() throws IOException {
+    void alwaysGeneratesNewKey() throws IOException, NoSuchAlgorithmException, NoSuchProviderException {
         final var ekp =
-                EncryptionKeyProvider.of(
+                RsaEncryptionProvider.of(
                         Files.newInputStream(publicKeyPem),
                         Files.newInputStream(privateKeyPem)
                 );
 
-        final var key1 = ekp.createKey();
-        final var key2 = ekp.createKey();
+        final AesEncryptionProvider aesProvider = new AesEncryptionProvider(ekp.keyGenerator());
+        final var key1 = aesProvider.createKey();
+        final var key2 = aesProvider.createKey();
 
         assertThat(key1).isNotEqualTo(key2);
     }
 
     @Test
-    void decryptGeneratedKey() throws IOException {
+    void decryptGeneratedKey() throws IOException, NoSuchAlgorithmException, NoSuchProviderException {
         final var ekProvider =
-                EncryptionKeyProvider.of(
+                RsaEncryptionProvider.of(
                         Files.newInputStream(publicKeyPem),
                         Files.newInputStream(privateKeyPem)
                 );
-        final var secretKey = ekProvider.createKey();
+        final AesEncryptionProvider aesProvider = new AesEncryptionProvider(ekProvider.keyGenerator());
+        final var secretKey = aesProvider.createKey();
         final var encryptedKey = ekProvider.encryptKey(secretKey);
         final var restoredKey = ekProvider.decryptKey(encryptedKey);
 

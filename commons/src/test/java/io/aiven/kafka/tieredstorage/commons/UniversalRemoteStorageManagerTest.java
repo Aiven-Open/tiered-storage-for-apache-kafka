@@ -45,7 +45,7 @@ import org.apache.kafka.server.log.remote.storage.RemoteStorageException;
 import org.apache.kafka.server.log.remote.storage.RemoteStorageManager;
 
 import io.aiven.kafka.tieredstorage.commons.manifest.index.ChunkIndex;
-import io.aiven.kafka.tieredstorage.commons.security.EncryptionKeyProvider;
+import io.aiven.kafka.tieredstorage.commons.security.RsaEncryptionProvider;
 
 import com.github.luben.zstd.Zstd;
 import org.apache.commons.io.input.BoundedInputStream;
@@ -62,7 +62,7 @@ import static org.assertj.core.api.Assertions.assertThat;
 class UniversalRemoteStorageManagerTest extends RsaKeyAwareTest {
     RemoteStorageManager rsm;
 
-    EncryptionKeyProvider encryptionKeyProvider;
+    RsaEncryptionProvider encryptionKeyProvider;
 
     @TempDir
     Path tmpDir;
@@ -98,7 +98,7 @@ class UniversalRemoteStorageManagerTest extends RsaKeyAwareTest {
 
         try (final InputStream publicKeyFis = Files.newInputStream(publicKeyPem);
              final InputStream privateKeyFis = Files.newInputStream(privateKeyPem)) {
-            encryptionKeyProvider = EncryptionKeyProvider.of(publicKeyFis, privateKeyFis);
+            encryptionKeyProvider = RsaEncryptionProvider.of(publicKeyFis, privateKeyFis);
         }
 
         sourceDir = Path.of(tmpDir.toString(), "source");

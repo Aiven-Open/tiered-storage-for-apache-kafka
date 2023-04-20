@@ -21,20 +21,20 @@ import javax.crypto.SecretKey;
 import java.io.IOException;
 import java.util.Base64;
 
-import io.aiven.kafka.tieredstorage.commons.security.EncryptionKeyProvider;
+import io.aiven.kafka.tieredstorage.commons.security.RsaEncryptionProvider;
 
 import com.fasterxml.jackson.core.JsonProcessingException;
 import com.fasterxml.jackson.databind.ObjectMapper;
 
 public class EncryptedRepositoryMetadata {
 
-    private final EncryptionKeyProvider encryptionKeyProvider;
+    private final RsaEncryptionProvider encryptionKeyProvider;
 
     private final ObjectMapper objectMapper;
 
     static final int VERSION = 1;
 
-    public EncryptedRepositoryMetadata(final EncryptionKeyProvider encryptionKeyProvider) {
+    public EncryptedRepositoryMetadata(final RsaEncryptionProvider encryptionKeyProvider) {
         this.encryptionKeyProvider = encryptionKeyProvider;
         this.objectMapper = new ObjectMapper();
     }

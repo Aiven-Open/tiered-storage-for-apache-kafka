@@ -16,6 +16,7 @@
 
 package io.aiven.kafka.tieredstorage.commons.io;
 
+import io.aiven.kafka.tieredstorage.commons.security.AesEncryptionProvider;
 import javax.crypto.spec.SecretKeySpec;
 
 import java.nio.ByteBuffer;
@@ -24,7 +25,7 @@ import java.nio.file.Path;
 import java.util.Random;
 
 import io.aiven.kafka.tieredstorage.commons.RsaKeyAwareTest;
-import io.aiven.kafka.tieredstorage.commons.security.EncryptionKeyProvider;
+import io.aiven.kafka.tieredstorage.commons.security.RsaEncryptionProvider;
 
 import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.Test;
@@ -42,11 +43,12 @@ public class CryptoIOProviderTest extends RsaKeyAwareTest {
 
     @BeforeEach
     public void setUpKey() throws Exception {
-        final EncryptionKeyProvider encProvider = EncryptionKeyProvider.of(
+        final RsaEncryptionProvider rsaProvider = RsaEncryptionProvider.of(
                 Files.newInputStream(publicKeyPem),
                 Files.newInputStream(privateKeyPem)
         );
-        final var key = encProvider.createKey();
+        final AesEncryptionProvider aesProvider = new AesEncryptionProvider(rsaProvider.keyGenerator());
+        final var key = aesProvider.createKey();
         final byte[] encryptionKey = new byte[32];
         System.arraycopy(key.getEncoded(), 0, encryptionKey, 0, 32);
         final byte[] aad = new byte[32];

@@ -16,6 +16,9 @@
 
 package io.aiven.kafka.tieredstorage.commons.security.metadata;
 
+import io.aiven.kafka.tieredstorage.commons.security.AesEncryptionProvider;
+import java.security.NoSuchAlgorithmException;
+import java.security.NoSuchProviderException;
 import javax.crypto.spec.SecretKeySpec;
 
 import java.io.IOException;
@@ -24,7 +27,7 @@ import java.nio.file.Files;
 import java.util.Base64;
 
 import io.aiven.kafka.tieredstorage.commons.RsaKeyAwareTest;
-import io.aiven.kafka.tieredstorage.commons.security.EncryptionKeyProvider;
+import io.aiven.kafka.tieredstorage.commons.security.RsaEncryptionProvider;
 
 import com.fasterxml.jackson.databind.ObjectMapper;
 import org.junit.jupiter.api.BeforeEach;
@@ -38,20 +41,22 @@ class EncryptedRepositoryMetadataTest extends RsaKeyAwareTest {
     static final String METADATA_JSON_PATTERN =
         "{ \"encryptionMetadata\": \"%s\", \"version\": %s }";
 
-    EncryptionKeyProvider encryptionKeyProvider;
+    RsaEncryptionProvider encryptionKeyProvider;
+    AesEncryptionProvider aesEncryptionProvider;
 
     @BeforeEach
-    void setUp() throws IOException {
+    void setUp() throws IOException, NoSuchAlgorithmException, NoSuchProviderException {
         encryptionKeyProvider =
-            EncryptionKeyProvider.of(
+            RsaEncryptionProvider.of(
                 Files.newInputStream(publicKeyPem),
                 Files.newInputStream(privateKeyPem)
             );
+        aesEncryptionProvider = new AesEncryptionProvider(encryptionKeyProvider.keyGenerator());
     }
 
     @Test
     void shouldSerializeMetadata() throws IOException {
-        final var encKey = encryptionKeyProvider.createKey();
+        final var encKey = aesEncryptionProvider.createKey();
         final var bytes = new EncryptedRepositoryMetadata(encryptionKeyProvider).serialize(encKey);
 
         final var encKeyMetadata = new ObjectMapper().readValue(bytes, EncryptionMetadata.class);
@@ -64,7 +69,7 @@ class EncryptedRepositoryMetadataTest extends RsaKeyAwareTest {
 
     @Test
     void shouldDeserializeMetadata() throws IOException {
-        final var encKey = encryptionKeyProvider.createKey();
+        final var encKey = aesEncryptionProvider.createKey();
         final var encryptedKey = encryptionKeyProvider.encryptKey(encKey);
 
         final var json =
@@ -81,9 +86,7 @@ class EncryptedRepositoryMetadataTest extends RsaKeyAwareTest {
     @Test
     void deserializationShouldThrowIOExceptionForWrongJson() {
 
-        final var encryptedKey =
-            encryptionKeyProvider
-                .encryptKey(encryptionKeyProvider.createKey());
+        final var encryptedKey = encryptionKeyProvider.encryptKey(aesEncryptionProvider.createKey());
 
         assertThatThrownBy(() -> deserializeMetadata(""))
             .isInstanceOf(IOException.class);
@@ -105,9 +108,7 @@ class EncryptedRepositoryMetadataTest extends RsaKeyAwareTest {
 
     @Test
     void deserializationShouldThrowIOExceptionForWrongVersion() {
-        final var encryptedKey =
-            encryptionKeyProvider
-                .encryptKey(encryptionKeyProvider.createKey());
+        final var encryptedKey = encryptionKeyProvider.encryptKey(aesEncryptionProvider.createKey());
 
         final var jsonWithWrongVersion =
             String.format(
@@ -118,11 +119,8 @@ class EncryptedRepositoryMetadataTest extends RsaKeyAwareTest {
             .hasMessage("Unsupported metadata version");
     }
 
-
     private byte[] deserializeMetadata(final String json) throws IOException {
         return new EncryptedRepositoryMetadata(encryptionKeyProvider)
             .deserialize(json.getBytes(StandardCharsets.UTF_8));
     }
-
-
 }
