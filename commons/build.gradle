@@ -16,11 +16,13 @@
 
 ext {
     zstdVersion = "1.5.4-2"
+    jacksonVersion = "2.15.0"
 }
 
 dependencies {
     // The client of a library should provide a runtime dependency. For now taking the version from kafka-storage-api
-    compileOnly 'com.fasterxml.jackson.core:jackson-databind:2.15.0'
+    compileOnly "com.fasterxml.jackson.core:jackson-databind:$jacksonVersion"
+    implementation "com.fasterxml.jackson.datatype:jackson-datatype-jdk8:$jacksonVersion"
     // The client of a library should provide a runtime dependency.
     // For now taking the version from kafka-clients
     compileOnly "com.github.luben:zstd-jni:$zstdVersion"
