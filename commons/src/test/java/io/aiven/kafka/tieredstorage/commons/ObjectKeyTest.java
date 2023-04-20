@@ -40,31 +40,32 @@ class ObjectKeyTest {
 
     @Test
     void test() {
-        assertThat(ObjectKey.key("prefix/", REMOTE_LOG_SEGMENT_METADATA, ObjectKey.Suffix.LOG))
+        final ObjectKey objectKey = new ObjectKey("prefix/");
+        assertThat(objectKey.key(REMOTE_LOG_SEGMENT_METADATA, ObjectKey.Suffix.LOG))
             .isEqualTo(
                 "prefix/topic-AAAAAAAAAAAAAAAAAAAAAQ/7/"
                     + "00000000000000001234-AAAAAAAAAAAAAAAAAAAAAA.log");
-        assertThat(ObjectKey.key("prefix/", REMOTE_LOG_SEGMENT_METADATA, ObjectKey.Suffix.OFFSET_INDEX))
+        assertThat(objectKey.key(REMOTE_LOG_SEGMENT_METADATA, ObjectKey.Suffix.OFFSET_INDEX))
             .isEqualTo(
                 "prefix/topic-AAAAAAAAAAAAAAAAAAAAAQ/7/"
                     + "00000000000000001234-AAAAAAAAAAAAAAAAAAAAAA.index");
-        assertThat(ObjectKey.key("prefix/", REMOTE_LOG_SEGMENT_METADATA, ObjectKey.Suffix.TIME_INDEX))
+        assertThat(objectKey.key(REMOTE_LOG_SEGMENT_METADATA, ObjectKey.Suffix.TIME_INDEX))
             .isEqualTo(
                 "prefix/topic-AAAAAAAAAAAAAAAAAAAAAQ/7/"
                     + "00000000000000001234-AAAAAAAAAAAAAAAAAAAAAA.timeindex");
-        assertThat(ObjectKey.key("prefix/", REMOTE_LOG_SEGMENT_METADATA, ObjectKey.Suffix.PRODUCER_SNAPSHOT))
+        assertThat(objectKey.key(REMOTE_LOG_SEGMENT_METADATA, ObjectKey.Suffix.PRODUCER_SNAPSHOT))
             .isEqualTo(
                 "prefix/topic-AAAAAAAAAAAAAAAAAAAAAQ/7/"
                     + "00000000000000001234-AAAAAAAAAAAAAAAAAAAAAA.snapshot");
-        assertThat(ObjectKey.key("prefix/", REMOTE_LOG_SEGMENT_METADATA, ObjectKey.Suffix.TXN_INDEX))
+        assertThat(objectKey.key(REMOTE_LOG_SEGMENT_METADATA, ObjectKey.Suffix.TXN_INDEX))
             .isEqualTo(
                 "prefix/topic-AAAAAAAAAAAAAAAAAAAAAQ/7/"
                     + "00000000000000001234-AAAAAAAAAAAAAAAAAAAAAA.txnindex");
-        assertThat(ObjectKey.key("prefix/", REMOTE_LOG_SEGMENT_METADATA, ObjectKey.Suffix.LEADER_EPOCH_CHECKPOINT))
+        assertThat(objectKey.key(REMOTE_LOG_SEGMENT_METADATA, ObjectKey.Suffix.LEADER_EPOCH_CHECKPOINT))
             .isEqualTo(
                 "prefix/topic-AAAAAAAAAAAAAAAAAAAAAQ/7/"
                     + "00000000000000001234-AAAAAAAAAAAAAAAAAAAAAA.leader-epoch-checkpoint");
-        assertThat(ObjectKey.key("prefix/", REMOTE_LOG_SEGMENT_METADATA, ObjectKey.Suffix.MANIFEST))
+        assertThat(objectKey.key(REMOTE_LOG_SEGMENT_METADATA, ObjectKey.Suffix.MANIFEST))
             .isEqualTo(
                 "prefix/topic-AAAAAAAAAAAAAAAAAAAAAQ/7/"
                     + "00000000000000001234-AAAAAAAAAAAAAAAAAAAAAA.rsm-manifest");
@@ -72,7 +73,8 @@ class ObjectKeyTest {
 
     @Test
     void nullPrefix() {
-        assertThat(ObjectKey.key(null, REMOTE_LOG_SEGMENT_METADATA, ObjectKey.Suffix.LOG))
+        final ObjectKey objectKey = new ObjectKey(null);
+        assertThat(objectKey.key(REMOTE_LOG_SEGMENT_METADATA, ObjectKey.Suffix.LOG))
             .isEqualTo(
                 "topic-AAAAAAAAAAAAAAAAAAAAAQ/7/00000000000000001234-AAAAAAAAAAAAAAAAAAAAAA.log");
     }
