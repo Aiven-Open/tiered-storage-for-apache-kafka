@@ -56,9 +56,9 @@ public class FixedSizeChunkIndexBuilderTest extends ChunkIndexBuilderCommonTest 
     void threeChunks() {
         /*
         Original file:        |  Transformed file:
-        [0-101   - size 101)  |  [0-110   - size 111)
-        [101-202 - size 101)  |  [111-222 - size 111)
-        [202-253 - size 51)   |  [222-304 - size 82)
+        [0-101)   - size 101  |  [0-110)   - size 111
+        [101-202) - size 101  |  [111-222) - size 111
+        [202-253) - size 51   |  [222-304) - size 82
         */
         final var builder = new FixedSizeChunkIndexBuilder(101, 253, 111);
         builder.addChunk(111);
