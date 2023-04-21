@@ -24,16 +24,16 @@ import org.junit.jupiter.api.Test;
 
 import static org.assertj.core.api.Assertions.assertThat;
 
-class EncryptionKeyAndAADEqualsTest {
+class DataKeyAndAADEqualsTest {
     @Test
     void identical() {
         final byte[] keyBytes = new byte[32];
         final byte[] aad = new byte[32];
-        final var ekaad1 = new EncryptionKeyAndAAD(new SecretKeySpec(keyBytes, "AES"), aad);
-        final var ekaad2 = new EncryptionKeyAndAAD(new SecretKeySpec(keyBytes, "AES"), aad);
-        assertThat(ekaad1).isEqualTo(ekaad2);
-        assertThat(ekaad2).isEqualTo(ekaad1);
-        assertThat(ekaad1).hasSameHashCodeAs(ekaad2);
+        final var dataKeyAndAAD1 = new DataKeyAndAAD(new SecretKeySpec(keyBytes, "AES"), aad);
+        final var dataKeyAndAAD2 = new DataKeyAndAAD(new SecretKeySpec(keyBytes, "AES"), aad);
+        assertThat(dataKeyAndAAD1).isEqualTo(dataKeyAndAAD2);
+        assertThat(dataKeyAndAAD2).isEqualTo(dataKeyAndAAD1);
+        assertThat(dataKeyAndAAD1).hasSameHashCodeAs(dataKeyAndAAD2);
     }
 
     @Test
@@ -42,11 +42,11 @@ class EncryptionKeyAndAADEqualsTest {
         final byte[] keyBytes2 = new byte[32];
         Arrays.fill(keyBytes2, (byte) 1);
         final byte[] aad = new byte[32];
-        final var ekaad1 = new EncryptionKeyAndAAD(new SecretKeySpec(keyBytes1, "AES"), aad);
-        final var ekaad2 = new EncryptionKeyAndAAD(new SecretKeySpec(keyBytes2, "AES"), aad);
-        assertThat(ekaad1).isNotEqualTo(ekaad2);
-        assertThat(ekaad2).isNotEqualTo(ekaad1);
-        assertThat(ekaad1).doesNotHaveSameHashCodeAs(ekaad2);
+        final var dataKeyAndAAD1 = new DataKeyAndAAD(new SecretKeySpec(keyBytes1, "AES"), aad);
+        final var dataKeyAndAAD2 = new DataKeyAndAAD(new SecretKeySpec(keyBytes2, "AES"), aad);
+        assertThat(dataKeyAndAAD1).isNotEqualTo(dataKeyAndAAD2);
+        assertThat(dataKeyAndAAD2).isNotEqualTo(dataKeyAndAAD1);
+        assertThat(dataKeyAndAAD1).doesNotHaveSameHashCodeAs(dataKeyAndAAD2);
     }
 
     @Test
@@ -55,10 +55,10 @@ class EncryptionKeyAndAADEqualsTest {
         final byte[] aad1 = new byte[32];
         final byte[] aad2 = new byte[32];
         Arrays.fill(aad2, (byte) 1);
-        final var ekaad1 = new EncryptionKeyAndAAD(new SecretKeySpec(keyBytes, "AES"), aad1);
-        final var ekaad2 = new EncryptionKeyAndAAD(new SecretKeySpec(keyBytes, "AES"), aad2);
-        assertThat(ekaad1).isNotEqualTo(ekaad2);
-        assertThat(ekaad2).isNotEqualTo(ekaad1);
-        assertThat(ekaad1).doesNotHaveSameHashCodeAs(ekaad2);
+        final var dataKeyAndAAD1 = new DataKeyAndAAD(new SecretKeySpec(keyBytes, "AES"), aad1);
+        final var dataKeyAndAAD2 = new DataKeyAndAAD(new SecretKeySpec(keyBytes, "AES"), aad2);
+        assertThat(dataKeyAndAAD1).isNotEqualTo(dataKeyAndAAD2);
+        assertThat(dataKeyAndAAD2).isNotEqualTo(dataKeyAndAAD1);
+        assertThat(dataKeyAndAAD1).doesNotHaveSameHashCodeAs(dataKeyAndAAD2);
     }
 }

@@ -21,22 +21,20 @@ import javax.crypto.SecretKey;
 import java.io.IOException;
 import java.util.function.Function;
 
-import com.fasterxml.jackson.core.JsonGenerator;
-import com.fasterxml.jackson.databind.SerializerProvider;
-import com.fasterxml.jackson.databind.ser.std.StdSerializer;
+import com.fasterxml.jackson.core.JsonParser;
+import com.fasterxml.jackson.databind.DeserializationContext;
+import com.fasterxml.jackson.databind.deser.std.StdDeserializer;
 
-public class SecretKeySerializer extends StdSerializer<SecretKey> {
-    private final Function<SecretKey, byte[]> keyEncryptor;
+public class DataKeyDeserializer extends StdDeserializer<SecretKey> {
+    private final Function<byte[], SecretKey> keyDecryptor;
 
-    public SecretKeySerializer(final Function<SecretKey, byte[]> keyEncryptor) {
+    public DataKeyDeserializer(final Function<byte[], SecretKey> keyDecryptor) {
         super(SecretKey.class);
-        this.keyEncryptor = keyEncryptor;
+        this.keyDecryptor = keyDecryptor;
     }
 
     @Override
-    public void serialize(final SecretKey value,
-                          final JsonGenerator gen,
-                          final SerializerProvider provider) throws IOException {
-        gen.writeBinary(keyEncryptor.apply(value));
+    public SecretKey deserialize(final JsonParser p, final DeserializationContext ctxt) throws IOException {
+        return keyDecryptor.apply(p.getBinaryValue());
     }
 }

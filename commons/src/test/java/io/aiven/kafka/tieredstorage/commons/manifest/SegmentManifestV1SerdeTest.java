@@ -26,9 +26,9 @@ import java.util.Base64;
 
 import io.aiven.kafka.tieredstorage.commons.RsaKeyAwareTest;
 import io.aiven.kafka.tieredstorage.commons.manifest.index.FixedSizeChunkIndex;
-import io.aiven.kafka.tieredstorage.commons.manifest.serde.SecretKeyDeserializer;
-import io.aiven.kafka.tieredstorage.commons.manifest.serde.SecretKeySerializer;
-import io.aiven.kafka.tieredstorage.commons.security.EncryptionKeyProvider;
+import io.aiven.kafka.tieredstorage.commons.manifest.serde.DataKeyDeserializer;
+import io.aiven.kafka.tieredstorage.commons.manifest.serde.DataKeySerializer;
+import io.aiven.kafka.tieredstorage.commons.security.RsaEncryptionProvider;
 
 import com.fasterxml.jackson.core.JsonProcessingException;
 import com.fasterxml.jackson.databind.ObjectMapper;
@@ -43,7 +43,7 @@ import static org.assertj.core.api.Assertions.assertThat;
 class SegmentManifestV1SerdeTest extends RsaKeyAwareTest {
     static final FixedSizeChunkIndex INDEX =
         new FixedSizeChunkIndex(100, 1000, 110, 110);
-    static final SecretKey SECRET_KEY = new SecretKeySpec(new byte[]{0, 1, 2, 3, 4, 5, 6, 7, 8, 9}, "AES");
+    static final SecretKey DATA_KEY = new SecretKeySpec(new byte[]{0, 1, 2, 3, 4, 5, 6, 7, 8, 9}, "AES");
     static final byte[] AAD = {10, 11, 12, 13};
 
     static final String WITH_ENCRYPTION_WITHOUT_SECRET_KEY_JSON =
@@ -58,7 +58,7 @@ class SegmentManifestV1SerdeTest extends RsaKeyAwareTest {
             + "\"compression\":false}";
 
     ObjectMapper mapper;
-    EncryptionKeyProvider encryptionKeyProvider;
+    RsaEncryptionProvider rsaEncryptionProvider;
 
     @BeforeEach
     void init() throws IOException {
@@ -67,32 +67,32 @@ class SegmentManifestV1SerdeTest extends RsaKeyAwareTest {
 
         try (final InputStream publicKeyFis = Files.newInputStream(publicKeyPem);
              final InputStream privateKeyFis = Files.newInputStream(privateKeyPem)) {
-            encryptionKeyProvider = EncryptionKeyProvider.of(publicKeyFis, privateKeyFis);
+            rsaEncryptionProvider = RsaEncryptionProvider.of(publicKeyFis, privateKeyFis);
         }
 
         final SimpleModule simpleModule = new SimpleModule();
-        simpleModule.addSerializer(SecretKey.class, new SecretKeySerializer(encryptionKeyProvider::encryptKey));
-        simpleModule.addDeserializer(SecretKey.class, new SecretKeyDeserializer(
-            b -> new SecretKeySpec(encryptionKeyProvider.decryptKey(b), "AES")));
+        simpleModule.addSerializer(SecretKey.class, new DataKeySerializer(rsaEncryptionProvider::encryptDataKey));
+        simpleModule.addDeserializer(SecretKey.class, new DataKeyDeserializer(
+            b -> new SecretKeySpec(rsaEncryptionProvider.decryptDataKey(b), "AES")));
         mapper.registerModule(simpleModule);
     }
 
     @Test
     void withEncryption() throws JsonProcessingException {
         final SegmentManifest manifest = new SegmentManifestV1(INDEX, false,
-            new SegmentEncryptionMetadataV1(SECRET_KEY, AAD));
+            new SegmentEncryptionMetadataV1(DATA_KEY, AAD));
 
         final String jsonStr = mapper.writeValueAsString(manifest);
 
         // Check that the key is encrypted.
         final ObjectNode deserializedJson = (ObjectNode) mapper.readTree(jsonStr);
-        final byte[] encryptedKey = Base64.getDecoder().decode(
-            deserializedJson.get("encryption").get("secretKey").asText());
-        assertThat(new SecretKeySpec(encryptionKeyProvider.decryptKey(encryptedKey), "AES"))
-            .isEqualTo(SECRET_KEY);
+        final String dataKeyText = deserializedJson.get("encryption").get("dataKey").asText();
+        final byte[] encryptedKey = Base64.getDecoder().decode(dataKeyText);
+        final SecretKeySpec dataKey = new SecretKeySpec(rsaEncryptionProvider.decryptDataKey(encryptedKey), "AES");
+        assertThat(dataKey).isEqualTo(DATA_KEY);
 
         // Remove the secret key--i.e. the variable part--and compare the JSON representation.
-        ((ObjectNode) deserializedJson.get("encryption")).remove("secretKey");
+        ((ObjectNode) deserializedJson.get("encryption")).remove("dataKey");
         assertThat(mapper.writeValueAsString(deserializedJson)).isEqualTo(WITH_ENCRYPTION_WITHOUT_SECRET_KEY_JSON);
 
         // Check deserialization.

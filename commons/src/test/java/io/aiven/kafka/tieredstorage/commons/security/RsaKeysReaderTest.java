@@ -37,7 +37,7 @@ class RsaKeysReaderTest extends RsaKeyAwareTest {
     public void failsForUnknownPaths() {
         assertThatThrownBy(
             () ->
-                RsaKeysReader.readRsaKeyPair(
+                RsaEncryptionProvider.RsaKeysReader.readRsaKeyPair(
                     Files.newInputStream(Paths.get(".")),
                     Files.newInputStream(Paths.get("."))))
             .isInstanceOf(IllegalArgumentException.class);
@@ -54,7 +54,7 @@ class RsaKeysReaderTest extends RsaKeyAwareTest {
 
         assertThatThrownBy(
             () ->
-                RsaKeysReader.readRsaKeyPair(
+                RsaEncryptionProvider.RsaKeysReader.readRsaKeyPair(
                     Files.newInputStream(dsaPublicKeyPem),
                     Files.newInputStream(dsaPrivateKeyPem)))
             .isInstanceOf(IllegalArgumentException.class)
@@ -68,7 +68,7 @@ class RsaKeysReaderTest extends RsaKeyAwareTest {
 
         assertThatThrownBy(
             () ->
-                RsaKeysReader.readRsaKeyPair(
+                RsaEncryptionProvider.RsaKeysReader.readRsaKeyPair(
                     Files.newInputStream(emptyPublicKeyPemFile),
                     Files.newInputStream(privateKeyPem)))
             .isInstanceOf(IllegalArgumentException.class)
@@ -82,7 +82,7 @@ class RsaKeysReaderTest extends RsaKeyAwareTest {
 
         assertThatThrownBy(
             () ->
-                RsaKeysReader.readRsaKeyPair(
+                RsaEncryptionProvider.RsaKeysReader.readRsaKeyPair(
                     Files.newInputStream(publicKeyPem),
                     Files.newInputStream(emptyPrivateKeyPemFile)))
             .isInstanceOf(IllegalArgumentException.class)

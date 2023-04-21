@@ -21,7 +21,7 @@ import javax.crypto.SecretKey;
 public interface SegmentEncryptionMetadata {
     int ivSize();
 
-    SecretKey secretKey();
+    SecretKey dataKey();
 
     byte[] aad();
 }
