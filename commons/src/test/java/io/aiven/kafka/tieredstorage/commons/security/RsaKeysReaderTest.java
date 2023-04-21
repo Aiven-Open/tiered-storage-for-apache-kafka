@@ -53,7 +53,7 @@ class RsaKeysReaderTest extends RsaKeyAwareTest {
         assertThatThrownBy(
             () -> RsaKeysReader.readRsaKeyPair(dsaPublicKeyPem, dsaPrivateKeyPem))
             .isInstanceOf(IllegalArgumentException.class)
-            .hasMessage("Couldn't generate RSA key pair");
+            .hasMessage("Couldn't read RSA key pair");
     }
 
     @Test
