@@ -16,25 +16,25 @@
 
 package io.aiven.kafka.tieredstorage.commons.security;
 
-import java.io.IOException;
-import java.io.InputStreamReader;
-import java.io.Reader;
-import java.security.KeyFactory;
-import java.security.PrivateKey;
-import java.security.PublicKey;
-import java.security.spec.InvalidKeySpecException;
-import java.security.spec.PKCS8EncodedKeySpec;
-import java.security.spec.X509EncodedKeySpec;
 import javax.crypto.BadPaddingException;
 import javax.crypto.IllegalBlockSizeException;
 import javax.crypto.KeyGenerator;
 import javax.crypto.SecretKey;
 
+import java.io.IOException;
 import java.io.InputStream;
+import java.io.InputStreamReader;
+import java.io.Reader;
+import java.security.KeyFactory;
 import java.security.KeyPair;
 import java.security.NoSuchAlgorithmException;
 import java.security.NoSuchProviderException;
+import java.security.PrivateKey;
+import java.security.PublicKey;
 import java.security.SecureRandom;
+import java.security.spec.InvalidKeySpecException;
+import java.security.spec.PKCS8EncodedKeySpec;
+import java.security.spec.X509EncodedKeySpec;
 import java.util.Objects;
 
 import org.bouncycastle.util.io.pem.PemReader;
@@ -91,8 +91,7 @@ public final class RsaEncryptionProvider implements Encryption, Decryption {
 
     static class RsaKeysReader {
 
-        static KeyPair readRsaKeyPair(final InputStream publicKeyIn,
-                                      final InputStream privateKeyIn) {
+        static KeyPair readRsaKeyPair(final InputStream publicKeyIn, final InputStream privateKeyIn) {
             try {
                 final var publicKey = readPublicKey(publicKeyIn);
                 final var privateKey = readPrivateKey(privateKeyIn);
@@ -103,7 +102,7 @@ public final class RsaEncryptionProvider implements Encryption, Decryption {
         }
 
         private static PublicKey readPublicKey(final InputStream in)
-                throws NoSuchAlgorithmException, InvalidKeySpecException {
+            throws NoSuchAlgorithmException, InvalidKeySpecException {
             final var pemContent = readPemContent(new InputStreamReader(in));
             final var keySpec = new X509EncodedKeySpec(pemContent);
             final var kf = KeyFactory.getInstance("RSA");
@@ -111,7 +110,7 @@ public final class RsaEncryptionProvider implements Encryption, Decryption {
         }
 
         private static PrivateKey readPrivateKey(final InputStream in)
-                throws NoSuchAlgorithmException, InvalidKeySpecException {
+            throws NoSuchAlgorithmException, InvalidKeySpecException {
             final var pemContent = readPemContent(new InputStreamReader(in));
             final var keySpec = new PKCS8EncodedKeySpec(pemContent);
             final var kf = KeyFactory.getInstance("RSA");
@@ -129,6 +128,5 @@ public final class RsaEncryptionProvider implements Encryption, Decryption {
                 throw new IllegalArgumentException("Couldn't read PEM file", e);
             }
         }
-
     }
 }

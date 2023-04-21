@@ -28,21 +28,19 @@ import com.fasterxml.jackson.databind.ObjectMapper;
 
 public class EncryptedRepositoryMetadata {
 
-    private final RsaEncryptionProvider encryptionKeyProvider;
+    private final RsaEncryptionProvider rsaEncryptionProvider;
 
     private final ObjectMapper objectMapper;
 
     static final int VERSION = 1;
 
-    public EncryptedRepositoryMetadata(final RsaEncryptionProvider encryptionKeyProvider) {
-        this.encryptionKeyProvider = encryptionKeyProvider;
+    public EncryptedRepositoryMetadata(final RsaEncryptionProvider rsaEncryptionProvider) {
+        this.rsaEncryptionProvider = rsaEncryptionProvider;
         this.objectMapper = new ObjectMapper();
     }
 
-    public byte[] serialize(final SecretKey encryptionKey) throws JsonProcessingException {
-        final var encryptedKey =
-            Base64.getEncoder()
-                .encodeToString(encryptionKeyProvider.encryptKey(encryptionKey));
+    public byte[] serialize(final SecretKey dataKey) throws JsonProcessingException {
+        final var encryptedKey = Base64.getEncoder().encodeToString(rsaEncryptionProvider.encryptKey(dataKey));
         return objectMapper.writeValueAsBytes(new EncryptionMetadata(encryptedKey, VERSION));
     }
 
@@ -58,7 +56,7 @@ public class EncryptedRepositoryMetadata {
         }
         final var encryptedKey =
             Base64.getDecoder().decode(encryptionMetadata.encryptionMetadata());
-        return encryptionKeyProvider.decryptKey(encryptedKey);
+        return rsaEncryptionProvider.decryptKey(encryptedKey);
     }
 
 }

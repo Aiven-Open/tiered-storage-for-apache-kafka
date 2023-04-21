@@ -1,13 +1,30 @@
+/*
+ * Copyright 2021 Aiven Oy
+ *
+ * Licensed under the Apache License, Version 2.0 (the "License");
+ * you may not use this file except in compliance with the License.
+ * You may obtain a copy of the License at
+ *
+ * http://www.apache.org/licenses/LICENSE-2.0
+ *
+ * Unless required by applicable law or agreed to in writing, software
+ * distributed under the License is distributed on an "AS IS" BASIS,
+ * WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
+ * See the License for the specific language governing permissions and
+ * limitations under the License.
+ */
+
 package io.aiven.kafka.tieredstorage.commons.security;
 
-import static io.aiven.kafka.tieredstorage.commons.security.RsaEncryptionProvider.KEY_SIZE;
-
-import io.aiven.kafka.tieredstorage.commons.manifest.SegmentEncryptionMetadata;
 import javax.crypto.Cipher;
 import javax.crypto.KeyGenerator;
 import javax.crypto.SecretKey;
 import javax.crypto.spec.IvParameterSpec;
 import javax.crypto.spec.SecretKeySpec;
+
+import io.aiven.kafka.tieredstorage.commons.manifest.SegmentEncryptionMetadata;
+
+import static io.aiven.kafka.tieredstorage.commons.security.RsaEncryptionProvider.KEY_SIZE;
 
 public class AesEncryptionProvider implements Encryption, Decryption {
 
@@ -16,34 +33,33 @@ public class AesEncryptionProvider implements Encryption, Decryption {
 
     private final KeyGenerator aesKeyGenerator;
 
-    public AesEncryptionProvider(KeyGenerator aesKeyGenerator) {
+    public AesEncryptionProvider(final KeyGenerator aesKeyGenerator) {
         this.aesKeyGenerator = aesKeyGenerator;
     }
 
-    public SecretKey createKey() {
+    public SecretKey createDataKey() {
         return aesKeyGenerator.generateKey();
     }
 
-    public SecretKeyAndAAD createKeyAndAAD() {
-        final byte[] keyAndAAD = createKey().getEncoded();
-        final byte[] encryptionKey = new byte[KEY_AND_AAD_SIZE_BYTES];
-        System.arraycopy(keyAndAAD, 0, encryptionKey, 0, 32);
+    public DataKeyAndAAD createDataKeyAndAAD() {
+        final byte[] dataKeyAndAAD = createDataKey().getEncoded();
+        final byte[] dataKey = new byte[KEY_AND_AAD_SIZE_BYTES];
+        System.arraycopy(dataKeyAndAAD, 0, dataKey, 0, 32);
         final byte[] aad = new byte[KEY_AND_AAD_SIZE_BYTES];
-        System.arraycopy(keyAndAAD, 32, aad, 0, 32);
-        return new SecretKeyAndAAD(new SecretKeySpec(encryptionKey, "AES"), aad);
+        System.arraycopy(dataKeyAndAAD, 32, aad, 0, 32);
+        return new DataKeyAndAAD(new SecretKeySpec(dataKey, "AES"), aad);
     }
 
-    public Cipher encryptionCipher(final SecretKeyAndAAD encryptionKeyAndAAD) {
-        final Cipher encryptCipher = createEncryptingCipher(encryptionKeyAndAAD.key, AES_TRANSFORMATION);
-        encryptCipher.updateAAD(encryptionKeyAndAAD.aad);
+    public Cipher encryptionCipher(final DataKeyAndAAD dataKeyAndAAD) {
+        final Cipher encryptCipher = createEncryptingCipher(dataKeyAndAAD.dataKey, AES_TRANSFORMATION);
+        encryptCipher.updateAAD(dataKeyAndAAD.aad);
         return encryptCipher;
     }
 
     public Cipher decryptionCipher(final byte[] encryptedChunk,
                                    final SegmentEncryptionMetadata encryptionMetadata) {
-        final Cipher encryptCipher = createDecryptingCipher(encryptionMetadata.secretKey(),
-            new IvParameterSpec(encryptedChunk, 0, encryptionMetadata.ivSize()),
-            AES_TRANSFORMATION);
+        final IvParameterSpec params = new IvParameterSpec(encryptedChunk, 0, encryptionMetadata.ivSize());
+        final Cipher encryptCipher = createDecryptingCipher(encryptionMetadata.dataKey(), params, AES_TRANSFORMATION);
         encryptCipher.updateAAD(encryptionMetadata.aad());
         return encryptCipher;
     }

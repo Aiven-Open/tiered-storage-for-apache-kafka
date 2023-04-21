@@ -26,8 +26,8 @@ import java.util.Base64;
 
 import io.aiven.kafka.tieredstorage.commons.RsaKeyAwareTest;
 import io.aiven.kafka.tieredstorage.commons.manifest.index.FixedSizeChunkIndex;
-import io.aiven.kafka.tieredstorage.commons.manifest.serde.SecretKeyDeserializer;
-import io.aiven.kafka.tieredstorage.commons.manifest.serde.SecretKeySerializer;
+import io.aiven.kafka.tieredstorage.commons.manifest.serde.DataKeyDeserializer;
+import io.aiven.kafka.tieredstorage.commons.manifest.serde.DataKeySerializer;
 import io.aiven.kafka.tieredstorage.commons.security.RsaEncryptionProvider;
 
 import com.fasterxml.jackson.core.JsonProcessingException;
@@ -71,8 +71,8 @@ class SegmentManifestV1SerdeTest extends RsaKeyAwareTest {
         }
 
         final SimpleModule simpleModule = new SimpleModule();
-        simpleModule.addSerializer(SecretKey.class, new SecretKeySerializer(encryptionKeyProvider::encryptKey));
-        simpleModule.addDeserializer(SecretKey.class, new SecretKeyDeserializer(
+        simpleModule.addSerializer(SecretKey.class, new DataKeySerializer(encryptionKeyProvider::encryptKey));
+        simpleModule.addDeserializer(SecretKey.class, new DataKeyDeserializer(
             b -> new SecretKeySpec(encryptionKeyProvider.decryptKey(b), "AES")));
         mapper.registerModule(simpleModule);
     }

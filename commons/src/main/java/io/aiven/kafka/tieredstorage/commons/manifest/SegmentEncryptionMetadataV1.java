@@ -27,15 +27,15 @@ import com.fasterxml.jackson.annotation.JsonProperty;
 public class SegmentEncryptionMetadataV1 implements SegmentEncryptionMetadata {
     public static final int IV_SIZE = 12;
 
-    private final SecretKey secretKey;
+    private final SecretKey dataKey;
     private final byte[] aad;
 
     @JsonCreator
-    public SegmentEncryptionMetadataV1(@JsonProperty(value = "secretKey", required = true)
-                                       final SecretKey secretKey,
+    public SegmentEncryptionMetadataV1(@JsonProperty(value = "dataKey", required = true)
+                                       final SecretKey dataKey,
                                        @JsonProperty(value = "aad", required = true)
                                        final byte[] aad) {
-        this.secretKey = Objects.requireNonNull(secretKey, "secretKey cannot be null");
+        this.dataKey = Objects.requireNonNull(dataKey, "dataKey cannot be null");
         this.aad = Objects.requireNonNull(aad, "aad cannot be null");
     }
 
@@ -45,9 +45,9 @@ public class SegmentEncryptionMetadataV1 implements SegmentEncryptionMetadata {
     }
 
     @Override
-    @JsonProperty("secretKey")
-    public SecretKey secretKey() {
-        return this.secretKey;
+    @JsonProperty("dataKey")
+    public SecretKey dataKey() {
+        return this.dataKey;
     }
 
     @Override
@@ -67,7 +67,7 @@ public class SegmentEncryptionMetadataV1 implements SegmentEncryptionMetadata {
 
         final SegmentEncryptionMetadataV1 that = (SegmentEncryptionMetadataV1) o;
 
-        if (!secretKey.equals(that.secretKey)) {
+        if (!dataKey.equals(that.dataKey)) {
             return false;
         }
         return Arrays.equals(aad, that.aad);
@@ -75,7 +75,7 @@ public class SegmentEncryptionMetadataV1 implements SegmentEncryptionMetadata {
 
     @Override
     public int hashCode() {
-        int result = secretKey.hashCode();
+        int result = dataKey.hashCode();
         result = 31 * result + Arrays.hashCode(aad);
         return result;
     }
@@ -83,7 +83,7 @@ public class SegmentEncryptionMetadataV1 implements SegmentEncryptionMetadata {
     @Override
     public String toString() {
         return "SegmentManifestV1("
-            + "secretKey=" + secretKey
+            + "dataKey=" + dataKey
             + ", aad=" + Arrays.toString(aad)
             + ")";
     }

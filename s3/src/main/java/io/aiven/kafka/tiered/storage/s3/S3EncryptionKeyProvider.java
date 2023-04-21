@@ -101,13 +101,13 @@ public class S3EncryptionKeyProvider {
                 }
             } else {
                 log.info("Creating new metadata file. Path: {}", metadataFileKey);
-                final SecretKey encryptionKey = aesEncryptionProvider.createKey();
+                final SecretKey dataKey = aesEncryptionProvider.createDataKey();
                 try {
-                    uploadMetadata(repositoryMetadata.serialize(encryptionKey), metadataFileKey);
+                    uploadMetadata(repositoryMetadata.serialize(dataKey), metadataFileKey);
                 } catch (final IOException e) {
                     throw new RuntimeException("Failed to create new metadata file", e);
                 }
-                return encryptionKey.getEncoded();
+                return dataKey.getEncoded();
             }
         });
     }

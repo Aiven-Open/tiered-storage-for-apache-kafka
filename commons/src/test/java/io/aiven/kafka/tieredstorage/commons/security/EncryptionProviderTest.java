@@ -29,36 +29,36 @@ import org.junit.jupiter.api.Test;
 
 import static org.assertj.core.api.Assertions.assertThat;
 
-public class RsaEncryptionProviderTest extends RsaKeyAwareTest {
+public class EncryptionProviderTest extends RsaKeyAwareTest {
 
     @Test
     void alwaysGeneratesNewKey() throws IOException, NoSuchAlgorithmException, NoSuchProviderException {
-        final var ekp =
+        final var rsaProvider =
                 RsaEncryptionProvider.of(
                         Files.newInputStream(publicKeyPem),
                         Files.newInputStream(privateKeyPem)
                 );
 
-        final AesEncryptionProvider aesProvider = new AesEncryptionProvider(ekp.keyGenerator());
-        final var key1 = aesProvider.createKey();
-        final var key2 = aesProvider.createKey();
+        final AesEncryptionProvider aesProvider = new AesEncryptionProvider(rsaProvider.keyGenerator());
+        final var key1 = aesProvider.createDataKey();
+        final var key2 = aesProvider.createDataKey();
 
         assertThat(key1).isNotEqualTo(key2);
     }
 
     @Test
     void decryptGeneratedKey() throws IOException, NoSuchAlgorithmException, NoSuchProviderException {
-        final var ekProvider =
+        final var rsaEncryptionProvider =
                 RsaEncryptionProvider.of(
                         Files.newInputStream(publicKeyPem),
                         Files.newInputStream(privateKeyPem)
                 );
-        final AesEncryptionProvider aesProvider = new AesEncryptionProvider(ekProvider.keyGenerator());
-        final var secretKey = aesProvider.createKey();
-        final var encryptedKey = ekProvider.encryptKey(secretKey);
-        final var restoredKey = ekProvider.decryptKey(encryptedKey);
+        final AesEncryptionProvider aesProvider = new AesEncryptionProvider(rsaEncryptionProvider.keyGenerator());
+        final var dataKey = aesProvider.createDataKey();
+        final var encryptedKey = rsaEncryptionProvider.encryptKey(dataKey);
+        final var restoredKey = rsaEncryptionProvider.decryptKey(encryptedKey);
 
-        assertThat(new SecretKeySpec(restoredKey, "AES")).isEqualTo(secretKey);
+        assertThat(new SecretKeySpec(restoredKey, "AES")).isEqualTo(dataKey);
     }
 
 }

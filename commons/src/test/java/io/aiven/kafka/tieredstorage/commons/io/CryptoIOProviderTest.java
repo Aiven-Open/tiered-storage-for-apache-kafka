@@ -48,7 +48,7 @@ public class CryptoIOProviderTest extends RsaKeyAwareTest {
                 Files.newInputStream(privateKeyPem)
         );
         final AesEncryptionProvider aesProvider = new AesEncryptionProvider(rsaProvider.keyGenerator());
-        final var key = aesProvider.createKey();
+        final var key = aesProvider.createDataKey();
         final byte[] encryptionKey = new byte[32];
         System.arraycopy(key.getEncoded(), 0, encryptionKey, 0, 32);
         final byte[] aad = new byte[32];
