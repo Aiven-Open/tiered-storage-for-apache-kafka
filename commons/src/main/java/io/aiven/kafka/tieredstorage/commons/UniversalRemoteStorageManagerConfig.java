@@ -77,7 +77,8 @@ public class UniversalRemoteStorageManagerConfig extends AbstractConfig {
             CHUNK_SIZE_CONFIG,
             ConfigDef.Type.INT,
             ConfigDef.NO_DEFAULT_VALUE,
-            ConfigDef.Range.between(1, Integer.MAX_VALUE),
+            //TODO figure out sensible limit because Integer.Max_VALUE leads to overflow during encryption
+            ConfigDef.Range.between(1, Integer.MAX_VALUE / 2),
             ConfigDef.Importance.HIGH,
             CHUNK_SIZE_DOC
         );
