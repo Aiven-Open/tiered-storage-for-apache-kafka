@@ -16,8 +16,8 @@
 
 package io.aiven.kafka.tieredstorage.commons;
 
+import java.io.IOException;
 import java.io.InputStream;
-import java.util.concurrent.Future;
 
 import org.apache.kafka.server.log.remote.storage.RemoteLogSegmentMetadata;
 
@@ -26,9 +26,10 @@ import io.aiven.kafka.tieredstorage.commons.manifest.SegmentManifest;
 public interface ChunkManager {
     /**
      * Gets a chunk of a segment.
-     * @return a future of {@link InputStream} of the chunk, plain text (i.e. decrypted and decompressed).
+     *
+     * @return an {@link InputStream} of the chunk, plain text (i.e. decrypted and decompressed).
      */
-    Future<InputStream> getChunk(RemoteLogSegmentMetadata remoteLogSegmentMetadata,
-                                 SegmentManifest manifest,
-                                 int chunkId);
+    InputStream getChunk(RemoteLogSegmentMetadata remoteLogSegmentMetadata,
+                         SegmentManifest manifest,
+                         int chunkId) throws IOException;
 }
