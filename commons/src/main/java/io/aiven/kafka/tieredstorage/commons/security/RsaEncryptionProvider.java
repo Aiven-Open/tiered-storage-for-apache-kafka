@@ -74,7 +74,7 @@ public final class RsaEncryptionProvider implements Encryption, Decryption {
     public byte[] encryptDataKey(final SecretKey dataKey) {
         try {
             final var cipher = createEncryptingCipher(rsaKeyPair.getPublic(), RSA_TRANSFORMATION);
-            return cipher.doFinal(secretKey.getEncoded());
+            return cipher.doFinal(dataKey.getEncoded());
         } catch (final IllegalBlockSizeException | BadPaddingException e) {
             throw new RuntimeException("Couldn't encrypt AES key", e);
         }

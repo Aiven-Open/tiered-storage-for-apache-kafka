@@ -55,8 +55,8 @@ public class EncryptionProviderTest extends RsaKeyAwareTest {
                 );
         final AesEncryptionProvider aesProvider = new AesEncryptionProvider(rsaEncryptionProvider.keyGenerator());
         final var dataKey = aesProvider.createDataKey();
-        final var encryptedKey = rsaEncryptionProvider.encryptKey(dataKey);
-        final var restoredKey = rsaEncryptionProvider.decryptKey(encryptedKey);
+        final var encryptedKey = rsaEncryptionProvider.encryptDataKey(dataKey);
+        final var restoredKey = rsaEncryptionProvider.decryptDataKey(encryptedKey);
 
         assertThat(new SecretKeySpec(restoredKey, "AES")).isEqualTo(dataKey);
     }

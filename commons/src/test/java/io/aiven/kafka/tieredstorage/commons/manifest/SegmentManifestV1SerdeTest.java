@@ -71,9 +71,9 @@ class SegmentManifestV1SerdeTest extends RsaKeyAwareTest {
         }
 
         final SimpleModule simpleModule = new SimpleModule();
-        simpleModule.addSerializer(SecretKey.class, new DataKeySerializer(rsaEncryptionProvider::encryptKey));
+        simpleModule.addSerializer(SecretKey.class, new DataKeySerializer(rsaEncryptionProvider::encryptDataKey));
         simpleModule.addDeserializer(SecretKey.class, new DataKeyDeserializer(
-            b -> new SecretKeySpec(rsaEncryptionProvider.decryptKey(b), "AES")));
+            b -> new SecretKeySpec(rsaEncryptionProvider.decryptDataKey(b), "AES")));
         mapper.registerModule(simpleModule);
     }
 
@@ -88,7 +88,7 @@ class SegmentManifestV1SerdeTest extends RsaKeyAwareTest {
         final ObjectNode deserializedJson = (ObjectNode) mapper.readTree(jsonStr);
         final String dataKeyText = deserializedJson.get("encryption").get("dataKey").asText();
         final byte[] encryptedKey = Base64.getDecoder().decode(dataKeyText);
-        assertThat(new SecretKeySpec(rsaEncryptionProvider.decryptKey(encryptedKey), "AES"))
+        assertThat(new SecretKeySpec(rsaEncryptionProvider.decryptDataKey(encryptedKey), "AES"))
             .isEqualTo(SECRET_KEY);
 
         // Remove the secret key--i.e. the variable part--and compare the JSON representation.

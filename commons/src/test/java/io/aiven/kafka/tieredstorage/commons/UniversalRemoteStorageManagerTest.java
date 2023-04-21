@@ -282,7 +282,7 @@ class UniversalRemoteStorageManagerTest extends RsaKeyAwareTest {
         final JsonNode manifest = objectMapper.readTree(new File(targetDir.toString(), TARGET_MANIFEST_FILE));
 
         final byte[] encryptedDataKey = manifest.get("encryption").get("dataKey").binaryValue();
-        final byte[] dataKey = rsaEncryptionProvider.decryptKey(encryptedDataKey);
+        final byte[] dataKey = rsaEncryptionProvider.decryptDataKey(encryptedDataKey);
         final byte[] aad = manifest.get("encryption").get("aad").binaryValue();
 
         final ChunkIndex chunkIndex = objectMapper.treeToValue(manifest.get("chunkIndex"), ChunkIndex.class);

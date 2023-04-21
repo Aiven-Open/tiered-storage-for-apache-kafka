@@ -40,7 +40,7 @@ public class EncryptedRepositoryMetadata {
     }
 
     public byte[] serialize(final SecretKey dataKey) throws JsonProcessingException {
-        final var encryptedKey = Base64.getEncoder().encodeToString(rsaEncryptionProvider.encryptKey(dataKey));
+        final var encryptedKey = Base64.getEncoder().encodeToString(rsaEncryptionProvider.encryptDataKey(dataKey));
         return objectMapper.writeValueAsBytes(new EncryptionMetadata(encryptedKey, VERSION));
     }
 
@@ -56,7 +56,7 @@ public class EncryptedRepositoryMetadata {
         }
         final var encryptedKey =
             Base64.getDecoder().decode(encryptionMetadata.encryptionMetadata());
-        return rsaEncryptionProvider.decryptKey(encryptedKey);
+        return rsaEncryptionProvider.decryptDataKey(encryptedKey);
     }
 
 }
