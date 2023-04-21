@@ -40,10 +40,10 @@ public class EncryptionProviderTest extends RsaKeyAwareTest {
                 );
 
         final AesEncryptionProvider aesProvider = new AesEncryptionProvider(rsaProvider.keyGenerator());
-        final var key1 = aesProvider.createDataKey();
-        final var key2 = aesProvider.createDataKey();
+        final var dataKey1 = aesProvider.createDataKey();
+        final var dataKey2 = aesProvider.createDataKey();
 
-        assertThat(key1).isNotEqualTo(key2);
+        assertThat(dataKey1).isNotEqualTo(dataKey2);
     }
 
     @Test
