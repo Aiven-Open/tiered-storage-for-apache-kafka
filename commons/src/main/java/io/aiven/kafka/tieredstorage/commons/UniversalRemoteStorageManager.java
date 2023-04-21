@@ -16,12 +16,6 @@
 
 package io.aiven.kafka.tieredstorage.commons;
 
-import io.aiven.kafka.tieredstorage.commons.transform.BaseDetransformChunkEnumeration;
-import io.aiven.kafka.tieredstorage.commons.transform.DecompressionChunkEnumeration;
-import io.aiven.kafka.tieredstorage.commons.transform.DecryptionChunkEnumeration;
-import io.aiven.kafka.tieredstorage.commons.transform.DetransformChunkEnumeration;
-import io.aiven.kafka.tieredstorage.commons.transform.DetransformFinisher;
-import java.util.List;
 import javax.crypto.SecretKey;
 import javax.crypto.spec.SecretKeySpec;
 
@@ -32,6 +26,7 @@ import java.io.SequenceInputStream;
 import java.nio.file.Files;
 import java.security.NoSuchAlgorithmException;
 import java.security.NoSuchProviderException;
+import java.util.List;
 import java.util.Map;
 import java.util.Objects;
 
@@ -51,8 +46,13 @@ import io.aiven.kafka.tieredstorage.commons.security.AesEncryptionProvider;
 import io.aiven.kafka.tieredstorage.commons.security.DataKeyAndAAD;
 import io.aiven.kafka.tieredstorage.commons.security.RsaEncryptionProvider;
 import io.aiven.kafka.tieredstorage.commons.storage.ObjectStorageFactory;
+import io.aiven.kafka.tieredstorage.commons.transform.BaseDetransformChunkEnumeration;
 import io.aiven.kafka.tieredstorage.commons.transform.BaseTransformChunkEnumeration;
 import io.aiven.kafka.tieredstorage.commons.transform.CompressionChunkEnumeration;
+import io.aiven.kafka.tieredstorage.commons.transform.DecompressionChunkEnumeration;
+import io.aiven.kafka.tieredstorage.commons.transform.DecryptionChunkEnumeration;
+import io.aiven.kafka.tieredstorage.commons.transform.DetransformChunkEnumeration;
+import io.aiven.kafka.tieredstorage.commons.transform.DetransformFinisher;
 import io.aiven.kafka.tieredstorage.commons.transform.EncryptionChunkEnumeration;
 import io.aiven.kafka.tieredstorage.commons.transform.FetchChunkEnumeration;
 import io.aiven.kafka.tieredstorage.commons.transform.TransformChunkEnumeration;
