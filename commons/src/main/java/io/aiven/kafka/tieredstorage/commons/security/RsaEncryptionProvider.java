@@ -71,7 +71,7 @@ public final class RsaEncryptionProvider implements Encryption, Decryption {
         return kg;
     }
 
-    public byte[] encryptKey(final SecretKey secretKey) {
+    public byte[] encryptDataKey(final SecretKey dataKey) {
         try {
             final var cipher = createEncryptingCipher(rsaKeyPair.getPublic(), RSA_TRANSFORMATION);
             return cipher.doFinal(secretKey.getEncoded());
@@ -80,7 +80,7 @@ public final class RsaEncryptionProvider implements Encryption, Decryption {
         }
     }
 
-    public byte[] decryptKey(final byte[] bytes) {
+    public byte[] decryptDataKey(final byte[] bytes) {
         try {
             final var cipher = createDecryptingCipher(rsaKeyPair.getPrivate(), RSA_TRANSFORMATION);
             return cipher.doFinal(bytes);
@@ -97,7 +97,7 @@ public final class RsaEncryptionProvider implements Encryption, Decryption {
                 final var privateKey = readPrivateKey(privateKeyIn);
                 return new KeyPair(publicKey, privateKey);
             } catch (NoSuchAlgorithmException | InvalidKeySpecException e) {
-                throw new IllegalArgumentException("Couldn't generate RSA key pair", e);
+                throw new IllegalArgumentException("Couldn't read RSA key pair", e);
             }
         }
 
