@@ -76,7 +76,7 @@ class UniversalRemoteStorageManagerConfigTest {
     }
 
     @Test
-    void encryptionKeysMustBeProvided() {
+    void rsaKeysMustBeProvided() {
         final var config1 = Map.of(
             "object.storage.factory", TestObjectStorageFactory.class.getCanonicalName(),
             "chunk.size", "123",

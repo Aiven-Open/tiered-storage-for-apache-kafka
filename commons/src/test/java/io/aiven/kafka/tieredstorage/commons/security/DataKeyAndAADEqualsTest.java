@@ -24,7 +24,7 @@ import org.junit.jupiter.api.Test;
 
 import static org.assertj.core.api.Assertions.assertThat;
 
-class EncryptionKeyAndAADEqualsTest {
+class DataKeyAndAADEqualsTest {
     @Test
     void identical() {
         final byte[] keyBytes = new byte[32];

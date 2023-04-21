@@ -58,7 +58,7 @@ class SegmentManifestV1SerdeTest extends RsaKeyAwareTest {
             + "\"compression\":false}";
 
     ObjectMapper mapper;
-    RsaEncryptionProvider encryptionKeyProvider;
+    RsaEncryptionProvider rsaEncryptionProvider;
 
     @BeforeEach
     void init() throws IOException {
@@ -67,13 +67,13 @@ class SegmentManifestV1SerdeTest extends RsaKeyAwareTest {
 
         try (final InputStream publicKeyFis = Files.newInputStream(publicKeyPem);
              final InputStream privateKeyFis = Files.newInputStream(privateKeyPem)) {
-            encryptionKeyProvider = RsaEncryptionProvider.of(publicKeyFis, privateKeyFis);
+            rsaEncryptionProvider = RsaEncryptionProvider.of(publicKeyFis, privateKeyFis);
         }
 
         final SimpleModule simpleModule = new SimpleModule();
-        simpleModule.addSerializer(SecretKey.class, new DataKeySerializer(encryptionKeyProvider::encryptKey));
+        simpleModule.addSerializer(SecretKey.class, new DataKeySerializer(rsaEncryptionProvider::encryptKey));
         simpleModule.addDeserializer(SecretKey.class, new DataKeyDeserializer(
-            b -> new SecretKeySpec(encryptionKeyProvider.decryptKey(b), "AES")));
+            b -> new SecretKeySpec(rsaEncryptionProvider.decryptKey(b), "AES")));
         mapper.registerModule(simpleModule);
     }
 
@@ -88,7 +88,7 @@ class SegmentManifestV1SerdeTest extends RsaKeyAwareTest {
         final ObjectNode deserializedJson = (ObjectNode) mapper.readTree(jsonStr);
         final byte[] encryptedKey = Base64.getDecoder().decode(
             deserializedJson.get("encryption").get("secretKey").asText());
-        assertThat(new SecretKeySpec(encryptionKeyProvider.decryptKey(encryptedKey), "AES"))
+        assertThat(new SecretKeySpec(rsaEncryptionProvider.decryptKey(encryptedKey), "AES"))
             .isEqualTo(SECRET_KEY);
 
         // Remove the secret key--i.e. the variable part--and compare the JSON representation.

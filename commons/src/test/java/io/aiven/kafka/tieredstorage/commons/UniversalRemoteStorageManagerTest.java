@@ -62,7 +62,7 @@ import static org.assertj.core.api.Assertions.assertThat;
 class UniversalRemoteStorageManagerTest extends RsaKeyAwareTest {
     RemoteStorageManager rsm;
 
-    RsaEncryptionProvider encryptionKeyProvider;
+    RsaEncryptionProvider rsaEncryptionProvider;
 
     @TempDir
     Path tmpDir;
@@ -98,7 +98,7 @@ class UniversalRemoteStorageManagerTest extends RsaKeyAwareTest {
 
         try (final InputStream publicKeyFis = Files.newInputStream(publicKeyPem);
              final InputStream privateKeyFis = Files.newInputStream(privateKeyPem)) {
-            encryptionKeyProvider = RsaEncryptionProvider.of(publicKeyFis, privateKeyFis);
+            rsaEncryptionProvider = RsaEncryptionProvider.of(publicKeyFis, privateKeyFis);
         }
 
         sourceDir = Path.of(tmpDir.toString(), "source");
@@ -283,7 +283,7 @@ class UniversalRemoteStorageManagerTest extends RsaKeyAwareTest {
 
         final byte[] encryptedSecretKey = manifest.get("encryption").get("secretKey").binaryValue();
         final SecretKeySpec secretKey = new SecretKeySpec(
-            encryptionKeyProvider.decryptKey(encryptedSecretKey), "AES");
+            rsaEncryptionProvider.decryptKey(encryptedSecretKey), "AES");
         final byte[] aad = manifest.get("encryption").get("aad").binaryValue();
 
         final ChunkIndex chunkIndex = objectMapper.treeToValue(manifest.get("chunkIndex"), ChunkIndex.class);
