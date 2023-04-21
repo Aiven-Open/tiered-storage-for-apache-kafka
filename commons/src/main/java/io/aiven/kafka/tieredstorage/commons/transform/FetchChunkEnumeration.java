@@ -119,14 +119,12 @@ public class FetchChunkEnumeration implements Enumeration<InputStream> {
         return chunkContent;
     }
 
-    private InputStream getChunkContent(int chunkId) {
-        InputStream chunk;
+    private InputStream getChunkContent(final int chunkId) {
         try {
-            chunk = chunkManager.getChunk(remoteLogSegmentMetadata, manifest, chunkId);
+            return chunkManager.getChunk(remoteLogSegmentMetadata, manifest, chunkId);
         } catch (final IOException e) {
             //TODO handle properly
             throw new RuntimeException(e);
         }
-        return chunk;
     }
 }
