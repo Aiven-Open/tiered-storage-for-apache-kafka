@@ -26,20 +26,28 @@ import io.aiven.kafka.tieredstorage.commons.storage.FileDeleter;
 import io.aiven.kafka.tieredstorage.commons.storage.FileFetcher;
 import io.aiven.kafka.tieredstorage.commons.storage.FileUploader;
 
+import org.apache.commons.io.file.PathUtils;
 import org.apache.commons.io.input.BoundedInputStream;
 
 class FileSystemStorage implements FileUploader, FileFetcher, FileDeleter {
-    private final String fsRoot;
+    private final Path fsRoot;
     private final boolean overwrites;
 
     FileSystemStorage(final String fsRoot, final boolean overwrites) {
+        this(Path.of(fsRoot), overwrites);
+    }
+
+    FileSystemStorage(final Path fsRoot, final boolean overwrites) {
         this.fsRoot = fsRoot;
+        if (!Files.isDirectory(this.fsRoot) || !Files.isWritable(this.fsRoot)) {
+            throw new IllegalArgumentException(fsRoot + " must be a writable directory");
+        }
         this.overwrites = overwrites;
     }
 
     @Override
     public void upload(final InputStream inputStream, final String key) throws IOException {
-        final Path path = Path.of(fsRoot, key);
+        final Path path = fsRoot.resolve(key);
         if (!overwrites && Files.exists(path)) {
             throw new IOException("File " + path + " already exists");
         }
@@ -51,7 +59,7 @@ class FileSystemStorage implements FileUploader, FileFetcher, FileDeleter {
 
     @Override
     public InputStream fetch(final String key) throws IOException {
-        final Path path = Path.of(fsRoot, key);
+        final Path path = fsRoot.resolve(key);
         return Files.newInputStream(path);
     }
 
@@ -64,19 +72,28 @@ class FileSystemStorage implements FileUploader, FileFetcher, FileDeleter {
             throw new IllegalArgumentException("from cannot be more than to, from=" + from + ", to=" + to + " given");
         }
 
-        final Path path = Path.of(fsRoot, key);
+        final Path path = fsRoot.resolve(key);
         final long fileSize = Files.size(path);
         if (to > fileSize) {
             throw new IllegalArgumentException("to cannot be bigger than file size, to="
                 + to + ", file size=" + fileSize + " given");
         }
-        final InputStream result = new BoundedInputStream(Files.newInputStream(path), to + 1);
+
+        final int size = to + 1;
+        final InputStream result = new BoundedInputStream(Files.newInputStream(path), size);
         result.skip(from);
         return result;
     }
 
     @Override
     public void delete(final String key) throws IOException {
-        Files.delete(Path.of(fsRoot, key));
+        final Path path = fsRoot.resolve(key);
+        Files.deleteIfExists(path);
+        Path parent = path.getParent();
+        while (parent != null && Files.isDirectory(parent) && !parent.equals(fsRoot)
+            && PathUtils.isEmptyDirectory(parent)) {
+            Files.deleteIfExists(parent);
+            parent = parent.getParent();
+        }
     }
 }
