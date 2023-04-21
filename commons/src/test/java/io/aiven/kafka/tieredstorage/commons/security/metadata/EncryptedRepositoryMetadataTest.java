@@ -16,17 +16,17 @@
 
 package io.aiven.kafka.tieredstorage.commons.security.metadata;
 
-import io.aiven.kafka.tieredstorage.commons.security.AesEncryptionProvider;
-import java.security.NoSuchAlgorithmException;
-import java.security.NoSuchProviderException;
 import javax.crypto.spec.SecretKeySpec;
 
 import java.io.IOException;
 import java.nio.charset.StandardCharsets;
 import java.nio.file.Files;
+import java.security.NoSuchAlgorithmException;
+import java.security.NoSuchProviderException;
 import java.util.Base64;
 
 import io.aiven.kafka.tieredstorage.commons.RsaKeyAwareTest;
+import io.aiven.kafka.tieredstorage.commons.security.AesEncryptionProvider;
 import io.aiven.kafka.tieredstorage.commons.security.RsaEncryptionProvider;
 
 import com.fasterxml.jackson.databind.ObjectMapper;

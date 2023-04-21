@@ -16,12 +16,12 @@
 
 package io.aiven.kafka.tieredstorage.commons.security;
 
-import java.security.NoSuchAlgorithmException;
-import java.security.NoSuchProviderException;
 import javax.crypto.spec.SecretKeySpec;
 
 import java.io.IOException;
 import java.nio.file.Files;
+import java.security.NoSuchAlgorithmException;
+import java.security.NoSuchProviderException;
 
 import io.aiven.kafka.tieredstorage.commons.RsaKeyAwareTest;
 
