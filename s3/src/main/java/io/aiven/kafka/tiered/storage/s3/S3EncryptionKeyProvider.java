@@ -16,9 +16,6 @@
 
 package io.aiven.kafka.tiered.storage.s3;
 
-import io.aiven.kafka.tieredstorage.commons.security.AesEncryptionProvider;
-import java.security.NoSuchAlgorithmException;
-import java.security.NoSuchProviderException;
 import javax.crypto.SecretKey;
 import javax.crypto.spec.SecretKeySpec;
 
@@ -27,10 +24,13 @@ import java.io.IOException;
 import java.io.InputStream;
 import java.nio.file.Files;
 import java.nio.file.Path;
+import java.security.NoSuchAlgorithmException;
+import java.security.NoSuchProviderException;
 import java.security.Security;
 import java.util.concurrent.TimeUnit;
 
 import io.aiven.kafka.tieredstorage.commons.io.IOUtils;
+import io.aiven.kafka.tieredstorage.commons.security.AesEncryptionProvider;
 import io.aiven.kafka.tieredstorage.commons.security.RsaEncryptionProvider;
 import io.aiven.kafka.tieredstorage.commons.security.metadata.EncryptedRepositoryMetadata;
 
