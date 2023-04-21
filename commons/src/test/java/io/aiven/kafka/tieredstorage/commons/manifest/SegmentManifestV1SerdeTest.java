@@ -43,7 +43,7 @@ import static org.assertj.core.api.Assertions.assertThat;
 class SegmentManifestV1SerdeTest extends RsaKeyAwareTest {
     static final FixedSizeChunkIndex INDEX =
         new FixedSizeChunkIndex(100, 1000, 110, 110);
-    static final SecretKey SECRET_KEY = new SecretKeySpec(new byte[]{0, 1, 2, 3, 4, 5, 6, 7, 8, 9}, "AES");
+    static final SecretKey DATA_KEY = new SecretKeySpec(new byte[]{0, 1, 2, 3, 4, 5, 6, 7, 8, 9}, "AES");
     static final byte[] AAD = {10, 11, 12, 13};
 
     static final String WITH_ENCRYPTION_WITHOUT_SECRET_KEY_JSON =
@@ -80,7 +80,7 @@ class SegmentManifestV1SerdeTest extends RsaKeyAwareTest {
     @Test
     void withEncryption() throws JsonProcessingException {
         final SegmentManifest manifest = new SegmentManifestV1(INDEX, false,
-            new SegmentEncryptionMetadataV1(SECRET_KEY, AAD));
+            new SegmentEncryptionMetadataV1(DATA_KEY, AAD));
 
         final String jsonStr = mapper.writeValueAsString(manifest);
 
@@ -88,8 +88,8 @@ class SegmentManifestV1SerdeTest extends RsaKeyAwareTest {
         final ObjectNode deserializedJson = (ObjectNode) mapper.readTree(jsonStr);
         final String dataKeyText = deserializedJson.get("encryption").get("dataKey").asText();
         final byte[] encryptedKey = Base64.getDecoder().decode(dataKeyText);
-        assertThat(new SecretKeySpec(rsaEncryptionProvider.decryptDataKey(encryptedKey), "AES"))
-            .isEqualTo(SECRET_KEY);
+        final SecretKeySpec dataKey = new SecretKeySpec(rsaEncryptionProvider.decryptDataKey(encryptedKey), "AES");
+        assertThat(dataKey).isEqualTo(DATA_KEY);
 
         // Remove the secret key--i.e. the variable part--and compare the JSON representation.
         ((ObjectNode) deserializedJson.get("encryption")).remove("dataKey");
