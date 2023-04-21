@@ -45,7 +45,7 @@ import org.apache.kafka.server.log.remote.storage.RemoteStorageException;
 import org.apache.kafka.server.log.remote.storage.RemoteStorageManager;
 
 import io.aiven.kafka.tieredstorage.commons.manifest.index.ChunkIndex;
-import io.aiven.kafka.tieredstorage.commons.security.EncryptionKeyProvider;
+import io.aiven.kafka.tieredstorage.commons.security.RsaEncryptionProvider;
 
 import com.github.luben.zstd.Zstd;
 import org.apache.commons.io.input.BoundedInputStream;
@@ -62,7 +62,7 @@ import static org.assertj.core.api.Assertions.assertThat;
 class UniversalRemoteStorageManagerTest extends RsaKeyAwareTest {
     RemoteStorageManager rsm;
 
-    EncryptionKeyProvider encryptionKeyProvider;
+    RsaEncryptionProvider rsaEncryptionProvider;
 
     @TempDir
     Path tmpDir;
@@ -98,7 +98,7 @@ class UniversalRemoteStorageManagerTest extends RsaKeyAwareTest {
 
         try (final InputStream publicKeyFis = Files.newInputStream(publicKeyPem);
              final InputStream privateKeyFis = Files.newInputStream(privateKeyPem)) {
-            encryptionKeyProvider = EncryptionKeyProvider.of(publicKeyFis, privateKeyFis);
+            rsaEncryptionProvider = RsaEncryptionProvider.of(publicKeyFis, privateKeyFis);
         }
 
         sourceDir = Path.of(tmpDir.toString(), "source");
@@ -281,9 +281,8 @@ class UniversalRemoteStorageManagerTest extends RsaKeyAwareTest {
         final ObjectMapper objectMapper = new ObjectMapper();
         final JsonNode manifest = objectMapper.readTree(new File(targetDir.toString(), TARGET_MANIFEST_FILE));
 
-        final byte[] encryptedSecretKey = manifest.get("encryption").get("secretKey").binaryValue();
-        final SecretKeySpec secretKey = new SecretKeySpec(
-            encryptionKeyProvider.decryptKey(encryptedSecretKey), "AES");
+        final byte[] encryptedDataKey = manifest.get("encryption").get("dataKey").binaryValue();
+        final byte[] dataKey = rsaEncryptionProvider.decryptDataKey(encryptedDataKey);
         final byte[] aad = manifest.get("encryption").get("aad").binaryValue();
 
         final ChunkIndex chunkIndex = objectMapper.treeToValue(manifest.get("chunkIndex"), ChunkIndex.class);
@@ -297,7 +296,8 @@ class UniversalRemoteStorageManagerTest extends RsaKeyAwareTest {
                 try {
                     final Cipher cipher = Cipher.getInstance("AES/GCM/NoPadding", "BC");
                     final int ivSize = cipher.getIV().length;
-                    cipher.init(Cipher.DECRYPT_MODE, secretKey,
+                    final SecretKeySpec secretKeySpec = new SecretKeySpec(dataKey, "AES");
+                    cipher.init(Cipher.DECRYPT_MODE, secretKeySpec,
                         new IvParameterSpec(transformedChunk, 0, ivSize),
                         SecureRandom.getInstanceStrong());
                     cipher.updateAAD(aad);
@@ -308,9 +308,9 @@ class UniversalRemoteStorageManagerTest extends RsaKeyAwareTest {
                 }
 
                 if (compression) {
-                    final byte[] detransformedChunk1 = new byte[chunk.originalSize];
-                    Zstd.decompress(detransformedChunk1, detransformedChunk);
-                    detransformedChunk = detransformedChunk1;
+                    final byte[] decompressChunk = new byte[chunk.originalSize];
+                    Zstd.decompress(decompressChunk, detransformedChunk);
+                    detransformedChunk = decompressChunk;
                 }
 
                 assertThat(detransformedChunk).isEqualTo(originalChunk);

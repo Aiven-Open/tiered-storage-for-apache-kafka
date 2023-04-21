@@ -46,9 +46,9 @@ public class AesKeyAwareTest {
         // These are tests, we don't need a secure source of randomness.
         final Random random = new Random();
 
-        final byte[] encryptionKey = new byte[32];
-        random.nextBytes(encryptionKey);
-        secretKey = new SecretKeySpec(encryptionKey, "AES");
+        final byte[] dataKey = new byte[32];
+        random.nextBytes(dataKey);
+        secretKey = new SecretKeySpec(dataKey, "AES");
 
         aad = new byte[32];
         random.nextBytes(aad);
