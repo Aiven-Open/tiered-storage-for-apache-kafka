@@ -86,13 +86,13 @@ class SegmentManifestV1SerdeTest extends RsaKeyAwareTest {
 
         // Check that the key is encrypted.
         final ObjectNode deserializedJson = (ObjectNode) mapper.readTree(jsonStr);
-        final byte[] encryptedKey = Base64.getDecoder().decode(
-            deserializedJson.get("encryption").get("secretKey").asText());
+        final String dataKeyText = deserializedJson.get("encryption").get("dataKey").asText();
+        final byte[] encryptedKey = Base64.getDecoder().decode(dataKeyText);
         assertThat(new SecretKeySpec(rsaEncryptionProvider.decryptKey(encryptedKey), "AES"))
             .isEqualTo(SECRET_KEY);
 
         // Remove the secret key--i.e. the variable part--and compare the JSON representation.
-        ((ObjectNode) deserializedJson.get("encryption")).remove("secretKey");
+        ((ObjectNode) deserializedJson.get("encryption")).remove("dataKey");
         assertThat(mapper.writeValueAsString(deserializedJson)).isEqualTo(WITH_ENCRYPTION_WITHOUT_SECRET_KEY_JSON);
 
         // Check deserialization.
