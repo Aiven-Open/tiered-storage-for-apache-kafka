@@ -20,6 +20,8 @@ import javax.crypto.spec.SecretKeySpec;
 
 import java.io.IOException;
 import java.nio.file.Files;
+import java.security.NoSuchAlgorithmException;
+import java.security.NoSuchProviderException;
 
 import io.aiven.kafka.tieredstorage.commons.RsaKeyAwareTest;
 
@@ -27,34 +29,36 @@ import org.junit.jupiter.api.Test;
 
 import static org.assertj.core.api.Assertions.assertThat;
 
-public class EncryptionKeyProviderTest extends RsaKeyAwareTest {
+public class EncryptionProviderTest extends RsaKeyAwareTest {
 
     @Test
-    void alwaysGeneratesNewKey() throws IOException {
-        final var ekp =
-                EncryptionKeyProvider.of(
+    void alwaysGeneratesNewKey() throws IOException, NoSuchAlgorithmException, NoSuchProviderException {
+        final var rsaProvider =
+                RsaEncryptionProvider.of(
                         Files.newInputStream(publicKeyPem),
                         Files.newInputStream(privateKeyPem)
                 );
 
-        final var key1 = ekp.createKey();
-        final var key2 = ekp.createKey();
+        final AesEncryptionProvider aesProvider = new AesEncryptionProvider(rsaProvider.keyGenerator());
+        final var dataKey1 = aesProvider.createDataKey();
+        final var dataKey2 = aesProvider.createDataKey();
 
-        assertThat(key1).isNotEqualTo(key2);
+        assertThat(dataKey1).isNotEqualTo(dataKey2);
     }
 
     @Test
-    void decryptGeneratedKey() throws IOException {
-        final var ekProvider =
-                EncryptionKeyProvider.of(
+    void decryptGeneratedKey() throws IOException, NoSuchAlgorithmException, NoSuchProviderException {
+        final var rsaEncryptionProvider =
+                RsaEncryptionProvider.of(
                         Files.newInputStream(publicKeyPem),
                         Files.newInputStream(privateKeyPem)
                 );
-        final var secretKey = ekProvider.createKey();
-        final var encryptedKey = ekProvider.encryptKey(secretKey);
-        final var restoredKey = ekProvider.decryptKey(encryptedKey);
+        final AesEncryptionProvider aesProvider = new AesEncryptionProvider(rsaEncryptionProvider.keyGenerator());
+        final var dataKey = aesProvider.createDataKey();
+        final var encryptedKey = rsaEncryptionProvider.encryptDataKey(dataKey);
+        final var restoredKey = rsaEncryptionProvider.decryptDataKey(encryptedKey);
 
-        assertThat(new SecretKeySpec(restoredKey, "AES")).isEqualTo(secretKey);
+        assertThat(new SecretKeySpec(restoredKey, "AES")).isEqualTo(dataKey);
     }
 
 }

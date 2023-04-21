@@ -37,21 +37,21 @@ public class CryptoIOProvider implements Encryption, Decryption {
 
     static final int NONCE_LENGTH = 12;
 
-    private final SecretKey encryptionKey;
+    private final SecretKey dataKey;
 
     private final int bufferSize;
 
     private final byte[] aad;
 
-    public CryptoIOProvider(final SecretKey encryptionKey, final byte[] aad, final int bufferSize) {
-        this.encryptionKey = encryptionKey;
+    public CryptoIOProvider(final SecretKey dataKey, final byte[] aad, final int bufferSize) {
+        this.dataKey = dataKey;
         this.aad = aad;
         this.bufferSize = bufferSize;
     }
 
     public long compressAndEncrypt(final InputStream in,
                                    final OutputStream out) throws IOException {
-        final var cipher = createEncryptingCipher(encryptionKey, CIPHER_TRANSFORMATION);
+        final var cipher = createEncryptingCipher(dataKey, CIPHER_TRANSFORMATION);
         cipher.updateAAD(aad);
         out.write(cipher.getIV());
         try (final ZstdOutputStream encrypted = new ZstdOutputStream(new CipherOutputStream(out, cipher))) {
@@ -60,10 +60,8 @@ public class CryptoIOProvider implements Encryption, Decryption {
     }
 
     public InputStream decryptAndDecompress(final InputStream in) throws IOException {
-        final var cipher = createDecryptingCipher(
-            encryptionKey,
-            new IvParameterSpec(in.readNBytes(NONCE_LENGTH)),
-            CIPHER_TRANSFORMATION);
+        final IvParameterSpec params = new IvParameterSpec(in.readNBytes(NONCE_LENGTH));
+        final var cipher = createDecryptingCipher(dataKey, params, CIPHER_TRANSFORMATION);
         cipher.updateAAD(aad);
         return new ZstdInputStream(new CipherInputStream(in, cipher));
     }
