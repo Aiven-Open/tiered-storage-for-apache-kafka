@@ -39,6 +39,11 @@ public class BaseDetransformChunkEnumeration implements DetransformChunkEnumerat
     private byte[] chunk = null;
 
     public BaseDetransformChunkEnumeration(final InputStream inputStream,
+                                           final Chunk chunk) {
+        this(inputStream, List.of(Objects.requireNonNull(chunk, "chunk cannot be null")));
+    }
+
+    public BaseDetransformChunkEnumeration(final InputStream inputStream,
                                            final List<Chunk> chunks) {
         this.inputStream = Objects.requireNonNull(inputStream, "inputStream cannot be null");
         this.chunksIter = Objects.requireNonNull(chunks, "chunks cannot be null").iterator();

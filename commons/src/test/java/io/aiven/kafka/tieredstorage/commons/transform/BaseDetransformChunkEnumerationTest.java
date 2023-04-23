@@ -39,9 +39,16 @@ class BaseDetransformChunkEnumerationTest {
 
     @Test
     void nullChunks() {
-        assertThatThrownBy(() -> new BaseDetransformChunkEnumeration(InputStream.nullInputStream(), null))
+        assertThatThrownBy(() -> new BaseDetransformChunkEnumeration(InputStream.nullInputStream(), (List<Chunk>) null))
             .isInstanceOf(NullPointerException.class)
             .hasMessage("chunks cannot be null");
+    }
+
+    @Test
+    void nullChunk() {
+        assertThatThrownBy(() -> new BaseDetransformChunkEnumeration(InputStream.nullInputStream(), (Chunk) null))
+            .isInstanceOf(NullPointerException.class)
+            .hasMessage("chunk cannot be null");
     }
 
     @Test
