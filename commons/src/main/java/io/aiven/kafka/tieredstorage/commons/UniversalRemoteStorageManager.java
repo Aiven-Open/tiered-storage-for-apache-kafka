@@ -24,8 +24,6 @@ import java.io.IOException;
 import java.io.InputStream;
 import java.io.SequenceInputStream;
 import java.nio.file.Files;
-import java.security.NoSuchAlgorithmException;
-import java.security.NoSuchProviderException;
 import java.util.List;
 import java.util.Map;
 import java.util.Objects;
@@ -69,7 +67,6 @@ import static org.apache.kafka.server.log.remote.storage.RemoteStorageManager.In
 import static org.apache.kafka.server.log.remote.storage.RemoteStorageManager.IndexType.TRANSACTION;
 
 public class UniversalRemoteStorageManager implements RemoteStorageManager, ChunkManager {
-    private UniversalRemoteStorageManagerConfig config;
     private ObjectStorageFactory objectStorageFactory;
 
     private boolean compression;
@@ -85,27 +82,20 @@ public class UniversalRemoteStorageManager implements RemoteStorageManager, Chun
     @Override
     public void configure(final Map<String, ?> configs) {
         Objects.requireNonNull(configs, "configs must not be null");
-        config = new UniversalRemoteStorageManagerConfig(configs);
+        final UniversalRemoteStorageManagerConfig config = new UniversalRemoteStorageManagerConfig(configs);
         objectStorageFactory = config.objectStorageFactory();
         objectKey = new ObjectKey(config.keyPrefix());
         encryption = config.encryptionEnabled();
         if (encryption) {
-            setupEncryptionKeys();
+            rsaEncryptionProvider = RsaEncryptionProvider.of(
+                config.encryptionPublicKeyFile(),
+                config.encryptionPrivateKeyFile()
+            );
+            aesEncryptionProvider = AesEncryptionProvider.of(rsaEncryptionProvider);
         }
         chunkSize = config.chunkSize();
         compression = config.compressionEnabled();
         mapper = getObjectMapper();
-    }
-
-    private void setupEncryptionKeys() {
-        try {
-            final InputStream rsaKey = Files.newInputStream(config.encryptionPublicKeyFile());
-            final InputStream rsaPrivateKey = Files.newInputStream(config.encryptionPrivateKeyFile());
-            rsaEncryptionProvider = RsaEncryptionProvider.of(rsaKey, rsaPrivateKey);
-            aesEncryptionProvider = new AesEncryptionProvider(rsaEncryptionProvider.keyGenerator());
-        } catch (final IOException | NoSuchAlgorithmException | NoSuchProviderException e) {
-            throw new RuntimeException(e);
-        }
     }
 
     private ObjectMapper getObjectMapper() {
