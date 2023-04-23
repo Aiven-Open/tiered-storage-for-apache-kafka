@@ -33,6 +33,9 @@ import org.bouncycastle.jce.provider.BouncyCastleProvider;
 import org.junit.jupiter.api.BeforeAll;
 
 public class AesKeyAwareTest {
+    public static final String CIPHER_TRANSFORMATION = "AES/GCM/NoPadding";
+    public static final String CIPHER_PROVIDER = "BC";
+
     protected static int ivSize;
     protected static SecretKeySpec secretKey;
     protected static byte[] aad;
@@ -53,37 +56,31 @@ public class AesKeyAwareTest {
         aad = new byte[32];
         random.nextBytes(aad);
 
-        ivSize = encryptionCipherSupplier().getIV().length;
+        ivSize = encryptionCipher().getIV().length;
     }
 
-    protected static Cipher encryptionCipherSupplier() {
+    protected static Cipher encryptionCipher() {
         try {
-            final Cipher encryptCipher = getCipher();
+            final Cipher encryptCipher = Cipher.getInstance(CIPHER_TRANSFORMATION, CIPHER_PROVIDER);
             encryptCipher.init(Cipher.ENCRYPT_MODE, secretKey, SecureRandom.getInstanceStrong());
             encryptCipher.updateAAD(aad);
             return encryptCipher;
-        } catch (final NoSuchAlgorithmException | InvalidKeyException e) {
+        } catch (final NoSuchAlgorithmException | InvalidKeyException | NoSuchPaddingException
+                       | NoSuchProviderException e) {
             throw new RuntimeException(e);
         }
     }
 
-    protected static Cipher decryptionCipherSupplier(final byte[] encryptedChunk) {
+    protected static Cipher decryptionCipher(final byte[] encryptedChunk) {
         try {
-            final Cipher encryptCipher = getCipher();
+            final Cipher encryptCipher = Cipher.getInstance(CIPHER_TRANSFORMATION, CIPHER_PROVIDER);
             encryptCipher.init(Cipher.DECRYPT_MODE, secretKey,
                 new IvParameterSpec(encryptedChunk, 0, ivSize),
                 SecureRandom.getInstanceStrong());
             encryptCipher.updateAAD(aad);
             return encryptCipher;
-        } catch (final NoSuchAlgorithmException | InvalidKeyException | InvalidAlgorithmParameterException e) {
-            throw new RuntimeException(e);
-        }
-    }
-
-    protected static Cipher getCipher() {
-        try {
-            return Cipher.getInstance("AES/GCM/NoPadding", "BC");
-        } catch (final NoSuchAlgorithmException | NoSuchProviderException | NoSuchPaddingException e) {
+        } catch (final NoSuchAlgorithmException | InvalidKeyException | InvalidAlgorithmParameterException
+                       | NoSuchPaddingException | NoSuchProviderException e) {
             throw new RuntimeException(e);
         }
     }

@@ -25,5 +25,5 @@
     <suppress checks="ClassDataAbstractionCoupling" files="S3ClientWrapper.java"/>
     <suppress checks="ClassDataAbstractionCoupling" files="S3RemoteStorageManagerConfig.java"/>
     <suppress checks="AbbreviationAsWordInName" files="DataKeyAndAADEqualsTest"/>
-    <suppress checks="ClassDataAbstractionCoupling" files="UniversalRemoteStorageManager.java"/>
+    <suppress checks="ClassDataAbstractionCoupling" files="TransformPipeline.java"/>
 </suppressions>

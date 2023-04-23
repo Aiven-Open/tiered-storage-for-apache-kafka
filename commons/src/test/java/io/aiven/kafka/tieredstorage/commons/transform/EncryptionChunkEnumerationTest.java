@@ -101,11 +101,11 @@ class EncryptionChunkEnumerationTest extends AesKeyAwareTest {
     void encrypt() throws IllegalBlockSizeException, BadPaddingException {
         final byte[] data = {0, 1, 2, 3, 4, 5, 6, 7, 8, 9};
 
-        final var transform = new EncryptionChunkEnumeration(inner, AesKeyAwareTest::encryptionCipherSupplier);
+        final var transform = new EncryptionChunkEnumeration(inner, AesKeyAwareTest::encryptionCipher);
         when(inner.nextElement()).thenReturn(data);
         final byte[] encrypted = transform.nextElement();
 
-        final Cipher decryptCipher = decryptionCipherSupplier(encrypted);
+        final Cipher decryptCipher = decryptionCipher(encrypted);
         assertThat(decryptCipher.doFinal(encrypted, ivSize, encrypted.length - ivSize)).isEqualTo(data);
     }
 }
