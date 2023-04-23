@@ -22,6 +22,9 @@ import javax.crypto.SecretKey;
 import javax.crypto.spec.IvParameterSpec;
 import javax.crypto.spec.SecretKeySpec;
 
+import java.security.NoSuchAlgorithmException;
+import java.security.NoSuchProviderException;
+
 import io.aiven.kafka.tieredstorage.commons.manifest.SegmentEncryptionMetadata;
 
 import static io.aiven.kafka.tieredstorage.commons.security.RsaEncryptionProvider.KEY_SIZE;
@@ -33,7 +36,15 @@ public class AesEncryptionProvider implements Encryption, Decryption {
 
     private final KeyGenerator aesKeyGenerator;
 
-    public AesEncryptionProvider(final KeyGenerator aesKeyGenerator) {
+    public static AesEncryptionProvider of(final RsaEncryptionProvider rsaEncryptionProvider) {
+        try {
+            return new AesEncryptionProvider(rsaEncryptionProvider.keyGenerator());
+        } catch (NoSuchAlgorithmException | NoSuchProviderException e) {
+            throw new RuntimeException(e);
+        }
+    }
+
+    AesEncryptionProvider(final KeyGenerator aesKeyGenerator) {
         this.aesKeyGenerator = aesKeyGenerator;
     }
 

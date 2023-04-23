@@ -25,6 +25,8 @@ import java.io.IOException;
 import java.io.InputStream;
 import java.io.InputStreamReader;
 import java.io.Reader;
+import java.nio.file.Files;
+import java.nio.file.Path;
 import java.security.KeyFactory;
 import java.security.KeyPair;
 import java.security.NoSuchAlgorithmException;
@@ -56,8 +58,8 @@ public final class RsaEncryptionProvider implements Encryption, Decryption {
         this.rsaKeyPair = rsaKeyPair;
     }
 
-    public static RsaEncryptionProvider of(final InputStream rsaPublicKey,
-                                           final InputStream rsaPrivateKey) {
+    public static RsaEncryptionProvider of(final Path rsaPublicKey,
+                                           final Path rsaPrivateKey) {
         LOGGER.info("Read RSA keys");
         Objects.requireNonNull(rsaPublicKey, "rsaPublicKey hasn't been set");
         Objects.requireNonNull(rsaPrivateKey, "rsaPrivateKey hasn't been set");
@@ -91,12 +93,12 @@ public final class RsaEncryptionProvider implements Encryption, Decryption {
 
     static class RsaKeysReader {
 
-        static KeyPair readRsaKeyPair(final InputStream publicKeyIn, final InputStream privateKeyIn) {
+        static KeyPair readRsaKeyPair(final Path publicKeyIn, final Path privateKeyIn) {
             try {
-                final var publicKey = readPublicKey(publicKeyIn);
-                final var privateKey = readPrivateKey(privateKeyIn);
+                final var publicKey = readPublicKey(Files.newInputStream(publicKeyIn));
+                final var privateKey = readPrivateKey(Files.newInputStream(privateKeyIn));
                 return new KeyPair(publicKey, privateKey);
-            } catch (NoSuchAlgorithmException | InvalidKeySpecException e) {
+            } catch (NoSuchAlgorithmException | InvalidKeySpecException | IOException e) {
                 throw new IllegalArgumentException("Couldn't read RSA key pair", e);
             }
         }

@@ -42,12 +42,9 @@ public class CryptoIOProviderTest extends RsaKeyAwareTest {
     private CryptoIOProvider cryptoIOProvider;
 
     @BeforeEach
-    public void setUpKey() throws Exception {
-        final RsaEncryptionProvider rsaProvider = RsaEncryptionProvider.of(
-            Files.newInputStream(publicKeyPem),
-            Files.newInputStream(privateKeyPem)
-        );
-        final AesEncryptionProvider aesProvider = new AesEncryptionProvider(rsaProvider.keyGenerator());
+    public void setUpKey() {
+        final RsaEncryptionProvider rsaProvider = RsaEncryptionProvider.of(publicKeyPem, privateKeyPem);
+        final AesEncryptionProvider aesProvider = AesEncryptionProvider.of(rsaProvider);
         final var key = aesProvider.createDataKey();
         final byte[] dataKey = new byte[32];
         System.arraycopy(key.getEncoded(), 0, dataKey, 0, 32);

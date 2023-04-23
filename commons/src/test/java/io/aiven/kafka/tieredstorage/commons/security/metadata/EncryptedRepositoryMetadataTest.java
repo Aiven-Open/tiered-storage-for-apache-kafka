@@ -20,9 +20,6 @@ import javax.crypto.spec.SecretKeySpec;
 
 import java.io.IOException;
 import java.nio.charset.StandardCharsets;
-import java.nio.file.Files;
-import java.security.NoSuchAlgorithmException;
-import java.security.NoSuchProviderException;
 import java.util.Base64;
 
 import io.aiven.kafka.tieredstorage.commons.RsaKeyAwareTest;
@@ -45,13 +42,9 @@ class EncryptedRepositoryMetadataTest extends RsaKeyAwareTest {
     AesEncryptionProvider aesEncryptionProvider;
 
     @BeforeEach
-    void setUp() throws IOException, NoSuchAlgorithmException, NoSuchProviderException {
-        rsaEncryptionProvider =
-            RsaEncryptionProvider.of(
-                Files.newInputStream(publicKeyPem),
-                Files.newInputStream(privateKeyPem)
-            );
-        aesEncryptionProvider = new AesEncryptionProvider(rsaEncryptionProvider.keyGenerator());
+    void setUp() {
+        rsaEncryptionProvider = RsaEncryptionProvider.of(publicKeyPem, privateKeyPem);
+        aesEncryptionProvider = AesEncryptionProvider.of(rsaEncryptionProvider);
     }
 
     @Test

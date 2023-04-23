@@ -16,21 +16,18 @@
 
 package io.aiven.kafka.tiered.storage.s3;
 
-import io.aiven.kafka.tieredstorage.commons.security.AesEncryptionProvider;
-import java.security.NoSuchAlgorithmException;
-import java.security.NoSuchProviderException;
 import javax.crypto.SecretKey;
 import javax.crypto.spec.SecretKeySpec;
 
 import java.io.ByteArrayInputStream;
 import java.io.IOException;
 import java.io.InputStream;
-import java.nio.file.Files;
 import java.nio.file.Path;
 import java.security.Security;
 import java.util.concurrent.TimeUnit;
 
 import io.aiven.kafka.tieredstorage.commons.io.IOUtils;
+import io.aiven.kafka.tieredstorage.commons.security.AesEncryptionProvider;
 import io.aiven.kafka.tieredstorage.commons.security.RsaEncryptionProvider;
 import io.aiven.kafka.tieredstorage.commons.security.metadata.EncryptedRepositoryMetadata;
 
@@ -61,16 +58,8 @@ public class S3EncryptionKeyProvider {
                 .expireAfterWrite(config.encryptionMetadataCacheRetentionMs(), TimeUnit.MILLISECONDS)
                 .maximumSize(config.encryptionMetadataCacheSize())
                 .build();
-        try {
-            encryptionKeyProvider = RsaEncryptionProvider.of(
-                    Files.newInputStream(Path.of(config.publicKey())),
-                    Files.newInputStream(Path.of(config.privateKey()))
-            );
-            aesEncryptionProvider = new AesEncryptionProvider(encryptionKeyProvider.keyGenerator());
-        } catch (final IOException | NoSuchAlgorithmException | NoSuchProviderException e) {
-            throw new RuntimeException(
-                    "Failed to initialize encryption key provider: keys are not readable or do not exist", e);
-        }
+        encryptionKeyProvider = RsaEncryptionProvider.of(Path.of(config.publicKey()), Path.of(config.privateKey()));
+        aesEncryptionProvider = AesEncryptionProvider.of(encryptionKeyProvider);
     }
 
     public SecretKey createOrRestoreEncryptionKey(final String metadataFileKey) {

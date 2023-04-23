@@ -25,6 +25,7 @@ import java.security.spec.PKCS8EncodedKeySpec;
 import java.security.spec.X509EncodedKeySpec;
 
 import io.aiven.kafka.tieredstorage.commons.RsaKeyAwareTest;
+import io.aiven.kafka.tieredstorage.commons.security.RsaEncryptionProvider.RsaKeysReader;
 
 import org.junit.jupiter.api.Test;
 import org.junit.jupiter.api.io.TempDir;
@@ -36,10 +37,7 @@ class RsaKeysReaderTest extends RsaKeyAwareTest {
     @Test
     public void failsForUnknownPaths() {
         assertThatThrownBy(
-            () ->
-                RsaEncryptionProvider.RsaKeysReader.readRsaKeyPair(
-                    Files.newInputStream(Paths.get(".")),
-                    Files.newInputStream(Paths.get("."))))
+            () -> RsaKeysReader.readRsaKeyPair(Paths.get("."), Paths.get(".")))
             .isInstanceOf(IllegalArgumentException.class);
     }
 
@@ -53,10 +51,7 @@ class RsaKeysReaderTest extends RsaKeyAwareTest {
         writePemFile(dsaPrivateKeyPem, new PKCS8EncodedKeySpec(dsaKeyPair.getPrivate().getEncoded()));
 
         assertThatThrownBy(
-            () ->
-                RsaEncryptionProvider.RsaKeysReader.readRsaKeyPair(
-                    Files.newInputStream(dsaPublicKeyPem),
-                    Files.newInputStream(dsaPrivateKeyPem)))
+            () -> RsaKeysReader.readRsaKeyPair(dsaPublicKeyPem, dsaPrivateKeyPem))
             .isInstanceOf(IllegalArgumentException.class)
             .hasMessage("Couldn't generate RSA key pair");
     }
@@ -67,10 +62,7 @@ class RsaKeysReaderTest extends RsaKeyAwareTest {
             Files.createFile(tmpDir.resolve("empty_public_key.pem"));
 
         assertThatThrownBy(
-            () ->
-                RsaEncryptionProvider.RsaKeysReader.readRsaKeyPair(
-                    Files.newInputStream(emptyPublicKeyPemFile),
-                    Files.newInputStream(privateKeyPem)))
+            () -> RsaKeysReader.readRsaKeyPair(emptyPublicKeyPemFile, privateKeyPem))
             .isInstanceOf(IllegalArgumentException.class)
             .hasMessage("Couldn't read PEM file");
     }
@@ -81,10 +73,7 @@ class RsaKeysReaderTest extends RsaKeyAwareTest {
             Files.createFile(tmpDir.resolve("empty_private_key.pem"));
 
         assertThatThrownBy(
-            () ->
-                RsaEncryptionProvider.RsaKeysReader.readRsaKeyPair(
-                    Files.newInputStream(publicKeyPem),
-                    Files.newInputStream(emptyPrivateKeyPemFile)))
+            () -> RsaKeysReader.readRsaKeyPair(publicKeyPem, emptyPrivateKeyPemFile))
             .isInstanceOf(IllegalArgumentException.class)
             .hasMessage("Couldn't read PEM file");
     }
