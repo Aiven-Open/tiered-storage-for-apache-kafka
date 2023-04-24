@@ -81,7 +81,9 @@ public class TransformsEndToEndTest extends EncryptionAwareTest {
         if (encryption) {
             transformEnum = new EncryptionChunkEnumeration(
                 transformEnum,
-                () -> encryptionProvider.encryptionCipher(dataKeyAndAAD));
+                encryptionProvider,
+                dataKeyAndAAD
+            );
         }
         final var transformFinisher = new TransformFinisher(transformEnum, ORIGINAL_SIZE);
         final byte[] uploadedData;
@@ -92,11 +94,13 @@ public class TransformsEndToEndTest extends EncryptionAwareTest {
         }
 
         // Detransform.
+        final ByteArrayInputStream uploaded = new ByteArrayInputStream(uploadedData);
         DetransformChunkEnumeration detransformEnum = new BaseDetransformChunkEnumeration(
-            new ByteArrayInputStream(uploadedData), chunkIndex.chunks());
+            uploaded,
+            chunkIndex.chunks()
+        );
         if (encryption) {
-            detransformEnum = new DecryptionChunkEnumeration(
-                detransformEnum, ivSize, bytes -> encryptionProvider.decryptionCipher(bytes, dataKeyAndAAD));
+            detransformEnum = new DecryptionChunkEnumeration(detransformEnum, encryptionProvider, dataKeyAndAAD);
         }
         if (compression) {
             detransformEnum = new DecompressionChunkEnumeration(detransformEnum);

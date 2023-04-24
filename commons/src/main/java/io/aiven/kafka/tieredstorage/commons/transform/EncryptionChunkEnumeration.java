@@ -22,28 +22,35 @@ import javax.crypto.IllegalBlockSizeException;
 import javax.crypto.ShortBufferException;
 
 import java.util.Objects;
-import java.util.function.Supplier;
+
+import io.aiven.kafka.tieredstorage.commons.security.DataKeyAndAAD;
+import io.aiven.kafka.tieredstorage.commons.security.EncryptionProvider;
 
 /**
  * The chunk transformation that does encryption.
  */
 public class EncryptionChunkEnumeration implements TransformChunkEnumeration {
     private final TransformChunkEnumeration inner;
-    private final Supplier<Cipher> cipherSupplier;
 
-    private final Integer transformedChunkSize;
+    private Integer transformedChunkSize;
+    private final EncryptionProvider encryptionProvider;
+    private final DataKeyAndAAD dataKeyAndAAD;
 
     public EncryptionChunkEnumeration(final TransformChunkEnumeration inner,
-                                      final Supplier<Cipher> cipherSupplier) {
+                                      final EncryptionProvider encryptionProvider,
+                                      final DataKeyAndAAD dataKeyAndAAD) {
         this.inner = Objects.requireNonNull(inner, "inner cannot be null");
-        this.cipherSupplier = Objects.requireNonNull(cipherSupplier, "cipherSupplier cannot be null");
+        this.encryptionProvider = Objects.requireNonNull(encryptionProvider, "encryptionProvider cannot be null");
+        this.dataKeyAndAAD = Objects.requireNonNull(dataKeyAndAAD, "dataKeyAndAAD cannot be null");
 
         final Integer innerTransformedChunkSize = inner.transformedChunkSize();
         if (innerTransformedChunkSize == null) {
             transformedChunkSize = null;
         } else {
-            final Cipher cipher = cipherSupplier.get();
-            transformedChunkSize = encryptedChunkSize(cipher, cipher.getIV().length, innerTransformedChunkSize);
+            transformedChunkSize = encryptedChunkSize(
+                encryptionProvider.encryptionCipher(dataKeyAndAAD),
+                innerTransformedChunkSize
+            );
         }
     }
 
@@ -64,13 +71,13 @@ public class EncryptionChunkEnumeration implements TransformChunkEnumeration {
 
     @Override
     public byte[] nextElement() {
-        final var cipher = cipherSupplier.get();
         final var chunk = inner.nextElement();
-        final byte[] iv = cipher.getIV();
-        final int transformedChunkSize = encryptedChunkSize(cipher, iv.length, chunk.length);
+        final Cipher cipher = encryptionProvider.encryptionCipher(dataKeyAndAAD);
+        transformedChunkSize = encryptedChunkSize(cipher, chunk.length);
         final byte[] transformedChunk = new byte[transformedChunkSize];
+        final byte[] iv = cipher.getIV();
         // Prepend the IV and then write the encrypted data.
-        System.arraycopy(iv, 0, transformedChunk, 0, iv.length);
+        System.arraycopy(cipher.getIV(), 0, transformedChunk, 0, iv.length);
         try {
             cipher.doFinal(chunk, 0, chunk.length, transformedChunk, iv.length);
         } catch (final ShortBufferException | IllegalBlockSizeException | BadPaddingException e) {
@@ -79,7 +86,7 @@ public class EncryptionChunkEnumeration implements TransformChunkEnumeration {
         return transformedChunk;
     }
 
-    private int encryptedChunkSize(final Cipher cipher, final int ivSize, final int inputChunkSize) {
-        return ivSize + cipher.getOutputSize(inputChunkSize);
+    private static int encryptedChunkSize(final Cipher cipher, final int inputChunkSize) {
+        return cipher.getIV().length + cipher.getOutputSize(inputChunkSize);
     }
 }

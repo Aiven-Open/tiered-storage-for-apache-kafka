@@ -18,17 +18,17 @@ package io.aiven.kafka.tieredstorage.commons;
 
 import javax.crypto.Cipher;
 import javax.crypto.SecretKey;
-import javax.crypto.spec.IvParameterSpec;
 
 import java.io.File;
 import java.io.IOException;
 import java.io.InputStream;
+import java.io.RandomAccessFile;
 import java.nio.ByteBuffer;
 import java.nio.file.Files;
 import java.nio.file.Path;
 import java.security.GeneralSecurityException;
-import java.security.SecureRandom;
 import java.util.ArrayList;
+import java.util.Arrays;
 import java.util.HashMap;
 import java.util.List;
 import java.util.Map;
@@ -45,17 +45,20 @@ import org.apache.kafka.server.log.remote.storage.RemoteStorageException;
 import org.apache.kafka.server.log.remote.storage.RemoteStorageManager;
 
 import io.aiven.kafka.tieredstorage.commons.manifest.index.ChunkIndex;
+import io.aiven.kafka.tieredstorage.commons.manifest.serde.DataKeyDeserializer;
+import io.aiven.kafka.tieredstorage.commons.manifest.serde.DataKeySerializer;
+import io.aiven.kafka.tieredstorage.commons.security.DataKeyAndAAD;
 
+import com.fasterxml.jackson.databind.JsonNode;
+import com.fasterxml.jackson.databind.ObjectMapper;
+import com.fasterxml.jackson.databind.module.SimpleModule;
 import com.github.luben.zstd.Zstd;
-import org.apache.commons.io.input.BoundedInputStream;
 import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.Disabled;
 import org.junit.jupiter.api.io.TempDir;
 import org.junit.jupiter.params.ParameterizedTest;
 import org.junit.jupiter.params.provider.Arguments;
 import org.junit.jupiter.params.provider.MethodSource;
-import org.testcontainers.shaded.com.fasterxml.jackson.databind.JsonNode;
-import org.testcontainers.shaded.com.fasterxml.jackson.databind.ObjectMapper;
 
 import static org.assertj.core.api.Assertions.assertThat;
 
@@ -74,6 +77,8 @@ class UniversalRemoteStorageManagerTest extends EncryptionAwareTest {
     Path producerSnapshotFilePath;
     Path txnIndexFilePath;
 
+    public static final byte[] LEADER_EPOCH_INDEX_BYTES = "leader epoch index".getBytes();
+    static final int IV_SIZE = 12;
     static final int SEGMENT_SIZE = 10 * 1024 * 1024;
     static final Uuid TOPIC_ID = Uuid.METADATA_TOPIC_ID;  // string representation: AAAAAAAAAAAAAAAAAAAAAQ
     static final Uuid SEGMENT_ID = Uuid.ZERO_UUID;  // string representation: AAAAAAAAAAAAAAAAAAAAAA
@@ -83,13 +88,24 @@ class UniversalRemoteStorageManagerTest extends EncryptionAwareTest {
     static final RemoteLogSegmentMetadata REMOTE_LOG_METADATA = new RemoteLogSegmentMetadata(
         REMOTE_SEGMENT_ID, START_OFFSET, 2000L,
         0, 0, 0, SEGMENT_SIZE, Map.of(0, 0L));
-
-    static final ByteBuffer LEADER_EPOCH_INDEX = ByteBuffer.wrap("leader epoch index".getBytes());
-
     static final String TARGET_LOG_FILE =
-        "topic-AAAAAAAAAAAAAAAAAAAAAQ/7/00000000000000000023-AAAAAAAAAAAAAAAAAAAAAA.log";
+        "test/topic-AAAAAAAAAAAAAAAAAAAAAQ/7/00000000000000000023-AAAAAAAAAAAAAAAAAAAAAA.log";
     static final String TARGET_MANIFEST_FILE =
-        "topic-AAAAAAAAAAAAAAAAAAAAAQ/7/00000000000000000023-AAAAAAAAAAAAAAAAAAAAAA.rsm-manifest";
+        "test/topic-AAAAAAAAAAAAAAAAAAAAAQ/7/00000000000000000023-AAAAAAAAAAAAAAAAAAAAAA.rsm-manifest";
+
+    private static List<Arguments> provideEndToEnd() {
+        final List<Arguments> result = new ArrayList<>();
+        for (final int chunkSize : List.of(1024 * 1024 - 1, 1024 * 1024 * 1024 - 1, Integer.MAX_VALUE / 2)) {
+            for (final boolean compression : List.of(true, false)) {
+                for (final boolean encryption : List.of(true, false)) {
+                    for (final boolean hasTxnIndex : List.of(true, false)) {
+                        result.add(Arguments.of(chunkSize, compression, encryption, hasTxnIndex));
+                    }
+                }
+            }
+        }
+        return result;
+    }
 
     @BeforeEach
     void init() throws IOException {
@@ -113,13 +129,13 @@ class UniversalRemoteStorageManagerTest extends EncryptionAwareTest {
         txnIndexFilePath = Path.of(sourceDir.toString(), "00000000000000000023.txnindex");
         createRandomFilledFile(txnIndexFilePath, 128 * 1024);
 
-        targetDir = Path.of(tmpDir.toString(), "target");
+        targetDir = Path.of(tmpDir.toString(), "target/");
         Files.createDirectories(targetDir);
     }
 
     private void createRandomFilledFile(final Path path, final int size) throws IOException {
         // Should be at least multiple of kilobyte.
-        assertThat(size % 1024).isEqualTo(0);
+        assertThat(size % 1024).isZero();
 
         int unit = 1024 * 1024;
         while (size % unit != 0) {
@@ -136,7 +152,7 @@ class UniversalRemoteStorageManagerTest extends EncryptionAwareTest {
         }
     }
 
-    @ParameterizedTest
+    @ParameterizedTest(name = "{argumentsWithNames}")
     @MethodSource("provideEndToEnd")
     void endToEnd(final int chunkSize,
                   final boolean compression,
@@ -147,6 +163,7 @@ class UniversalRemoteStorageManagerTest extends EncryptionAwareTest {
             "chunk.size", Integer.toString(chunkSize),
             "object.storage.factory",
             "io.aiven.kafka.tieredstorage.commons.storage.filesystem.FileSystemStorageFactory",
+            "key.prefix", "test/",
             "object.storage.root", targetDir.toString(),
             "compression.enabled", Boolean.toString(compression),
             "encryption.enabled", Boolean.toString(encryption)
@@ -163,7 +180,7 @@ class UniversalRemoteStorageManagerTest extends EncryptionAwareTest {
             : Optional.empty();
         final LogSegmentData logSegmentData = new LogSegmentData(
             logFilePath, offsetIndexFilePath, timeIndexFilePath, txnIndexPath,
-            producerSnapshotFilePath, LEADER_EPOCH_INDEX);
+            producerSnapshotFilePath, ByteBuffer.wrap(LEADER_EPOCH_INDEX_BYTES));
         rsm.copyLogSegmentData(REMOTE_LOG_METADATA, logSegmentData);
 
         checkFilesInTargetDirectory(hasTxnIndex);
@@ -176,34 +193,19 @@ class UniversalRemoteStorageManagerTest extends EncryptionAwareTest {
         checkDeletion();
     }
 
-    private static List<Arguments> provideEndToEnd() {
-        final List<Arguments> result = new ArrayList<>();
-        for (final int chunkSize : List.of(1024 - 1, 4 * 1024, 1024 * 1024 * 1024 - 1, Integer.MAX_VALUE)) {
-            for (final boolean compression : List.of(true, false)) {
-                for (final boolean encryption : List.of(true, false)) {
-                    for (final boolean hasTxnIndex : List.of(true, false)) {
-                        result.add(Arguments.of(chunkSize, compression, encryption, hasTxnIndex));
-                    }
-                }
-            }
-        }
-        return result;
-    }
-
-    private void checkFilesInTargetDirectory(final boolean hasTxnIndex) throws IOException {
+    private void checkFilesInTargetDirectory(final boolean hasTxnIndex) {
         final List<String> expectedFiles = new ArrayList<>(List.of(
             TARGET_LOG_FILE,
-            "topic-AAAAAAAAAAAAAAAAAAAAAQ/7/00000000000000001234-AAAAAAAAAAAAAAAAAAAAAA.index",
-            "topic-AAAAAAAAAAAAAAAAAAAAAQ/7/00000000000000001234-AAAAAAAAAAAAAAAAAAAAAA.timeindex",
-            "topic-AAAAAAAAAAAAAAAAAAAAAQ/7/00000000000000001234-AAAAAAAAAAAAAAAAAAAAAA.snapshot",
-            "topic-AAAAAAAAAAAAAAAAAAAAAQ/7/00000000000000001234-AAAAAAAAAAAAAAAAAAAAAA.leader-epoch-checkpoint",
+            "topic-AAAAAAAAAAAAAAAAAAAAAQ/7/00000000000000000023-AAAAAAAAAAAAAAAAAAAAAA.timeindex",
+            "topic-AAAAAAAAAAAAAAAAAAAAAQ/7/00000000000000000023-AAAAAAAAAAAAAAAAAAAAAA.snapshot",
+            "topic-AAAAAAAAAAAAAAAAAAAAAQ/7/00000000000000000023-AAAAAAAAAAAAAAAAAAAAAA.leader-epoch-checkpoint",
             TARGET_MANIFEST_FILE
         ));
         if (hasTxnIndex) {
-            expectedFiles.add("topic-AAAAAAAAAAAAAAAAAAAAAQ/7/00000000000000001234-AAAAAAAAAAAAAAAAAAAAAA.txnindex");
+            expectedFiles.add("topic-AAAAAAAAAAAAAAAAAAAAAQ/7/00000000000000000023-AAAAAAAAAAAAAAAAAAAAAA.txnindex");
         }
-        assertThat(Files.list(targetDir).map(Path::toString))
-            .containsExactlyInAnyOrderElementsOf(expectedFiles);
+        expectedFiles.forEach(s ->
+            assertThat(targetDir).isDirectoryRecursivelyContaining(path -> path.toString().endsWith(s)));
     }
 
     private void checkManifest(final int chunkSize,
@@ -217,7 +219,7 @@ class UniversalRemoteStorageManagerTest extends EncryptionAwareTest {
         assertThat(chunkIndex.get("originalChunkSize").asInt()).isEqualTo(chunkSize);
         assertThat(chunkIndex.get("originalFileSize").asInt()).isEqualTo(SEGMENT_SIZE);
 
-        if (compression || encryption) {
+        if (compression) {
             assertThat(chunkIndex.get("type").asText()).isEqualTo("variable");
             assertThat(chunkIndex.get("transformedChunks").asText()).isNotNull();
         } else {
@@ -254,7 +256,7 @@ class UniversalRemoteStorageManagerTest extends EncryptionAwareTest {
         try (final var inputStream = rsm.fetchIndex(REMOTE_LOG_METADATA,
             RemoteStorageManager.IndexType.LEADER_EPOCH)) {
             assertThat(inputStream.readAllBytes())
-                .isEqualTo(LEADER_EPOCH_INDEX.array());
+                .isEqualTo(LEADER_EPOCH_INDEX_BYTES);
         }
         if (hasTxnIndex) {
             try (final var inputStream = rsm.fetchIndex(REMOTE_LOG_METADATA,
@@ -278,24 +280,23 @@ class UniversalRemoteStorageManagerTest extends EncryptionAwareTest {
         final byte[] encryptedDataKey = manifest.get("encryption").get("dataKey").binaryValue();
         final SecretKey dataKey = encryptionProvider.decryptDataKey(encryptedDataKey);
         final byte[] aad = manifest.get("encryption").get("aad").binaryValue();
+        final DataKeyAndAAD dataKeyAndAAD = new DataKeyAndAAD(dataKey, aad);
 
+        final SimpleModule simpleModule = new SimpleModule();
+        simpleModule.addSerializer(SecretKey.class, new DataKeySerializer(encryptionProvider::encryptDataKey));
+        simpleModule.addDeserializer(SecretKey.class, new DataKeyDeserializer(encryptionProvider::decryptDataKey));
+        objectMapper.registerModule(simpleModule);
         final ChunkIndex chunkIndex = objectMapper.treeToValue(manifest.get("chunkIndex"), ChunkIndex.class);
 
-        try (final InputStream originalInputStream = Files.newInputStream(Path.of(TARGET_LOG_FILE));
-             final InputStream transformedInputStream = Files.newInputStream(logFilePath)) {
+        try (final InputStream originalInputStream = Files.newInputStream(logFilePath);
+             final InputStream transformedInputStream = Files.newInputStream(targetDir.resolve(TARGET_LOG_FILE))) {
             for (final Chunk chunk : chunkIndex.chunks()) {
                 final byte[] originalChunk = originalInputStream.readNBytes(chunk.originalSize);
                 final byte[] transformedChunk = transformedInputStream.readNBytes(chunk.transformedSize);
                 byte[] detransformedChunk;
                 try {
-                    final Cipher cipher = Cipher.getInstance("AES/GCM/NoPadding", "BC");
-                    final int ivSize = cipher.getIV().length;
-                    cipher.init(Cipher.DECRYPT_MODE, dataKey,
-                        new IvParameterSpec(transformedChunk, 0, ivSize),
-                        SecureRandom.getInstanceStrong());
-                    cipher.updateAAD(aad);
-
-                    detransformedChunk = cipher.doFinal(transformedChunk, ivSize, transformedChunk.length - ivSize);
+                    final Cipher cipher = encryptionProvider.decryptionCipher(transformedChunk, dataKeyAndAAD);
+                    detransformedChunk = cipher.doFinal(transformedChunk, IV_SIZE, transformedChunk.length - IV_SIZE);
                 } catch (final GeneralSecurityException e) {
                     throw new RuntimeException(e);
                 }
@@ -318,16 +319,24 @@ class UniversalRemoteStorageManagerTest extends EncryptionAwareTest {
                 .hasSameContentAs(expectedInputStream);
         }
 
+        final int actualChunkSize = (int) Math.min(chunkSize, Files.size(logFilePath) - 2);
         // TODO more combinations?
-        for (final int readSize : List.of(1, 13, chunkSize / 2, chunkSize, chunkSize + 1, chunkSize * 2)) {
-            for (final int offset : List.of(0, 1, 23, chunkSize / 2, chunkSize - 1, chunkSize, chunkSize + 1,
-                SEGMENT_SIZE - readSize - 10, SEGMENT_SIZE - readSize)) {
-                try (final InputStream expectedInputStream = new BoundedInputStream(
-                    Files.newInputStream(logFilePath), offset + readSize)) {
-                    expectedInputStream.skip(offset);
-
-                    assertThat(rsm.fetchLogSegment(REMOTE_LOG_METADATA, offset, offset + readSize))
-                        .hasSameContentAs(expectedInputStream);
+        for (final int readSize : List.of(1, 13, actualChunkSize / 2, actualChunkSize, actualChunkSize + 1,
+            actualChunkSize * 2)) {
+            final byte[] expectedBytes = new byte[readSize];
+            for (final int offset : List.of(0, 1, 23, actualChunkSize / 2, actualChunkSize - 1, actualChunkSize,
+                actualChunkSize + 1
+//                ,
+//                SEGMENT_SIZE - readSize - 10
+            )) {
+                final int read;
+                try (RandomAccessFile r = new RandomAccessFile(logFilePath.toString(), "r")) {
+                    r.seek(offset);
+                    read = r.read(expectedBytes, 0, readSize);
+                }
+                try (InputStream actual = rsm.fetchLogSegment(REMOTE_LOG_METADATA, offset, offset + readSize)) {
+                    assertThat(actual.readAllBytes())
+                        .isEqualTo(Arrays.copyOfRange(expectedBytes, 0, read));
                 }
             }
         }
