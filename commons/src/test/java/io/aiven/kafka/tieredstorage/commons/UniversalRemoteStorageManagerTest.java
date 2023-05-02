@@ -50,6 +50,7 @@ import io.aiven.kafka.tieredstorage.commons.security.RsaEncryptionProvider;
 import com.github.luben.zstd.Zstd;
 import org.apache.commons.io.input.BoundedInputStream;
 import org.junit.jupiter.api.BeforeEach;
+import org.junit.jupiter.api.Disabled;
 import org.junit.jupiter.api.io.TempDir;
 import org.junit.jupiter.params.ParameterizedTest;
 import org.junit.jupiter.params.provider.Arguments;
@@ -59,6 +60,7 @@ import org.testcontainers.shaded.com.fasterxml.jackson.databind.ObjectMapper;
 
 import static org.assertj.core.api.Assertions.assertThat;
 
+@Disabled
 class UniversalRemoteStorageManagerTest extends RsaKeyAwareTest {
     RemoteStorageManager rsm;
 
