@@ -22,19 +22,32 @@ import javax.crypto.SecretKey;
 import javax.crypto.spec.IvParameterSpec;
 import javax.crypto.spec.SecretKeySpec;
 
-import io.aiven.kafka.tieredstorage.commons.manifest.SegmentEncryptionMetadata;
+import java.security.NoSuchAlgorithmException;
+import java.security.NoSuchProviderException;
+import java.security.SecureRandom;
 
-import static io.aiven.kafka.tieredstorage.commons.security.RsaEncryptionProvider.KEY_SIZE;
+import io.aiven.kafka.tieredstorage.commons.manifest.SegmentEncryptionMetadata;
 
 public class AesEncryptionProvider implements Encryption, Decryption {
 
+    public static final int KEY_SIZE = 512;
     public static final int KEY_AND_AAD_SIZE_BYTES = KEY_SIZE / 8 / 2;
     public static final String AES_TRANSFORMATION = "AES/GCM/NoPadding";
 
     private final KeyGenerator aesKeyGenerator;
 
-    public AesEncryptionProvider(final KeyGenerator aesKeyGenerator) {
-        this.aesKeyGenerator = aesKeyGenerator;
+    static KeyGenerator keyGenerator() {
+        try {
+            final KeyGenerator kg = KeyGenerator.getInstance("AES", "BC");
+            kg.init(KEY_SIZE, SecureRandom.getInstanceStrong());
+            return kg;
+        } catch (final NoSuchAlgorithmException | NoSuchProviderException e) {
+            throw new RuntimeException(e);
+        }
+    }
+
+    public AesEncryptionProvider() {
+        this.aesKeyGenerator = keyGenerator();
     }
 
     public SecretKey createDataKey() {

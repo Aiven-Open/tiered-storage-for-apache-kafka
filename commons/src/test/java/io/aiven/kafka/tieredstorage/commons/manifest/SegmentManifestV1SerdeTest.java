@@ -19,9 +19,6 @@ package io.aiven.kafka.tieredstorage.commons.manifest;
 import javax.crypto.SecretKey;
 import javax.crypto.spec.SecretKeySpec;
 
-import java.io.IOException;
-import java.io.InputStream;
-import java.nio.file.Files;
 import java.util.Base64;
 
 import io.aiven.kafka.tieredstorage.commons.RsaKeyAwareTest;
@@ -61,14 +58,10 @@ class SegmentManifestV1SerdeTest extends RsaKeyAwareTest {
     RsaEncryptionProvider rsaEncryptionProvider;
 
     @BeforeEach
-    void init() throws IOException {
+    void init() {
         mapper = new ObjectMapper();
         mapper.registerModule(new Jdk8Module());
-
-        try (final InputStream publicKeyFis = Files.newInputStream(publicKeyPem);
-             final InputStream privateKeyFis = Files.newInputStream(privateKeyPem)) {
-            rsaEncryptionProvider = RsaEncryptionProvider.of(publicKeyFis, privateKeyFis);
-        }
+        rsaEncryptionProvider = RsaEncryptionProvider.of(publicKeyPem, privateKeyPem);
 
         final SimpleModule simpleModule = new SimpleModule();
         simpleModule.addSerializer(SecretKey.class, new DataKeySerializer(rsaEncryptionProvider::encryptDataKey));
