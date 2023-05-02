@@ -117,7 +117,7 @@ class UniversalRemoteStorageManagerTest extends RsaKeyAwareTest {
     void init() throws IOException {
         rsm = new UniversalRemoteStorageManager();
         rsaEncryptionProvider = RsaEncryptionProvider.of(publicKeyPem, privateKeyPem);
-        aesEncryptionProvider = AesEncryptionProvider.of(rsaEncryptionProvider);
+        aesEncryptionProvider = new AesEncryptionProvider();
 
         sourceDir = Path.of(tmpDir.toString(), "source");
         Files.createDirectories(sourceDir);

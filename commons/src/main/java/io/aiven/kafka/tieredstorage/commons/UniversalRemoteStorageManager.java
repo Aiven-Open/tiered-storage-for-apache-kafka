@@ -91,7 +91,7 @@ public class UniversalRemoteStorageManager implements RemoteStorageManager, Chun
                 config.encryptionPublicKeyFile(),
                 config.encryptionPrivateKeyFile()
             );
-            aesEncryptionProvider = AesEncryptionProvider.of(rsaEncryptionProvider);
+            aesEncryptionProvider = new AesEncryptionProvider();
         }
         chunkSize = config.chunkSize();
         compression = config.compressionEnabled();
