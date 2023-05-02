@@ -18,20 +18,19 @@ package io.aiven.kafka.tieredstorage.commons.security;
 
 import javax.crypto.BadPaddingException;
 import javax.crypto.IllegalBlockSizeException;
-import javax.crypto.KeyGenerator;
 import javax.crypto.SecretKey;
 
 import java.io.IOException;
 import java.io.InputStream;
 import java.io.InputStreamReader;
 import java.io.Reader;
+import java.nio.file.Files;
+import java.nio.file.Path;
 import java.security.KeyFactory;
 import java.security.KeyPair;
 import java.security.NoSuchAlgorithmException;
-import java.security.NoSuchProviderException;
 import java.security.PrivateKey;
 import java.security.PublicKey;
-import java.security.SecureRandom;
 import java.security.spec.InvalidKeySpecException;
 import java.security.spec.PKCS8EncodedKeySpec;
 import java.security.spec.X509EncodedKeySpec;
@@ -45,7 +44,6 @@ public final class RsaEncryptionProvider implements Encryption, Decryption {
 
     private static final Logger LOGGER = LoggerFactory.getLogger(RsaEncryptionProvider.class);
 
-    public static final int KEY_SIZE = 512;
 
     private static final String RSA_TRANSFORMATION = "RSA/NONE/OAEPWithSHA3-512AndMGF1Padding";
 
@@ -56,19 +54,12 @@ public final class RsaEncryptionProvider implements Encryption, Decryption {
         this.rsaKeyPair = rsaKeyPair;
     }
 
-    public static RsaEncryptionProvider of(final InputStream rsaPublicKey,
-                                           final InputStream rsaPrivateKey) {
+    public static RsaEncryptionProvider of(final Path rsaPublicKey, final Path rsaPrivateKey) {
         LOGGER.info("Read RSA keys");
         Objects.requireNonNull(rsaPublicKey, "rsaPublicKey hasn't been set");
         Objects.requireNonNull(rsaPrivateKey, "rsaPrivateKey hasn't been set");
         final KeyPair rsaKeyPair = RsaKeysReader.readRsaKeyPair(rsaPublicKey, rsaPrivateKey);
         return new RsaEncryptionProvider(rsaKeyPair);
-    }
-
-    public KeyGenerator keyGenerator() throws NoSuchAlgorithmException, NoSuchProviderException {
-        final KeyGenerator kg = KeyGenerator.getInstance("AES", "BC");
-        kg.init(KEY_SIZE, SecureRandom.getInstanceStrong());
-        return kg;
     }
 
     public byte[] encryptDataKey(final SecretKey dataKey) {
@@ -91,12 +82,21 @@ public final class RsaEncryptionProvider implements Encryption, Decryption {
 
     static class RsaKeysReader {
 
+        static KeyPair readRsaKeyPair(final Path publicKeyPath, final Path privateKeyPath) {
+            try (final InputStream publicKeyIn = Files.newInputStream(publicKeyPath);
+                 final InputStream privateKeyIn = Files.newInputStream(privateKeyPath)) {
+                return readRsaKeyPair(publicKeyIn, privateKeyIn);
+            } catch (final IOException e) {
+                throw new IllegalArgumentException("Couldn't read RSA key pair paths", e);
+            }
+        }
+
         static KeyPair readRsaKeyPair(final InputStream publicKeyIn, final InputStream privateKeyIn) {
             try {
                 final var publicKey = readPublicKey(publicKeyIn);
                 final var privateKey = readPrivateKey(privateKeyIn);
                 return new KeyPair(publicKey, privateKey);
-            } catch (NoSuchAlgorithmException | InvalidKeySpecException e) {
+            } catch (final NoSuchAlgorithmException | InvalidKeySpecException e) {
                 throw new IllegalArgumentException("Couldn't read RSA key pair", e);
             }
         }

@@ -18,11 +18,6 @@ package io.aiven.kafka.tieredstorage.commons.security;
 
 import javax.crypto.spec.SecretKeySpec;
 
-import java.io.IOException;
-import java.nio.file.Files;
-import java.security.NoSuchAlgorithmException;
-import java.security.NoSuchProviderException;
-
 import io.aiven.kafka.tieredstorage.commons.RsaKeyAwareTest;
 
 import org.junit.jupiter.api.Test;
@@ -32,14 +27,8 @@ import static org.assertj.core.api.Assertions.assertThat;
 public class EncryptionProviderTest extends RsaKeyAwareTest {
 
     @Test
-    void alwaysGeneratesNewKey() throws IOException, NoSuchAlgorithmException, NoSuchProviderException {
-        final var rsaProvider =
-                RsaEncryptionProvider.of(
-                        Files.newInputStream(publicKeyPem),
-                        Files.newInputStream(privateKeyPem)
-                );
-
-        final AesEncryptionProvider aesProvider = new AesEncryptionProvider(rsaProvider.keyGenerator());
+    void alwaysGeneratesNewKey() {
+        final AesEncryptionProvider aesProvider = new AesEncryptionProvider();
         final var dataKey1 = aesProvider.createDataKey();
         final var dataKey2 = aesProvider.createDataKey();
 
@@ -47,13 +36,9 @@ public class EncryptionProviderTest extends RsaKeyAwareTest {
     }
 
     @Test
-    void decryptGeneratedKey() throws IOException, NoSuchAlgorithmException, NoSuchProviderException {
-        final var rsaEncryptionProvider =
-                RsaEncryptionProvider.of(
-                        Files.newInputStream(publicKeyPem),
-                        Files.newInputStream(privateKeyPem)
-                );
-        final AesEncryptionProvider aesProvider = new AesEncryptionProvider(rsaEncryptionProvider.keyGenerator());
+    void decryptGeneratedKey() {
+        final var rsaEncryptionProvider = RsaEncryptionProvider.of(publicKeyPem, privateKeyPem);
+        final AesEncryptionProvider aesProvider = new AesEncryptionProvider();
         final var dataKey = aesProvider.createDataKey();
         final var encryptedKey = rsaEncryptionProvider.encryptDataKey(dataKey);
         final var restoredKey = rsaEncryptionProvider.decryptDataKey(encryptedKey);
