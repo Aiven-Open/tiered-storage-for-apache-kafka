@@ -58,7 +58,7 @@ class RsaKeysReaderTest extends RsaKeyAwareTest {
                     Files.newInputStream(dsaPublicKeyPem),
                     Files.newInputStream(dsaPrivateKeyPem)))
             .isInstanceOf(IllegalArgumentException.class)
-            .hasMessage("Couldn't generate RSA key pair");
+            .hasMessage("Couldn't read RSA key pair");
     }
 
     @Test
