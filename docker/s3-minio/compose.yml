@@ -1,11 +1,5 @@
 version: '3.8'
 services:
-  zookeeper:
-    image: kafka-ts-s3-minio
-    command:
-      - zookeeper-server-start.sh
-      - config/zookeeper.properties
-
   kafka:
     image: kafka-ts-s3-minio
     build:
@@ -17,56 +11,40 @@ services:
       #   - KAFKA_VERSION=3.0.1-SNAPSHOT
     ports:
       - "9092:9092"
+    environment:
+      KAFKA_BROKER_ID: 1
+      KAFKA_LISTENERS: "PLAINTEXT://0.0.0.0:9092"
+      KAFKA_LISTENER_SECURITY_PROTOCOL_MAP: "PLAINTEXT:PLAINTEXT"
+      KAFKA_ADVERTISED_LISTENERS: "PLAINTEXT://localhost:9092"
+      KAFKA_INTER_BROKER_LISTENER_NAME: "PLAINTEXT"
+      KAFKA_ZOOKEEPER_CONNECT: "localhost:2181"
+      KAFKA_OFFSETS_TOPIC_REPLICATION_FACTOR: 1
+      KAFKA_TRANSACTION_STATE_LOG_REPLICATION_FACTOR: 1
+      # Enable Tiered storage
+      KAFKA_REMOTE_LOG_STORAGE_SYSTEM_ENABLE: true
+      # Tiered Storage: RLMM config
+      KAFKA_REMOTE_LOG_METADATA_MANAGER_CLASS_NAME: "org.apache.kafka.server.log.remote.metadata.storage.TopicBasedRemoteLogMetadataManager"
+      KAFKA_REMOTE_LOG_STORAGE_MANAGER_CLASS_NAME: "io.aiven.kafka.tiered.storage.s3.S3RemoteStorageManager"
+      KAFKA_RLMM_CONFIG_REMOTE_LOG_METADATA_COMMON_CLIENT_BOOTSTRAP_SERVERS: "kafka:9092"
+      KAFKA_RLMM_CONFIG_REMOTE_LOG_METADATA_TOPIC_REPLICATION_FACTOR: 1
+      KAFKA_RSM_CONFIG_DIR: ""  # it'll be /home/appuser/kafka-tiered-storage
+      KAFKA_REMOTE_LOG_STORAGE_MANAGER_CLASS_PATH: "/kafka/plugins/tiered-storage-s3/*"
+      KAFKA_RSM_CONFIG_S3_BUCKET_NAME: "kafka-ts-us-east-1"
+      KAFKA_RSM_CONFIG_S3_REGION: "us-east-1"
+      KAFKA_RSM_CONFIG_S3_ENDPOINT_URL: "http://minio:9000"
+      KAFKA_RSM_CONFIG_S3_CREDENTIALS_PROVIDER.CLASS: "com.amazonaws.auth.AWSStaticCredentialsProvider"
+      KAFKA_RSM_CONFIG_S3_CLIENT_AWS_ACCESS_KEY_ID: "admin"
+      KAFKA_RSM_CONFIG_S3_CLIENT_AWS_SECRET_ACCESS_KEY: "password"
+      KAFKA_RSM_CONFIG_S3_PUBLIC_KEY_PEM: "/kafka/plugins/public.pem"
+      KAFKA_RSM_CONFIG_S3_PRIVATE_KEY_PEM: "/kafka/plugins/private.pem"
     volumes:
+      - ../run.sh:/tmp/run.sh
       # mount plugin
       - ./../../s3/build/install/s3:/kafka/plugins/tiered-storage-s3
       # encryption keys
       - ./../private.pem:/kafka/plugins/private.pem
       - ./../public.pem:/kafka/plugins/public.pem
-    command:
-      - kafka-server-start.sh
-      - config/server.properties
-      - --override
-      - zookeeper.connect=zookeeper:2181
-      - --override
-      - listeners=BROKER://kafka:29092,EXTERNAL://kafka:9092
-      - --override
-      - advertised.listeners=BROKER://kafka:29092,EXTERNAL://localhost:9092
-      - --override
-      - listener.security.protocol.map=BROKER:PLAINTEXT,EXTERNAL:PLAINTEXT
-      - --override
-      - inter.broker.listener.name=BROKER
-      # Enable Tiered storage
-      - --override
-      - remote.log.storage.system.enable=true
-      # Tiered Storage: RLMM config
-      - --override
-      - remote.log.metadata.manager.class.name=org.apache.kafka.server.log.remote.metadata.storage.TopicBasedRemoteLogMetadataManager
-      - --override
-      - rlmm.config.remote.log.metadata.common.client.bootstrap.servers=kafka:29092
-      - --override
-      - rlmm.config.remote.log.metadata.topic.replication.factor=1
-      # Tiered storage S3 plugin
-      - --override
-      - remote.log.storage.manager.class.name=io.aiven.kafka.tiered.storage.s3.S3RemoteStorageManager
-      - --override
-      - remote.log.storage.manager.class.path=/kafka/plugins/tiered-storage-s3/*
-      - --override
-      - rsm.config.s3.bucket.name=kafka-ts-us-east-1
-      - --override
-      - rsm.config.s3.region=us-east-1
-      - --override
-      - rsm.config.s3.endpoint.url=http://minio:9000
-      - --override
-      - rsm.config.s3.credentials.provider.class=com.amazonaws.auth.AWSStaticCredentialsProvider
-      - --override
-      - rsm.config.s3.client.aws_access_key_id=admin
-      - --override
-      - rsm.config.s3.client.aws_secret_access_key=password
-      - --override
-      - rsm.config.s3.public_key_pem=/kafka/plugins/public.pem
-      - --override
-      - rsm.config.s3.private_key_pem=/kafka/plugins/private.pem
+    command: "bash -c 'if [ ! -f /tmp/run.sh ]; then echo \"ERROR: Did you forget the run.sh file that came with this docker-compose.yml file?\" && exit 1 ; else /tmp/run.sh && /etc/confluent/docker/run ; fi'"
 
   minio:
     image: quay.io/minio/minio
