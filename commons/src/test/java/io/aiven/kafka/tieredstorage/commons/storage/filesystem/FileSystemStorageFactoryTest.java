@@ -96,6 +96,6 @@ class FileSystemStorageFactoryTest {
 
         osFactory.fileDeleter().delete("aaa/0.log.txt");
 
-        assertThat(new File(fsRoot, "aaa")).isEmptyDirectory();
+        assertThat(new File(fsRoot, "aaa")).doesNotExist();
     }
 }
