@@ -58,11 +58,11 @@ public class VariableSizeChunkIndex extends AbstractChunkIndex {
     // TODO consider storing and caching chunks encoded when they are fetched from remote storage
     // This will have smaller memory footprint than boxed integers.
     @JsonCreator
-    public VariableSizeChunkIndex(@JsonProperty("originalChunkSize")
+    public VariableSizeChunkIndex(@JsonProperty(value = "originalChunkSize", required = true)
                                   final int originalChunkSize,
-                                  @JsonProperty("originalFileSize")
+                                  @JsonProperty(value = "originalFileSize", required = true)
                                   final int originalFileSize,
-                                  @JsonProperty("transformedChunks")
+                                  @JsonProperty(value = "transformedChunks", required = true)
                                   @JsonDeserialize(using = TransformedChunksDeserializer.class)
                                   final List<Integer> transformedChunks) {
         super(originalChunkSize, originalFileSize,

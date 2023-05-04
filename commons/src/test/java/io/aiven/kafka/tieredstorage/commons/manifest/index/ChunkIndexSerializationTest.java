@@ -26,10 +26,12 @@ import io.aiven.kafka.tieredstorage.commons.Chunk;
 
 import com.fasterxml.jackson.core.JsonProcessingException;
 import com.fasterxml.jackson.databind.ObjectMapper;
+import com.fasterxml.jackson.databind.exc.MismatchedInputException;
 import com.github.luben.zstd.ZstdCompressCtx;
 import org.junit.jupiter.api.Test;
 
 import static org.assertj.core.api.Assertions.assertThat;
+import static org.assertj.core.api.Assertions.assertThatThrownBy;
 
 public class ChunkIndexSerializationTest {
     final ObjectMapper mapper = new ObjectMapper();
@@ -118,6 +120,72 @@ public class ChunkIndexSerializationTest {
             new Chunk(2, 200, 50, 30, 30)
         );
         assertThat(index.chunkCount).isEqualTo(3);
+    }
+
+    @Test
+    void deserializationShouldRequireFieldsForFixedSizeChunkIndex() {
+        final String json1 = "{"
+            + "\"type\":\"fixed\","
+            + "\"originalFileSize\":250,"
+            + "\"transformedChunkSize\":110,"
+            + "\"finalTransformedChunkSize\":30}";
+        assertThatThrownBy(() -> mapper.readValue(json1, FixedSizeChunkIndex.class))
+            .isInstanceOf(MismatchedInputException.class)
+            .hasMessageStartingWith("Missing required creator property 'originalChunkSize' (index 0)");
+
+        final String json2 = "{"
+            + "\"type\":\"fixed\","
+            + "\"originalChunkSize\":100,"
+            + "\"transformedChunkSize\":110,"
+            + "\"finalTransformedChunkSize\":30}";
+        assertThatThrownBy(() -> mapper.readValue(json2, FixedSizeChunkIndex.class))
+            .isInstanceOf(MismatchedInputException.class)
+            .hasMessageStartingWith("Missing required creator property 'originalFileSize' (index 1)");
+
+        final String json3 = "{"
+            + "\"type\":\"fixed\","
+            + "\"originalChunkSize\":100,"
+            + "\"originalFileSize\":250,"
+            + "\"finalTransformedChunkSize\":30}";
+        assertThatThrownBy(() -> mapper.readValue(json3, FixedSizeChunkIndex.class))
+            .isInstanceOf(MismatchedInputException.class)
+            .hasMessageStartingWith("Missing required creator property 'transformedChunkSize' (index 2)");
+
+        final String json4 = "{"
+            + "\"type\":\"fixed\","
+            + "\"originalChunkSize\":100,"
+            + "\"originalFileSize\":250,"
+            + "\"transformedChunkSize\":110}";
+        assertThatThrownBy(() -> mapper.readValue(json4, FixedSizeChunkIndex.class))
+            .isInstanceOf(MismatchedInputException.class)
+            .hasMessageStartingWith("Missing required creator property 'finalTransformedChunkSize' (index 3)");
+    }
+
+    @Test
+    void deserializationShouldRequireFieldsForVariableSizeChunkIndex() {
+        final String json1 = "{"
+            + "\"type\":\"variable\","
+            + "\"originalFileSize\":250,"
+            + "\"transformedChunks\":\"" + ENCODED_CHUNKS + "\"}";
+        assertThatThrownBy(() -> mapper.readValue(json1, VariableSizeChunkIndex.class))
+            .isInstanceOf(MismatchedInputException.class)
+            .hasMessageStartingWith("Missing required creator property 'originalChunkSize' (index 0)");
+
+        final String json2 = "{"
+            + "\"type\":\"variable\","
+            + "\"originalChunkSize\":100,"
+            + "\"transformedChunks\":\"" + ENCODED_CHUNKS + "\"}";
+        assertThatThrownBy(() -> mapper.readValue(json2, VariableSizeChunkIndex.class))
+            .isInstanceOf(MismatchedInputException.class)
+            .hasMessageStartingWith("Missing required creator property 'originalFileSize' (index 1)");
+
+        final String json3 = "{"
+            + "\"type\":\"variable\","
+            + "\"originalChunkSize\":100,"
+            + "\"originalFileSize\":250}";
+        assertThatThrownBy(() -> mapper.readValue(json3, VariableSizeChunkIndex.class))
+            .isInstanceOf(MismatchedInputException.class)
+            .hasMessageStartingWith("Missing required creator property 'transformedChunks' (index 2)");
     }
 
     @Test
