@@ -82,7 +82,7 @@ public class SegmentEncryptionMetadataV1 implements SegmentEncryptionMetadata {
 
     @Override
     public String toString() {
-        return "SegmentManifestV1("
+        return "SegmentEncryptionMetadataV1("
             + "dataKey=" + dataKey
             + ", aad=" + Arrays.toString(aad)
             + ")";
