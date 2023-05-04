@@ -56,4 +56,12 @@ public class ChunkKey {
         result = 31 * result + chunkId;
         return result;
     }
+
+    @Override
+    public String toString() {
+        return "ChunkKey("
+            + "uuid=" + uuid
+            + ", chunkId=" + chunkId
+            + ")";
+    }
 }

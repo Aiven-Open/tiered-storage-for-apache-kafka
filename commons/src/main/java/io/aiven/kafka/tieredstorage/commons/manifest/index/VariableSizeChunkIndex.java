@@ -105,4 +105,13 @@ public class VariableSizeChunkIndex extends AbstractChunkIndex {
     public int hashCode() {
         return Objects.hash(originalChunkSize, originalFileSize, transformedChunks);
     }
+
+    @Override
+    public String toString() {
+        return "VariableSizeChunkIndex("
+            + "originalChunkSize=" + originalChunkSize
+            + ", originalFileSize=" + originalFileSize
+            + ", transformedChunks=" + transformedChunks
+            + ")";
+    }
 }

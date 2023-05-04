@@ -110,4 +110,14 @@ public class FixedSizeChunkIndex extends AbstractChunkIndex {
     public int hashCode() {
         return Objects.hash(originalChunkSize, originalFileSize, transformedChunkSize, finalTransformedChunkSize);
     }
+
+    @Override
+    public String toString() {
+        return "FixedSizeChunkIndex("
+            + "originalChunkSize=" + originalChunkSize
+            + ", originalFileSize=" + originalFileSize
+            + ", transformedChunkSize=" + transformedChunkSize
+            + ", finalTransformedChunkSize=" + finalTransformedChunkSize
+            + ")";
+    }
 }
