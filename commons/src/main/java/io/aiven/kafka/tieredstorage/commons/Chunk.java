@@ -71,7 +71,7 @@ public class Chunk {
 
     @Override
     public String toString() {
-        return "ChunkPositionAndSize("
+        return "Chunk("
             + "index=" + id
             + ", originalPosition=" + originalPosition
             + ", originalSize=" + originalSize
