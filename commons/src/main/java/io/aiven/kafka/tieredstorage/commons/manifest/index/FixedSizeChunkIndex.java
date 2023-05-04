@@ -56,13 +56,13 @@ public class FixedSizeChunkIndex extends AbstractChunkIndex {
     private final List<Chunk> chunks;
 
     @JsonCreator
-    public FixedSizeChunkIndex(@JsonProperty("originalChunkSize")
+    public FixedSizeChunkIndex(@JsonProperty(value = "originalChunkSize", required = true)
                                final int originalChunkSize,
-                               @JsonProperty("originalFileSize")
+                               @JsonProperty(value = "originalFileSize", required = true)
                                final int originalFileSize,
-                               @JsonProperty("transformedChunkSize")
+                               @JsonProperty(value = "transformedChunkSize", required = true)
                                final int transformedChunkSize,
-                               @JsonProperty("finalTransformedChunkSize")
+                               @JsonProperty(value = "finalTransformedChunkSize", required = true)
                                final int finalTransformedChunkSize) {
         super(originalChunkSize, originalFileSize, finalTransformedChunkSize,
             chunkCount(originalChunkSize, originalFileSize));
