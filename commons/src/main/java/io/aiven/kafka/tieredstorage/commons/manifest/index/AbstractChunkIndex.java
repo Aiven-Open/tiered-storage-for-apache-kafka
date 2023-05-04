@@ -35,13 +35,13 @@ public abstract class AbstractChunkIndex implements ChunkIndex {
                                  final int originalFileSize,
                                  final int finalTransformedChunkSize,
                                  final int chunkCount) {
-        checkSize(originalChunkSize, "Original chunk size");
+        checkSizePositive(originalChunkSize, "Original chunk size");
         this.originalChunkSize = originalChunkSize;
 
-        checkSize(originalFileSize, "Original file size");
+        checkSizeNonNegative(originalFileSize, "Original file size");
         this.originalFileSize = originalFileSize;
 
-        checkSize(finalTransformedChunkSize, "Final transformed chunk size");
+        checkSizeNonNegative(finalTransformedChunkSize, "Final transformed chunk size");
         this.finalTransformedChunkSize = finalTransformedChunkSize;
 
         this.chunkCount = chunkCount;
@@ -115,10 +115,17 @@ public abstract class AbstractChunkIndex implements ChunkIndex {
 
     protected abstract int transformedChunkSize(final int chunkI);
 
-    protected final void checkSize(final int size, final String name) {
+    protected static void checkSizeNonNegative(final int size, final String name) {
         if (size < 0) {
             throw new IllegalArgumentException(
                 name + " must be non-negative, " + size + " given");
+        }
+    }
+
+    protected static void checkSizePositive(final int size, final String name) {
+        if (size <= 0) {
+            throw new IllegalArgumentException(
+                name + " must be positive, " + size + " given");
         }
     }
 

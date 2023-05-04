@@ -67,13 +67,14 @@ public class FixedSizeChunkIndex extends AbstractChunkIndex {
         super(originalChunkSize, originalFileSize, finalTransformedChunkSize,
             chunkCount(originalChunkSize, originalFileSize));
 
-        checkSize(transformedChunkSize, "Transformed chunk size");
+        checkSizeNonNegative(transformedChunkSize, "Transformed chunk size");
         this.transformedChunkSize = transformedChunkSize;
 
         chunks = materializeChunks();
     }
 
     private static int chunkCount(final int originalChunkSize, final int originalFileSize) {
+        checkSizePositive(originalChunkSize, "Original chunk size");
         // ceil
         return originalFileSize % originalChunkSize == 0
             ? originalFileSize / originalChunkSize
