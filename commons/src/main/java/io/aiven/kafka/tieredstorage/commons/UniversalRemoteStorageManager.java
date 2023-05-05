@@ -24,10 +24,18 @@ import java.io.IOException;
 import java.io.InputStream;
 import java.io.SequenceInputStream;
 import java.nio.file.Files;
+import java.util.List;
 import java.util.Map;
 import java.util.Objects;
 
+import org.apache.kafka.common.metrics.JmxReporter;
+import org.apache.kafka.common.metrics.KafkaMetricsContext;
+import org.apache.kafka.common.metrics.MetricConfig;
+import org.apache.kafka.common.metrics.Metrics;
+import org.apache.kafka.common.metrics.Sensor;
+import org.apache.kafka.common.metrics.stats.Rate;
 import org.apache.kafka.common.utils.ByteBufferInputStream;
+import org.apache.kafka.common.utils.Time;
 import org.apache.kafka.server.log.remote.storage.LogSegmentData;
 import org.apache.kafka.server.log.remote.storage.RemoteLogSegmentMetadata;
 import org.apache.kafka.server.log.remote.storage.RemoteStorageException;
@@ -62,6 +70,9 @@ import static org.apache.kafka.server.log.remote.storage.RemoteStorageManager.In
 import static org.apache.kafka.server.log.remote.storage.RemoteStorageManager.IndexType.TRANSACTION;
 
 public class UniversalRemoteStorageManager implements RemoteStorageManager {
+    private final Metrics metrics;
+    private final Sensor segmentCopyPerSec;
+
     private UniversalRemoteStorageManagerConfig config;
 
     private ObjectStorageFactory objectStorageFactory;
@@ -73,6 +84,22 @@ public class UniversalRemoteStorageManager implements RemoteStorageManager {
     private ObjectMapper mapper;
     private ChunkManager chunkManager;
     private ObjectKey objectKey;
+
+    UniversalRemoteStorageManager() {
+        this(Time.SYSTEM);
+    }
+
+    // for testing
+    UniversalRemoteStorageManager(final Time time) {
+        final JmxReporter reporter = new JmxReporter();
+        metrics = new Metrics(
+            new MetricConfig(), List.of(reporter), time,
+            new KafkaMetricsContext("aiven.kafka.server.tieredstorage")
+        );
+        segmentCopyPerSec = metrics.sensor("segment-copy");
+        segmentCopyPerSec.add(
+            metrics.metricName("segment-copy-rate", "remote-storage-manager-metrics"), new Rate());
+    }
 
     @Override
     public void configure(final Map<String, ?> configs) {
@@ -113,6 +140,9 @@ public class UniversalRemoteStorageManager implements RemoteStorageManager {
                                    final LogSegmentData logSegmentData) throws RemoteStorageException {
         Objects.requireNonNull(remoteLogSegmentMetadata, "remoteLogSegmentId must not be null");
         Objects.requireNonNull(logSegmentData, "logSegmentData must not be null");
+
+        segmentCopyPerSec.record();
+
         try {
             TransformChunkEnumeration transformEnum = new BaseTransformChunkEnumeration(
                 Files.newInputStream(logSegmentData.logSegment()), chunkSize);
@@ -235,5 +265,10 @@ public class UniversalRemoteStorageManager implements RemoteStorageManager {
 
     @Override
     public void close() {
+        try {
+            metrics.close();
+        } catch (final Exception e) {
+            // TODO log
+        }
     }
 }
