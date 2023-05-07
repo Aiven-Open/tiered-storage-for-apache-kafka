@@ -18,18 +18,52 @@ package io.aiven.kafka.tieredstorage.commons;
 
 import java.io.IOException;
 import java.io.InputStream;
+import java.util.List;
 
 import org.apache.kafka.server.log.remote.storage.RemoteLogSegmentMetadata;
 
 import io.aiven.kafka.tieredstorage.commons.manifest.SegmentManifest;
+import io.aiven.kafka.tieredstorage.commons.security.AesEncryptionProvider;
+import io.aiven.kafka.tieredstorage.commons.storage.ObjectStorageFactory;
+import io.aiven.kafka.tieredstorage.commons.transform.BaseDetransformChunkEnumeration;
+import io.aiven.kafka.tieredstorage.commons.transform.DecompressionChunkEnumeration;
+import io.aiven.kafka.tieredstorage.commons.transform.DecryptionChunkEnumeration;
+import io.aiven.kafka.tieredstorage.commons.transform.DetransformChunkEnumeration;
+import io.aiven.kafka.tieredstorage.commons.transform.DetransformFinisher;
 
-public interface ChunkManager {
+public class ChunkManager {
+    private final ObjectStorageFactory objectStorageFactory;
+    private final ObjectKey objectKey;
+    private final AesEncryptionProvider aesEncryptionProvider;
+
+    public ChunkManager(final ObjectStorageFactory objectStorageFactory, final ObjectKey objectKey,
+            final AesEncryptionProvider aesEncryptionProvider) {
+        this.objectStorageFactory = objectStorageFactory;
+        this.objectKey = objectKey;
+        this.aesEncryptionProvider = aesEncryptionProvider;
+    }
+
     /**
      * Gets a chunk of a segment.
      *
      * @return an {@link InputStream} of the chunk, plain text (i.e. decrypted and decompressed).
      */
-    InputStream getChunk(RemoteLogSegmentMetadata remoteLogSegmentMetadata,
-                         SegmentManifest manifest,
-                         int chunkId) throws IOException;
+    public InputStream getChunk(final RemoteLogSegmentMetadata remoteLogSegmentMetadata, final SegmentManifest manifest,
+            final int chunkId) throws IOException {
+        final Chunk chunk = manifest.chunkIndex().chunks().get(chunkId);
+        final InputStream segmentFile = objectStorageFactory.fileFetcher()
+                .fetch(objectKey.key(remoteLogSegmentMetadata, ObjectKey.Suffix.LOG), chunk.transformedPosition,
+                        chunk.transformedPosition + chunk.transformedSize - 1);
+        DetransformChunkEnumeration detransformEnum = new BaseDetransformChunkEnumeration(segmentFile, List.of(chunk));
+        if (manifest.encryption().isPresent()) {
+            detransformEnum = new DecryptionChunkEnumeration(detransformEnum, manifest.encryption().get().ivSize(),
+                    encryptedChunk -> aesEncryptionProvider.decryptionCipher(encryptedChunk,
+                            manifest.encryption().get()));
+        }
+        if (manifest.compression()) {
+            detransformEnum = new DecompressionChunkEnumeration(detransformEnum);
+        }
+        final DetransformFinisher detransformFinisher = new DetransformFinisher(detransformEnum);
+        return detransformFinisher.nextElement();
+    }
 }
