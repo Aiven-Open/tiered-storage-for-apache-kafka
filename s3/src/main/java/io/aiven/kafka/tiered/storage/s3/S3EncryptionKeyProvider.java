@@ -27,8 +27,7 @@ import java.security.Security;
 import java.util.concurrent.TimeUnit;
 
 import io.aiven.kafka.tieredstorage.commons.io.IOUtils;
-import io.aiven.kafka.tieredstorage.commons.security.AesEncryptionProvider;
-import io.aiven.kafka.tieredstorage.commons.security.RsaEncryptionProvider;
+import io.aiven.kafka.tieredstorage.commons.security.EncryptionProvider;
 import io.aiven.kafka.tieredstorage.commons.security.metadata.EncryptedRepositoryMetadata;
 
 import com.amazonaws.AmazonClientException;
@@ -43,8 +42,7 @@ public class S3EncryptionKeyProvider {
     private static final Logger log = LoggerFactory.getLogger(S3RemoteStorageManager.class);
     private final AmazonS3 s3Client;
     private final S3RemoteStorageManagerConfig config;
-    private final RsaEncryptionProvider encryptionKeyProvider;
-    private final AesEncryptionProvider aesEncryptionProvider;
+    private final EncryptionProvider encryptionKeyProvider;
     private final Cache<String, byte[]> encryptionMetadataCache;
 
     static {
@@ -58,8 +56,7 @@ public class S3EncryptionKeyProvider {
                 .expireAfterWrite(config.encryptionMetadataCacheRetentionMs(), TimeUnit.MILLISECONDS)
                 .maximumSize(config.encryptionMetadataCacheSize())
                 .build();
-        encryptionKeyProvider = RsaEncryptionProvider.of(Path.of(config.publicKey()), Path.of(config.privateKey()));
-        aesEncryptionProvider = new AesEncryptionProvider();
+        encryptionKeyProvider = EncryptionProvider.of(Path.of(config.publicKey()), Path.of(config.privateKey()));
     }
 
     public SecretKey createOrRestoreEncryptionKey(final String metadataFileKey) {
@@ -84,13 +81,13 @@ public class S3EncryptionKeyProvider {
                 log.info("Restoring encryption key from metadata file. Path: {}", metadataFileKey);
                 try (final InputStream in = s3Client.getObject(config.s3BucketName(),
                         metadataFileKey).getObjectContent()) {
-                    return repositoryMetadata.deserialize(in.readAllBytes());
+                    return repositoryMetadata.deserialize(in.readAllBytes()).getEncoded();
                 } catch (final AmazonClientException | IOException e) {
                     throw new RuntimeException("Couldn't read metadata file from bucket " + config.s3BucketName(), e);
                 }
             } else {
                 log.info("Creating new metadata file. Path: {}", metadataFileKey);
-                final SecretKey dataKey = aesEncryptionProvider.createDataKey();
+                final SecretKey dataKey = encryptionKeyProvider.createDataKeyAndAAD().dataKey;
                 try {
                     uploadMetadata(repositoryMetadata.serialize(dataKey), metadataFileKey);
                 } catch (final IOException e) {

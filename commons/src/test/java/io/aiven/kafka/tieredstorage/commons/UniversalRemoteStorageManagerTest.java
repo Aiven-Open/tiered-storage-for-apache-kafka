@@ -17,8 +17,8 @@
 package io.aiven.kafka.tieredstorage.commons;
 
 import javax.crypto.Cipher;
+import javax.crypto.SecretKey;
 import javax.crypto.spec.IvParameterSpec;
-import javax.crypto.spec.SecretKeySpec;
 
 import java.io.File;
 import java.io.IOException;
@@ -45,7 +45,6 @@ import org.apache.kafka.server.log.remote.storage.RemoteStorageException;
 import org.apache.kafka.server.log.remote.storage.RemoteStorageManager;
 
 import io.aiven.kafka.tieredstorage.commons.manifest.index.ChunkIndex;
-import io.aiven.kafka.tieredstorage.commons.security.RsaEncryptionProvider;
 
 import com.github.luben.zstd.Zstd;
 import org.apache.commons.io.input.BoundedInputStream;
@@ -61,10 +60,8 @@ import org.testcontainers.shaded.com.fasterxml.jackson.databind.ObjectMapper;
 import static org.assertj.core.api.Assertions.assertThat;
 
 @Disabled
-class UniversalRemoteStorageManagerTest extends RsaKeyAwareTest {
+class UniversalRemoteStorageManagerTest extends EncryptionAwareTest {
     RemoteStorageManager rsm;
-
-    RsaEncryptionProvider rsaEncryptionProvider;
 
     @TempDir
     Path tmpDir;
@@ -97,7 +94,6 @@ class UniversalRemoteStorageManagerTest extends RsaKeyAwareTest {
     @BeforeEach
     void init() throws IOException {
         rsm = new UniversalRemoteStorageManager();
-        rsaEncryptionProvider = RsaEncryptionProvider.of(publicKeyPem, privateKeyPem);
 
         sourceDir = Path.of(tmpDir.toString(), "source");
         Files.createDirectories(sourceDir);
@@ -280,7 +276,7 @@ class UniversalRemoteStorageManagerTest extends RsaKeyAwareTest {
         final JsonNode manifest = objectMapper.readTree(new File(targetDir.toString(), TARGET_MANIFEST_FILE));
 
         final byte[] encryptedDataKey = manifest.get("encryption").get("dataKey").binaryValue();
-        final byte[] dataKey = rsaEncryptionProvider.decryptDataKey(encryptedDataKey);
+        final SecretKey dataKey = encryptionProvider.decryptDataKey(encryptedDataKey);
         final byte[] aad = manifest.get("encryption").get("aad").binaryValue();
 
         final ChunkIndex chunkIndex = objectMapper.treeToValue(manifest.get("chunkIndex"), ChunkIndex.class);
@@ -294,8 +290,7 @@ class UniversalRemoteStorageManagerTest extends RsaKeyAwareTest {
                 try {
                     final Cipher cipher = Cipher.getInstance("AES/GCM/NoPadding", "BC");
                     final int ivSize = cipher.getIV().length;
-                    final SecretKeySpec secretKeySpec = new SecretKeySpec(dataKey, "AES");
-                    cipher.init(Cipher.DECRYPT_MODE, secretKeySpec,
+                    cipher.init(Cipher.DECRYPT_MODE, dataKey,
                         new IvParameterSpec(transformedChunk, 0, ivSize),
                         SecureRandom.getInstanceStrong());
                     cipher.updateAAD(aad);

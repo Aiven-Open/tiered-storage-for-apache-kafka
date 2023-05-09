@@ -25,8 +25,6 @@ import com.fasterxml.jackson.annotation.JsonCreator;
 import com.fasterxml.jackson.annotation.JsonProperty;
 
 public class SegmentEncryptionMetadataV1 implements SegmentEncryptionMetadata {
-    public static final int IV_SIZE = 12;
-
     private final SecretKey dataKey;
     private final byte[] aad;
 
@@ -37,11 +35,6 @@ public class SegmentEncryptionMetadataV1 implements SegmentEncryptionMetadata {
                                        final byte[] aad) {
         this.dataKey = Objects.requireNonNull(dataKey, "dataKey cannot be null");
         this.aad = Objects.requireNonNull(aad, "aad cannot be null");
-    }
-
-    @Override
-    public int ivSize() {
-        return IV_SIZE;
     }
 
     @Override

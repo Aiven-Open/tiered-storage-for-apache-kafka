@@ -21,7 +21,8 @@ import javax.crypto.Cipher;
 import javax.crypto.IllegalBlockSizeException;
 import javax.crypto.ShortBufferException;
 
-import io.aiven.kafka.tieredstorage.commons.AesKeyAwareTest;
+import io.aiven.kafka.tieredstorage.commons.EncryptionAwareTest;
+import io.aiven.kafka.tieredstorage.commons.security.DataKeyAndAAD;
 
 import org.junit.jupiter.api.Test;
 import org.junit.jupiter.api.extension.ExtendWith;
@@ -35,7 +36,7 @@ import static org.mockito.Mockito.verify;
 import static org.mockito.Mockito.when;
 
 @ExtendWith(MockitoExtension.class)
-class DecryptionChunkEnumerationTest extends AesKeyAwareTest {
+class DecryptionChunkEnumerationTest extends EncryptionAwareTest {
     @Mock
     DetransformChunkEnumeration inner;
 
@@ -81,13 +82,18 @@ class DecryptionChunkEnumerationTest extends AesKeyAwareTest {
     @Test
     void decrypt() throws IllegalBlockSizeException, BadPaddingException, ShortBufferException {
         final byte[] data = {0, 1, 2, 3, 4, 5, 6, 7, 8, 9};
-        final Cipher encryptionCipher = encryptionCipherSupplier();
+        final DataKeyAndAAD dataKeyAndAAD = encryptionProvider.createDataKeyAndAAD();
+        final Cipher encryptionCipher = encryptionProvider.encryptionCipher(dataKeyAndAAD);
         final byte[] iv = encryptionCipher.getIV();
         final byte[] encrypted = new byte[iv.length + encryptionCipher.getOutputSize(data.length)];
         System.arraycopy(iv, 0, encrypted, 0, iv.length);
         encryptionCipher.doFinal(data, 0, data.length, encrypted, iv.length);
 
-        final var transform = new DecryptionChunkEnumeration(inner, ivSize, AesKeyAwareTest::decryptionCipherSupplier);
+        final var transform = new DecryptionChunkEnumeration(
+            inner,
+            ivSize,
+            bytes -> encryptionProvider.decryptionCipher(bytes, dataKeyAndAAD)
+        );
         when(inner.nextElement()).thenReturn(encrypted);
         final byte[] decrypted = transform.nextElement();
 

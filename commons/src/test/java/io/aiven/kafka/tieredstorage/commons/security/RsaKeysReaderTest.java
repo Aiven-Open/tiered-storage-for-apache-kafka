@@ -24,7 +24,7 @@ import java.security.KeyPairGenerator;
 import java.security.spec.PKCS8EncodedKeySpec;
 import java.security.spec.X509EncodedKeySpec;
 
-import io.aiven.kafka.tieredstorage.commons.RsaKeyAwareTest;
+import io.aiven.kafka.tieredstorage.commons.EncryptionAwareTest;
 import io.aiven.kafka.tieredstorage.commons.security.RsaEncryptionProvider.RsaKeysReader;
 
 import org.junit.jupiter.api.Test;
@@ -32,7 +32,7 @@ import org.junit.jupiter.api.io.TempDir;
 
 import static org.assertj.core.api.Assertions.assertThatThrownBy;
 
-class RsaKeysReaderTest extends RsaKeyAwareTest {
+class RsaKeysReaderTest extends EncryptionAwareTest {
 
     @Test
     public void failsForUnknownPaths() {

@@ -21,8 +21,9 @@ import java.io.IOException;
 import java.io.SequenceInputStream;
 import java.util.Random;
 
-import io.aiven.kafka.tieredstorage.commons.AesKeyAwareTest;
+import io.aiven.kafka.tieredstorage.commons.EncryptionAwareTest;
 import io.aiven.kafka.tieredstorage.commons.manifest.index.ChunkIndex;
+import io.aiven.kafka.tieredstorage.commons.security.DataKeyAndAAD;
 
 import org.junit.jupiter.api.BeforeAll;
 import org.junit.jupiter.params.ParameterizedTest;
@@ -30,7 +31,7 @@ import org.junit.jupiter.params.provider.ValueSource;
 
 import static org.assertj.core.api.Assertions.assertThat;
 
-public class TransformsEndToEndTest extends AesKeyAwareTest {
+public class TransformsEndToEndTest extends EncryptionAwareTest {
     static final int ORIGINAL_SIZE = 1812004;
 
     static byte[] original;
@@ -76,8 +77,11 @@ public class TransformsEndToEndTest extends AesKeyAwareTest {
         if (compression) {
             transformEnum = new CompressionChunkEnumeration(transformEnum);
         }
+        final DataKeyAndAAD dataKeyAndAAD = encryptionProvider.createDataKeyAndAAD();
         if (encryption) {
-            transformEnum = new EncryptionChunkEnumeration(transformEnum, AesKeyAwareTest::encryptionCipherSupplier);
+            transformEnum = new EncryptionChunkEnumeration(
+                transformEnum,
+                () -> encryptionProvider.encryptionCipher(dataKeyAndAAD));
         }
         final var transformFinisher = new TransformFinisher(transformEnum, ORIGINAL_SIZE);
         final byte[] uploadedData;
@@ -92,7 +96,7 @@ public class TransformsEndToEndTest extends AesKeyAwareTest {
             new ByteArrayInputStream(uploadedData), chunkIndex.chunks());
         if (encryption) {
             detransformEnum = new DecryptionChunkEnumeration(
-                detransformEnum, ivSize, AesKeyAwareTest::decryptionCipherSupplier);
+                detransformEnum, ivSize, bytes -> encryptionProvider.decryptionCipher(bytes, dataKeyAndAAD));
         }
         if (compression) {
             detransformEnum = new DecompressionChunkEnumeration(detransformEnum);

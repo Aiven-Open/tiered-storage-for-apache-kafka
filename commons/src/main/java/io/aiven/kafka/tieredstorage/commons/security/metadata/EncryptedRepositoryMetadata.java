@@ -21,30 +21,30 @@ import javax.crypto.SecretKey;
 import java.io.IOException;
 import java.util.Base64;
 
-import io.aiven.kafka.tieredstorage.commons.security.RsaEncryptionProvider;
+import io.aiven.kafka.tieredstorage.commons.security.EncryptionProvider;
 
 import com.fasterxml.jackson.core.JsonProcessingException;
 import com.fasterxml.jackson.databind.ObjectMapper;
 
 public class EncryptedRepositoryMetadata {
 
-    private final RsaEncryptionProvider rsaEncryptionProvider;
+    private final EncryptionProvider encryptionProvider;
 
     private final ObjectMapper objectMapper;
 
     static final int VERSION = 1;
 
-    public EncryptedRepositoryMetadata(final RsaEncryptionProvider rsaEncryptionProvider) {
-        this.rsaEncryptionProvider = rsaEncryptionProvider;
+    public EncryptedRepositoryMetadata(final EncryptionProvider encryptionProvider) {
+        this.encryptionProvider = encryptionProvider;
         this.objectMapper = new ObjectMapper();
     }
 
     public byte[] serialize(final SecretKey dataKey) throws JsonProcessingException {
-        final var encryptedKey = Base64.getEncoder().encodeToString(rsaEncryptionProvider.encryptDataKey(dataKey));
+        final var encryptedKey = Base64.getEncoder().encodeToString(encryptionProvider.encryptDataKey(dataKey));
         return objectMapper.writeValueAsBytes(new EncryptionMetadata(encryptedKey, VERSION));
     }
 
-    public byte[] deserialize(final byte[] metadata) throws IOException {
+    public SecretKey deserialize(final byte[] metadata) throws IOException {
         final EncryptionMetadata encryptionMetadata;
         try {
             encryptionMetadata = objectMapper.readValue(metadata, EncryptionMetadata.class);
@@ -56,7 +56,7 @@ public class EncryptedRepositoryMetadata {
         }
         final var encryptedKey =
             Base64.getDecoder().decode(encryptionMetadata.encryptionMetadata());
-        return rsaEncryptionProvider.decryptDataKey(encryptedKey);
+        return encryptionProvider.decryptDataKey(encryptedKey);
     }
 
 }

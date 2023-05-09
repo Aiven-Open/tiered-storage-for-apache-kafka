@@ -19,7 +19,6 @@ package io.aiven.kafka.tieredstorage.commons.manifest;
 import javax.crypto.SecretKey;
 
 public interface SegmentEncryptionMetadata {
-    int ivSize();
 
     SecretKey dataKey();
 

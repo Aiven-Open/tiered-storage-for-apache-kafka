@@ -16,34 +16,28 @@
 
 package io.aiven.kafka.tieredstorage.commons.security;
 
-import javax.crypto.spec.SecretKeySpec;
-
-import io.aiven.kafka.tieredstorage.commons.RsaKeyAwareTest;
+import io.aiven.kafka.tieredstorage.commons.EncryptionAwareTest;
 
 import org.junit.jupiter.api.Test;
 
 import static org.assertj.core.api.Assertions.assertThat;
 
-public class EncryptionProviderTest extends RsaKeyAwareTest {
+public class EncryptionProviderTest extends EncryptionAwareTest {
 
     @Test
     void alwaysGeneratesNewKey() {
-        final AesEncryptionProvider aesProvider = new AesEncryptionProvider();
-        final var dataKey1 = aesProvider.createDataKey();
-        final var dataKey2 = aesProvider.createDataKey();
+        final var dataKey1 = encryptionProvider.createDataKeyAndAAD().dataKey;
+        final var dataKey2 = encryptionProvider.createDataKeyAndAAD().dataKey;
 
         assertThat(dataKey1).isNotEqualTo(dataKey2);
     }
 
     @Test
     void decryptGeneratedKey() {
-        final var rsaEncryptionProvider = RsaEncryptionProvider.of(publicKeyPem, privateKeyPem);
-        final AesEncryptionProvider aesProvider = new AesEncryptionProvider();
-        final var dataKey = aesProvider.createDataKey();
-        final var encryptedKey = rsaEncryptionProvider.encryptDataKey(dataKey);
-        final var restoredKey = rsaEncryptionProvider.decryptDataKey(encryptedKey);
+        final var dataKey = encryptionProvider.createDataKeyAndAAD().dataKey;
+        final var encryptedKey = encryptionProvider.encryptDataKey(dataKey);
+        final var restoredKey = encryptionProvider.decryptDataKey(encryptedKey);
 
-        assertThat(new SecretKeySpec(restoredKey, "AES")).isEqualTo(dataKey);
+        assertThat(restoredKey).isEqualTo(dataKey);
     }
-
 }

@@ -23,7 +23,7 @@ import java.nio.file.Files;
 import java.nio.file.Path;
 import java.util.Random;
 
-import io.aiven.kafka.tieredstorage.commons.RsaKeyAwareTest;
+import io.aiven.kafka.tieredstorage.commons.EncryptionAwareTest;
 import io.aiven.kafka.tieredstorage.commons.security.AesEncryptionProvider;
 
 import org.junit.jupiter.api.BeforeEach;
@@ -32,7 +32,7 @@ import org.junit.jupiter.api.io.TempDir;
 
 import static org.assertj.core.api.Assertions.assertThat;
 
-public class CryptoIOProviderTest extends RsaKeyAwareTest {
+public class CryptoIOProviderTest extends EncryptionAwareTest {
 
     private static final int BUFFER_SIZE = 8_192;
 

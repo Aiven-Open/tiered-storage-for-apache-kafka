@@ -30,6 +30,7 @@ import io.aiven.kafka.tieredstorage.commons.manifest.SegmentEncryptionMetadata;
 
 public class AesEncryptionProvider implements Encryption, Decryption {
 
+    public static final int IV_SIZE = 12;
     public static final int KEY_SIZE = 512;
     public static final int KEY_AND_AAD_SIZE_BYTES = KEY_SIZE / 8 / 2;
     public static final String AES_TRANSFORMATION = "AES/GCM/NoPadding";
@@ -70,10 +71,10 @@ public class AesEncryptionProvider implements Encryption, Decryption {
     }
 
     public Cipher decryptionCipher(final byte[] encryptedChunk,
-                                   final SegmentEncryptionMetadata encryptionMetadata) {
-        final IvParameterSpec params = new IvParameterSpec(encryptedChunk, 0, encryptionMetadata.ivSize());
-        final Cipher encryptCipher = createDecryptingCipher(encryptionMetadata.dataKey(), params, AES_TRANSFORMATION);
-        encryptCipher.updateAAD(encryptionMetadata.aad());
+                                   final DataKeyAndAAD dataKeyAndAAD) {
+        final IvParameterSpec params = new IvParameterSpec(encryptedChunk, 0, IV_SIZE);
+        final Cipher encryptCipher = createDecryptingCipher(dataKeyAndAAD.dataKey, params, AES_TRANSFORMATION);
+        encryptCipher.updateAAD(dataKeyAndAAD.aad);
         return encryptCipher;
     }
 }
