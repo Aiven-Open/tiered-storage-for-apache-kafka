@@ -16,6 +16,8 @@
 
 package io.aiven.kafka.tieredstorage.commons;
 
+import io.aiven.kafka.tieredstorage.commons.storage.BytesRange;
+
 public class Chunk {
     public final int id;
     public final int originalPosition;
@@ -57,6 +59,10 @@ public class Chunk {
             return false;
         }
         return transformedSize == that.transformedSize;
+    }
+
+    BytesRange range() {
+        return BytesRange.of(transformedPosition, transformedPosition + transformedSize);
     }
 
     @Override
