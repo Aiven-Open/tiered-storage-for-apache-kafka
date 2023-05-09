@@ -24,6 +24,7 @@ import java.nio.file.Files;
 import java.nio.file.Path;
 import java.util.Map;
 
+import io.aiven.kafka.tieredstorage.commons.storage.BytesRange;
 import io.aiven.kafka.tieredstorage.commons.storage.ObjectStorageFactory;
 
 import org.junit.jupiter.api.Test;
@@ -89,7 +90,8 @@ class FileSystemStorageFactoryTest {
             assertThat(r).isEqualTo("some file");
         }
 
-        try (final InputStream fetch = osFactory.fileFetcher().fetch("aaa/0.log.txt", 1, data.length - 2)) {
+        final BytesRange range = BytesRange.of(1, data.length - 2);
+        try (final InputStream fetch = osFactory.fileFetcher().fetch("aaa/0.log.txt", range)) {
             final String r = new String(fetch.readAllBytes());
             assertThat(r).isEqualTo("ome fi");
         }

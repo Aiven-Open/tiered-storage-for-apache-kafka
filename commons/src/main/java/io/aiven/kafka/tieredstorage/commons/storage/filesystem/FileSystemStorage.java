@@ -22,6 +22,7 @@ import java.io.OutputStream;
 import java.nio.file.Files;
 import java.nio.file.Path;
 
+import io.aiven.kafka.tieredstorage.commons.storage.BytesRange;
 import io.aiven.kafka.tieredstorage.commons.storage.FileDeleter;
 import io.aiven.kafka.tieredstorage.commons.storage.FileFetcher;
 import io.aiven.kafka.tieredstorage.commons.storage.FileUploader;
@@ -64,23 +65,16 @@ class FileSystemStorage implements FileUploader, FileFetcher, FileDeleter {
     }
 
     @Override
-    public InputStream fetch(final String key, final int from, final int to) throws IOException {
-        if (from < 0) {
-            throw new IllegalArgumentException("from cannot be negative, " + from + " given");
-        }
-        if (from > to) {
-            throw new IllegalArgumentException("from cannot be more than to, from=" + from + ", to=" + to + " given");
-        }
-
+    public InputStream fetch(final String key, final BytesRange range) throws IOException {
         final Path path = fsRoot.resolve(key);
         final long fileSize = Files.size(path);
-        if (to > fileSize) {
-            throw new IllegalArgumentException("position 'to' cannot be equal or higher than the file size, to="
-                + to + ", file size=" + fileSize + " given");
+        if (range.to > fileSize) {
+            throw new IllegalArgumentException("position 'to' cannot be higher than the file size, to="
+                + range.to + ", file size=" + fileSize + " given");
         }
 
-        final InputStream result = new BoundedInputStream(Files.newInputStream(path), to);
-        result.skip(from);
+        final InputStream result = new BoundedInputStream(Files.newInputStream(path), range.to);
+        result.skip(range.from);
         return result;
     }
 
@@ -94,5 +88,12 @@ class FileSystemStorage implements FileUploader, FileFetcher, FileDeleter {
             Files.deleteIfExists(parent);
             parent = parent.getParent();
         }
+    }
+
+    @Override
+    public String toString() {
+        return "FileSystemStorage{"
+            + "fsRoot=" + fsRoot
+            + ", overwrites=" + overwrites + '}';
     }
 }
