@@ -26,9 +26,7 @@ import java.security.NoSuchAlgorithmException;
 import java.security.NoSuchProviderException;
 import java.security.SecureRandom;
 
-import io.aiven.kafka.tieredstorage.commons.manifest.SegmentEncryptionMetadata;
-
-public class AesEncryptionProvider implements Encryption, Decryption {
+public class AesEncryption implements Encryption, Decryption {
 
     public static final int IV_SIZE = 12;
     public static final int KEY_SIZE = 512;
@@ -47,7 +45,7 @@ public class AesEncryptionProvider implements Encryption, Decryption {
         }
     }
 
-    public AesEncryptionProvider() {
+    public AesEncryption() {
         this.aesKeyGenerator = keyGenerator();
     }
 

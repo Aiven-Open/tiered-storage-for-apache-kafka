@@ -24,18 +24,18 @@ import java.nio.file.Path;
 
 public class EncryptionProvider {
 
-    static final int IV_SIZE = AesEncryptionProvider.IV_SIZE;
+    static final int IV_SIZE = AesEncryption.IV_SIZE;
 
-    final RsaEncryptionProvider rsaEncryptionProvider;
-    final AesEncryptionProvider aesEncryptionProvider;
+    final RsaEncryption rsaEncryptionProvider;
+    final AesEncryption aesEncryption;
 
-    public EncryptionProvider(final RsaEncryptionProvider rsaEncryptionProvider) {
-        this.rsaEncryptionProvider = rsaEncryptionProvider;
-        this.aesEncryptionProvider = new AesEncryptionProvider();
+    public EncryptionProvider(final RsaEncryption rsaEncryption) {
+        this.rsaEncryptionProvider = rsaEncryption;
+        this.aesEncryption = new AesEncryption();
     }
 
     public static EncryptionProvider of(final Path publicKey, final Path privateKey) {
-        return new EncryptionProvider(RsaEncryptionProvider.of(publicKey, privateKey));
+        return new EncryptionProvider(RsaEncryption.of(publicKey, privateKey));
     }
 
     public byte[] encryptDataKey(final SecretKey dataKey) {
@@ -48,15 +48,15 @@ public class EncryptionProvider {
     }
 
     public DataKeyAndAAD createDataKeyAndAAD() {
-        return aesEncryptionProvider.createDataKeyAndAAD();
+        return aesEncryption.createDataKeyAndAAD();
     }
 
     public Cipher encryptionCipher(final DataKeyAndAAD dataKeyAndAAD) {
-        return aesEncryptionProvider.encryptionCipher(dataKeyAndAAD);
+        return aesEncryption.encryptionCipher(dataKeyAndAAD);
     }
 
     public Cipher decryptionCipher(final byte[] encryptedChunk, final DataKeyAndAAD dataKeyAndAAD) {
-        return aesEncryptionProvider.decryptionCipher(encryptedChunk, dataKeyAndAAD);
+        return aesEncryption.decryptionCipher(encryptedChunk, dataKeyAndAAD);
     }
 
     public int ivSize() {

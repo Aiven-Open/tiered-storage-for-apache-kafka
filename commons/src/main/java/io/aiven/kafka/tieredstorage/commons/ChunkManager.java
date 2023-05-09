@@ -22,8 +22,10 @@ import java.util.List;
 
 import org.apache.kafka.server.log.remote.storage.RemoteLogSegmentMetadata;
 
+import io.aiven.kafka.tieredstorage.commons.manifest.SegmentEncryptionMetadata;
 import io.aiven.kafka.tieredstorage.commons.manifest.SegmentManifest;
-import io.aiven.kafka.tieredstorage.commons.security.AesEncryptionProvider;
+import io.aiven.kafka.tieredstorage.commons.security.DataKeyAndAAD;
+import io.aiven.kafka.tieredstorage.commons.security.EncryptionProvider;
 import io.aiven.kafka.tieredstorage.commons.storage.ObjectStorageFactory;
 import io.aiven.kafka.tieredstorage.commons.transform.BaseDetransformChunkEnumeration;
 import io.aiven.kafka.tieredstorage.commons.transform.DecompressionChunkEnumeration;
@@ -34,13 +36,14 @@ import io.aiven.kafka.tieredstorage.commons.transform.DetransformFinisher;
 public class ChunkManager {
     private final ObjectStorageFactory objectStorageFactory;
     private final ObjectKey objectKey;
-    private final AesEncryptionProvider aesEncryptionProvider;
+    private final EncryptionProvider encryptionProvider;
 
-    public ChunkManager(final ObjectStorageFactory objectStorageFactory, final ObjectKey objectKey,
-            final AesEncryptionProvider aesEncryptionProvider) {
+    public ChunkManager(final ObjectStorageFactory objectStorageFactory,
+                        final ObjectKey objectKey,
+                        final EncryptionProvider encryptionProvider) {
         this.objectStorageFactory = objectStorageFactory;
         this.objectKey = objectKey;
-        this.aesEncryptionProvider = aesEncryptionProvider;
+        this.encryptionProvider = encryptionProvider;
     }
 
     /**
@@ -55,10 +58,15 @@ public class ChunkManager {
         final InputStream chunkContent = objectStorageFactory.fileFetcher().fetch(segmentKey, chunk.range());
         DetransformChunkEnumeration detransformEnum = new BaseDetransformChunkEnumeration(chunkContent, List.of(chunk));
         if (manifest.encryption().isPresent()) {
+            final SegmentEncryptionMetadata encryptionMetadata = manifest.encryption().get();
+            final DataKeyAndAAD dataKeyAndAAD = new DataKeyAndAAD(
+                encryptionMetadata.dataKey(),
+                encryptionMetadata.aad()
+            );
             detransformEnum = new DecryptionChunkEnumeration(
                 detransformEnum,
-                manifest.encryption().get().ivSize(),
-                encryptedChunk -> aesEncryptionProvider.decryptionCipher(encryptedChunk, manifest.encryption().get())
+                encryptionProvider.ivSize(),
+                encryptedChunk -> encryptionProvider.decryptionCipher(encryptedChunk, dataKeyAndAAD)
             );
         }
         if (manifest.compression()) {

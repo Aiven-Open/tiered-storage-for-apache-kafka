@@ -40,9 +40,9 @@ import org.bouncycastle.util.io.pem.PemReader;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
-public final class RsaEncryptionProvider implements Encryption, Decryption {
+public final class RsaEncryption implements Encryption, Decryption {
 
-    private static final Logger LOGGER = LoggerFactory.getLogger(RsaEncryptionProvider.class);
+    private static final Logger LOGGER = LoggerFactory.getLogger(RsaEncryption.class);
 
 
     private static final String RSA_TRANSFORMATION = "RSA/NONE/OAEPWithSHA3-512AndMGF1Padding";
@@ -50,16 +50,16 @@ public final class RsaEncryptionProvider implements Encryption, Decryption {
 
     private final KeyPair rsaKeyPair;
 
-    private RsaEncryptionProvider(final KeyPair rsaKeyPair) {
+    private RsaEncryption(final KeyPair rsaKeyPair) {
         this.rsaKeyPair = rsaKeyPair;
     }
 
-    public static RsaEncryptionProvider of(final Path rsaPublicKey, final Path rsaPrivateKey) {
+    public static RsaEncryption of(final Path rsaPublicKey, final Path rsaPrivateKey) {
         LOGGER.info("Read RSA keys");
         Objects.requireNonNull(rsaPublicKey, "rsaPublicKey hasn't been set");
         Objects.requireNonNull(rsaPrivateKey, "rsaPrivateKey hasn't been set");
         final KeyPair rsaKeyPair = RsaKeysReader.readRsaKeyPair(rsaPublicKey, rsaPrivateKey);
-        return new RsaEncryptionProvider(rsaKeyPair);
+        return new RsaEncryption(rsaKeyPair);
     }
 
     public byte[] encryptDataKey(final SecretKey dataKey) {

@@ -25,7 +25,7 @@ import java.security.spec.PKCS8EncodedKeySpec;
 import java.security.spec.X509EncodedKeySpec;
 
 import io.aiven.kafka.tieredstorage.commons.EncryptionAwareTest;
-import io.aiven.kafka.tieredstorage.commons.security.RsaEncryptionProvider.RsaKeysReader;
+import io.aiven.kafka.tieredstorage.commons.security.RsaEncryption.RsaKeysReader;
 
 import org.junit.jupiter.api.Test;
 import org.junit.jupiter.api.io.TempDir;

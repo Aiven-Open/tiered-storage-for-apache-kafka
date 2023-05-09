@@ -16,15 +16,12 @@
 
 package io.aiven.kafka.tieredstorage.commons.io;
 
-import javax.crypto.spec.SecretKeySpec;
-
 import java.nio.ByteBuffer;
 import java.nio.file.Files;
 import java.nio.file.Path;
 import java.util.Random;
 
 import io.aiven.kafka.tieredstorage.commons.EncryptionAwareTest;
-import io.aiven.kafka.tieredstorage.commons.security.AesEncryptionProvider;
 
 import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.Test;
@@ -42,13 +39,8 @@ public class CryptoIOProviderTest extends EncryptionAwareTest {
 
     @BeforeEach
     public void setUpKey() {
-        final AesEncryptionProvider aesProvider = new AesEncryptionProvider();
-        final var key = aesProvider.createDataKey();
-        final byte[] dataKey = new byte[32];
-        System.arraycopy(key.getEncoded(), 0, dataKey, 0, 32);
-        final byte[] aad = new byte[32];
-        System.arraycopy(key.getEncoded(), 32, dataKey, 0, 32);
-        cryptoIOProvider = new CryptoIOProvider(new SecretKeySpec(dataKey, "AES"), aad, BUFFER_SIZE);
+        final var dataKeyAndAAD = encryptionProvider.createDataKeyAndAAD();
+        cryptoIOProvider = new CryptoIOProvider(dataKeyAndAAD.dataKey, dataKeyAndAAD.aad, BUFFER_SIZE);
     }
 
     @Test
