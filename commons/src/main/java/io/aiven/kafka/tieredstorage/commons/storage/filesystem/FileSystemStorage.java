@@ -32,26 +32,17 @@ import org.apache.commons.io.input.BoundedInputStream;
 
 class FileSystemStorage implements FileUploader, FileFetcher, FileDeleter {
     private final Path fsRoot;
-    private final boolean overwrites;
 
-    FileSystemStorage(final String fsRoot, final boolean overwrites) {
-        this(Path.of(fsRoot), overwrites);
-    }
-
-    FileSystemStorage(final Path fsRoot, final boolean overwrites) {
+    FileSystemStorage(final Path fsRoot) {
         if (!Files.isDirectory(fsRoot) || !Files.isWritable(fsRoot)) {
             throw new IllegalArgumentException(fsRoot + " must be a writable directory");
         }
         this.fsRoot = fsRoot;
-        this.overwrites = overwrites;
     }
 
     @Override
     public void upload(final InputStream inputStream, final String key) throws IOException {
         final Path path = fsRoot.resolve(key);
-        if (!overwrites && Files.exists(path)) {
-            throw new IOException("File " + path + " already exists");
-        }
         Files.createDirectories(path.getParent());
         try (final OutputStream outputStream = Files.newOutputStream(path)) {
             inputStream.transferTo(outputStream);
@@ -93,7 +84,6 @@ class FileSystemStorage implements FileUploader, FileFetcher, FileDeleter {
     @Override
     public String toString() {
         return "FileSystemStorage{"
-            + "fsRoot=" + fsRoot
-            + ", overwrites=" + overwrites + '}';
+            + "fsRoot=" + fsRoot + '}';
     }
 }

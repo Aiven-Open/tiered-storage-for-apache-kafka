@@ -20,7 +20,6 @@ import java.io.ByteArrayInputStream;
 import java.io.File;
 import java.io.IOException;
 import java.io.InputStream;
-import java.nio.file.Files;
 import java.nio.file.Path;
 import java.util.Map;
 
@@ -31,48 +30,8 @@ import org.junit.jupiter.api.Test;
 import org.junit.jupiter.api.io.TempDir;
 
 import static org.assertj.core.api.Assertions.assertThat;
-import static org.assertj.core.api.Assertions.assertThatNoException;
-import static org.assertj.core.api.Assertions.assertThatThrownBy;
 
 class FileSystemStorageFactoryTest {
-    @Test
-    void testNotAllowOverwriting(@TempDir final Path tempDir) throws IOException {
-        final File fsRoot = tempDir.toFile();
-        final ObjectStorageFactory osFactory = new FileSystemStorageFactory();
-        osFactory.configure(Map.of(
-            "root", fsRoot.toString(),
-            "overwrite.enabled", "false"
-        ));
-
-        final InputStream logFile = new ByteArrayInputStream("log file".getBytes());
-        osFactory.fileUploader().upload(logFile, "aaa/0.log.txt");
-
-        assertThatThrownBy(() -> osFactory.fileUploader().upload(logFile, "aaa/0.log.txt"))
-            .isInstanceOf(IOException.class)
-            .hasMessage("File %s already exists", fsRoot + "/aaa/0.log.txt");
-    }
-
-    @Test
-    void testAllowOverwriting(@TempDir final Path tempDir) throws IOException {
-        final File fsRoot = tempDir.toFile();
-        final ObjectStorageFactory osFactory = new FileSystemStorageFactory();
-        osFactory.configure(Map.of(
-            "root", fsRoot.toString(),
-            "overwrite.enabled", "true"
-        ));
-
-        final byte[] data1 = "log file 1".getBytes();
-        osFactory.fileUploader().upload(new ByteArrayInputStream(data1), "aaa/0.log.txt");
-        assertThat(Files.readAllBytes(Path.of(fsRoot.getPath(), "aaa/0.log.txt")))
-            .isEqualTo(data1);
-
-        final byte[] data2 = "log file 2".getBytes();
-        assertThatNoException().isThrownBy(
-            () -> osFactory.fileUploader().upload(new ByteArrayInputStream(data2), "aaa/0.log.txt"));
-        assertThat(Files.readAllBytes(Path.of(fsRoot.getPath(), "aaa/0.log.txt")))
-            .isEqualTo(data2);
-    }
-
     @Test
     void testUploadFetchDelete(@TempDir final Path tempDir) throws IOException {
         final File fsRoot = tempDir.toFile();

@@ -16,6 +16,7 @@
 
 package io.aiven.kafka.tieredstorage.commons.storage.filesystem;
 
+import java.nio.file.Path;
 import java.util.Map;
 
 import io.aiven.kafka.tieredstorage.commons.storage.FileDeleter;
@@ -24,28 +25,26 @@ import io.aiven.kafka.tieredstorage.commons.storage.FileUploader;
 import io.aiven.kafka.tieredstorage.commons.storage.ObjectStorageFactory;
 
 public class FileSystemStorageFactory implements ObjectStorageFactory {
-    private String root;
-    private boolean overwrites;
+    private Path root;
 
     @Override
     public void configure(final Map<String, ?> configs) {
         final FileSystemStorageConfig config = new FileSystemStorageConfig(configs);
         this.root = config.root();
-        this.overwrites = config.overwrites();
     }
 
     @Override
     public FileUploader fileUploader() {
-        return new FileSystemStorage(root, overwrites);
+        return new FileSystemStorage(root);
     }
 
     @Override
     public FileFetcher fileFetcher() {
-        return new FileSystemStorage(root, overwrites);
+        return new FileSystemStorage(root);
     }
 
     @Override
     public FileDeleter fileDeleter() {
-        return new FileSystemStorage(root, overwrites);
+        return new FileSystemStorage(root);
     }
 }

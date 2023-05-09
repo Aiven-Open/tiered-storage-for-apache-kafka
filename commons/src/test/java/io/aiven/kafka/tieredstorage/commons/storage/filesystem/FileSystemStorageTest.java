@@ -42,7 +42,7 @@ class FileSystemStorageTest {
         final Path wrongRoot = root.resolve("file_instead");
         Files.writeString(wrongRoot, "Wrong root");
 
-        assertThatThrownBy(() -> new FileSystemStorage(wrongRoot, true))
+        assertThatThrownBy(() -> new FileSystemStorage(wrongRoot))
             .isInstanceOf(IllegalArgumentException.class)
             .hasMessage(wrongRoot + " must be a writable directory");
     }
@@ -52,14 +52,14 @@ class FileSystemStorageTest {
         final Path nonWritableDir = root.resolve("non_writable");
         Files.createDirectory(nonWritableDir).toFile().setReadOnly();
 
-        assertThatThrownBy(() -> new FileSystemStorage(nonWritableDir, true))
+        assertThatThrownBy(() -> new FileSystemStorage(nonWritableDir))
             .isInstanceOf(IllegalArgumentException.class)
             .hasMessage(nonWritableDir + " must be a writable directory");
     }
 
     @Test
     void testUploadANewFile() throws IOException {
-        final FileSystemStorage storage = new FileSystemStorage(root, false);
+        final FileSystemStorage storage = new FileSystemStorage(root);
         final String content = "content";
         storage.upload(new ByteArrayInputStream(content.getBytes()), TOPIC_PARTITION_SEGMENT_KEY);
 
@@ -67,25 +67,11 @@ class FileSystemStorageTest {
     }
 
     @Test
-    void testUploadFailsWhenFileExists() throws IOException {
-        final Path previous = root.resolve(TOPIC_PARTITION_SEGMENT_KEY);
-        Files.createDirectories(previous.getParent());
-        Files.writeString(previous, "previous");
-        final FileSystemStorage storage = new FileSystemStorage(root, false);
-        final String content = "content";
-
-        assertThatThrownBy(() ->
-            storage.upload(new ByteArrayInputStream(content.getBytes()), TOPIC_PARTITION_SEGMENT_KEY))
-            .isInstanceOf(IOException.class)
-            .hasMessage("File " + previous + " already exists");
-    }
-
-    @Test
     void testUploadWithOverridesWhenFileExists() throws IOException {
         final Path previous = root.resolve(TOPIC_PARTITION_SEGMENT_KEY);
         Files.createDirectories(previous.getParent());
         Files.writeString(previous, "previous");
-        final FileSystemStorage storage = new FileSystemStorage(root, true);
+        final FileSystemStorage storage = new FileSystemStorage(root);
         final String content = "content";
         storage.upload(new ByteArrayInputStream(content.getBytes()), TOPIC_PARTITION_SEGMENT_KEY);
         assertThat(previous).hasContent(content);
@@ -97,7 +83,7 @@ class FileSystemStorageTest {
         final Path keyPath = root.resolve(TOPIC_PARTITION_SEGMENT_KEY);
         Files.createDirectories(keyPath.getParent());
         Files.writeString(keyPath, content);
-        final FileSystemStorage storage = new FileSystemStorage(root, true);
+        final FileSystemStorage storage = new FileSystemStorage(root);
 
         try (final InputStream fetch = storage.fetch(TOPIC_PARTITION_SEGMENT_KEY)) {
             assertThat(fetch).hasContent(content);
@@ -113,7 +99,7 @@ class FileSystemStorageTest {
         final Path keyPath = root.resolve(TOPIC_PARTITION_SEGMENT_KEY);
         Files.createDirectories(keyPath.getParent());
         Files.writeString(keyPath, content);
-        final FileSystemStorage storage = new FileSystemStorage(root, true);
+        final FileSystemStorage storage = new FileSystemStorage(root);
 
         try (final InputStream fetch = storage.fetch(TOPIC_PARTITION_SEGMENT_KEY, BytesRange.of(from, to))) {
             assertThat(fetch).hasContent(range);
@@ -126,7 +112,7 @@ class FileSystemStorageTest {
         final Path keyPath = root.resolve(TOPIC_PARTITION_SEGMENT_KEY);
         Files.createDirectories(keyPath.getParent());
         Files.writeString(keyPath, content);
-        final FileSystemStorage storage = new FileSystemStorage(root, true);
+        final FileSystemStorage storage = new FileSystemStorage(root);
 
         try (final InputStream fetch = storage.fetch(TOPIC_PARTITION_SEGMENT_KEY, BytesRange.of(2, 3))) {
             assertThat(fetch).hasContent("C");
@@ -139,7 +125,7 @@ class FileSystemStorageTest {
         final Path keyPath = root.resolve(TOPIC_PARTITION_SEGMENT_KEY);
         Files.createDirectories(keyPath.getParent());
         Files.writeString(keyPath, content);
-        final FileSystemStorage storage = new FileSystemStorage(root, true);
+        final FileSystemStorage storage = new FileSystemStorage(root);
 
 
         assertThatThrownBy(() -> storage.fetch(TOPIC_PARTITION_SEGMENT_KEY, BytesRange.of(0, content.length() + 1)))
@@ -152,7 +138,7 @@ class FileSystemStorageTest {
         final Path keyPath = root.resolve(TOPIC_PARTITION_SEGMENT_KEY);
         Files.createDirectories(keyPath.getParent());
         Files.writeString(keyPath, "test");
-        final FileSystemStorage storage = new FileSystemStorage(root, false);
+        final FileSystemStorage storage = new FileSystemStorage(root);
         storage.delete(TOPIC_PARTITION_SEGMENT_KEY);
 
         assertThat(keyPath).doesNotExist(); // segment key
@@ -170,7 +156,7 @@ class FileSystemStorageTest {
         Files.writeString(parentPath.resolve("another"), "test");
         final Path keyPath = parentPath.resolve(key);
         Files.writeString(keyPath, "test");
-        final FileSystemStorage storage = new FileSystemStorage(root, false);
+        final FileSystemStorage storage = new FileSystemStorage(root);
         storage.delete(parent + "/" + key);
 
         assertThat(keyPath).doesNotExist();

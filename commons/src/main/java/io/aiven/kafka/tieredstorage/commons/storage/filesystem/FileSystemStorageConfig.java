@@ -16,6 +16,7 @@
 
 package io.aiven.kafka.tieredstorage.commons.storage.filesystem;
 
+import java.nio.file.Path;
 import java.util.Map;
 
 import org.apache.kafka.common.config.AbstractConfig;
@@ -52,11 +53,7 @@ class FileSystemStorageConfig extends AbstractConfig {
         super(CONFIG, props);
     }
 
-    final String root() {
-        return getString(ROOT_CONFIG);
-    }
-
-    final boolean overwrites() {
-        return getBoolean(OVERWRITE_ENABLED_CONFIG);
+    final Path root() {
+        return Path.of(getString(ROOT_CONFIG));
     }
 }
