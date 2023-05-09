@@ -63,11 +63,7 @@ public class ChunkManager {
                 encryptionMetadata.dataKey(),
                 encryptionMetadata.aad()
             );
-            detransformEnum = new DecryptionChunkEnumeration(
-                detransformEnum,
-                encryptionProvider.ivSize(),
-                encryptedChunk -> encryptionProvider.decryptionCipher(encryptedChunk, dataKeyAndAAD)
-            );
+            detransformEnum = new DecryptionChunkEnumeration(detransformEnum, encryptionProvider, dataKeyAndAAD);
         }
         if (manifest.compression()) {
             detransformEnum = new DecompressionChunkEnumeration(detransformEnum);
