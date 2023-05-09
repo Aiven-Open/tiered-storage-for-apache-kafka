@@ -91,7 +91,7 @@ class FileSystemStorageFactoryTest {
 
         try (final InputStream fetch = osFactory.fileFetcher().fetch("aaa/0.log.txt", 1, data.length - 2)) {
             final String r = new String(fetch.readAllBytes());
-            assertThat(r).isEqualTo("ome fil");
+            assertThat(r).isEqualTo("ome fi");
         }
 
         osFactory.fileDeleter().delete("aaa/0.log.txt");

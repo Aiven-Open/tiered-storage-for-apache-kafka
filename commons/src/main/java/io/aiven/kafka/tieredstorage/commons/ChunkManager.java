@@ -51,10 +51,10 @@ public class ChunkManager {
     public InputStream getChunk(final RemoteLogSegmentMetadata remoteLogSegmentMetadata, final SegmentManifest manifest,
             final int chunkId) throws IOException {
         final Chunk chunk = manifest.chunkIndex().chunks().get(chunkId);
-        final InputStream segmentFile = objectStorageFactory.fileFetcher()
+        final InputStream chunkContent = objectStorageFactory.fileFetcher()
                 .fetch(objectKey.key(remoteLogSegmentMetadata, ObjectKey.Suffix.LOG), chunk.transformedPosition,
-                        chunk.transformedPosition + chunk.transformedSize - 1);
-        DetransformChunkEnumeration detransformEnum = new BaseDetransformChunkEnumeration(segmentFile, List.of(chunk));
+                        chunk.transformedPosition + chunk.transformedSize);
+        DetransformChunkEnumeration detransformEnum = new BaseDetransformChunkEnumeration(chunkContent, List.of(chunk));
         if (manifest.encryption().isPresent()) {
             detransformEnum = new DecryptionChunkEnumeration(detransformEnum, manifest.encryption().get().ivSize(),
                     encryptedChunk -> aesEncryptionProvider.decryptionCipher(encryptedChunk,
