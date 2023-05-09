@@ -22,6 +22,8 @@ import java.io.InputStream;
 import java.nio.file.Files;
 import java.nio.file.Path;
 
+import io.aiven.kafka.tieredstorage.commons.storage.BytesRange;
+
 import org.junit.jupiter.api.Test;
 import org.junit.jupiter.api.io.TempDir;
 
@@ -113,21 +115,9 @@ class FileSystemStorageTest {
         Files.writeString(keyPath, content);
         final FileSystemStorage storage = new FileSystemStorage(root, true);
 
-        try (final InputStream fetch = storage.fetch(TOPIC_PARTITION_SEGMENT_KEY, from, to)) {
+        try (final InputStream fetch = storage.fetch(TOPIC_PARTITION_SEGMENT_KEY, BytesRange.of(from, to))) {
             assertThat(fetch).hasContent(range);
         }
-    }
-
-    @Test
-    void testFetchWithFailsWithWrongOffsets() {
-        final FileSystemStorage storage = new FileSystemStorage(root, true);
-
-        assertThatThrownBy(() -> storage.fetch(TOPIC_PARTITION_SEGMENT_KEY, -1, 1))
-            .isInstanceOf(IllegalArgumentException.class)
-            .hasMessage("from cannot be negative, -1 given");
-        assertThatThrownBy(() -> storage.fetch(TOPIC_PARTITION_SEGMENT_KEY, 2, 1))
-            .isInstanceOf(IllegalArgumentException.class)
-            .hasMessage("from cannot be more than to, from=2, to=1 given");
     }
 
     @Test
@@ -138,7 +128,7 @@ class FileSystemStorageTest {
         Files.writeString(keyPath, content);
         final FileSystemStorage storage = new FileSystemStorage(root, true);
 
-        try (final InputStream fetch = storage.fetch(TOPIC_PARTITION_SEGMENT_KEY, 2, 3)) {
+        try (final InputStream fetch = storage.fetch(TOPIC_PARTITION_SEGMENT_KEY, BytesRange.of(2, 3))) {
             assertThat(fetch).hasContent("C");
         }
     }
@@ -152,9 +142,9 @@ class FileSystemStorageTest {
         final FileSystemStorage storage = new FileSystemStorage(root, true);
 
 
-        assertThatThrownBy(() -> storage.fetch(TOPIC_PARTITION_SEGMENT_KEY, 0, content.length() + 1))
+        assertThatThrownBy(() -> storage.fetch(TOPIC_PARTITION_SEGMENT_KEY, BytesRange.of(0, content.length() + 1)))
             .isInstanceOf(IllegalArgumentException.class)
-            .hasMessage("position 'to' cannot be equal or higher than the file size, to=8, file size=7 given");
+            .hasMessage("position 'to' cannot be higher than the file size, to=8, file size=7 given");
     }
 
     @Test
