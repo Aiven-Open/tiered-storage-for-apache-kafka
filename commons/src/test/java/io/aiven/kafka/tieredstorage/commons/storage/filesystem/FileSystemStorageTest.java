@@ -107,7 +107,7 @@ class FileSystemStorageTest {
         final String content = "AABBBBAA";
         final int from = 2;
         final int to = 6;
-        final String range = content.substring(from, to + 1); // exclusive
+        final String range = content.substring(from, to);
         final Path keyPath = root.resolve(TOPIC_PARTITION_SEGMENT_KEY);
         Files.createDirectories(keyPath.getParent());
         Files.writeString(keyPath, content);
@@ -131,15 +131,15 @@ class FileSystemStorageTest {
     }
 
     @Test
-    void testFetchWhenRangeFromAndToAreSame() throws IOException {
-        final String content = "AAA";
+    void testFetchSingleByte() throws IOException {
+        final String content = "ABC";
         final Path keyPath = root.resolve(TOPIC_PARTITION_SEGMENT_KEY);
         Files.createDirectories(keyPath.getParent());
         Files.writeString(keyPath, content);
         final FileSystemStorage storage = new FileSystemStorage(root, true);
 
-        try (final InputStream fetch = storage.fetch(TOPIC_PARTITION_SEGMENT_KEY, 2, 2)) {
-            assertThat(fetch).hasContent("A");
+        try (final InputStream fetch = storage.fetch(TOPIC_PARTITION_SEGMENT_KEY, 2, 3)) {
+            assertThat(fetch).hasContent("C");
         }
     }
 
@@ -151,9 +151,7 @@ class FileSystemStorageTest {
         Files.writeString(keyPath, content);
         final FileSystemStorage storage = new FileSystemStorage(root, true);
 
-        assertThatThrownBy(() -> storage.fetch(TOPIC_PARTITION_SEGMENT_KEY, 0, content.length()))
-            .isInstanceOf(IllegalArgumentException.class)
-            .hasMessage("position 'to' cannot be equal or higher than the file size, to=7, file size=7 given");
+
         assertThatThrownBy(() -> storage.fetch(TOPIC_PARTITION_SEGMENT_KEY, 0, content.length() + 1))
             .isInstanceOf(IllegalArgumentException.class)
             .hasMessage("position 'to' cannot be equal or higher than the file size, to=8, file size=7 given");
