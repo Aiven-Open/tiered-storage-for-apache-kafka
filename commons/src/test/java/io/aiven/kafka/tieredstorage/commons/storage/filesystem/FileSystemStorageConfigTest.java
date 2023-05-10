@@ -16,11 +16,10 @@
 
 package io.aiven.kafka.tieredstorage.commons.storage.filesystem;
 
+import java.nio.file.Path;
 import java.util.Map;
 
 import org.junit.jupiter.api.Test;
-import org.junit.jupiter.params.ParameterizedTest;
-import org.junit.jupiter.params.provider.ValueSource;
 
 import static org.assertj.core.api.Assertions.assertThat;
 
@@ -30,17 +29,6 @@ class FileSystemStorageConfigTest {
         final FileSystemStorageConfig config = new FileSystemStorageConfig(Map.of(
             "root", "."
         ));
-        assertThat(config.root()).isEqualTo(".");
-        assertThat(config.overwrites()).isFalse();
-    }
-
-    @ParameterizedTest
-    @ValueSource(booleans = {true, false})
-    void overwriteEnabledExplicit(final boolean overwriteEnabled) {
-        final FileSystemStorageConfig config = new FileSystemStorageConfig(Map.of(
-            "root", ".",
-            "overwrite.enabled", Boolean.toString(overwriteEnabled)
-        ));
-        assertThat(config.overwrites()).isEqualTo(overwriteEnabled);
+        assertThat(config.root()).isEqualTo(Path.of("."));
     }
 }
