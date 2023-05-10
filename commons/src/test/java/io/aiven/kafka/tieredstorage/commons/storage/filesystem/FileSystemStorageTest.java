@@ -94,8 +94,8 @@ class FileSystemStorageTest {
     void testFetchWithOffsetRange() throws IOException {
         final String content = "AABBBBAA";
         final int from = 2;
-        final int to = 6;
-        final String range = content.substring(from, to);
+        final int to = 5;
+        final String range = content.substring(from, to + 1); // exclusive -> inclusive
         final Path keyPath = root.resolve(TOPIC_PARTITION_SEGMENT_KEY);
         Files.createDirectories(keyPath.getParent());
         Files.writeString(keyPath, content);
@@ -114,23 +114,22 @@ class FileSystemStorageTest {
         Files.writeString(keyPath, content);
         final FileSystemStorage storage = new FileSystemStorage(root);
 
-        try (final InputStream fetch = storage.fetch(TOPIC_PARTITION_SEGMENT_KEY, BytesRange.of(2, 3))) {
+        try (final InputStream fetch = storage.fetch(TOPIC_PARTITION_SEGMENT_KEY, BytesRange.of(2, 2))) {
             assertThat(fetch).hasContent("C");
         }
     }
 
     @Test
-    void testFetchWithOffsetRangeLargerThanFileSize() throws IOException {
-        final String content = "content";
+    void testFetchLargerThanSize() throws IOException {
+        final String content = "ABC";
         final Path keyPath = root.resolve(TOPIC_PARTITION_SEGMENT_KEY);
         Files.createDirectories(keyPath.getParent());
         Files.writeString(keyPath, content);
         final FileSystemStorage storage = new FileSystemStorage(root);
 
-
-        assertThatThrownBy(() -> storage.fetch(TOPIC_PARTITION_SEGMENT_KEY, BytesRange.of(0, content.length() + 1)))
-            .isInstanceOf(IllegalArgumentException.class)
-            .hasMessage("position 'to' cannot be higher than the file size, to=8, file size=7 given");
+        try (final InputStream fetch = storage.fetch(TOPIC_PARTITION_SEGMENT_KEY, BytesRange.of(2, 4))) {
+            assertThat(fetch).hasContent("C");
+        }
     }
 
     @Test

@@ -29,7 +29,7 @@ public interface FileFetcher {
     /**
      * Fetch file.
      * @param key file key.
-     * @param range start (inclusive)/end (exclusive) position
+     * @param range inclusive range
      */
     InputStream fetch(String key, BytesRange range) throws IOException;
 }

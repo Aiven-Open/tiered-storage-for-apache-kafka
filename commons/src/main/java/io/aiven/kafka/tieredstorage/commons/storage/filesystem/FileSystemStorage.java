@@ -59,12 +59,14 @@ class FileSystemStorage implements FileUploader, FileFetcher, FileDeleter {
     public InputStream fetch(final String key, final BytesRange range) throws IOException {
         final Path path = fsRoot.resolve(key);
         final long fileSize = Files.size(path);
-        if (range.to > fileSize) {
-            throw new IllegalArgumentException("position 'to' cannot be higher than the file size, to="
-                + range.to + ", file size=" + fileSize + " given");
+        final int size;
+        if (range.to < fileSize) {
+            size = range.to + 1; // inclusive end range
+        } else {
+            size = (int) fileSize;
         }
 
-        final InputStream result = new BoundedInputStream(Files.newInputStream(path), range.to);
+        final InputStream result = new BoundedInputStream(Files.newInputStream(path), size);
         result.skip(range.from);
         return result;
     }
