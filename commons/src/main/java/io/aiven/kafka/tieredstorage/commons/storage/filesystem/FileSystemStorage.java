@@ -26,6 +26,7 @@ import io.aiven.kafka.tieredstorage.commons.storage.BytesRange;
 import io.aiven.kafka.tieredstorage.commons.storage.FileDeleter;
 import io.aiven.kafka.tieredstorage.commons.storage.FileFetcher;
 import io.aiven.kafka.tieredstorage.commons.storage.FileUploader;
+import io.aiven.kafka.tieredstorage.commons.storage.StorageBackEndException;
 
 import org.apache.commons.io.file.PathUtils;
 import org.apache.commons.io.input.BoundedInputStream;
@@ -41,43 +42,59 @@ class FileSystemStorage implements FileUploader, FileFetcher, FileDeleter {
     }
 
     @Override
-    public void upload(final InputStream inputStream, final String key) throws IOException {
-        final Path path = fsRoot.resolve(key);
-        Files.createDirectories(path.getParent());
-        try (final OutputStream outputStream = Files.newOutputStream(path)) {
-            inputStream.transferTo(outputStream);
+    public void upload(final InputStream inputStream, final String key) throws StorageBackEndException {
+        try {
+            final Path path = fsRoot.resolve(key);
+            Files.createDirectories(path.getParent());
+            try (final OutputStream outputStream = Files.newOutputStream(path)) {
+                inputStream.transferTo(outputStream);
+            }
+        } catch (final IOException e) {
+            throw new StorageBackEndException("Failed to upload " + key, e);
         }
     }
 
     @Override
-    public InputStream fetch(final String key) throws IOException {
-        final Path path = fsRoot.resolve(key);
-        return Files.newInputStream(path);
-    }
-
-    @Override
-    public InputStream fetch(final String key, final BytesRange range) throws IOException {
-        final Path path = fsRoot.resolve(key);
-        final long fileSize = Files.size(path);
-        if (range.to > fileSize) {
-            throw new IllegalArgumentException("position 'to' cannot be higher than the file size, to="
-                + range.to + ", file size=" + fileSize + " given");
+    public InputStream fetch(final String key) throws StorageBackEndException {
+        try {
+            final Path path = fsRoot.resolve(key);
+            return Files.newInputStream(path);
+        } catch (final IOException e) {
+            throw new StorageBackEndException("Failed to fetch " + key, e);
         }
-
-        final InputStream result = new BoundedInputStream(Files.newInputStream(path), range.to);
-        result.skip(range.from);
-        return result;
     }
 
     @Override
-    public void delete(final String key) throws IOException {
-        final Path path = fsRoot.resolve(key);
-        Files.deleteIfExists(path);
-        Path parent = path.getParent();
-        while (parent != null && Files.isDirectory(parent) && !parent.equals(fsRoot)
-            && PathUtils.isEmptyDirectory(parent)) {
-            Files.deleteIfExists(parent);
-            parent = parent.getParent();
+    public InputStream fetch(final String key, final BytesRange range) throws StorageBackEndException {
+        try {
+            final Path path = fsRoot.resolve(key);
+            final long fileSize = Files.size(path);
+            if (range.to > fileSize) {
+                throw new IllegalArgumentException("position 'to' cannot be higher than the file size, to="
+                    + range.to + ", file size=" + fileSize + " given");
+            }
+
+            final InputStream result = new BoundedInputStream(Files.newInputStream(path), range.to);
+            result.skip(range.from);
+            return result;
+        } catch (final IOException e) {
+            throw new StorageBackEndException("Failed to fetch " + key + ", with range " + range, e);
+        }
+    }
+
+    @Override
+    public void delete(final String key) throws StorageBackEndException {
+        try {
+            final Path path = fsRoot.resolve(key);
+            Files.deleteIfExists(path);
+            Path parent = path.getParent();
+            while (parent != null && Files.isDirectory(parent) && !parent.equals(fsRoot)
+                && PathUtils.isEmptyDirectory(parent)) {
+                Files.deleteIfExists(parent);
+                parent = parent.getParent();
+            }
+        } catch (final IOException e) {
+            throw new StorageBackEndException("Error when deleting " + key, e);
         }
     }
 

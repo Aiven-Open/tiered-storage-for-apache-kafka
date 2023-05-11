@@ -23,6 +23,7 @@ import java.nio.file.Files;
 import java.nio.file.Path;
 
 import io.aiven.kafka.tieredstorage.commons.storage.BytesRange;
+import io.aiven.kafka.tieredstorage.commons.storage.StorageBackEndException;
 
 import org.junit.jupiter.api.Test;
 import org.junit.jupiter.api.io.TempDir;
@@ -58,7 +59,7 @@ class FileSystemStorageTest {
     }
 
     @Test
-    void testUploadANewFile() throws IOException {
+    void testUploadANewFile() throws StorageBackEndException {
         final FileSystemStorage storage = new FileSystemStorage(root);
         final String content = "content";
         storage.upload(new ByteArrayInputStream(content.getBytes()), TOPIC_PARTITION_SEGMENT_KEY);
@@ -67,7 +68,7 @@ class FileSystemStorageTest {
     }
 
     @Test
-    void testUploadWithOverridesWhenFileExists() throws IOException {
+    void testUploadWithOverridesWhenFileExists() throws IOException, StorageBackEndException {
         final Path previous = root.resolve(TOPIC_PARTITION_SEGMENT_KEY);
         Files.createDirectories(previous.getParent());
         Files.writeString(previous, "previous");
@@ -78,7 +79,7 @@ class FileSystemStorageTest {
     }
 
     @Test
-    void testFetchAll() throws IOException {
+    void testFetchAll() throws IOException, StorageBackEndException {
         final String content = "content";
         final Path keyPath = root.resolve(TOPIC_PARTITION_SEGMENT_KEY);
         Files.createDirectories(keyPath.getParent());
@@ -91,7 +92,7 @@ class FileSystemStorageTest {
     }
 
     @Test
-    void testFetchWithOffsetRange() throws IOException {
+    void testFetchWithOffsetRange() throws IOException, StorageBackEndException {
         final String content = "AABBBBAA";
         final int from = 2;
         final int to = 6;
@@ -107,7 +108,7 @@ class FileSystemStorageTest {
     }
 
     @Test
-    void testFetchSingleByte() throws IOException {
+    void testFetchSingleByte() throws IOException, StorageBackEndException {
         final String content = "ABC";
         final Path keyPath = root.resolve(TOPIC_PARTITION_SEGMENT_KEY);
         Files.createDirectories(keyPath.getParent());
@@ -134,7 +135,7 @@ class FileSystemStorageTest {
     }
 
     @Test
-    void testDelete() throws IOException {
+    void testDelete() throws IOException, StorageBackEndException {
         final Path keyPath = root.resolve(TOPIC_PARTITION_SEGMENT_KEY);
         Files.createDirectories(keyPath.getParent());
         Files.writeString(keyPath, "test");
@@ -148,7 +149,7 @@ class FileSystemStorageTest {
     }
 
     @Test
-    void testDeleteDoesNotRemoveParentDir() throws IOException {
+    void testDeleteDoesNotRemoveParentDir() throws IOException, StorageBackEndException {
         final String parent = "parent";
         final String key = "key";
         final Path parentPath = root.resolve(parent);
