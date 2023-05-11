@@ -43,6 +43,7 @@ import io.aiven.kafka.tieredstorage.commons.security.AesEncryptionProvider;
 import io.aiven.kafka.tieredstorage.commons.security.DataKeyAndAAD;
 import io.aiven.kafka.tieredstorage.commons.security.RsaEncryptionProvider;
 import io.aiven.kafka.tieredstorage.commons.storage.ObjectStorageFactory;
+import io.aiven.kafka.tieredstorage.commons.storage.StorageBackEndException;
 import io.aiven.kafka.tieredstorage.commons.transform.BaseTransformChunkEnumeration;
 import io.aiven.kafka.tieredstorage.commons.transform.CompressionChunkEnumeration;
 import io.aiven.kafka.tieredstorage.commons.transform.EncryptionChunkEnumeration;
@@ -152,21 +153,21 @@ public class UniversalRemoteStorageManager implements RemoteStorageManager {
             }
             uploadIndexFile(remoteLogSegmentMetadata, new ByteBufferInputStream(logSegmentData.leaderEpochIndex()),
                 LEADER_EPOCH);
-        } catch (final IOException e) {
+        } catch (final StorageBackEndException | IOException e) {
             throw new RemoteStorageException(e);
         }
     }
 
     private void uploadIndexFile(final RemoteLogSegmentMetadata remoteLogSegmentMetadata,
                                  final InputStream index,
-                                 final IndexType indexType) throws IOException {
+                                 final IndexType indexType) throws StorageBackEndException {
         objectStorageFactory.fileUploader().upload(index,
             objectKey.key(remoteLogSegmentMetadata, ObjectKey.Suffix.fromIndexType(indexType)));
     }
 
     private void uploadManifest(final RemoteLogSegmentMetadata remoteLogSegmentMetadata,
                                 final SegmentManifest segmentManifest)
-        throws IOException {
+        throws StorageBackEndException, IOException {
         final String manifest = mapper.writeValueAsString(segmentManifest);
         final String manifestFileKey =
             objectKey.key(remoteLogSegmentMetadata, ObjectKey.Suffix.MANIFEST);
@@ -197,7 +198,7 @@ public class UniversalRemoteStorageManager implements RemoteStorageManager {
                 startPosition,
                 endPosition);
             return new SequenceInputStream(fetchChunkEnumeration);
-        } catch (final IOException e) {
+        } catch (final StorageBackEndException | IOException e) {
             throw new RemoteStorageException(e);
         }
     }
@@ -208,7 +209,7 @@ public class UniversalRemoteStorageManager implements RemoteStorageManager {
         try {
             return objectStorageFactory.fileFetcher()
                 .fetch(objectKey.key(remoteLogSegmentMetadata, ObjectKey.Suffix.fromIndexType(indexType)));
-        } catch (final IOException e) {
+        } catch (final StorageBackEndException e) {
             // TODO: should be aligned with upstream implementation
             if (indexType == TRANSACTION) {
                 return null;
@@ -227,7 +228,7 @@ public class UniversalRemoteStorageManager implements RemoteStorageManager {
                 objectStorageFactory.fileDeleter()
                     .delete(objectKey.key(remoteLogSegmentMetadata, suffix));
             }
-        } catch (final IOException e) {
+        } catch (final StorageBackEndException e) {
             throw new RemoteStorageException(e);
         }
     }

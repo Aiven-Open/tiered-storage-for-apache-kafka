@@ -25,6 +25,7 @@ import java.util.Map;
 
 import io.aiven.kafka.tieredstorage.commons.storage.BytesRange;
 import io.aiven.kafka.tieredstorage.commons.storage.ObjectStorageFactory;
+import io.aiven.kafka.tieredstorage.commons.storage.StorageBackEndException;
 
 import org.junit.jupiter.api.Test;
 import org.junit.jupiter.api.io.TempDir;
@@ -33,7 +34,7 @@ import static org.assertj.core.api.Assertions.assertThat;
 
 class FileSystemStorageFactoryTest {
     @Test
-    void testUploadFetchDelete(@TempDir final Path tempDir) throws IOException {
+    void testUploadFetchDelete(@TempDir final Path tempDir) throws IOException, StorageBackEndException {
         final File fsRoot = tempDir.toFile();
         final ObjectStorageFactory osFactory = new FileSystemStorageFactory();
         osFactory.configure(Map.of(
