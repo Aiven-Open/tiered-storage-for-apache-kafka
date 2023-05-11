@@ -14,7 +14,7 @@
  * limitations under the License.
  */
 
-package io.aiven.kafka.tieredstorage.commons.transform;
+package io.aiven.kafka.tieredstorage.commons;
 
 import java.io.ByteArrayInputStream;
 import java.io.IOException;
@@ -22,7 +22,7 @@ import java.util.NoSuchElementException;
 
 import org.apache.kafka.server.log.remote.storage.RemoteLogSegmentMetadata;
 
-import io.aiven.kafka.tieredstorage.commons.ChunkManager;
+import io.aiven.kafka.tieredstorage.commons.ChunkedLogSegmentManager.FetchedChunksContent;
 import io.aiven.kafka.tieredstorage.commons.manifest.SegmentManifest;
 import io.aiven.kafka.tieredstorage.commons.manifest.SegmentManifestV1;
 import io.aiven.kafka.tieredstorage.commons.manifest.index.FixedSizeChunkIndex;
@@ -37,9 +37,9 @@ import static org.assertj.core.api.Assertions.assertThatThrownBy;
 import static org.mockito.Mockito.when;
 
 @ExtendWith(MockitoExtension.class)
-class FetchChunkEnumerationTest {
+class FetchedChunksContentTest {
     @Mock
-    ChunkManager chunkManager;
+    ChunkedLogSegmentManager chunkManager;
     @Mock
     RemoteLogSegmentMetadata remoteLogSegmentMetadata;
 
@@ -60,7 +60,7 @@ class FetchChunkEnumerationTest {
         final int to = from + 1;
         // Then
         assertThatThrownBy(
-            () -> new FetchChunkEnumeration(chunkManager, remoteLogSegmentMetadata, manifest, from, to))
+            () -> new FetchedChunksContent(chunkManager, remoteLogSegmentMetadata, manifest, from, to))
             .hasMessage("Invalid start position " + from + " in segment remoteLogSegmentMetadata");
     }
 
@@ -72,8 +72,8 @@ class FetchChunkEnumerationTest {
         final int from = 0;
         final int to = 80;
         // Then
-        final FetchChunkEnumeration fetchChunk =
-            new FetchChunkEnumeration(chunkManager, remoteLogSegmentMetadata, manifest, from, to);
+        final FetchedChunksContent fetchChunk =
+            new FetchedChunksContent(chunkManager, remoteLogSegmentMetadata, manifest, from, to);
         assertThat(fetchChunk.startChunkId).isEqualTo(0);
         assertThat(fetchChunk.lastChunkId).isEqualTo(8);
     }
@@ -85,8 +85,8 @@ class FetchChunkEnumerationTest {
         // When
         final int from = 0;
         final int to = 110;
-        final FetchChunkEnumeration fetchChunk =
-            new FetchChunkEnumeration(chunkManager, remoteLogSegmentMetadata, manifest, from, to);
+        final FetchedChunksContent fetchChunk =
+            new FetchedChunksContent(chunkManager, remoteLogSegmentMetadata, manifest, from, to);
         // Then
         assertThat(fetchChunk.startChunkId).isEqualTo(0);
         assertThat(fetchChunk.lastChunkId).isEqualTo(9);
@@ -99,9 +99,9 @@ class FetchChunkEnumerationTest {
         // When
         final int from = 32;
         final int to = 35;
-        final FetchChunkEnumeration fetchChunk =
-            new FetchChunkEnumeration(chunkManager, remoteLogSegmentMetadata, manifest, from, to);
-        when(chunkManager.getChunk(remoteLogSegmentMetadata, manifest, fetchChunk.currentChunkId))
+        final FetchedChunksContent fetchChunk =
+            new FetchedChunksContent(chunkManager, remoteLogSegmentMetadata, manifest, from, to);
+        when(chunkManager.fetchChunk(remoteLogSegmentMetadata, manifest, fetchChunk.currentChunkId))
             .thenReturn(new ByteArrayInputStream(CHUNK_CONTENT));
         // Then
         assertThat(fetchChunk.startChunkId).isEqualTo(fetchChunk.lastChunkId);
@@ -117,13 +117,13 @@ class FetchChunkEnumerationTest {
         // When
         final int from = 15;
         final int to = 35;
-        final FetchChunkEnumeration fetchChunk =
-            new FetchChunkEnumeration(chunkManager, remoteLogSegmentMetadata, manifest, from, to);
-        when(chunkManager.getChunk(remoteLogSegmentMetadata, manifest, 1))
+        final FetchedChunksContent fetchChunk =
+            new FetchedChunksContent(chunkManager, remoteLogSegmentMetadata, manifest, from, to);
+        when(chunkManager.fetchChunk(remoteLogSegmentMetadata, manifest, 1))
             .thenReturn(new ByteArrayInputStream(CHUNK_CONTENT));
-        when(chunkManager.getChunk(remoteLogSegmentMetadata, manifest, 2))
+        when(chunkManager.fetchChunk(remoteLogSegmentMetadata, manifest, 2))
             .thenReturn(new ByteArrayInputStream(CHUNK_CONTENT));
-        when(chunkManager.getChunk(remoteLogSegmentMetadata, manifest, 3))
+        when(chunkManager.fetchChunk(remoteLogSegmentMetadata, manifest, 3))
             .thenReturn(new ByteArrayInputStream(CHUNK_CONTENT));
         // Then
         assertThat(fetchChunk.startChunkId).isNotEqualTo(fetchChunk.lastChunkId);
