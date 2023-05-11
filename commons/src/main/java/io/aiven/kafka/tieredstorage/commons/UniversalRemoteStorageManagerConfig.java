@@ -142,19 +142,19 @@ public class UniversalRemoteStorageManagerConfig extends AbstractConfig {
         return getString(OBJECT_STORAGE_KEY_PREFIX_CONFIG);
     }
 
-    int chunkSize() {
+    public int chunkSize() {
         return getInt(CHUNK_SIZE_CONFIG);
     }
 
-    boolean compressionEnabled() {
+    public boolean compressionEnabled() {
         return getBoolean(COMPRESSION_CONFIG);
     }
 
-    boolean encryptionEnabled() {
+    public boolean encryptionEnabled() {
         return getBoolean(ENCRYPTION_CONFIG);
     }
 
-    Path encryptionPublicKeyFile() {
+    public Path encryptionPublicKeyFile() {
         final String value = getString(ENCRYPTION_PUBLIC_KEY_FILE_CONFIG);
         if (value == null) {
             return null;
@@ -162,7 +162,7 @@ public class UniversalRemoteStorageManagerConfig extends AbstractConfig {
         return Path.of(value);
     }
 
-    Path encryptionPrivateKeyFile() {
+    public Path encryptionPrivateKeyFile() {
         final String value = getString(ENCRYPTION_PRIVATE_KEY_FILE_CONFIG);
         if (value == null) {
             return null;

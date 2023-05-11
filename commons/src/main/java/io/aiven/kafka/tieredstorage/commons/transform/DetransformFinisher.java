@@ -44,4 +44,8 @@ public class DetransformFinisher implements Enumeration<InputStream> {
         final var chunk = inner.nextElement();
         return new ByteArrayInputStream(chunk);
     }
+
+    public InputStream sequence() {
+        return new SequenceInputStream(this);
+    }
 }
