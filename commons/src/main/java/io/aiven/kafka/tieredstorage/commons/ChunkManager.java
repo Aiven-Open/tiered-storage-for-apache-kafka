@@ -16,7 +16,6 @@
 
 package io.aiven.kafka.tieredstorage.commons;
 
-import java.io.IOException;
 import java.io.InputStream;
 import java.util.List;
 
@@ -25,6 +24,7 @@ import org.apache.kafka.server.log.remote.storage.RemoteLogSegmentMetadata;
 import io.aiven.kafka.tieredstorage.commons.manifest.SegmentManifest;
 import io.aiven.kafka.tieredstorage.commons.security.AesEncryptionProvider;
 import io.aiven.kafka.tieredstorage.commons.storage.ObjectStorageFactory;
+import io.aiven.kafka.tieredstorage.commons.storage.StorageBackEndException;
 import io.aiven.kafka.tieredstorage.commons.transform.BaseDetransformChunkEnumeration;
 import io.aiven.kafka.tieredstorage.commons.transform.DecompressionChunkEnumeration;
 import io.aiven.kafka.tieredstorage.commons.transform.DecryptionChunkEnumeration;
@@ -49,7 +49,7 @@ public class ChunkManager {
      * @return an {@link InputStream} of the chunk, plain text (i.e. decrypted and decompressed).
      */
     public InputStream getChunk(final RemoteLogSegmentMetadata remoteLogSegmentMetadata, final SegmentManifest manifest,
-            final int chunkId) throws IOException {
+            final int chunkId) throws StorageBackEndException {
         final Chunk chunk = manifest.chunkIndex().chunks().get(chunkId);
         final String segmentKey = objectKey.key(remoteLogSegmentMetadata, ObjectKey.Suffix.LOG);
         final InputStream chunkContent = objectStorageFactory.fileFetcher().fetch(segmentKey, chunk.range());

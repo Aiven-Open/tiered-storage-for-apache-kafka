@@ -17,7 +17,6 @@
 package io.aiven.kafka.tieredstorage.commons.transform;
 
 import java.io.ByteArrayInputStream;
-import java.io.IOException;
 import java.util.NoSuchElementException;
 
 import org.apache.kafka.server.log.remote.storage.RemoteLogSegmentMetadata;
@@ -26,6 +25,7 @@ import io.aiven.kafka.tieredstorage.commons.ChunkManager;
 import io.aiven.kafka.tieredstorage.commons.manifest.SegmentManifest;
 import io.aiven.kafka.tieredstorage.commons.manifest.SegmentManifestV1;
 import io.aiven.kafka.tieredstorage.commons.manifest.index.FixedSizeChunkIndex;
+import io.aiven.kafka.tieredstorage.commons.storage.StorageBackEndException;
 
 import org.junit.jupiter.api.Test;
 import org.junit.jupiter.api.extension.ExtendWith;
@@ -94,7 +94,7 @@ class FetchChunkEnumerationTest {
 
     // - Single chunk
     @Test
-    void shouldReturnRangeFromSingleChunk() throws IOException {
+    void shouldReturnRangeFromSingleChunk() throws StorageBackEndException {
         // Given a set of 10 chunks with 10 bytes each
         // When
         final int from = 32;
@@ -112,7 +112,7 @@ class FetchChunkEnumerationTest {
 
     // - Multiple chunks
     @Test
-    void shouldReturnRangeFromMultipleChunks() throws IOException {
+    void shouldReturnRangeFromMultipleChunks() throws StorageBackEndException {
         // Given a set of 10 chunks with 10 bytes each
         // When
         final int from = 15;
