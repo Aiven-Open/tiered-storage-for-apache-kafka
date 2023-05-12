@@ -22,6 +22,7 @@ import java.util.Map;
 
 import org.apache.kafka.common.config.ConfigException;
 
+import io.aiven.kafka.tieredstorage.commons.cache.TestChunkCache;
 import io.aiven.kafka.tieredstorage.commons.storage.ObjectStorageFactory;
 
 import org.junit.jupiter.api.Test;
@@ -98,7 +99,7 @@ class UniversalRemoteStorageManagerConfigTest {
     }
 
     @Test
-    void objectStorageFactoryCorrectClass() {
+    void objectStorageFactoryIncorrectClass() {
         assertThatThrownBy(() -> new UniversalRemoteStorageManagerConfig(
             Map.of(
                 "object.storage.factory", "x"
@@ -132,9 +133,8 @@ class UniversalRemoteStorageManagerConfigTest {
         assertThat(config.keyPrefix()).isEqualTo(testPrefix);
     }
 
-
     @Test
-    void requiredFields() {
+    void missingRequiredFields() {
         assertThatThrownBy(() -> new UniversalRemoteStorageManagerConfig(Map.of()))
             .isInstanceOf(ConfigException.class)
             .hasMessage("Missing required configuration \"object.storage.factory\" which has no default value.");
@@ -169,7 +169,7 @@ class UniversalRemoteStorageManagerConfigTest {
     }
 
     @Test
-    void chunkSizeRange() {
+    void invalidChunkSizeRange() {
         assertThatThrownBy(() -> new UniversalRemoteStorageManagerConfig(
             Map.of(
                 "object.storage.factory", TestObjectStorageFactory.class.getCanonicalName(),
@@ -185,5 +185,60 @@ class UniversalRemoteStorageManagerConfigTest {
             )
         )).isInstanceOf(ConfigException.class)
             .hasMessage("Invalid value 2147483648 for configuration chunk.size: Not a number of type INT");
+    }
+
+    @Test
+    void invalidChunkCacheClass() {
+        assertThatThrownBy(() -> new UniversalRemoteStorageManagerConfig(
+            new HashMap<>() {{
+                    put("object.storage.factory", TestObjectStorageFactory.class);
+                    put("chunk.size", 123);
+                    put("chunk.cache.class", "x");
+                }}
+        )).isInstanceOf(ConfigException.class)
+            .hasMessage("Invalid value x for configuration chunk.cache.class: Class x could not be found.");
+        assertThatThrownBy(() -> new UniversalRemoteStorageManagerConfig(
+            new HashMap<>() {{
+                    put("object.storage.factory", TestObjectStorageFactory.class);
+                    put("chunk.size", 123);
+                    put("chunk.cache.class", Object.class);
+                }}
+        )).isInstanceOf(ConfigException.class)
+            .hasMessage("chunk.cache.class must be an implementation "
+                + "of io.aiven.kafka.tieredstorage.commons.cache.ChunkCache");
+    }
+
+    @Test
+    void disabledChunkCache() {
+        final UniversalRemoteStorageManagerConfig config = new UniversalRemoteStorageManagerConfig(
+            new HashMap<>() {{
+                    put("object.storage.factory", TestObjectStorageFactory.class);
+                    put("chunk.size", 123);
+                    put("chunk.cache.class", null);
+                }}
+        );
+        assertThat(config.chunkCache()).isNull();
+    }
+
+    @Test
+    void chuckCacheIsConfigured() {
+        final var config = new UniversalRemoteStorageManagerConfig(
+            Map.of(
+                "object.storage.factory", TestObjectStorageFactory.class.getCanonicalName(),
+                "chunk.size", "123",
+                "chunk.cache.class", TestChunkCache.class.getCanonicalName(),
+                "chunk.cache.config1", "aaa",
+                "chunk.cache.config2", "123",
+                "chunk.cache.config3", "true"
+                )
+        );
+        final TestChunkCache chunkCache = (TestChunkCache) config.chunkCache();
+        assertThat(chunkCache.configureCalled).isTrue();
+        assertThat(chunkCache.configuredWith).isEqualTo(Map.of(
+            "class", TestChunkCache.class.getCanonicalName(),
+            "config1", "aaa",
+            "config2", "123",
+            "config3", "true"
+        ));
     }
 }

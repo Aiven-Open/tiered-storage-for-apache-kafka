@@ -16,11 +16,13 @@
 
 package io.aiven.kafka.tieredstorage.commons.cache;
 
-import java.io.IOException;
 import java.io.InputStream;
 import java.util.Optional;
 
+import org.apache.kafka.common.Configurable;
+
 import io.aiven.kafka.tieredstorage.commons.ChunkKey;
+import io.aiven.kafka.tieredstorage.commons.storage.StorageBackEndException;
 
 /**
  * A chunk cache.
@@ -44,12 +46,12 @@ import io.aiven.kafka.tieredstorage.commons.ChunkKey;
  *
  * <p>By this separation, the atomicity of adding chunks to cache is achieved and potential lock contention is lowered.
  */
-public interface ChunkCache {
+public interface ChunkCache extends Configurable {
     /**
      * Gets a cached chunk if present.
      * @return the requested chunk if present; empty otherwise.
      */
-    Optional<InputStream> get(ChunkKey chunkKey) throws IOException;
+    Optional<InputStream> get(ChunkKey chunkKey) throws StorageBackEndException;
 
     /**
      * Stores a chunk temporarily.
@@ -62,7 +64,7 @@ public interface ChunkCache {
      *
      * @return temporary ID (e.g. a file name).
      */
-    String storeTemporarily(byte[] chunk) throws IOException;
+    String storeTemporarily(byte[] chunk) throws StorageBackEndException;
 
     /**
      * Stores permanently a chunk that was stored temporarily previously.
@@ -71,5 +73,5 @@ public interface ChunkCache {
      *
      * <p>See the class' Javadoc for the details.
      */
-    void store(String tempId, ChunkKey chunkKey) throws IOException;
+    void store(String tempId, ChunkKey chunkKey) throws StorageBackEndException;
 }

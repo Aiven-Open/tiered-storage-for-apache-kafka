@@ -17,15 +17,16 @@
 package io.aiven.kafka.tieredstorage.commons.cache;
 
 import java.io.ByteArrayInputStream;
-import java.io.IOException;
 import java.io.InputStream;
 import java.util.Base64;
+import java.util.Map;
 import java.util.Objects;
 import java.util.Optional;
 import java.util.concurrent.ConcurrentHashMap;
 import java.util.concurrent.ThreadLocalRandom;
 
 import io.aiven.kafka.tieredstorage.commons.ChunkKey;
+import io.aiven.kafka.tieredstorage.commons.storage.StorageBackEndException;
 
 /**
  * An unbound memory-backed chunk cache.
@@ -37,7 +38,7 @@ public class UnboundInMemoryChunkCache implements ChunkCache {
     private final ConcurrentHashMap<String, byte[]> tempStorage = new ConcurrentHashMap<>();
 
     @Override
-    public Optional<InputStream> get(final ChunkKey chunkKey) throws IOException {
+    public Optional<InputStream> get(final ChunkKey chunkKey) {
         Objects.requireNonNull(chunkKey, "chunkKey cannot be null");
 
         return Optional.ofNullable(permanentStorage.get(chunkKey))
@@ -45,7 +46,7 @@ public class UnboundInMemoryChunkCache implements ChunkCache {
     }
 
     @Override
-    public String storeTemporarily(final byte[] chunk) throws IOException {
+    public String storeTemporarily(final byte[] chunk) throws StorageBackEndException {
         Objects.requireNonNull(chunk, "chunk cannot be null");
 
         final byte[] randomBytes = new byte[20];
@@ -53,21 +54,25 @@ public class UnboundInMemoryChunkCache implements ChunkCache {
         final String tempId = Base64.getEncoder().encodeToString(randomBytes);
         // This should never happen practically if the source of randomness is fair.
         if (tempStorage.putIfAbsent(tempId, chunk) != null) {
-            throw new IOException("Temp ID conflict");
+            throw new StorageBackEndException("Temporary ID conflict in chunk cache");
         }
         return tempId;
     }
 
     @Override
-    public void store(final String tempId, final ChunkKey chunkKey) throws IOException {
+    public void store(final String tempId, final ChunkKey chunkKey) throws StorageBackEndException {
         Objects.requireNonNull(tempId, "tempId cannot be null");
         Objects.requireNonNull(chunkKey, "chunkKey cannot be null");
 
         final byte[] bytes = tempStorage.get(tempId);
         if (bytes == null) {
-            throw new IOException("Temp ID " + tempId + " not found");
+            throw new StorageBackEndException("Temporary ID " + tempId + " not found in chunk cache");
         }
         permanentStorage.putIfAbsent(chunkKey, bytes);
         tempStorage.remove(tempId);
+    }
+
+    @Override
+    public void configure(final Map<String, ?> configs) {
     }
 }
