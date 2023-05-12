@@ -35,6 +35,25 @@ public class BytesRange {
         this.to = to;
     }
 
+    @Override
+    public boolean equals(final Object o) {
+        if (this == o) {
+            return true;
+        }
+        if (o == null || getClass() != o.getClass()) {
+            return false;
+        }
+        final BytesRange that = (BytesRange) o;
+        return from == that.from && to == that.to;
+    }
+
+    @Override
+    public int hashCode() {
+        int result = from;
+        result = 31 * result + to;
+        return result;
+    }
+
     public static BytesRange of(final int from, final int to) {
         return new BytesRange(from, to);
     }
