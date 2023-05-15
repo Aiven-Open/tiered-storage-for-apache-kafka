@@ -147,6 +147,22 @@ class S3StorageConfigTest {
             .hasMessage("aws.access.key.id and aws.secret.access.key must be defined together");
     }
 
+    //   - With empty static credentials
+    @Test
+    void configWithEmptyStaticConfig() {
+        final String bucketName = "b1";
+        assertThatThrownBy(() -> new S3StorageConfig(Map.of(
+            "s3.bucket.name", bucketName,
+            "aws.access.key.id", "")))
+            .isInstanceOf(ConfigException.class)
+            .hasMessage("aws.access.key.id value must not be empty");
+        assertThatThrownBy(() -> new S3StorageConfig(Map.of(
+            "s3.bucket.name", bucketName,
+            "aws.secret.access.key", "")))
+            .isInstanceOf(ConfigException.class)
+            .hasMessage("aws.secret.access.key value must not be empty");
+    }
+
     //   - With conflict between static and custom
     @Test
     void configWithConflictBetweenCustomProviderAndStaticCredentials() {

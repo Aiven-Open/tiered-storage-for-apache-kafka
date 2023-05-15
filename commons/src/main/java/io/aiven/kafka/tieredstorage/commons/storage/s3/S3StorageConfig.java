@@ -204,7 +204,7 @@ public class S3StorageConfig extends AbstractConfig {
             }
             final var pwd = (Password) value;
             if (pwd.value() == null || pwd.value().isBlank()) {
-                throw new ConfigException(name, pwd, "Password must be non-empty");
+                throw new ConfigException(name + " value must not be empty");
             }
         }
     }
