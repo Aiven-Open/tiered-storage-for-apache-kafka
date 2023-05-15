@@ -27,6 +27,8 @@ import java.nio.file.Files;
 import java.util.List;
 import java.util.Map;
 import java.util.Objects;
+import java.util.concurrent.Executor;
+import java.util.concurrent.ForkJoinPool;
 
 import org.apache.kafka.common.metrics.JmxReporter;
 import org.apache.kafka.common.metrics.KafkaMetricsContext;
@@ -77,6 +79,8 @@ public class UniversalRemoteStorageManager implements RemoteStorageManager {
     private final Metrics metrics;
     private final Sensor segmentCopyPerSec;
 
+    private final Executor executor = new ForkJoinPool();
+
     private UniversalRemoteStorageManagerConfig config;
 
     private ObjectStorageFactory objectStorageFactory;
@@ -88,6 +92,8 @@ public class UniversalRemoteStorageManager implements RemoteStorageManager {
     private ObjectMapper mapper;
     private ChunkManager chunkManager;
     private ObjectKey objectKey;
+
+    private SegmentManifestProvider segmentManifestProvider;
 
     UniversalRemoteStorageManager() {
         this(Time.SYSTEM);
@@ -130,6 +136,14 @@ public class UniversalRemoteStorageManager implements RemoteStorageManager {
         compression = config.compressionEnabled();
 
         mapper = getObjectMapper();
+
+        segmentManifestProvider = new SegmentManifestProvider(
+            objectKey,
+            config.segmentManifestCacheSize(),
+            config.segmentManifestCacheRetention(),
+            objectStorageFactory.fileFetcher(),
+            mapper,
+            executor);
     }
 
     private ObjectMapper getObjectMapper() {
@@ -227,14 +241,11 @@ public class UniversalRemoteStorageManager implements RemoteStorageManager {
                                        final int startPosition,
                                        final int endPosition) throws RemoteStorageException {
         try {
-            final InputStream manifest = objectStorageFactory.fileFetcher()
-                .fetch(objectKey.key(remoteLogSegmentMetadata, ObjectKey.Suffix.MANIFEST));
-
-            final SegmentManifestV1 segmentManifestV1 = mapper.readValue(manifest, SegmentManifestV1.class);
+            final SegmentManifest segmentManifest = segmentManifestProvider.get(remoteLogSegmentMetadata);
             final FetchChunkEnumeration fetchChunkEnumeration = new FetchChunkEnumeration(
                 chunkManager,
                 remoteLogSegmentMetadata,
-                segmentManifestV1,
+                segmentManifest,
                 startPosition,
                 endPosition);
             return new SequenceInputStream(fetchChunkEnumeration);

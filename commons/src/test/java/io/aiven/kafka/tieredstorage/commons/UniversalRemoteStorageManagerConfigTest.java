@@ -17,6 +17,7 @@
 package io.aiven.kafka.tieredstorage.commons;
 
 import java.nio.file.Path;
+import java.time.Duration;
 import java.util.HashMap;
 import java.util.Map;
 
@@ -40,12 +41,62 @@ class UniversalRemoteStorageManagerConfigTest {
             )
         );
         assertThat(config.objectStorageFactory()).isInstanceOf(ObjectStorageFactory.class);
+        assertThat(config.segmentManifestCacheSize()).hasValue(1000L);
+        assertThat(config.segmentManifestCacheRetention()).hasValue(Duration.ofHours(1));
         assertThat(config.chunkSize()).isEqualTo(123);
         assertThat(config.compressionEnabled()).isFalse();
         assertThat(config.encryptionEnabled()).isFalse();
         assertThat(config.encryptionPrivateKeyFile()).isNull();
         assertThat(config.encryptionPublicKeyFile()).isNull();
         assertThat(config.keyPrefix()).isEmpty();
+    }
+
+    @Test
+    void segmentManifestCacheSizeUnbounded() {
+        final var config = new UniversalRemoteStorageManagerConfig(
+            Map.of(
+                "object.storage.factory", TestObjectStorageFactory.class.getCanonicalName(),
+                "chunk.size", "123",
+                "segment.manifest.cache.size", "-1"
+            )
+        );
+        assertThat(config.segmentManifestCacheSize()).isEmpty();
+    }
+
+    @Test
+    void segmentManifestCacheSizeBounded() {
+        final var config = new UniversalRemoteStorageManagerConfig(
+            Map.of(
+                "object.storage.factory", TestObjectStorageFactory.class.getCanonicalName(),
+                "chunk.size", "123",
+                "segment.manifest.cache.size", "42"
+            )
+        );
+        assertThat(config.segmentManifestCacheSize()).hasValue(42L);
+    }
+
+    @Test
+    void segmentManifestCacheRetentionForever() {
+        final var config = new UniversalRemoteStorageManagerConfig(
+            Map.of(
+                "object.storage.factory", TestObjectStorageFactory.class.getCanonicalName(),
+                "chunk.size", "123",
+                "segment.manifest.cache.retention.ms", "-1"
+            )
+        );
+        assertThat(config.segmentManifestCacheRetention()).isEmpty();
+    }
+
+    @Test
+    void segmentManifestCacheRetentionLimited() {
+        final var config = new UniversalRemoteStorageManagerConfig(
+            Map.of(
+                "object.storage.factory", TestObjectStorageFactory.class.getCanonicalName(),
+                "chunk.size", "123",
+                "segment.manifest.cache.retention.ms", "42"
+            )
+        );
+        assertThat(config.segmentManifestCacheRetention()).hasValue(Duration.ofMillis(42));
     }
 
     @Test
