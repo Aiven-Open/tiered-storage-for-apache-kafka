@@ -35,7 +35,6 @@ import com.amazonaws.services.s3.AmazonS3ClientBuilder;
 
 public class S3StorageConfig extends AbstractConfig {
 
-
     public static final String S3_BUCKET_NAME_CONFIG = "s3.bucket.name";
     private static final String S3_BUCKET_NAME_DOC = "S3 bucket to store log segments";
     public static final String S3_ENDPOINT_URL_CONFIG = "s3.endpoint.url";

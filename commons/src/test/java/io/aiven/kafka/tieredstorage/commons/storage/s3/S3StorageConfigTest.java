@@ -57,10 +57,12 @@ class S3StorageConfigTest {
         assertThat(config.bucketName()).isEqualTo(bucketName);
         assertThat(config.getString("s3.region")).isEqualTo(region);
         assertThat(config.getString("s3.endpoint.url")).isEqualTo(minioUrl);
-        assertThat(config.getClass("aws.credentials.provider.class")).isNull();
 
         final AWSCredentialsProvider credentialsProvider = config.credentialsProvider();
         assertThat(credentialsProvider).isNull();
+        final AmazonS3 s3 = config.s3Client();
+        assertThat(s3.getRegionName()).isEqualTo(region);
+        assertThat(s3.getUrl(bucketName, "test")).hasHost("minio");
     }
 
     //   - With provider
@@ -84,6 +86,9 @@ class S3StorageConfigTest {
 
         final AWSCredentialsProvider credentialsProvider = config.credentialsProvider();
         assertThat(credentialsProvider).isInstanceOf(EnvironmentVariableCredentialsProvider.class);
+        final AmazonS3 s3 = config.s3Client();
+        assertThat(s3.getRegionName()).isEqualTo(region);
+        assertThat(s3.getUrl(bucketName, "test")).hasHost("minio");
     }
 
     //   - With static credentials
@@ -109,6 +114,13 @@ class S3StorageConfigTest {
 
         final AWSCredentialsProvider credentialsProvider = config.credentialsProvider();
         assertThat(credentialsProvider).isInstanceOf(AWSStaticCredentialsProvider.class);
+        final AWSStaticCredentialsProvider staticCredentialsProvider =
+            (AWSStaticCredentialsProvider) credentialsProvider;
+        assertThat(staticCredentialsProvider.getCredentials().getAWSAccessKeyId()).isEqualTo(username);
+        assertThat(staticCredentialsProvider.getCredentials().getAWSSecretKey()).isEqualTo(password);
+        final AmazonS3 s3 = config.s3Client();
+        assertThat(s3.getRegionName()).isEqualTo(region);
+        assertThat(s3.getUrl(bucketName, "test")).hasHost("minio");
     }
 
     //   - With missing static credentials
