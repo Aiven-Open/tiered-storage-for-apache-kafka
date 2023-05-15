@@ -88,7 +88,13 @@ public class UniversalRemoteStorageManager implements RemoteStorageManager {
             );
             aesEncryptionProvider = new AesEncryptionProvider();
         }
-        chunkManager = new ChunkManager(objectStorageFactory, objectKey, aesEncryptionProvider);
+        chunkManager = new ChunkManager(
+            objectStorageFactory.fileFetcher(),
+            objectKey,
+            aesEncryptionProvider,
+            config.chunkCache()
+        );
+
         chunkSize = config.chunkSize();
         compression = config.compressionEnabled();
 

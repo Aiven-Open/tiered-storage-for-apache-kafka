@@ -24,6 +24,8 @@ import org.apache.kafka.common.config.ConfigDef;
 import org.apache.kafka.common.config.ConfigException;
 import org.apache.kafka.common.utils.Utils;
 
+import io.aiven.kafka.tieredstorage.commons.cache.ChunkCache;
+import io.aiven.kafka.tieredstorage.commons.cache.UnboundInMemoryChunkCache;
 import io.aiven.kafka.tieredstorage.commons.storage.ObjectStorageFactory;
 
 public class UniversalRemoteStorageManagerConfig extends AbstractConfig {
@@ -37,6 +39,10 @@ public class UniversalRemoteStorageManagerConfig extends AbstractConfig {
 
     private static final String CHUNK_SIZE_CONFIG = "chunk.size";
     private static final String CHUNK_SIZE_DOC = "The chunk size of log files";
+
+    private static final String CHUNK_CACHE_PREFIX = "chunk.cache.";
+    private static final String CHUNK_CACHE_CONFIG = CHUNK_CACHE_PREFIX + "class";
+    private static final String CHUNK_CACHE_DOC = "The chunk cache implementation";
 
     private static final String COMPRESSION_CONFIG = "compression.enabled";
     private static final String COMPRESSION_DOC = "Whether to enable compression";
@@ -81,6 +87,14 @@ public class UniversalRemoteStorageManagerConfig extends AbstractConfig {
             ConfigDef.Range.between(1, Integer.MAX_VALUE / 2),
             ConfigDef.Importance.HIGH,
             CHUNK_SIZE_DOC
+        );
+
+        CONFIG.define(
+            CHUNK_CACHE_CONFIG,
+            ConfigDef.Type.CLASS,
+            UnboundInMemoryChunkCache.class,
+            ConfigDef.Importance.MEDIUM,
+            CHUNK_CACHE_DOC
         );
 
         CONFIG.define(
@@ -129,6 +143,11 @@ public class UniversalRemoteStorageManagerConfig extends AbstractConfig {
             throw new ConfigException(
                 ENCRYPTION_PRIVATE_KEY_FILE_CONFIG + " must be provided if encryption is enabled");
         }
+        final Class<?> chunkCacheClass = getClass(CHUNK_CACHE_CONFIG);
+        if (chunkCacheClass != null && !ChunkCache.class.isAssignableFrom(chunkCacheClass)) {
+            throw new ConfigException(
+                CHUNK_CACHE_CONFIG + " must be an implementation of " + ChunkCache.class.getCanonicalName());
+        }
     }
 
     ObjectStorageFactory objectStorageFactory() {
@@ -136,6 +155,17 @@ public class UniversalRemoteStorageManagerConfig extends AbstractConfig {
             getClass(OBJECT_STORAGE_FACTORY_CONFIG), ObjectStorageFactory.class);
         objectFactory.configure(this.originalsWithPrefix(OBJECT_STORAGE_PREFIX));
         return objectFactory;
+    }
+
+    ChunkCache chunkCache() {
+        final Class<?> chunkCacheClass = getClass(CHUNK_CACHE_CONFIG);
+        if (chunkCacheClass != null) {
+            final ChunkCache chunkCache = Utils.newInstance(chunkCacheClass, ChunkCache.class);
+            chunkCache.configure(this.originalsWithPrefix(CHUNK_CACHE_PREFIX));
+            return chunkCache;
+        } else {
+            return null;
+        }
     }
 
     String keyPrefix() {
