@@ -145,7 +145,7 @@ public class S3StorageConfig extends AbstractConfig {
         return s3ClientBuilder.build();
     }
 
-    public AWSCredentialsProvider credentialsProvider() {
+    AWSCredentialsProvider credentialsProvider() {
         @SuppressWarnings("unchecked") final Class<? extends AWSCredentialsProvider> providerClass =
             (Class<? extends AWSCredentialsProvider>) getClass(AWS_CREDENTIALS_PROVIDER_CLASS_CONFIG);
         if (Objects.isNull(providerClass)) {

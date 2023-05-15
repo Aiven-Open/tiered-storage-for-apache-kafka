@@ -86,7 +86,7 @@ class S3StorageConfigTest {
         assertThat(credentialsProvider).isInstanceOf(EnvironmentVariableCredentialsProvider.class);
     }
 
-    //   - With static configs
+    //   - With static credentials
     @Test
     void configWithStaticCredentials() {
         final String bucketName = "b1";
@@ -111,7 +111,7 @@ class S3StorageConfigTest {
         assertThat(credentialsProvider).isInstanceOf(AWSStaticCredentialsProvider.class);
     }
 
-    //   - With missing static config
+    //   - With missing static credentials
     @Test
     void configWithMissingStaticConfig() {
         final String bucketName = "b1";
