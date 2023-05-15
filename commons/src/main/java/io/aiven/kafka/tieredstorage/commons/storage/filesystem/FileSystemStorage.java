@@ -20,12 +20,14 @@ import java.io.IOException;
 import java.io.InputStream;
 import java.io.OutputStream;
 import java.nio.file.Files;
+import java.nio.file.NoSuchFileException;
 import java.nio.file.Path;
 
 import io.aiven.kafka.tieredstorage.commons.storage.BytesRange;
 import io.aiven.kafka.tieredstorage.commons.storage.FileDeleter;
 import io.aiven.kafka.tieredstorage.commons.storage.FileFetcher;
 import io.aiven.kafka.tieredstorage.commons.storage.FileUploader;
+import io.aiven.kafka.tieredstorage.commons.storage.KeyNotFoundException;
 import io.aiven.kafka.tieredstorage.commons.storage.StorageBackEndException;
 
 import org.apache.commons.io.file.PathUtils;
@@ -59,6 +61,8 @@ class FileSystemStorage implements FileUploader, FileFetcher, FileDeleter {
         try {
             final Path path = fsRoot.resolve(key);
             return Files.newInputStream(path);
+        } catch (final NoSuchFileException e) {
+            throw new KeyNotFoundException(this, key, e);
         } catch (final IOException e) {
             throw new StorageBackEndException("Failed to fetch " + key, e);
         }
@@ -77,6 +81,8 @@ class FileSystemStorage implements FileUploader, FileFetcher, FileDeleter {
             final InputStream result = new BoundedInputStream(Files.newInputStream(path), range.to);
             result.skip(range.from);
             return result;
+        } catch (final NoSuchFileException e) {
+            throw new KeyNotFoundException(this, key, e);
         } catch (final IOException e) {
             throw new StorageBackEndException("Failed to fetch " + key + ", with range " + range, e);
         }
