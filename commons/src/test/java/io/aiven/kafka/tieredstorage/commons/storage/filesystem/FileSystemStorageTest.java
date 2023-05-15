@@ -16,14 +16,15 @@
 
 package io.aiven.kafka.tieredstorage.commons.storage.filesystem;
 
-import java.io.ByteArrayInputStream;
 import java.io.IOException;
-import java.io.InputStream;
 import java.nio.file.Files;
 import java.nio.file.Path;
 
+import io.aiven.kafka.tieredstorage.commons.storage.BaseStorageTest;
 import io.aiven.kafka.tieredstorage.commons.storage.BytesRange;
-import io.aiven.kafka.tieredstorage.commons.storage.KeyNotFoundException;
+import io.aiven.kafka.tieredstorage.commons.storage.FileDeleter;
+import io.aiven.kafka.tieredstorage.commons.storage.FileFetcher;
+import io.aiven.kafka.tieredstorage.commons.storage.FileUploader;
 import io.aiven.kafka.tieredstorage.commons.storage.StorageBackEndException;
 
 import org.junit.jupiter.api.Test;
@@ -32,12 +33,25 @@ import org.junit.jupiter.api.io.TempDir;
 import static org.assertj.core.api.Assertions.assertThat;
 import static org.assertj.core.api.Assertions.assertThatThrownBy;
 
-class FileSystemStorageTest {
-
-    static final String TOPIC_PARTITION_SEGMENT_KEY = "topic/partition/log";
+class FileSystemStorageTest extends BaseStorageTest {
 
     @TempDir
     Path root;
+
+    @Override
+    protected FileUploader uploader() {
+        return new FileSystemStorage(root);
+    }
+
+    @Override
+    protected FileFetcher fetcher() {
+        return new FileSystemStorage(root);
+    }
+
+    @Override
+    protected FileDeleter deleter() {
+        return new FileSystemStorage(root);
+    }
 
     @Test
     void testRootCannotBeAFile() throws IOException {
@@ -60,68 +74,6 @@ class FileSystemStorageTest {
     }
 
     @Test
-    void testUploadANewFile() throws StorageBackEndException {
-        final FileSystemStorage storage = new FileSystemStorage(root);
-        final String content = "content";
-        storage.upload(new ByteArrayInputStream(content.getBytes()), TOPIC_PARTITION_SEGMENT_KEY);
-
-        assertThat(root.resolve(TOPIC_PARTITION_SEGMENT_KEY)).hasContent(content);
-    }
-
-    @Test
-    void testUploadWithOverridesWhenFileExists() throws IOException, StorageBackEndException {
-        final Path previous = root.resolve(TOPIC_PARTITION_SEGMENT_KEY);
-        Files.createDirectories(previous.getParent());
-        Files.writeString(previous, "previous");
-        final FileSystemStorage storage = new FileSystemStorage(root);
-        final String content = "content";
-        storage.upload(new ByteArrayInputStream(content.getBytes()), TOPIC_PARTITION_SEGMENT_KEY);
-        assertThat(previous).hasContent(content);
-    }
-
-    @Test
-    void testFetchAll() throws IOException, StorageBackEndException {
-        final String content = "content";
-        final Path keyPath = root.resolve(TOPIC_PARTITION_SEGMENT_KEY);
-        Files.createDirectories(keyPath.getParent());
-        Files.writeString(keyPath, content);
-        final FileSystemStorage storage = new FileSystemStorage(root);
-
-        try (final InputStream fetch = storage.fetch(TOPIC_PARTITION_SEGMENT_KEY)) {
-            assertThat(fetch).hasContent(content);
-        }
-    }
-
-    @Test
-    void testFetchWithOffsetRange() throws IOException, StorageBackEndException {
-        final String content = "AABBBBAA";
-        final int from = 2;
-        final int to = 6;
-        final String range = content.substring(from, to);
-        final Path keyPath = root.resolve(TOPIC_PARTITION_SEGMENT_KEY);
-        Files.createDirectories(keyPath.getParent());
-        Files.writeString(keyPath, content);
-        final FileSystemStorage storage = new FileSystemStorage(root);
-
-        try (final InputStream fetch = storage.fetch(TOPIC_PARTITION_SEGMENT_KEY, BytesRange.of(from, to))) {
-            assertThat(fetch).hasContent(range);
-        }
-    }
-
-    @Test
-    void testFetchSingleByte() throws IOException, StorageBackEndException {
-        final String content = "ABC";
-        final Path keyPath = root.resolve(TOPIC_PARTITION_SEGMENT_KEY);
-        Files.createDirectories(keyPath.getParent());
-        Files.writeString(keyPath, content);
-        final FileSystemStorage storage = new FileSystemStorage(root);
-
-        try (final InputStream fetch = storage.fetch(TOPIC_PARTITION_SEGMENT_KEY, BytesRange.of(2, 3))) {
-            assertThat(fetch).hasContent("C");
-        }
-    }
-
-    @Test
     void testFetchWithOffsetRangeLargerThanFileSize() throws IOException {
         final String content = "content";
         final Path keyPath = root.resolve(TOPIC_PARTITION_SEGMENT_KEY);
@@ -135,18 +87,7 @@ class FileSystemStorageTest {
     }
 
     @Test
-    void testFetchNonExistingKey() {
-        final FileSystemStorage storage = new FileSystemStorage(root);
-        assertThatThrownBy(() -> storage.fetch("non-existing"))
-            .isInstanceOf(KeyNotFoundException.class)
-            .hasMessage("Key non-existing does not exists in storage " + storage);
-        assertThatThrownBy(() -> storage.fetch("non-existing", BytesRange.of(0, 1)))
-            .isInstanceOf(KeyNotFoundException.class)
-            .hasMessage("Key non-existing does not exists in storage " + storage);
-    }
-
-    @Test
-    void testDelete() throws IOException, StorageBackEndException {
+    void testDeleteAllParentsButRoot() throws IOException, StorageBackEndException {
         final Path keyPath = root.resolve(TOPIC_PARTITION_SEGMENT_KEY);
         Files.createDirectories(keyPath.getParent());
         Files.writeString(keyPath, "test");
