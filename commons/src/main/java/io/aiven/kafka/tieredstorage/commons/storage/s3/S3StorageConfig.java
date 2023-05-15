@@ -41,7 +41,7 @@ public class S3StorageConfig extends AbstractConfig {
     private static final String S3_ENDPOINT_URL_DOC = "Custom S3 endpoint URL. "
         + "To be used with custom S3-compatible backends (e.g. minio).";
     public static final String S3_REGION_CONFIG = "s3.region";
-    private static final String S3_REGION_DEFAULT = Regions.DEFAULT_REGION.getName();
+    static final String S3_REGION_DEFAULT = Regions.DEFAULT_REGION.getName();
     private static final String S3_REGION_DOC = "AWS region where S3 bucket is placed";
 
     public static final String AWS_CREDENTIALS_PROVIDER_CLASS_CONFIG = "aws.credentials.provider.class";

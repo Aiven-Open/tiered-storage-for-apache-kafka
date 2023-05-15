@@ -27,6 +27,7 @@ import com.amazonaws.regions.Regions;
 import com.amazonaws.services.s3.AmazonS3;
 import org.junit.jupiter.api.Test;
 
+import static io.aiven.kafka.tieredstorage.commons.storage.s3.S3StorageConfig.S3_REGION_DEFAULT;
 import static org.assertj.core.api.Assertions.assertThat;
 import static org.assertj.core.api.Assertions.assertThatThrownBy;
 
@@ -40,6 +41,13 @@ class S3StorageConfigTest {
         final Map<String, Object> configs = Map.of("s3.bucket.name", bucketName);
         final S3StorageConfig config = new S3StorageConfig(configs);
         assertThat(config.bucketName()).isEqualTo(bucketName);
+
+        final AWSCredentialsProvider credentialsProvider = config.credentialsProvider();
+        assertThat(credentialsProvider).isNull();
+        final AmazonS3 s3 = config.s3Client();
+        assertThat(s3.getRegionName()).isEqualTo(S3_REGION_DEFAULT);
+        final String expectedHost = "s3." + S3_REGION_DEFAULT + ".amazonaws.com";
+        assertThat(s3.getUrl(bucketName, "test")).hasHost(expectedHost);
     }
 
     // - Credential provider scenarios
