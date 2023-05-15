@@ -23,6 +23,7 @@ import java.nio.file.Files;
 import java.nio.file.Path;
 
 import io.aiven.kafka.tieredstorage.commons.storage.BytesRange;
+import io.aiven.kafka.tieredstorage.commons.storage.KeyNotFoundException;
 import io.aiven.kafka.tieredstorage.commons.storage.StorageBackEndException;
 
 import org.junit.jupiter.api.Test;
@@ -128,10 +129,20 @@ class FileSystemStorageTest {
         Files.writeString(keyPath, content);
         final FileSystemStorage storage = new FileSystemStorage(root);
 
-
         assertThatThrownBy(() -> storage.fetch(TOPIC_PARTITION_SEGMENT_KEY, BytesRange.of(0, content.length() + 1)))
             .isInstanceOf(IllegalArgumentException.class)
             .hasMessage("position 'to' cannot be higher than the file size, to=8, file size=7 given");
+    }
+
+    @Test
+    void testFetchNonExistingKey() {
+        final FileSystemStorage storage = new FileSystemStorage(root);
+        assertThatThrownBy(() -> storage.fetch("non-existing"))
+            .isInstanceOf(KeyNotFoundException.class)
+            .hasMessage("Key non-existing does not exists in storage " + storage);
+        assertThatThrownBy(() -> storage.fetch("non-existing", BytesRange.of(0, 1)))
+            .isInstanceOf(KeyNotFoundException.class)
+            .hasMessage("Key non-existing does not exists in storage " + storage);
     }
 
     @Test
