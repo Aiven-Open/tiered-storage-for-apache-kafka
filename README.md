@@ -68,15 +68,15 @@ This encoding scheme allows indices to be stored (cached) in memory and accessed
 
 ### Compression
 
-TBD
+Optional data compression with Zstandard is supported. It can be disabled, enabled, or enabled conditionally based on a heuristic.
 
-#### Compression heuristics
+#### Compression heuristic
 
-TBD
+For each segment that is to be uploaded, the heuristic checks if the first batch in the segment is compressed. If it is not compressed, the whole segment is considered not compressed and compression is performed.
 
 #### On compression dictionaries
 
-TBD
+It's possible to further reduce the size of compressed chunks if, instead of compressing them independently, first pretrain a shared compression dictionary. This is not implemented now and will potentially be addressed in the future: preliminary research didn't demonstrate significant advantage.
 
 ### Encryption
 
