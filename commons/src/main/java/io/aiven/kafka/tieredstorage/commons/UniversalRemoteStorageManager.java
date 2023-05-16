@@ -62,6 +62,8 @@ import io.aiven.kafka.tieredstorage.commons.transform.TransformFinisher;
 import com.fasterxml.jackson.databind.ObjectMapper;
 import com.fasterxml.jackson.databind.module.SimpleModule;
 import com.fasterxml.jackson.datatype.jdk8.Jdk8Module;
+import org.slf4j.Logger;
+import org.slf4j.LoggerFactory;
 
 import static org.apache.kafka.server.log.remote.storage.RemoteStorageManager.IndexType.LEADER_EPOCH;
 import static org.apache.kafka.server.log.remote.storage.RemoteStorageManager.IndexType.OFFSET;
@@ -70,6 +72,8 @@ import static org.apache.kafka.server.log.remote.storage.RemoteStorageManager.In
 import static org.apache.kafka.server.log.remote.storage.RemoteStorageManager.IndexType.TRANSACTION;
 
 public class UniversalRemoteStorageManager implements RemoteStorageManager {
+    private static final Logger log = LoggerFactory.getLogger(UniversalRemoteStorageManager.class);
+
     private final Metrics metrics;
     private final Sensor segmentCopyPerSec;
 
@@ -274,7 +278,7 @@ public class UniversalRemoteStorageManager implements RemoteStorageManager {
         try {
             metrics.close();
         } catch (final Exception e) {
-            // TODO log
+            log.warn("Error while closing metrics", e);
         }
     }
 }
