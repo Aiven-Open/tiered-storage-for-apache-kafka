@@ -16,6 +16,8 @@
 
 package io.aiven.kafka.tieredstorage.commons;
 
+import javax.crypto.SecretKey;
+
 import java.io.IOException;
 import java.nio.file.Files;
 import java.nio.file.Path;
@@ -30,18 +32,19 @@ import java.security.spec.EncodedKeySpec;
 import java.security.spec.PKCS8EncodedKeySpec;
 import java.security.spec.X509EncodedKeySpec;
 
+import io.aiven.kafka.tieredstorage.commons.security.EncryptionProvider;
+
 import org.bouncycastle.jce.provider.BouncyCastleProvider;
 import org.bouncycastle.util.io.pem.PemObject;
 import org.bouncycastle.util.io.pem.PemWriter;
 import org.junit.jupiter.api.BeforeAll;
 import org.junit.jupiter.api.io.TempDir;
 
-public abstract class RsaKeyAwareTest {
-
-    public static KeyPair rsaKeyPair;
-
+public class EncryptionAwareTest {
+    public static EncryptionProvider encryptionProvider;
+    public static int ivSize;
+    public static SecretKey dataKey;
     public static Path publicKeyPem;
-
     public static Path privateKeyPem;
 
     static {
@@ -49,26 +52,30 @@ public abstract class RsaKeyAwareTest {
     }
 
     @BeforeAll
-    static void generateRsaKeyPair(@TempDir final Path tmpFolder)
-            throws NoSuchAlgorithmException, IOException, NoSuchProviderException {
-        final var keyPair = KeyPairGenerator.getInstance("RSA", "BC");
+    static void setup(@TempDir final Path tmpFolder)
+        throws NoSuchAlgorithmException, IOException, NoSuchProviderException {
+        final KeyPairGenerator keyPair = KeyPairGenerator.getInstance("RSA", "BC");
         keyPair.initialize(2048, SecureRandom.getInstanceStrong());
-        rsaKeyPair = keyPair.generateKeyPair();
+        final KeyPair rsaKeyPair = keyPair.generateKeyPair();
 
         publicKeyPem = tmpFolder.resolve(Paths.get("test_public.pem"));
         privateKeyPem = tmpFolder.resolve(Paths.get("test_private.pem"));
 
         writePemFile(publicKeyPem, new X509EncodedKeySpec(rsaKeyPair.getPublic().getEncoded()));
         writePemFile(privateKeyPem, new PKCS8EncodedKeySpec(rsaKeyPair.getPrivate().getEncoded()));
+
+        encryptionProvider = EncryptionProvider.of(publicKeyPem, privateKeyPem);
+        ivSize = encryptionProvider.ivSize();
+
+        // These are tests, we don't need a secure source of randomness.
+        dataKey = encryptionProvider.createDataKeyAndAAD().dataKey;
     }
 
-    protected static void writePemFile(final Path path, final EncodedKeySpec encodedKeySpec) throws IOException {
+    public static void writePemFile(final Path path, final EncodedKeySpec encodedKeySpec) throws IOException {
         try (var pemWriter = new PemWriter(Files.newBufferedWriter(path))) {
             final var pemObject = new PemObject("SOME KEY", encodedKeySpec.getEncoded());
             pemWriter.writeObject(pemObject);
             pemWriter.flush();
         }
     }
-
-
 }

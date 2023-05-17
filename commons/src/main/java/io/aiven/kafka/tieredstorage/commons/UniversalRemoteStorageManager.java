@@ -17,7 +17,6 @@
 package io.aiven.kafka.tieredstorage.commons;
 
 import javax.crypto.SecretKey;
-import javax.crypto.spec.SecretKeySpec;
 
 import java.io.ByteArrayInputStream;
 import java.io.IOException;
@@ -49,9 +48,8 @@ import io.aiven.kafka.tieredstorage.commons.manifest.SegmentManifestV1;
 import io.aiven.kafka.tieredstorage.commons.manifest.index.ChunkIndex;
 import io.aiven.kafka.tieredstorage.commons.manifest.serde.DataKeyDeserializer;
 import io.aiven.kafka.tieredstorage.commons.manifest.serde.DataKeySerializer;
-import io.aiven.kafka.tieredstorage.commons.security.AesEncryptionProvider;
 import io.aiven.kafka.tieredstorage.commons.security.DataKeyAndAAD;
-import io.aiven.kafka.tieredstorage.commons.security.RsaEncryptionProvider;
+import io.aiven.kafka.tieredstorage.commons.security.EncryptionProvider;
 import io.aiven.kafka.tieredstorage.commons.storage.ObjectStorageFactory;
 import io.aiven.kafka.tieredstorage.commons.storage.StorageBackEndException;
 import io.aiven.kafka.tieredstorage.commons.transform.BaseTransformChunkEnumeration;
@@ -81,14 +79,11 @@ public class UniversalRemoteStorageManager implements RemoteStorageManager {
 
     private final Executor executor = new ForkJoinPool();
 
-    private UniversalRemoteStorageManagerConfig config;
-
     private ObjectStorageFactory objectStorageFactory;
     private boolean compression;
     private boolean encryption;
     private int chunkSize;
-    private RsaEncryptionProvider rsaEncryptionProvider;
-    private AesEncryptionProvider aesEncryptionProvider;
+    private EncryptionProvider encryptionProvider;
     private ObjectMapper mapper;
     private ChunkManager chunkManager;
     private ObjectKey objectKey;
@@ -114,21 +109,20 @@ public class UniversalRemoteStorageManager implements RemoteStorageManager {
     @Override
     public void configure(final Map<String, ?> configs) {
         Objects.requireNonNull(configs, "configs must not be null");
-        config = new UniversalRemoteStorageManagerConfig(configs);
+        final UniversalRemoteStorageManagerConfig config = new UniversalRemoteStorageManagerConfig(configs);
         objectStorageFactory = config.objectStorageFactory();
         objectKey = new ObjectKey(config.keyPrefix());
         encryption = config.encryptionEnabled();
         if (encryption) {
-            rsaEncryptionProvider = RsaEncryptionProvider.of(
+            encryptionProvider = EncryptionProvider.of(
                 config.encryptionPublicKeyFile(),
                 config.encryptionPrivateKeyFile()
             );
-            aesEncryptionProvider = new AesEncryptionProvider();
         }
         chunkManager = new ChunkManager(
             objectStorageFactory.fileFetcher(),
             objectKey,
-            aesEncryptionProvider,
+            encryptionProvider,
             config.chunkCache()
         );
 
@@ -151,9 +145,9 @@ public class UniversalRemoteStorageManager implements RemoteStorageManager {
         objectMapper.registerModule(new Jdk8Module());
         if (encryption) {
             final SimpleModule simpleModule = new SimpleModule();
-            simpleModule.addSerializer(SecretKey.class, new DataKeySerializer(rsaEncryptionProvider::encryptDataKey));
+            simpleModule.addSerializer(SecretKey.class, new DataKeySerializer(encryptionProvider::encryptDataKey));
             simpleModule.addDeserializer(SecretKey.class, new DataKeyDeserializer(
-                b -> new SecretKeySpec(rsaEncryptionProvider.decryptDataKey(b), "AES")));
+                b -> encryptionProvider.decryptDataKey(b)));
             objectMapper.registerModule(simpleModule);
         }
         return objectMapper;
@@ -175,10 +169,10 @@ public class UniversalRemoteStorageManager implements RemoteStorageManager {
                 transformEnum = new CompressionChunkEnumeration(transformEnum);
             }
             if (encryption) {
-                final DataKeyAndAAD dataKeyAndAAD = aesEncryptionProvider.createDataKeyAndAAD();
+                final DataKeyAndAAD dataKeyAndAAD = encryptionProvider.createDataKeyAndAAD();
                 transformEnum = new EncryptionChunkEnumeration(
                     transformEnum,
-                    () -> aesEncryptionProvider.encryptionCipher(dataKeyAndAAD));
+                    () -> encryptionProvider.encryptionCipher(dataKeyAndAAD));
                 encryptionMetadata = new SegmentEncryptionMetadataV1(dataKeyAndAAD.dataKey, dataKeyAndAAD.aad);
             }
             final var transformFinisher =

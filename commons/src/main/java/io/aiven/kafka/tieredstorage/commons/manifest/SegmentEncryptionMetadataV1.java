@@ -21,12 +21,13 @@ import javax.crypto.SecretKey;
 import java.util.Arrays;
 import java.util.Objects;
 
+import io.aiven.kafka.tieredstorage.commons.security.DataKeyAndAAD;
+
 import com.fasterxml.jackson.annotation.JsonCreator;
+import com.fasterxml.jackson.annotation.JsonIgnore;
 import com.fasterxml.jackson.annotation.JsonProperty;
 
 public class SegmentEncryptionMetadataV1 implements SegmentEncryptionMetadata {
-    public static final int IV_SIZE = 12;
-
     private final SecretKey dataKey;
     private final byte[] aad;
 
@@ -40,11 +41,6 @@ public class SegmentEncryptionMetadataV1 implements SegmentEncryptionMetadata {
     }
 
     @Override
-    public int ivSize() {
-        return IV_SIZE;
-    }
-
-    @Override
     @JsonProperty("dataKey")
     public SecretKey dataKey() {
         return this.dataKey;
@@ -54,6 +50,12 @@ public class SegmentEncryptionMetadataV1 implements SegmentEncryptionMetadata {
     @JsonProperty("aad")
     public byte[] aad() {
         return this.aad;
+    }
+
+    @Override
+    @JsonIgnore
+    public DataKeyAndAAD dataKeyAndAAD() {
+        return new DataKeyAndAAD(this.dataKey, this.aad);
     }
 
     @Override

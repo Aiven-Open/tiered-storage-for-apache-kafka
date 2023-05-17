@@ -16,54 +16,42 @@
 
 package io.aiven.kafka.tieredstorage.commons.security.metadata;
 
-import javax.crypto.spec.SecretKeySpec;
+import javax.crypto.SecretKey;
 
 import java.io.IOException;
 import java.nio.charset.StandardCharsets;
 import java.util.Base64;
 
-import io.aiven.kafka.tieredstorage.commons.RsaKeyAwareTest;
-import io.aiven.kafka.tieredstorage.commons.security.AesEncryptionProvider;
-import io.aiven.kafka.tieredstorage.commons.security.RsaEncryptionProvider;
+import io.aiven.kafka.tieredstorage.commons.EncryptionAwareTest;
 
 import com.fasterxml.jackson.databind.ObjectMapper;
-import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.Test;
 
 import static org.assertj.core.api.Assertions.assertThat;
 import static org.assertj.core.api.Assertions.assertThatThrownBy;
 
-class EncryptedRepositoryMetadataTest extends RsaKeyAwareTest {
+class EncryptedRepositoryMetadataTest extends EncryptionAwareTest {
 
     static final String METADATA_JSON_PATTERN =
         "{ \"encryptionMetadata\": \"%s\", \"version\": %s }";
 
-    RsaEncryptionProvider rsaEncryptionProvider;
-    AesEncryptionProvider aesEncryptionProvider;
-
-    @BeforeEach
-    void setUp() {
-        rsaEncryptionProvider = RsaEncryptionProvider.of(publicKeyPem, privateKeyPem);
-        aesEncryptionProvider = new AesEncryptionProvider();
-    }
-
     @Test
     void shouldSerializeMetadata() throws IOException {
-        final var dataKey = aesEncryptionProvider.createDataKey();
-        final var bytes = new EncryptedRepositoryMetadata(rsaEncryptionProvider).serialize(dataKey);
+        final var dataKey = encryptionProvider.createDataKeyAndAAD().dataKey;
+        final var bytes = new EncryptedRepositoryMetadata(encryptionProvider).serialize(dataKey);
 
         final var encryptionMetadata = new ObjectMapper().readValue(bytes, EncryptionMetadata.class);
 
         final var encryptedKey = Base64.getDecoder().decode(encryptionMetadata.encryptionMetadata());
 
-        assertThat(new SecretKeySpec(rsaEncryptionProvider.decryptDataKey(encryptedKey), "AES")).isEqualTo(dataKey);
+        assertThat(encryptionProvider.decryptDataKey(encryptedKey)).isEqualTo(dataKey);
         assertThat(encryptionMetadata.version()).isEqualTo(EncryptedRepositoryMetadata.VERSION);
     }
 
     @Test
     void shouldDeserializeMetadata() throws IOException {
-        final var dataKey = aesEncryptionProvider.createDataKey();
-        final var encryptedKey = rsaEncryptionProvider.encryptDataKey(dataKey);
+        final var dataKey = encryptionProvider.createDataKeyAndAAD().dataKey;
+        final var encryptedKey = encryptionProvider.encryptDataKey(dataKey);
 
         final var json =
             String.format(
@@ -71,14 +59,15 @@ class EncryptedRepositoryMetadataTest extends RsaKeyAwareTest {
                 Base64.getEncoder().encodeToString(encryptedKey),
                 EncryptedRepositoryMetadata.VERSION);
 
-        final var savedKey = deserializeMetadata(json);
+        final SecretKey savedKey = deserializeMetadata(json);
 
-        assertThat(new SecretKeySpec(savedKey, "AES")).isEqualTo(dataKey);
+        assertThat(savedKey).isEqualTo(dataKey);
     }
 
     @Test
     void deserializationShouldThrowIOExceptionForWrongJson() {
-        final var encryptedKey = rsaEncryptionProvider.encryptDataKey(aesEncryptionProvider.createDataKey());
+        final SecretKey dataKey = encryptionProvider.createDataKeyAndAAD().dataKey;
+        final var encryptedKey = encryptionProvider.encryptDataKey(dataKey);
 
         assertThatThrownBy(() -> deserializeMetadata(""))
             .isInstanceOf(IOException.class);
@@ -99,9 +88,10 @@ class EncryptedRepositoryMetadataTest extends RsaKeyAwareTest {
 
     @Test
     void deserializationShouldThrowIOExceptionForWrongVersion() {
-        final var encryptedKey = rsaEncryptionProvider.encryptDataKey(aesEncryptionProvider.createDataKey());
+        final SecretKey dataKey = encryptionProvider.createDataKeyAndAAD().dataKey;
+        final byte[] encryptedKey = encryptionProvider.encryptDataKey(dataKey);
 
-        final var jsonWithWrongVersion =
+        final String jsonWithWrongVersion =
             String.format(
                 METADATA_JSON_PATTERN,
                 Base64.getEncoder().encodeToString(encryptedKey), 100);
@@ -110,8 +100,8 @@ class EncryptedRepositoryMetadataTest extends RsaKeyAwareTest {
             .hasMessage("Unsupported metadata version");
     }
 
-    private byte[] deserializeMetadata(final String json) throws IOException {
-        return new EncryptedRepositoryMetadata(rsaEncryptionProvider)
+    private SecretKey deserializeMetadata(final String json) throws IOException {
+        return new EncryptedRepositoryMetadata(encryptionProvider)
             .deserialize(json.getBytes(StandardCharsets.UTF_8));
     }
 }

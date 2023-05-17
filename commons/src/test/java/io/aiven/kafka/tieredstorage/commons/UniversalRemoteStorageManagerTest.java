@@ -18,8 +18,6 @@ package io.aiven.kafka.tieredstorage.commons;
 
 import javax.crypto.Cipher;
 import javax.crypto.SecretKey;
-import javax.crypto.spec.IvParameterSpec;
-import javax.crypto.spec.SecretKeySpec;
 
 import java.io.File;
 import java.io.IOException;
@@ -29,7 +27,6 @@ import java.nio.ByteBuffer;
 import java.nio.file.Files;
 import java.nio.file.Path;
 import java.security.GeneralSecurityException;
-import java.security.SecureRandom;
 import java.util.ArrayList;
 import java.util.Arrays;
 import java.util.HashMap;
@@ -48,15 +45,10 @@ import org.apache.kafka.server.log.remote.storage.RemoteStorageException;
 import org.apache.kafka.server.log.remote.storage.RemoteStorageManager;
 
 import io.aiven.kafka.tieredstorage.commons.manifest.index.ChunkIndex;
-import io.aiven.kafka.tieredstorage.commons.manifest.serde.DataKeyDeserializer;
-import io.aiven.kafka.tieredstorage.commons.manifest.serde.DataKeySerializer;
-import io.aiven.kafka.tieredstorage.commons.security.AesEncryptionProvider;
 import io.aiven.kafka.tieredstorage.commons.security.DataKeyAndAAD;
-import io.aiven.kafka.tieredstorage.commons.security.RsaEncryptionProvider;
 
 import com.fasterxml.jackson.databind.JsonNode;
 import com.fasterxml.jackson.databind.ObjectMapper;
-import com.fasterxml.jackson.databind.module.SimpleModule;
 import com.github.luben.zstd.Zstd;
 import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.io.TempDir;
@@ -66,11 +58,8 @@ import org.junit.jupiter.params.provider.MethodSource;
 
 import static org.assertj.core.api.Assertions.assertThat;
 
-class UniversalRemoteStorageManagerTest extends RsaKeyAwareTest {
+class UniversalRemoteStorageManagerTest extends EncryptionAwareTest {
     RemoteStorageManager rsm;
-
-    RsaEncryptionProvider rsaEncryptionProvider;
-    AesEncryptionProvider aesEncryptionProvider;
 
     @TempDir
     Path tmpDir;
@@ -84,7 +73,6 @@ class UniversalRemoteStorageManagerTest extends RsaKeyAwareTest {
     Path txnIndexFilePath;
 
     public static final byte[] LEADER_EPOCH_INDEX_BYTES = "leader epoch index".getBytes();
-    static final int IV_SIZE = 12;
     static final int SEGMENT_SIZE = 10 * 1024 * 1024;
     static final Uuid TOPIC_ID = Uuid.METADATA_TOPIC_ID;  // string representation: AAAAAAAAAAAAAAAAAAAAAQ
     static final Uuid SEGMENT_ID = Uuid.ZERO_UUID;  // string representation: AAAAAAAAAAAAAAAAAAAAAA
@@ -116,9 +104,6 @@ class UniversalRemoteStorageManagerTest extends RsaKeyAwareTest {
     @BeforeEach
     void init() throws IOException {
         rsm = new UniversalRemoteStorageManager();
-
-        rsaEncryptionProvider = RsaEncryptionProvider.of(publicKeyPem, privateKeyPem);
-        aesEncryptionProvider = new AesEncryptionProvider();
 
         sourceDir = Path.of(tmpDir.toString(), "source");
         Files.createDirectories(sourceDir);
@@ -213,9 +198,8 @@ class UniversalRemoteStorageManagerTest extends RsaKeyAwareTest {
         if (hasTxnIndex) {
             expectedFiles.add("topic-AAAAAAAAAAAAAAAAAAAAAQ/7/00000000000000000023-AAAAAAAAAAAAAAAAAAAAAA.txnindex");
         }
-        expectedFiles.forEach(s -> {
-            assertThat(targetDir).isDirectoryRecursivelyContaining(path -> path.toString().endsWith(s));
-        });
+        expectedFiles.forEach(s ->
+            assertThat(targetDir).isDirectoryRecursivelyContaining(path -> path.toString().endsWith(s)));
     }
 
     private void checkManifest(final int chunkSize,
@@ -288,14 +272,9 @@ class UniversalRemoteStorageManagerTest extends RsaKeyAwareTest {
         final JsonNode manifest = objectMapper.readTree(new File(targetDir.toString(), TARGET_MANIFEST_FILE));
 
         final byte[] encryptedDataKey = manifest.get("encryption").get("dataKey").binaryValue();
-        final byte[] dataKey = rsaEncryptionProvider.decryptDataKey(encryptedDataKey);
+        final SecretKey dataKey = encryptionProvider.decryptDataKey(encryptedDataKey);
         final byte[] aad = manifest.get("encryption").get("aad").binaryValue();
 
-        final SimpleModule simpleModule = new SimpleModule();
-        simpleModule.addSerializer(SecretKey.class, new DataKeySerializer(rsaEncryptionProvider::encryptDataKey));
-        simpleModule.addDeserializer(SecretKey.class, new DataKeyDeserializer(
-            b -> new SecretKeySpec(rsaEncryptionProvider.decryptDataKey(b), "AES")));
-        objectMapper.registerModule(simpleModule);
         final ChunkIndex chunkIndex = objectMapper.treeToValue(manifest.get("chunkIndex"), ChunkIndex.class);
 
         try (final InputStream originalInputStream = Files.newInputStream(logFilePath);
@@ -305,17 +284,9 @@ class UniversalRemoteStorageManagerTest extends RsaKeyAwareTest {
                 final byte[] transformedChunk = transformedInputStream.readNBytes(chunk.transformedSize);
                 byte[] detransformedChunk;
                 try {
-                    final DataKeyAndAAD dataKeyAndAAD = aesEncryptionProvider.createDataKeyAndAAD();
-                    final Cipher cipher = aesEncryptionProvider.encryptionCipher(dataKeyAndAAD);
-                    final byte[] iv = cipher.getIV();
-                    final int ivSize = iv.length;
-                    final SecretKeySpec secretKeySpec = new SecretKeySpec(dataKey, "AES");
-                    cipher.init(Cipher.DECRYPT_MODE, secretKeySpec,
-                        new IvParameterSpec(transformedChunk, 0, ivSize),
-                        SecureRandom.getInstanceStrong());
-                    cipher.updateAAD(aad);
-
-                    detransformedChunk = cipher.doFinal(transformedChunk, IV_SIZE, transformedChunk.length - IV_SIZE);
+                    final DataKeyAndAAD dataKeyAndAAD = new DataKeyAndAAD(dataKey, aad);
+                    final Cipher cipher = encryptionProvider.decryptionCipher(transformedChunk, dataKeyAndAAD);
+                    detransformedChunk = cipher.doFinal(transformedChunk, ivSize, transformedChunk.length - ivSize);
                 } catch (final GeneralSecurityException e) {
                     throw new RuntimeException(e);
                 }

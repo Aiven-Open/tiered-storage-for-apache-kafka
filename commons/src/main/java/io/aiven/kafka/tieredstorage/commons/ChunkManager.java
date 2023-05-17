@@ -27,7 +27,8 @@ import org.apache.kafka.server.log.remote.storage.RemoteLogSegmentMetadata;
 import io.aiven.kafka.tieredstorage.commons.cache.ChunkCache;
 import io.aiven.kafka.tieredstorage.commons.manifest.SegmentEncryptionMetadata;
 import io.aiven.kafka.tieredstorage.commons.manifest.SegmentManifest;
-import io.aiven.kafka.tieredstorage.commons.security.AesEncryptionProvider;
+import io.aiven.kafka.tieredstorage.commons.security.DataKeyAndAAD;
+import io.aiven.kafka.tieredstorage.commons.security.EncryptionProvider;
 import io.aiven.kafka.tieredstorage.commons.storage.FileFetcher;
 import io.aiven.kafka.tieredstorage.commons.storage.StorageBackEndException;
 import io.aiven.kafka.tieredstorage.commons.transform.BaseDetransformChunkEnumeration;
@@ -41,14 +42,16 @@ import org.apache.commons.io.IOUtils;
 public class ChunkManager {
     private final FileFetcher fileFetcher;
     private final ObjectKey objectKey;
-    private final AesEncryptionProvider aesEncryptionProvider;
+    private final EncryptionProvider encryptionProvider;
     private final ChunkCache chunkCache;
 
-    public ChunkManager(final FileFetcher fileFetcher, final ObjectKey objectKey,
-                        final AesEncryptionProvider aesEncryptionProvider, final ChunkCache chunkCache) {
+    public ChunkManager(final FileFetcher fileFetcher,
+                        final ObjectKey objectKey,
+                        final EncryptionProvider encryptionProvider,
+                        final ChunkCache chunkCache) {
         this.fileFetcher = fileFetcher;
         this.objectKey = objectKey;
-        this.aesEncryptionProvider = aesEncryptionProvider;
+        this.encryptionProvider = encryptionProvider;
         this.chunkCache = chunkCache;
     }
 
@@ -62,12 +65,13 @@ public class ChunkManager {
         final Chunk chunk = manifest.chunkIndex().chunks().get(chunkId);
         final InputStream chunkContent = getChunkContent(remoteLogSegmentMetadata, chunk);
         DetransformChunkEnumeration detransformEnum = new BaseDetransformChunkEnumeration(chunkContent, List.of(chunk));
-        final Optional<SegmentEncryptionMetadata> encryptionMetadata = manifest.encryption();
-        if (encryptionMetadata.isPresent()) {
+        if (manifest.encryption().isPresent()) {
+            final SegmentEncryptionMetadata encryptionMetadata = manifest.encryption().get();
+            final DataKeyAndAAD dataKeyAndAAD = encryptionMetadata.dataKeyAndAAD();
             detransformEnum = new DecryptionChunkEnumeration(
                 detransformEnum,
-                encryptionMetadata.get().ivSize(),
-                encryptedChunk -> aesEncryptionProvider.decryptionCipher(encryptedChunk, encryptionMetadata.get())
+                encryptionProvider.ivSize(),
+                encryptedChunk -> encryptionProvider.decryptionCipher(encryptedChunk, dataKeyAndAAD)
             );
         }
         if (manifest.compression()) {

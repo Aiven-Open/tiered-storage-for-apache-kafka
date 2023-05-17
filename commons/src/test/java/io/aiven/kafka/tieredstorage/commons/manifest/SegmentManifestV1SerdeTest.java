@@ -21,11 +21,11 @@ import javax.crypto.spec.SecretKeySpec;
 
 import java.util.Base64;
 
-import io.aiven.kafka.tieredstorage.commons.RsaKeyAwareTest;
+import io.aiven.kafka.tieredstorage.commons.EncryptionAwareTest;
 import io.aiven.kafka.tieredstorage.commons.manifest.index.FixedSizeChunkIndex;
 import io.aiven.kafka.tieredstorage.commons.manifest.serde.DataKeyDeserializer;
 import io.aiven.kafka.tieredstorage.commons.manifest.serde.DataKeySerializer;
-import io.aiven.kafka.tieredstorage.commons.security.RsaEncryptionProvider;
+import io.aiven.kafka.tieredstorage.commons.security.EncryptionProvider;
 
 import com.fasterxml.jackson.core.JsonProcessingException;
 import com.fasterxml.jackson.databind.ObjectMapper;
@@ -37,7 +37,7 @@ import org.junit.jupiter.api.Test;
 
 import static org.assertj.core.api.Assertions.assertThat;
 
-class SegmentManifestV1SerdeTest extends RsaKeyAwareTest {
+class SegmentManifestV1SerdeTest extends EncryptionAwareTest {
     static final FixedSizeChunkIndex INDEX =
         new FixedSizeChunkIndex(100, 1000, 110, 110);
     static final SecretKey DATA_KEY = new SecretKeySpec(new byte[]{0, 1, 2, 3, 4, 5, 6, 7, 8, 9}, "AES");
@@ -55,18 +55,16 @@ class SegmentManifestV1SerdeTest extends RsaKeyAwareTest {
             + "\"compression\":false}";
 
     ObjectMapper mapper;
-    RsaEncryptionProvider rsaEncryptionProvider;
 
     @BeforeEach
     void init() {
         mapper = new ObjectMapper();
         mapper.registerModule(new Jdk8Module());
-        rsaEncryptionProvider = RsaEncryptionProvider.of(publicKeyPem, privateKeyPem);
+        encryptionProvider = EncryptionProvider.of(publicKeyPem, privateKeyPem);
 
         final SimpleModule simpleModule = new SimpleModule();
-        simpleModule.addSerializer(SecretKey.class, new DataKeySerializer(rsaEncryptionProvider::encryptDataKey));
-        simpleModule.addDeserializer(SecretKey.class, new DataKeyDeserializer(
-            b -> new SecretKeySpec(rsaEncryptionProvider.decryptDataKey(b), "AES")));
+        simpleModule.addSerializer(SecretKey.class, new DataKeySerializer(encryptionProvider::encryptDataKey));
+        simpleModule.addDeserializer(SecretKey.class, new DataKeyDeserializer(encryptionProvider::decryptDataKey));
         mapper.registerModule(simpleModule);
     }
 
@@ -81,7 +79,7 @@ class SegmentManifestV1SerdeTest extends RsaKeyAwareTest {
         final ObjectNode deserializedJson = (ObjectNode) mapper.readTree(jsonStr);
         final String dataKeyText = deserializedJson.get("encryption").get("dataKey").asText();
         final byte[] encryptedKey = Base64.getDecoder().decode(dataKeyText);
-        final SecretKeySpec dataKey = new SecretKeySpec(rsaEncryptionProvider.decryptDataKey(encryptedKey), "AES");
+        final SecretKey dataKey = encryptionProvider.decryptDataKey(encryptedKey);
         assertThat(dataKey).isEqualTo(DATA_KEY);
 
         // Remove the secret key--i.e. the variable part--and compare the JSON representation.

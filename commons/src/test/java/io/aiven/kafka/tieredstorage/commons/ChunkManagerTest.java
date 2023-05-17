@@ -31,7 +31,6 @@ import io.aiven.kafka.tieredstorage.commons.manifest.SegmentEncryptionMetadataV1
 import io.aiven.kafka.tieredstorage.commons.manifest.SegmentManifest;
 import io.aiven.kafka.tieredstorage.commons.manifest.SegmentManifestV1;
 import io.aiven.kafka.tieredstorage.commons.manifest.index.FixedSizeChunkIndex;
-import io.aiven.kafka.tieredstorage.commons.security.AesEncryptionProvider;
 import io.aiven.kafka.tieredstorage.commons.security.DataKeyAndAAD;
 import io.aiven.kafka.tieredstorage.commons.storage.FileFetcher;
 import io.aiven.kafka.tieredstorage.commons.storage.StorageBackEndException;
@@ -51,7 +50,7 @@ import static org.mockito.Mockito.verifyNoMoreInteractions;
 import static org.mockito.Mockito.when;
 
 @ExtendWith(MockitoExtension.class)
-class ChunkManagerTest extends AesKeyAwareTest {
+class ChunkManagerTest extends EncryptionAwareTest {
 
     static final byte[] TEST_CHUNK_CONTENT = "0123456789".getBytes();
     @Mock
@@ -104,10 +103,8 @@ class ChunkManagerTest extends AesKeyAwareTest {
 
     @Test
     void testGetChunkWithEncryption() throws Exception {
-        final AesEncryptionProvider aesEncryptionProvider = new AesEncryptionProvider();
-
-        final DataKeyAndAAD dataKeyAndAAD = aesEncryptionProvider.createDataKeyAndAAD();
-        final Cipher encryptionCipher = aesEncryptionProvider.encryptionCipher(dataKeyAndAAD);
+        final DataKeyAndAAD dataKeyAndAAD = encryptionProvider.createDataKeyAndAAD();
+        final Cipher encryptionCipher = encryptionProvider.encryptionCipher(dataKeyAndAAD);
         final byte[] iv = encryptionCipher.getIV();
         final byte[] encrypted = new byte[iv.length + encryptionCipher.getOutputSize(TEST_CHUNK_CONTENT.length)];
         System.arraycopy(iv, 0, encrypted, 0, iv.length);
@@ -125,7 +122,7 @@ class ChunkManagerTest extends AesKeyAwareTest {
             new SegmentEncryptionMetadataV1(dataKeyAndAAD.dataKey, dataKeyAndAAD.aad));
         final ChunkManager chunkManager = new ChunkManager(fileFetcher,
             objectKey,
-            aesEncryptionProvider,
+            encryptionProvider,
             new UnboundInMemoryChunkCache());
 
         assertThat(chunkManager.getChunk(remoteLogSegmentMetadata, manifest, 0)).hasBinaryContent(TEST_CHUNK_CONTENT);
