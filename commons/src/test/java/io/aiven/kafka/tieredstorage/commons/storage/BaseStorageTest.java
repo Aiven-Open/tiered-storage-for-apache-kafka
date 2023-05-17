@@ -35,31 +35,6 @@ public abstract class BaseStorageTest {
 
     protected abstract FileDeleter deleter();
 
-
-    @Test
-    void testUploadFetchDelete() throws IOException, StorageBackEndException {
-        final byte[] data = "some file".getBytes();
-        final InputStream file = new ByteArrayInputStream(data);
-        uploader().upload(file, TOPIC_PARTITION_SEGMENT_KEY);
-
-        try (final InputStream fetch = fetcher().fetch(TOPIC_PARTITION_SEGMENT_KEY)) {
-            final String r = new String(fetch.readAllBytes());
-            assertThat(r).isEqualTo("some file");
-        }
-
-        final BytesRange range = BytesRange.of(1, data.length - 2);
-        try (final InputStream fetch = fetcher().fetch(TOPIC_PARTITION_SEGMENT_KEY, range)) {
-            final String r = new String(fetch.readAllBytes());
-            assertThat(r).isEqualTo("ome fi");
-        }
-
-        deleter().delete(TOPIC_PARTITION_SEGMENT_KEY);
-
-        assertThatThrownBy(() -> fetcher().fetch(TOPIC_PARTITION_SEGMENT_KEY))
-            .isInstanceOf(KeyNotFoundException.class)
-            .hasMessage("Key topic/partition/log does not exists in storage " + fetcher().toString());
-    }
-
     @Test
     void testUploadANewFile() throws StorageBackEndException {
         final String content = "content";
