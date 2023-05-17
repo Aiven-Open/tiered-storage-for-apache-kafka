@@ -25,6 +25,7 @@ import io.aiven.kafka.tieredstorage.commons.ChunkManager;
 import io.aiven.kafka.tieredstorage.commons.manifest.SegmentManifest;
 import io.aiven.kafka.tieredstorage.commons.manifest.SegmentManifestV1;
 import io.aiven.kafka.tieredstorage.commons.manifest.index.FixedSizeChunkIndex;
+import io.aiven.kafka.tieredstorage.commons.storage.BytesRange;
 import io.aiven.kafka.tieredstorage.commons.storage.StorageBackEndException;
 
 import org.junit.jupiter.api.Test;
@@ -60,7 +61,7 @@ class FetchChunkEnumerationTest {
         final int to = from + 1;
         // Then
         assertThatThrownBy(
-            () -> new FetchChunkEnumeration(chunkManager, remoteLogSegmentMetadata, manifest, from, to))
+            () -> new FetchChunkEnumeration(chunkManager, remoteLogSegmentMetadata, manifest, BytesRange.of(from, to)))
             .hasMessage("Invalid start position " + from + " in segment remoteLogSegmentMetadata");
     }
 
@@ -73,7 +74,7 @@ class FetchChunkEnumerationTest {
         final int to = 80;
         // Then
         final FetchChunkEnumeration fetchChunk =
-            new FetchChunkEnumeration(chunkManager, remoteLogSegmentMetadata, manifest, from, to);
+            new FetchChunkEnumeration(chunkManager, remoteLogSegmentMetadata, manifest, BytesRange.of(from, to));
         assertThat(fetchChunk.startChunkId).isEqualTo(0);
         assertThat(fetchChunk.lastChunkId).isEqualTo(8);
     }
@@ -86,7 +87,7 @@ class FetchChunkEnumerationTest {
         final int from = 0;
         final int to = 110;
         final FetchChunkEnumeration fetchChunk =
-            new FetchChunkEnumeration(chunkManager, remoteLogSegmentMetadata, manifest, from, to);
+            new FetchChunkEnumeration(chunkManager, remoteLogSegmentMetadata, manifest, BytesRange.of(from, to));
         // Then
         assertThat(fetchChunk.startChunkId).isEqualTo(0);
         assertThat(fetchChunk.lastChunkId).isEqualTo(9);
@@ -98,9 +99,9 @@ class FetchChunkEnumerationTest {
         // Given a set of 10 chunks with 10 bytes each
         // When
         final int from = 32;
-        final int to = 35;
+        final int to = 34;
         final FetchChunkEnumeration fetchChunk =
-            new FetchChunkEnumeration(chunkManager, remoteLogSegmentMetadata, manifest, from, to);
+            new FetchChunkEnumeration(chunkManager, remoteLogSegmentMetadata, manifest, BytesRange.of(from, to));
         when(chunkManager.getChunk(remoteLogSegmentMetadata, manifest, fetchChunk.currentChunkId))
             .thenReturn(new ByteArrayInputStream(CHUNK_CONTENT));
         // Then
@@ -116,9 +117,9 @@ class FetchChunkEnumerationTest {
         // Given a set of 10 chunks with 10 bytes each
         // When
         final int from = 15;
-        final int to = 35;
+        final int to = 34;
         final FetchChunkEnumeration fetchChunk =
-            new FetchChunkEnumeration(chunkManager, remoteLogSegmentMetadata, manifest, from, to);
+            new FetchChunkEnumeration(chunkManager, remoteLogSegmentMetadata, manifest, BytesRange.of(from, to));
         when(chunkManager.getChunk(remoteLogSegmentMetadata, manifest, 1))
             .thenReturn(new ByteArrayInputStream(CHUNK_CONTENT));
         when(chunkManager.getChunk(remoteLogSegmentMetadata, manifest, 2))

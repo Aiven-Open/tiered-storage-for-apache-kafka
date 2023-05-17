@@ -52,6 +52,7 @@ import io.aiven.kafka.tieredstorage.commons.manifest.serde.DataKeySerializer;
 import io.aiven.kafka.tieredstorage.commons.security.AesEncryptionProvider;
 import io.aiven.kafka.tieredstorage.commons.security.DataKeyAndAAD;
 import io.aiven.kafka.tieredstorage.commons.security.RsaEncryptionProvider;
+import io.aiven.kafka.tieredstorage.commons.storage.BytesRange;
 import io.aiven.kafka.tieredstorage.commons.storage.ObjectStorageFactory;
 import io.aiven.kafka.tieredstorage.commons.storage.StorageBackEndException;
 import io.aiven.kafka.tieredstorage.commons.transform.BaseTransformChunkEnumeration;
@@ -232,8 +233,11 @@ public class UniversalRemoteStorageManager implements RemoteStorageManager {
     @Override
     public InputStream fetchLogSegment(final RemoteLogSegmentMetadata remoteLogSegmentMetadata,
                                        final int startPosition) throws RemoteStorageException {
-        return this.fetchLogSegment(remoteLogSegmentMetadata, startPosition,
-            remoteLogSegmentMetadata.segmentSizeInBytes());
+        return this.fetchLogSegment(
+            remoteLogSegmentMetadata,
+            startPosition,
+            remoteLogSegmentMetadata.segmentSizeInBytes() - 1
+        );
     }
 
     @Override
@@ -242,12 +246,17 @@ public class UniversalRemoteStorageManager implements RemoteStorageManager {
                                        final int endPosition) throws RemoteStorageException {
         try {
             final SegmentManifest segmentManifest = segmentManifestProvider.get(remoteLogSegmentMetadata);
+
+            final BytesRange range = BytesRange.of(
+                startPosition,
+                Math.min(endPosition, remoteLogSegmentMetadata.segmentSizeInBytes() - 1)
+            );
             final FetchChunkEnumeration fetchChunkEnumeration = new FetchChunkEnumeration(
                 chunkManager,
                 remoteLogSegmentMetadata,
                 segmentManifest,
-                startPosition,
-                endPosition);
+                range
+            );
             return new SequenceInputStream(fetchChunkEnumeration);
         } catch (final StorageBackEndException | IOException e) {
             throw new RemoteStorageException(e);

@@ -50,7 +50,7 @@ public abstract class BaseStorageTest {
         final BytesRange range = BytesRange.of(1, data.length - 2);
         try (final InputStream fetch = fetcher().fetch(TOPIC_PARTITION_SEGMENT_KEY, range)) {
             final String r = new String(fetch.readAllBytes());
-            assertThat(r).isEqualTo("ome fi");
+            assertThat(r).isEqualTo("ome fil");
         }
 
         deleter().delete(TOPIC_PARTITION_SEGMENT_KEY);
@@ -103,8 +103,9 @@ public abstract class BaseStorageTest {
         uploader().upload(new ByteArrayInputStream(content.getBytes()), TOPIC_PARTITION_SEGMENT_KEY);
 
         final int from = 2;
-        final int to = 6;
-        final String range = content.substring(from, to);
+        final int to = 5;
+        // Replacing end position as substring is end exclusive, and expected response is end inclusive
+        final String range = content.substring(from, to + 1);
 
         try (final InputStream fetch = fetcher().fetch(TOPIC_PARTITION_SEGMENT_KEY, BytesRange.of(from, to))) {
             assertThat(fetch).hasContent(range);
@@ -116,11 +117,42 @@ public abstract class BaseStorageTest {
         final String content = "ABC";
         uploader().upload(new ByteArrayInputStream(content.getBytes()), TOPIC_PARTITION_SEGMENT_KEY);
 
-        try (final InputStream fetch = fetcher().fetch(TOPIC_PARTITION_SEGMENT_KEY, BytesRange.of(2, 3))) {
+        try (final InputStream fetch = fetcher().fetch(TOPIC_PARTITION_SEGMENT_KEY, BytesRange.of(2, 2))) {
             assertThat(fetch).hasContent("C");
         }
     }
 
+    @Test
+    void testFetchWithOffsetRangeLargerThanFileSize() throws IOException, StorageBackEndException {
+        final String content = "ABC";
+        uploader().upload(new ByteArrayInputStream(content.getBytes()), TOPIC_PARTITION_SEGMENT_KEY);
+
+        try (final InputStream fetch = fetcher().fetch(TOPIC_PARTITION_SEGMENT_KEY, BytesRange.of(2, 4))) {
+            assertThat(fetch).hasContent("C");
+        }
+    }
+
+    @Test
+    void testFetchWithRangeOutsideFileSize() throws StorageBackEndException {
+        final String content = "ABC";
+        uploader().upload(new ByteArrayInputStream(content.getBytes()), TOPIC_PARTITION_SEGMENT_KEY);
+
+        assertThatThrownBy(() -> fetcher().fetch(TOPIC_PARTITION_SEGMENT_KEY, BytesRange.of(3, 5)))
+            .isInstanceOf(InvalidRangeException.class);
+        assertThatThrownBy(() -> fetcher().fetch(TOPIC_PARTITION_SEGMENT_KEY, BytesRange.of(4, 6)))
+            .isInstanceOf(InvalidRangeException.class);
+    }
+
+    @Test
+    void testFetchNonExistingKey() {
+        assertThatThrownBy(() -> fetcher().fetch("non-existing"))
+            .isInstanceOf(KeyNotFoundException.class)
+            .hasMessage("Key non-existing does not exists in storage " + fetcher());
+        assertThatThrownBy(() -> fetcher().fetch("non-existing", BytesRange.of(0, 1)))
+            .isInstanceOf(KeyNotFoundException.class)
+            .hasMessage("Key non-existing does not exists in storage " + fetcher());
+    }
+    
     @Test
     protected void testDelete() throws StorageBackEndException {
         uploader().upload(new ByteArrayInputStream("test".getBytes()), TOPIC_PARTITION_SEGMENT_KEY);
@@ -128,6 +160,6 @@ public abstract class BaseStorageTest {
 
         assertThatThrownBy(() -> fetcher().fetch(TOPIC_PARTITION_SEGMENT_KEY))
             .isInstanceOf(KeyNotFoundException.class)
-            .hasMessage("Key topic/partition/log does not exists in storage " + fetcher().toString());
+            .hasMessage("Key topic/partition/log does not exists in storage " + fetcher());
     }
 }

@@ -18,7 +18,6 @@ package io.aiven.kafka.tieredstorage.commons.storage;
 
 /**
  * Byte range with from and to edges; where to cannot be less than from.
- * inclusive/exclusive semantics are up to the consumer.
  */
 public class BytesRange {
     public final int from;

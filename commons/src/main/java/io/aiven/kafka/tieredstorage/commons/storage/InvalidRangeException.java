@@ -16,19 +16,8 @@
 
 package io.aiven.kafka.tieredstorage.commons.storage;
 
-import java.io.InputStream;
-
-public interface FileFetcher {
-    /**
-     * Fetch file.
-     * @param key file key.
-     */
-    InputStream fetch(String key) throws StorageBackEndException;
-
-    /**
-     * Fetch file.
-     * @param key file key.
-     * @param range range with inclusive start/end positions
-     */
-    InputStream fetch(String key, BytesRange range) throws StorageBackEndException;
+public class InvalidRangeException extends StorageBackEndException {
+    public InvalidRangeException(final String message) {
+        super(message);
+    }
 }
