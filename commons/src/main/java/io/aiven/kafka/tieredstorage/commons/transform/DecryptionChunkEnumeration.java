@@ -17,32 +17,27 @@
 package io.aiven.kafka.tieredstorage.commons.transform;
 
 import javax.crypto.BadPaddingException;
-import javax.crypto.Cipher;
 import javax.crypto.IllegalBlockSizeException;
 
 import java.util.Objects;
-import java.util.function.Function;
+
+import io.aiven.kafka.tieredstorage.commons.security.DataKeyAndAAD;
+import io.aiven.kafka.tieredstorage.commons.security.EncryptionProvider;
 
 /**
  * The chunk de-transformation that does decryption.
  */
 public class DecryptionChunkEnumeration implements DetransformChunkEnumeration {
     private final DetransformChunkEnumeration inner;
-    private final int ivSize;
-    private final Function<byte[], Cipher> cipherSupplier;
+    private final EncryptionProvider encryptionProvider;
+    private final DataKeyAndAAD dataKeyAndAAD;
 
-    /**
-     * @param cipherSupplier a function that takes an encrypted chunk and returns the decryption cypher for it
-     */
     public DecryptionChunkEnumeration(final DetransformChunkEnumeration inner,
-                                      final int ivSize,
-                                      final Function<byte[], Cipher> cipherSupplier) {
+                                      final EncryptionProvider encryptionProvider,
+                                      final DataKeyAndAAD dataKeyAndAAD) {
         this.inner = Objects.requireNonNull(inner, "inner cannot be null");
-        if (ivSize <= 0) {
-            throw new IllegalArgumentException("ivSize must be positive");
-        }
-        this.ivSize = ivSize;
-        this.cipherSupplier = Objects.requireNonNull(cipherSupplier, "cipherSupplier cannot be null");
+        this.encryptionProvider = Objects.requireNonNull(encryptionProvider, "encryptionProvider cannot be null");
+        this.dataKeyAndAAD = Objects.requireNonNull(dataKeyAndAAD, "dataKeyAndAAD cannot be null");
     }
 
     @Override
@@ -53,8 +48,9 @@ public class DecryptionChunkEnumeration implements DetransformChunkEnumeration {
     @Override
     public byte[] nextElement() {
         final var chunk = inner.nextElement();
-        final var cipher = cipherSupplier.apply(chunk);
+        final var cipher = encryptionProvider.decryptionCipher(chunk, dataKeyAndAAD);
         try {
+            final int ivSize = encryptionProvider.ivSize();
             return cipher.doFinal(chunk, ivSize, chunk.length - ivSize);
         } catch (final IllegalBlockSizeException | BadPaddingException e) {
             throw new RuntimeException(e);

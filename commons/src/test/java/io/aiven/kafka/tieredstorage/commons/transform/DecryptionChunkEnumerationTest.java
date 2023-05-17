@@ -40,37 +40,45 @@ class DecryptionChunkEnumerationTest extends EncryptionAwareTest {
     @Mock
     DetransformChunkEnumeration inner;
 
-    @Mock
-    Cipher cipher;
-
-    Cipher cipherSupplier(final byte[] encryptedChunk) {
-        return cipher;
-    }
-
     @Test
     void nullInnerEnumeration() {
-        assertThatThrownBy(() -> new DecryptionChunkEnumeration(null, 10, this::cipherSupplier))
+        assertThatThrownBy(() ->
+            new DecryptionChunkEnumeration(
+                null,
+                encryptionProvider,
+                encryptionProvider.createDataKeyAndAAD()))
             .isInstanceOf(NullPointerException.class)
             .hasMessage("inner cannot be null");
     }
 
     @Test
-    void zeroIvSize() {
-        assertThatThrownBy(() -> new DecryptionChunkEnumeration(inner, 0, this::cipherSupplier))
-            .isInstanceOf(IllegalArgumentException.class)
-            .hasMessage("ivSize must be positive");
+    void nullEncryptionProvider() {
+        assertThatThrownBy(() ->
+            new DecryptionChunkEnumeration(
+                inner,
+                null,
+                encryptionProvider.createDataKeyAndAAD()))
+            .isInstanceOf(NullPointerException.class)
+            .hasMessage("encryptionProvider cannot be null");
     }
 
     @Test
-    void nullCipherSupplier() {
-        assertThatThrownBy(() -> new DecryptionChunkEnumeration(inner, ivSize, null))
+    void nullDataKeyAndAAD() {
+        assertThatThrownBy(() ->
+            new DecryptionChunkEnumeration(
+                inner,
+                encryptionProvider,
+                null))
             .isInstanceOf(NullPointerException.class)
-            .hasMessage("cipherSupplier cannot be null");
+            .hasMessage("dataKeyAndAAD cannot be null");
     }
 
     @Test
     void hasMoreElementsPropagated() {
-        final var transform = new DecryptionChunkEnumeration(inner, ivSize, this::cipherSupplier);
+        final var transform = new DecryptionChunkEnumeration(
+            inner,
+            encryptionProvider,
+            encryptionProvider.createDataKeyAndAAD());
         when(inner.hasMoreElements())
             .thenReturn(true)
             .thenReturn(false);
@@ -91,8 +99,8 @@ class DecryptionChunkEnumerationTest extends EncryptionAwareTest {
 
         final var transform = new DecryptionChunkEnumeration(
             inner,
-            ivSize,
-            bytes -> encryptionProvider.decryptionCipher(bytes, dataKeyAndAAD)
+            encryptionProvider,
+            dataKeyAndAAD
         );
         when(inner.nextElement()).thenReturn(encrypted);
         final byte[] decrypted = transform.nextElement();

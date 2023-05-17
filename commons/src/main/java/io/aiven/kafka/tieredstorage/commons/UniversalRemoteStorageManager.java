@@ -172,7 +172,9 @@ public class UniversalRemoteStorageManager implements RemoteStorageManager {
                 final DataKeyAndAAD dataKeyAndAAD = encryptionProvider.createDataKeyAndAAD();
                 transformEnum = new EncryptionChunkEnumeration(
                     transformEnum,
-                    () -> encryptionProvider.encryptionCipher(dataKeyAndAAD));
+                    encryptionProvider,
+                    dataKeyAndAAD
+                );
                 encryptionMetadata = new SegmentEncryptionMetadataV1(dataKeyAndAAD.dataKey, dataKeyAndAAD.aad);
             }
             final var transformFinisher =

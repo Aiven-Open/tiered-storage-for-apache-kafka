@@ -70,8 +70,8 @@ public class ChunkManager {
             final DataKeyAndAAD dataKeyAndAAD = encryptionMetadata.dataKeyAndAAD();
             detransformEnum = new DecryptionChunkEnumeration(
                 detransformEnum,
-                encryptionProvider.ivSize(),
-                encryptedChunk -> encryptionProvider.decryptionCipher(encryptedChunk, dataKeyAndAAD)
+                encryptionProvider,
+                dataKeyAndAAD
             );
         }
         if (manifest.compression()) {

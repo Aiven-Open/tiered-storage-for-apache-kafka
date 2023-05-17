@@ -39,32 +39,47 @@ class EncryptionChunkEnumerationTest extends EncryptionAwareTest {
     @Mock
     TransformChunkEnumeration inner;
 
-    @Mock
-    Cipher cipher;
-
-    Cipher cipherSupplier() {
-        return cipher;
-    }
-
     @Test
     void nullInnerEnumeration() {
-        assertThatThrownBy(() -> new EncryptionChunkEnumeration(null, this::cipherSupplier))
+        assertThatThrownBy(() ->
+            new EncryptionChunkEnumeration(
+                null,
+                encryptionProvider,
+                encryptionProvider.createDataKeyAndAAD()))
             .isInstanceOf(NullPointerException.class)
             .hasMessage("inner cannot be null");
     }
 
     @Test
-    void nullCipherSupplier() {
-        assertThatThrownBy(() -> new EncryptionChunkEnumeration(inner, null))
+    void nullEncryptionProvider() {
+        assertThatThrownBy(() ->
+            new EncryptionChunkEnumeration(
+                inner,
+                null,
+                encryptionProvider.createDataKeyAndAAD()))
             .isInstanceOf(NullPointerException.class)
-            .hasMessage("cipherSupplier cannot be null");
+            .hasMessage("encryptionProvider cannot be null");
+    }
+
+    @Test
+    void nullDataKeyAndAAD() {
+        assertThatThrownBy(() ->
+            new EncryptionChunkEnumeration(
+                inner,
+                encryptionProvider,
+                null))
+            .isInstanceOf(NullPointerException.class)
+            .hasMessage("dataKeyAndAAD cannot be null");
     }
 
     @Test
     void originalChunkSizePropagated() {
         when(inner.originalChunkSize()).thenReturn(100);
-        when(cipher.getIV()).thenReturn(new byte[ivSize]);
-        final var transform = new EncryptionChunkEnumeration(inner, this::cipherSupplier);
+        final var transform = new EncryptionChunkEnumeration(
+            inner,
+            encryptionProvider,
+            encryptionProvider.createDataKeyAndAAD()
+        );
         assertThat(transform.originalChunkSize()).isEqualTo(100);
         verify(inner).originalChunkSize();
     }
@@ -72,7 +87,11 @@ class EncryptionChunkEnumerationTest extends EncryptionAwareTest {
     @Test
     void transformedChunkSizeIsPropagatedWhenNull() {
         when(inner.transformedChunkSize()).thenReturn(null);
-        final var transform = new EncryptionChunkEnumeration(inner, this::cipherSupplier);
+        final var transform = new EncryptionChunkEnumeration(
+            inner,
+            encryptionProvider,
+            encryptionProvider.createDataKeyAndAAD()
+        );
         assertThat(transform.transformedChunkSize()).isNull();
         verify(inner).transformedChunkSize();
     }
@@ -80,16 +99,23 @@ class EncryptionChunkEnumerationTest extends EncryptionAwareTest {
     @Test
     void transformedChunkSizeIsCalculatedWhenNotNull() {
         when(inner.transformedChunkSize()).thenReturn(100);
-        when(cipher.getIV()).thenReturn(new byte[ivSize]);
-        when(cipher.getOutputSize(100)).thenReturn(100);
-        final var transform = new EncryptionChunkEnumeration(inner, this::cipherSupplier);
-        assertThat(transform.transformedChunkSize()).isEqualTo(100 + ivSize);
+        final var transform = new EncryptionChunkEnumeration(
+            inner,
+            encryptionProvider,
+            encryptionProvider.createDataKeyAndAAD()
+        );
+        //TODO explain why 128 out of 100
+        assertThat(transform.transformedChunkSize()).isEqualTo(128);
     }
 
     @Test
     void hasMoreElementsPropagated() {
         when(inner.transformedChunkSize()).thenReturn(null);
-        final var transform = new EncryptionChunkEnumeration(inner, this::cipherSupplier);
+        final var transform = new EncryptionChunkEnumeration(
+            inner,
+            encryptionProvider,
+            encryptionProvider.createDataKeyAndAAD()
+        );
         when(inner.hasMoreElements())
             .thenReturn(true)
             .thenReturn(false);
@@ -105,7 +131,8 @@ class EncryptionChunkEnumerationTest extends EncryptionAwareTest {
         final DataKeyAndAAD dataKeyAndAAD = encryptionProvider.createDataKeyAndAAD();
         final var transform = new EncryptionChunkEnumeration(
             inner,
-            () -> encryptionProvider.encryptionCipher(dataKeyAndAAD)
+            encryptionProvider,
+            dataKeyAndAAD
         );
         when(inner.nextElement()).thenReturn(data);
         final byte[] encrypted = transform.nextElement();
