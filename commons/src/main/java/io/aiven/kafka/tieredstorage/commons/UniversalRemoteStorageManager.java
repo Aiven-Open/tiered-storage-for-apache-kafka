@@ -95,7 +95,7 @@ public class UniversalRemoteStorageManager implements RemoteStorageManager {
 
     private SegmentManifestProvider segmentManifestProvider;
 
-    UniversalRemoteStorageManager() {
+    public UniversalRemoteStorageManager() {
         this(Time.SYSTEM);
     }
 
