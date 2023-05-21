@@ -340,10 +340,22 @@ class UniversalRemoteStorageManagerTest extends RsaKeyAwareTest {
 
         final int actualChunkSize = (int) Math.min(chunkSize, Files.size(logFilePath) - 2);
         // TODO more combinations?
-        for (final int readSize : List.of(1, 13, actualChunkSize / 2, actualChunkSize, actualChunkSize + 1,
-            actualChunkSize * 2)) {
+        for (final int readSize : List.of(
+            1,
+            13,
+            actualChunkSize / 2,
+            actualChunkSize,
+            actualChunkSize + 1,
+            actualChunkSize * 2
+        )) {
             final byte[] expectedBytes = new byte[readSize];
-            for (final int offset : List.of(0, 1, 23, actualChunkSize / 2, actualChunkSize - 1, actualChunkSize,
+            for (final int offset : List.of(
+                0,
+                1,
+                23,
+                actualChunkSize / 2,
+                actualChunkSize - 1,
+                actualChunkSize,
                 actualChunkSize + 1
             )) {
                 final int read;
@@ -351,7 +363,8 @@ class UniversalRemoteStorageManagerTest extends RsaKeyAwareTest {
                     r.seek(offset);
                     read = r.read(expectedBytes, 0, readSize);
                 }
-                try (InputStream actual = rsm.fetchLogSegment(REMOTE_LOG_METADATA, offset, offset + readSize)) {
+                final int inclusiveEndPosition = offset + readSize - 1;
+                try (InputStream actual = rsm.fetchLogSegment(REMOTE_LOG_METADATA, offset, inclusiveEndPosition)) {
                     assertThat(actual.readAllBytes())
                         .isEqualTo(Arrays.copyOfRange(expectedBytes, 0, read));
                 }

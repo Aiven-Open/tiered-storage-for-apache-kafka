@@ -27,6 +27,7 @@ import io.aiven.kafka.tieredstorage.commons.storage.BytesRange;
 import io.aiven.kafka.tieredstorage.commons.storage.FileDeleter;
 import io.aiven.kafka.tieredstorage.commons.storage.FileFetcher;
 import io.aiven.kafka.tieredstorage.commons.storage.FileUploader;
+import io.aiven.kafka.tieredstorage.commons.storage.InvalidRangeException;
 import io.aiven.kafka.tieredstorage.commons.storage.KeyNotFoundException;
 import io.aiven.kafka.tieredstorage.commons.storage.StorageBackEndException;
 
@@ -73,14 +74,15 @@ class FileSystemStorage implements FileUploader, FileFetcher, FileDeleter {
         try {
             final Path path = fsRoot.resolve(key);
             final long fileSize = Files.size(path);
-            if (range.to > fileSize) {
-                throw new IllegalArgumentException("position 'to' cannot be higher than the file size, to="
-                    + range.to + ", file size=" + fileSize + " given");
+            if (range.from >= fileSize) {
+                throw new InvalidRangeException("Range start position " + range.from
+                    + " is outside file content. file size = " + fileSize);
             }
-
-            final InputStream result = new BoundedInputStream(Files.newInputStream(path), range.to);
-            result.skip(range.from);
-            return result;
+            // slice file content
+            final InputStream chunkContent = Files.newInputStream(path);
+            chunkContent.skip(range.from);
+            final long size = Math.min(range.to, fileSize) - range.from + 1;
+            return new BoundedInputStream(chunkContent, size);
         } catch (final NoSuchFileException e) {
             throw new KeyNotFoundException(this, key, e);
         } catch (final IOException e) {

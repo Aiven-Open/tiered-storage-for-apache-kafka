@@ -29,6 +29,7 @@ import io.aiven.kafka.tieredstorage.commons.Chunk;
 import io.aiven.kafka.tieredstorage.commons.ChunkManager;
 import io.aiven.kafka.tieredstorage.commons.manifest.SegmentManifest;
 import io.aiven.kafka.tieredstorage.commons.manifest.index.ChunkIndex;
+import io.aiven.kafka.tieredstorage.commons.storage.BytesRange;
 import io.aiven.kafka.tieredstorage.commons.storage.StorageBackEndException;
 
 import org.apache.commons.io.input.BoundedInputStream;
@@ -37,8 +38,7 @@ public class FetchChunkEnumeration implements Enumeration<InputStream> {
     private final ChunkManager chunkManager;
     private final RemoteLogSegmentMetadata remoteLogSegmentMetadata;
     private final SegmentManifest manifest;
-    private final int firstPosition;
-    private final int lastPosition;
+    private final BytesRange range;
     final int startChunkId;
     final int lastChunkId;
     private final ChunkIndex chunkIndex;
@@ -49,27 +49,24 @@ public class FetchChunkEnumeration implements Enumeration<InputStream> {
      * @param chunkManager provides chunk input to fetch from
      * @param remoteLogSegmentMetadata required by chunkManager
      * @param manifest provides to index to build response from
-     * @param firstPosition original offset range position to start from
-     * @param lastPosition original offset range position to finish
+     * @param range original offset range start/end position
      */
     public FetchChunkEnumeration(final ChunkManager chunkManager,
                                  final RemoteLogSegmentMetadata remoteLogSegmentMetadata,
                                  final SegmentManifest manifest,
-                                 final int firstPosition,
-                                 final int lastPosition) {
+                                 final BytesRange range) {
         this.chunkManager = Objects.requireNonNull(chunkManager, "chunkManager cannot be null");
         this.remoteLogSegmentMetadata =
             Objects.requireNonNull(remoteLogSegmentMetadata, "remoteLogSegmentMetadata cannot be null");
         this.manifest = Objects.requireNonNull(manifest, "manifest cannot be null");
-        this.firstPosition = firstPosition;
-        this.lastPosition = lastPosition;
+        this.range = Objects.requireNonNull(range, "range cannot be null");
 
         this.chunkIndex = manifest.chunkIndex();
 
-        final Chunk firstChunk = getFirstChunk(firstPosition);
+        final Chunk firstChunk = getFirstChunk(range.from);
         startChunkId = firstChunk.id;
         currentChunkId = startChunkId;
-        final Chunk lastChunk = getLastChunk(lastPosition);
+        final Chunk lastChunk = getLastChunk(range.to);
         lastChunkId = lastChunk.id;
     }
 
@@ -111,17 +108,17 @@ public class FetchChunkEnumeration implements Enumeration<InputStream> {
         final boolean isAtLastChunk = currentChunkId == lastChunkId;
         final boolean isSingleChunk = isAtFirstChunk && isAtLastChunk;
         if (isSingleChunk) {
-            final int toSkip = firstPosition - chunkStartPosition;
+            final int toSkip = range.from - chunkStartPosition;
             try {
                 chunkContent.skip(toSkip);
-                final int chunkSize = lastPosition - firstPosition;
+                final int chunkSize = range.to - range.from + 1;
                 chunkContent = new BoundedInputStream(chunkContent, chunkSize);
             } catch (final IOException e) {
                 throw new RuntimeException(e);
             }
         } else {
             if (isAtFirstChunk) {
-                final int toSkip = firstPosition - chunkStartPosition;
+                final int toSkip = range.from - chunkStartPosition;
                 try {
                     chunkContent.skip(toSkip);
                 } catch (final IOException e) {
@@ -129,7 +126,7 @@ public class FetchChunkEnumeration implements Enumeration<InputStream> {
                 }
             }
             if (isAtLastChunk) {
-                final int chunkSize = lastPosition - chunkStartPosition;
+                final int chunkSize = range.to - chunkStartPosition + 1;
                 chunkContent = new BoundedInputStream(chunkContent, chunkSize);
             }
         }
