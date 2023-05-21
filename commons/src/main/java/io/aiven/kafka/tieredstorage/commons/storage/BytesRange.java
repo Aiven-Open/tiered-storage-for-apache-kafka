@@ -53,6 +53,14 @@ public class BytesRange {
         return result;
     }
 
+    @Override
+    public String toString() {
+        return "BytesRange("
+            + "from=" + from
+            + ", to=" + to
+            + ")";
+    }
+
     public static BytesRange of(final int from, final int to) {
         return new BytesRange(from, to);
     }
