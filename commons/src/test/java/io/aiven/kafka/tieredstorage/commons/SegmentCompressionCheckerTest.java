@@ -83,7 +83,7 @@ class SegmentCompressionCheckerTest {
     @CsvSource({"NONE,false", "ZSTD,true"})
     void shouldReturnCompressedWhenEnabled(final CompressionType compressionType, final boolean result)
         throws InvalidRecordBatchException, IOException {
-        final File file = Files.newFile(dir.resolve("segment.log").toString());
+        final File file = dir.resolve("segment.log").toFile();
         try (final FileRecords records = FileRecords.open(file, false, 100000, true);
              final MemoryRecordsBuilder builder = MemoryRecords.builder(
                  ByteBuffer.allocate(1024),
@@ -104,7 +104,7 @@ class SegmentCompressionCheckerTest {
                                                       final CompressionType nextCompressionType,
                                                       final boolean result)
         throws InvalidRecordBatchException, IOException {
-        final File file = Files.newFile(dir.resolve("segment.log").toString());
+        final File file = dir.resolve("segment.log").toFile();
         try (final FileRecords records = FileRecords.open(file, false, 100000, true);
              final MemoryRecordsBuilder b1 = MemoryRecords.builder(
                  ByteBuffer.allocate(1024),

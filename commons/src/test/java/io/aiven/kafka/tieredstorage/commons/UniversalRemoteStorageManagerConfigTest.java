@@ -45,6 +45,7 @@ class UniversalRemoteStorageManagerConfigTest {
         assertThat(config.segmentManifestCacheRetention()).hasValue(Duration.ofHours(1));
         assertThat(config.chunkSize()).isEqualTo(123);
         assertThat(config.compressionEnabled()).isFalse();
+        assertThat(config.compressionHeuristicEnabled()).isFalse();
         assertThat(config.encryptionEnabled()).isFalse();
         assertThat(config.encryptionPrivateKeyFile()).isNull();
         assertThat(config.encryptionPublicKeyFile()).isNull();
@@ -105,10 +106,12 @@ class UniversalRemoteStorageManagerConfigTest {
             Map.of(
                 "object.storage.factory", TestObjectStorageFactory.class.getCanonicalName(),
                 "chunk.size", "123",
-                "compression.enabled", "true"
+                "compression.enabled", "true",
+                "compression.heuristic.enabled", "true"
             )
         );
         assertThat(config.compressionEnabled()).isTrue();
+        assertThat(config.compressionHeuristicEnabled()).isTrue();
     }
 
     @Test
@@ -161,26 +164,23 @@ class UniversalRemoteStorageManagerConfigTest {
 
     @Test
     void invalidKeyPrefix() {
-        assertThatThrownBy(() -> new UniversalRemoteStorageManagerConfig(
-            new HashMap<>() {{
-                    put("object.storage.factory", TestObjectStorageFactory.class);
-                    put("key.prefix", null);
-                }}
-        )).isInstanceOf(ConfigException.class)
+        final HashMap<String, Object> props = new HashMap<>();
+        props.put("object.storage.factory", TestObjectStorageFactory.class);
+        props.put("key.prefix", null);
+
+        assertThatThrownBy(() -> new UniversalRemoteStorageManagerConfig(props))
+            .isInstanceOf(ConfigException.class)
             .hasMessage("Invalid value null for configuration key.prefix: entry must be non null");
     }
 
     @Test
     void validKeyPrefix() {
         final String testPrefix = "test_prefix";
-        final UniversalRemoteStorageManagerConfig config =
-            new UniversalRemoteStorageManagerConfig(
-                new HashMap<>() {{
-                        put("object.storage.factory", TestObjectStorageFactory.class);
-                        put("chunk.size", "123");
-                        put("key.prefix", testPrefix);
-                    }}
-            );
+        final HashMap<String, Object> props = new HashMap<>();
+        props.put("object.storage.factory", TestObjectStorageFactory.class);
+        props.put("chunk.size", "123");
+        props.put("key.prefix", testPrefix);
+        final UniversalRemoteStorageManagerConfig config = new UniversalRemoteStorageManagerConfig(props);
         assertThat(config.keyPrefix()).isEqualTo(testPrefix);
     }
 
@@ -240,34 +240,34 @@ class UniversalRemoteStorageManagerConfigTest {
 
     @Test
     void invalidChunkCacheClass() {
-        assertThatThrownBy(() -> new UniversalRemoteStorageManagerConfig(
-            new HashMap<>() {{
-                    put("object.storage.factory", TestObjectStorageFactory.class);
-                    put("chunk.size", 123);
-                    put("chunk.cache.class", "x");
-                }}
-        )).isInstanceOf(ConfigException.class)
+        final HashMap<String, Object> props1 = new HashMap<>();
+        props1.put("object.storage.factory", TestObjectStorageFactory.class);
+        props1.put("chunk.size", 123);
+        props1.put("chunk.cache.class", "x");
+
+        assertThatThrownBy(() -> new UniversalRemoteStorageManagerConfig(props1))
+            .isInstanceOf(ConfigException.class)
             .hasMessage("Invalid value x for configuration chunk.cache.class: Class x could not be found.");
-        assertThatThrownBy(() -> new UniversalRemoteStorageManagerConfig(
-            new HashMap<>() {{
-                    put("object.storage.factory", TestObjectStorageFactory.class);
-                    put("chunk.size", 123);
-                    put("chunk.cache.class", Object.class);
-                }}
-        )).isInstanceOf(ConfigException.class)
+
+        final HashMap<String, Object> props2 = new HashMap<>();
+        props2.put("object.storage.factory", TestObjectStorageFactory.class);
+        props2.put("chunk.size", 123);
+        props2.put("chunk.cache.class", Object.class);
+
+        assertThatThrownBy(() -> new UniversalRemoteStorageManagerConfig(props2))
+            .isInstanceOf(ConfigException.class)
             .hasMessage("chunk.cache.class must be an implementation "
                 + "of io.aiven.kafka.tieredstorage.commons.cache.ChunkCache");
     }
 
     @Test
     void disabledChunkCache() {
-        final UniversalRemoteStorageManagerConfig config = new UniversalRemoteStorageManagerConfig(
-            new HashMap<>() {{
-                    put("object.storage.factory", TestObjectStorageFactory.class);
-                    put("chunk.size", 123);
-                    put("chunk.cache.class", null);
-                }}
-        );
+        final HashMap<String, Object> props = new HashMap<>();
+        props.put("object.storage.factory", TestObjectStorageFactory.class);
+        props.put("chunk.size", 123);
+        props.put("chunk.cache.class", null);
+
+        final UniversalRemoteStorageManagerConfig config = new UniversalRemoteStorageManagerConfig(props);
         assertThat(config.chunkCache()).isNull();
     }
 
@@ -281,7 +281,7 @@ class UniversalRemoteStorageManagerConfigTest {
                 "chunk.cache.config1", "aaa",
                 "chunk.cache.config2", "123",
                 "chunk.cache.config3", "true"
-                )
+            )
         );
         final TestChunkCache chunkCache = (TestChunkCache) config.chunkCache();
         assertThat(chunkCache.configureCalled).isTrue();
@@ -291,5 +291,18 @@ class UniversalRemoteStorageManagerConfigTest {
             "config2", "123",
             "config3", "true"
         ));
+    }
+
+    @Test
+    void invalidCompressionConfig() {
+        assertThatThrownBy(() -> new UniversalRemoteStorageManagerConfig(
+            Map.of(
+                "object.storage.factory", TestObjectStorageFactory.class.getCanonicalName(),
+                "chunk.size", "123",
+                "compression.enabled", "false",
+                "compression.heuristic.enabled", "true"
+            )))
+            .isInstanceOf(ConfigException.class)
+            .hasMessage("compression.enabled must be enabled if compression.heuristic.enabled is");
     }
 }

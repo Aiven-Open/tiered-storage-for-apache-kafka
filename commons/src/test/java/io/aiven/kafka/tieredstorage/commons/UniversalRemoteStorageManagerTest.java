@@ -41,6 +41,11 @@ import java.util.Random;
 import org.apache.kafka.common.TopicIdPartition;
 import org.apache.kafka.common.TopicPartition;
 import org.apache.kafka.common.Uuid;
+import org.apache.kafka.common.record.CompressionType;
+import org.apache.kafka.common.record.FileRecords;
+import org.apache.kafka.common.record.MemoryRecords;
+import org.apache.kafka.common.record.MemoryRecordsBuilder;
+import org.apache.kafka.common.record.TimestampType;
 import org.apache.kafka.server.log.remote.storage.LogSegmentData;
 import org.apache.kafka.server.log.remote.storage.RemoteLogSegmentId;
 import org.apache.kafka.server.log.remote.storage.RemoteLogSegmentMetadata;
@@ -62,12 +67,13 @@ import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.io.TempDir;
 import org.junit.jupiter.params.ParameterizedTest;
 import org.junit.jupiter.params.provider.Arguments;
+import org.junit.jupiter.params.provider.CsvSource;
 import org.junit.jupiter.params.provider.MethodSource;
 
 import static org.assertj.core.api.Assertions.assertThat;
 
 class UniversalRemoteStorageManagerTest extends RsaKeyAwareTest {
-    RemoteStorageManager rsm;
+    UniversalRemoteStorageManager rsm;
 
     RsaEncryptionProvider rsaEncryptionProvider;
     AesEncryptionProvider aesEncryptionProvider;
@@ -363,5 +369,43 @@ class UniversalRemoteStorageManagerTest extends RsaKeyAwareTest {
     private void checkDeletion() throws RemoteStorageException {
         rsm.deleteLogSegmentData(REMOTE_LOG_METADATA);
         assertThat(targetDir).isEmptyDirectory();
+    }
+
+    @ParameterizedTest
+    @CsvSource({"NONE,true", "ZSTD,false"})
+    void testRequiresCompression(final CompressionType compressionType, final boolean expectedResult)
+        throws IOException {
+        final Path logSegmentPath = targetDir.resolve("segment.log");
+        final File logSegmentFile = logSegmentPath.toFile();
+        try (final FileRecords records = FileRecords.open(logSegmentFile, false, 100000, true);
+             final MemoryRecordsBuilder builder = MemoryRecords.builder(
+                 ByteBuffer.allocate(1024),
+                 compressionType,
+                 TimestampType.CREATE_TIME,
+                 0)) {
+            builder.append(0L, "key-0".getBytes(), "value-0".getBytes());
+            records.append(builder.build());
+        }
+
+        // Configure the RSM.
+        final int chunkSize = 1024 * 1024;
+        final Map<String, ?> config = new HashMap<>(Map.of(
+            "chunk.size", Integer.toString(chunkSize),
+            "object.storage.factory",
+            "io.aiven.kafka.tieredstorage.commons.storage.filesystem.FileSystemStorageFactory",
+            "key.prefix", "test/",
+            "object.storage.root", targetDir.toString(),
+            "compression.enabled", "true",
+            "compression.heuristic.enabled", "true"
+        ));
+        rsm.configure(config);
+
+        // When
+        final LogSegmentData logSegmentData = new LogSegmentData(
+            logSegmentPath, offsetIndexFilePath, timeIndexFilePath, Optional.empty(),
+            producerSnapshotFilePath, ByteBuffer.wrap(LEADER_EPOCH_INDEX_BYTES));
+
+        final boolean requires = rsm.requiresCompression(logSegmentData);
+        assertThat(requires).isEqualTo(expectedResult);
     }
 }

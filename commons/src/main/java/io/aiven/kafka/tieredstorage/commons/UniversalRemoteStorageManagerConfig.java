@@ -60,8 +60,12 @@ public class UniversalRemoteStorageManagerConfig extends AbstractConfig {
     private static final String CHUNK_CACHE_CONFIG = CHUNK_CACHE_PREFIX + "class";
     private static final String CHUNK_CACHE_DOC = "The chunk cache implementation";
 
-    private static final String COMPRESSION_CONFIG = "compression.enabled";
-    private static final String COMPRESSION_DOC = "Whether to enable compression";
+    private static final String COMPRESSION_ENABLED_CONFIG = "compression.enabled";
+    private static final String COMPRESSION_ENABLED_DOC = "Whether to enable compression";
+
+    private static final String COMPRESSION_HEURISTIC_ENABLED_CONFIG = "compression.heuristic.enabled";
+    private static final String COMPRESSION_HEURISTIC_ENABLED_DOC = "Whether to use compression heuristics "
+        + "when compression is enabled";
 
     private static final String ENCRYPTION_CONFIG = "encryption.enabled";
     private static final String ENCRYPTION_DOC = "Whether to enable encryption";
@@ -131,11 +135,18 @@ public class UniversalRemoteStorageManagerConfig extends AbstractConfig {
         );
 
         CONFIG.define(
-            COMPRESSION_CONFIG,
+            COMPRESSION_ENABLED_CONFIG,
             ConfigDef.Type.BOOLEAN,
             false,
             ConfigDef.Importance.HIGH,
-            COMPRESSION_DOC
+            COMPRESSION_ENABLED_DOC
+        );
+        CONFIG.define(
+            COMPRESSION_HEURISTIC_ENABLED_CONFIG,
+            ConfigDef.Type.BOOLEAN,
+            false,
+            ConfigDef.Importance.HIGH,
+            COMPRESSION_HEURISTIC_ENABLED_DOC
         );
 
         CONFIG.define(
@@ -168,6 +179,27 @@ public class UniversalRemoteStorageManagerConfig extends AbstractConfig {
     }
 
     private void validate() {
+        validateEncryption();
+        validateCompression();
+        validateCaching();
+    }
+
+    private void validateCompression() {
+        if (getBoolean(COMPRESSION_HEURISTIC_ENABLED_CONFIG) && !getBoolean(COMPRESSION_ENABLED_CONFIG)) {
+            throw new ConfigException(
+                COMPRESSION_ENABLED_CONFIG + " must be enabled if " + COMPRESSION_HEURISTIC_ENABLED_CONFIG + " is");
+        }
+    }
+
+    private void validateCaching() {
+        final Class<?> chunkCacheClass = getClass(CHUNK_CACHE_CONFIG);
+        if (chunkCacheClass != null && !ChunkCache.class.isAssignableFrom(chunkCacheClass)) {
+            throw new ConfigException(
+                CHUNK_CACHE_CONFIG + " must be an implementation of " + ChunkCache.class.getCanonicalName());
+        }
+    }
+
+    private void validateEncryption() {
         if (getBoolean(ENCRYPTION_CONFIG) && getString(ENCRYPTION_PUBLIC_KEY_FILE_CONFIG) == null) {
             throw new ConfigException(
                 ENCRYPTION_PUBLIC_KEY_FILE_CONFIG + " must be provided if encryption is enabled");
@@ -175,11 +207,6 @@ public class UniversalRemoteStorageManagerConfig extends AbstractConfig {
         if (getBoolean(ENCRYPTION_CONFIG) && getString(ENCRYPTION_PRIVATE_KEY_FILE_CONFIG) == null) {
             throw new ConfigException(
                 ENCRYPTION_PRIVATE_KEY_FILE_CONFIG + " must be provided if encryption is enabled");
-        }
-        final Class<?> chunkCacheClass = getClass(CHUNK_CACHE_CONFIG);
-        if (chunkCacheClass != null && !ChunkCache.class.isAssignableFrom(chunkCacheClass)) {
-            throw new ConfigException(
-                CHUNK_CACHE_CONFIG + " must be an implementation of " + ChunkCache.class.getCanonicalName());
         }
     }
 
@@ -226,7 +253,11 @@ public class UniversalRemoteStorageManagerConfig extends AbstractConfig {
     }
 
     boolean compressionEnabled() {
-        return getBoolean(COMPRESSION_CONFIG);
+        return getBoolean(COMPRESSION_ENABLED_CONFIG);
+    }
+
+    boolean compressionHeuristicEnabled() {
+        return getBoolean(COMPRESSION_HEURISTIC_ENABLED_CONFIG);
     }
 
     boolean encryptionEnabled() {
