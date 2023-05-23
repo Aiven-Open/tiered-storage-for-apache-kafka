@@ -43,6 +43,10 @@ public class S3StorageConfig extends AbstractConfig {
     public static final String S3_REGION_CONFIG = "s3.region";
     static final String S3_REGION_DEFAULT = Regions.DEFAULT_REGION.getName();
     private static final String S3_REGION_DOC = "AWS region where S3 bucket is placed";
+    private static final String S3_PATH_STYLE_ENABLED_CONFIG = "s3.path.style.access.enabled";
+    private static final String S3_PATH_STYLE_ENABLED_DOC = "Whether to use path style access or virtual hosts. "
+        + "By default, empty value means S3 library will auto-detect. "
+        + "Amazon S3 uses virtual hosts by default (true), but other S3-compatible backends may differ (e.g. minio).";
 
     public static final String AWS_CREDENTIALS_PROVIDER_CLASS_CONFIG = "aws.credentials.provider.class";
     private static final String AWS_CREDENTIALS_PROVIDER_CLASS_DOC = "AWS credentials provider. "
@@ -80,6 +84,12 @@ public class S3StorageConfig extends AbstractConfig {
                 ConfigDef.Importance.MEDIUM,
                 S3_REGION_DOC)
             .define(
+                S3_PATH_STYLE_ENABLED_CONFIG,
+                ConfigDef.Type.BOOLEAN,
+                null,
+                ConfigDef.Importance.LOW,
+                S3_PATH_STYLE_ENABLED_DOC)
+            .define(
                 AWS_CREDENTIALS_PROVIDER_CLASS_CONFIG,
                 ConfigDef.Type.CLASS,
                 null,
@@ -102,21 +112,21 @@ public class S3StorageConfig extends AbstractConfig {
                 AWS_SECRET_ACCESS_KEY_DOC);
     }
 
-    public S3StorageConfig(final Map<String, Object> props) {
+    public S3StorageConfig(final Map<String, ?> props) {
         super(CONFIG, props);
         validate();
     }
 
     private void validate() {
-        if (Objects.nonNull(getPassword(AWS_ACCESS_KEY_ID_CONFIG))
-            ^ Objects.nonNull(getPassword(AWS_SECRET_ACCESS_KEY_CONFIG))) {
+        if (getPassword(AWS_ACCESS_KEY_ID_CONFIG) != null
+            ^ getPassword(AWS_SECRET_ACCESS_KEY_CONFIG) != null) {
             throw new ConfigException(AWS_ACCESS_KEY_ID_CONFIG
                 + " and "
                 + AWS_SECRET_ACCESS_KEY_CONFIG
                 + " must be defined together");
         }
-        if (Objects.nonNull(getClass(AWS_CREDENTIALS_PROVIDER_CLASS_CONFIG))
-            && Objects.nonNull(getPassword(AWS_ACCESS_KEY_ID_CONFIG))) {
+        if (getClass(AWS_CREDENTIALS_PROVIDER_CLASS_CONFIG) != null
+            && getPassword(AWS_ACCESS_KEY_ID_CONFIG) != null) {
             throw new ConfigException("Either "
                 + " static credential pair "
                 + AWS_ACCESS_KEY_ID_CONFIG + " and " + AWS_SECRET_ACCESS_KEY_CONFIG
@@ -137,8 +147,12 @@ public class S3StorageConfig extends AbstractConfig {
                 new AwsClientBuilder.EndpointConfiguration(s3ServiceEndpoint, region);
             s3ClientBuilder.withEndpointConfiguration(endpointConfiguration);
         }
+        final Boolean pathStyleAccessEnabled = pathStyleAccessEnabled();
+        if (pathStyleAccessEnabled != null) {
+            s3ClientBuilder.withPathStyleAccessEnabled(pathStyleAccessEnabled);
+        }
         final AWSCredentialsProvider credentialsProvider = credentialsProvider();
-        if (Objects.nonNull(credentialsProvider)) {
+        if (credentialsProvider != null) {
             s3ClientBuilder.setCredentials(credentialsProvider);
         }
         return s3ClientBuilder.build();
@@ -149,8 +163,8 @@ public class S3StorageConfig extends AbstractConfig {
             (Class<? extends AWSCredentialsProvider>) getClass(AWS_CREDENTIALS_PROVIDER_CLASS_CONFIG);
         if (Objects.isNull(providerClass)) {
             final boolean areCredentialsProvided =
-                Objects.nonNull(getPassword(AWS_ACCESS_KEY_ID_CONFIG))
-                    && Objects.nonNull(getPassword(AWS_SECRET_ACCESS_KEY_CONFIG));
+                getPassword(AWS_ACCESS_KEY_ID_CONFIG) != null
+                    && getPassword(AWS_SECRET_ACCESS_KEY_CONFIG) != null;
             if (areCredentialsProvided) {
                 final AWSCredentials staticCredentials = new BasicAWSCredentials(
                     getPassword(AWS_ACCESS_KEY_ID_CONFIG).value(),
@@ -167,6 +181,10 @@ public class S3StorageConfig extends AbstractConfig {
 
     public String bucketName() {
         return getString(S3_BUCKET_NAME_CONFIG);
+    }
+
+    public Boolean pathStyleAccessEnabled() {
+        return getBoolean(S3_PATH_STYLE_ENABLED_CONFIG);
     }
 
 

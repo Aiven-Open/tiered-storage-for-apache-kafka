@@ -193,17 +193,18 @@ public class UniversalRemoteStorageManager implements RemoteStorageManager {
                 new SegmentManifestV1(chunkIndex, requiresCompression, encryptionMetadata);
             uploadManifest(remoteLogSegmentMetadata, segmentManifest);
 
-            uploadIndexFile(remoteLogSegmentMetadata, Files.newInputStream(logSegmentData.offsetIndex()), OFFSET);
-            uploadIndexFile(remoteLogSegmentMetadata, Files.newInputStream(logSegmentData.timeIndex()),
-                TIMESTAMP);
-            uploadIndexFile(remoteLogSegmentMetadata, Files.newInputStream(logSegmentData.producerSnapshotIndex()),
-                PRODUCER_SNAPSHOT);
+            final InputStream offsetIndex = Files.newInputStream(logSegmentData.offsetIndex());
+            uploadIndexFile(remoteLogSegmentMetadata, offsetIndex, OFFSET);
+            final InputStream timeIndex = Files.newInputStream(logSegmentData.timeIndex());
+            uploadIndexFile(remoteLogSegmentMetadata, timeIndex, TIMESTAMP);
+            final InputStream producerSnapshotIndex = Files.newInputStream(logSegmentData.producerSnapshotIndex());
+            uploadIndexFile(remoteLogSegmentMetadata, producerSnapshotIndex, PRODUCER_SNAPSHOT);
             if (logSegmentData.transactionIndex().isPresent()) {
-                uploadIndexFile(remoteLogSegmentMetadata, Files.newInputStream(logSegmentData.transactionIndex().get()),
-                    TRANSACTION);
+                final InputStream transactionIndex = Files.newInputStream(logSegmentData.transactionIndex().get());
+                uploadIndexFile(remoteLogSegmentMetadata, transactionIndex, TRANSACTION);
             }
-            uploadIndexFile(remoteLogSegmentMetadata, new ByteBufferInputStream(logSegmentData.leaderEpochIndex()),
-                LEADER_EPOCH);
+            final ByteBufferInputStream leaderEpoch = new ByteBufferInputStream(logSegmentData.leaderEpochIndex());
+            uploadIndexFile(remoteLogSegmentMetadata, leaderEpoch, LEADER_EPOCH);
         } catch (final StorageBackEndException | IOException e) {
             throw new RemoteStorageException(e);
         }
@@ -239,19 +240,23 @@ public class UniversalRemoteStorageManager implements RemoteStorageManager {
 
     private void uploadIndexFile(final RemoteLogSegmentMetadata remoteLogSegmentMetadata,
                                  final InputStream index,
-                                 final IndexType indexType) throws StorageBackEndException {
-        objectStorageFactory.fileUploader().upload(index,
-            objectKey.key(remoteLogSegmentMetadata, ObjectKey.Suffix.fromIndexType(indexType)));
+                                 final IndexType indexType)
+        throws StorageBackEndException, IOException {
+        final String key = objectKey.key(remoteLogSegmentMetadata, ObjectKey.Suffix.fromIndexType(indexType));
+        try (index) {
+            objectStorageFactory.fileUploader().upload(index, key);
+        }
     }
 
     private void uploadManifest(final RemoteLogSegmentMetadata remoteLogSegmentMetadata,
                                 final SegmentManifest segmentManifest)
         throws StorageBackEndException, IOException {
         final String manifest = mapper.writeValueAsString(segmentManifest);
-        final String manifestFileKey =
-            objectKey.key(remoteLogSegmentMetadata, ObjectKey.Suffix.MANIFEST);
+        final String manifestFileKey = objectKey.key(remoteLogSegmentMetadata, ObjectKey.Suffix.MANIFEST);
 
-        objectStorageFactory.fileUploader().upload(new ByteArrayInputStream(manifest.getBytes()), manifestFileKey);
+        try (final ByteArrayInputStream manifestContent = new ByteArrayInputStream(manifest.getBytes())) {
+            objectStorageFactory.fileUploader().upload(manifestContent, manifestFileKey);
+        }
     }
 
     @Override

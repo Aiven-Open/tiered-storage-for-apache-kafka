@@ -16,6 +16,7 @@
 
 package io.aiven.kafka.tieredstorage.commons.storage.s3;
 
+import java.net.URL;
 import java.util.Map;
 
 import org.apache.kafka.common.config.ConfigException;
@@ -48,6 +49,7 @@ class S3StorageConfigTest {
         assertThat(s3.getRegionName()).isEqualTo(S3_REGION_DEFAULT);
         final String expectedHost = "s3." + S3_REGION_DEFAULT + ".amazonaws.com";
         assertThat(s3.getUrl(bucketName, "test")).hasHost(expectedHost);
+        assertThat(config.pathStyleAccessEnabled()).isNull();
     }
 
     // - Credential provider scenarios
@@ -60,7 +62,9 @@ class S3StorageConfigTest {
         final Map<String, Object> configs = Map.of(
             "s3.bucket.name", bucketName,
             "s3.region", region,
-            "s3.endpoint.url", minioUrl);
+            "s3.endpoint.url", minioUrl,
+            "s3.path.style.access.enabled", true
+        );
         final S3StorageConfig config = new S3StorageConfig(configs);
         assertThat(config.bucketName()).isEqualTo(bucketName);
         assertThat(config.getString("s3.region")).isEqualTo(region);
@@ -70,7 +74,9 @@ class S3StorageConfigTest {
         assertThat(credentialsProvider).isNull();
         final AmazonS3 s3 = config.s3Client();
         assertThat(s3.getRegionName()).isEqualTo(region);
-        assertThat(s3.getUrl(bucketName, "test")).hasHost("minio");
+        final URL test = s3.getUrl(bucketName, "test");
+        assertThat(test).hasHost("minio");
+        assertThat(config.pathStyleAccessEnabled()).isTrue();
     }
 
     //   - With provider
@@ -84,6 +90,7 @@ class S3StorageConfigTest {
             "s3.bucket.name", bucketName,
             "s3.region", region,
             "s3.endpoint.url", minioUrl,
+            "s3.path.style.access.enabled", false,
             "aws.credentials.provider.class", customConfigProvider);
         final S3StorageConfig config = new S3StorageConfig(configs);
         assertThat(config.bucketName()).isEqualTo(bucketName);
@@ -97,6 +104,7 @@ class S3StorageConfigTest {
         final AmazonS3 s3 = config.s3Client();
         assertThat(s3.getRegionName()).isEqualTo(region);
         assertThat(s3.getUrl(bucketName, "test")).hasHost("minio");
+        assertThat(config.pathStyleAccessEnabled()).isFalse();
     }
 
     //   - With static credentials
