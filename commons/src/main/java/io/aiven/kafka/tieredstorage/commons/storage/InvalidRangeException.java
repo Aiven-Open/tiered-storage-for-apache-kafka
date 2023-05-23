@@ -20,4 +20,8 @@ public class InvalidRangeException extends StorageBackEndException {
     public InvalidRangeException(final String message) {
         super(message);
     }
+
+    public InvalidRangeException(final String message, final Throwable e) {
+        super(message, e);
+    }
 }

@@ -61,10 +61,13 @@ public abstract class BaseStorageTest {
     }
 
     @Test
-    void testUploadANewFile() throws StorageBackEndException {
+    void testUploadANewFile() throws StorageBackEndException, IOException {
         final String content = "content";
-        uploader().upload(new ByteArrayInputStream(content.getBytes()), TOPIC_PARTITION_SEGMENT_KEY);
+        final ByteArrayInputStream in = new ByteArrayInputStream(content.getBytes());
+        uploader().upload(in, TOPIC_PARTITION_SEGMENT_KEY);
 
+        assertThat(in).isEmpty();
+        in.close();
         assertThat(fetcher().fetch(TOPIC_PARTITION_SEGMENT_KEY)).hasContent(content);
     }
 

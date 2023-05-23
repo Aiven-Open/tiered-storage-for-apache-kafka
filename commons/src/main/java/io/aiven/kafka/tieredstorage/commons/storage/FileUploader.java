@@ -19,5 +19,9 @@ package io.aiven.kafka.tieredstorage.commons.storage;
 import java.io.InputStream;
 
 public interface FileUploader {
+    /**
+     * @param inputStream content to upload. Not closed as part of the upload.
+     * @param key path to an object within a storage backend.
+     */
     void upload(InputStream inputStream, String key) throws StorageBackEndException;
 }
