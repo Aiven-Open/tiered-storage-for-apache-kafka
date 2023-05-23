@@ -20,6 +20,7 @@ import javax.crypto.SecretKey;
 import javax.crypto.spec.SecretKeySpec;
 
 import java.io.ByteArrayInputStream;
+import java.io.File;
 import java.io.IOException;
 import java.io.InputStream;
 import java.io.SequenceInputStream;
@@ -82,11 +83,10 @@ public class UniversalRemoteStorageManager implements RemoteStorageManager {
 
     private final Executor executor = new ForkJoinPool();
 
-    private UniversalRemoteStorageManagerConfig config;
-
     private ObjectStorageFactory objectStorageFactory;
-    private boolean compression;
-    private boolean encryption;
+    private boolean compressionEnabled;
+    private boolean compressionHeuristic;
+    private boolean encryptionEnabled;
     private int chunkSize;
     private RsaEncryptionProvider rsaEncryptionProvider;
     private AesEncryptionProvider aesEncryptionProvider;
@@ -115,11 +115,11 @@ public class UniversalRemoteStorageManager implements RemoteStorageManager {
     @Override
     public void configure(final Map<String, ?> configs) {
         Objects.requireNonNull(configs, "configs must not be null");
-        config = new UniversalRemoteStorageManagerConfig(configs);
+        final UniversalRemoteStorageManagerConfig config = new UniversalRemoteStorageManagerConfig(configs);
         objectStorageFactory = config.objectStorageFactory();
         objectKey = new ObjectKey(config.keyPrefix());
-        encryption = config.encryptionEnabled();
-        if (encryption) {
+        encryptionEnabled = config.encryptionEnabled();
+        if (encryptionEnabled) {
             rsaEncryptionProvider = RsaEncryptionProvider.of(
                 config.encryptionPublicKeyFile(),
                 config.encryptionPrivateKeyFile()
@@ -134,7 +134,8 @@ public class UniversalRemoteStorageManager implements RemoteStorageManager {
         );
 
         chunkSize = config.chunkSize();
-        compression = config.compressionEnabled();
+        compressionEnabled = config.compressionEnabled();
+        compressionHeuristic = config.compressionHeuristicEnabled();
 
         mapper = getObjectMapper();
 
@@ -150,7 +151,7 @@ public class UniversalRemoteStorageManager implements RemoteStorageManager {
     private ObjectMapper getObjectMapper() {
         final ObjectMapper objectMapper = new ObjectMapper();
         objectMapper.registerModule(new Jdk8Module());
-        if (encryption) {
+        if (encryptionEnabled) {
             final SimpleModule simpleModule = new SimpleModule();
             simpleModule.addSerializer(SecretKey.class, new DataKeySerializer(rsaEncryptionProvider::encryptDataKey));
             simpleModule.addDeserializer(SecretKey.class, new DataKeyDeserializer(
@@ -172,30 +173,25 @@ public class UniversalRemoteStorageManager implements RemoteStorageManager {
             TransformChunkEnumeration transformEnum = new BaseTransformChunkEnumeration(
                 Files.newInputStream(logSegmentData.logSegment()), chunkSize);
             SegmentEncryptionMetadataV1 encryptionMetadata = null;
-            if (compression) {
+            final boolean requiresCompression = requiresCompression(logSegmentData);
+            if (requiresCompression) {
                 transformEnum = new CompressionChunkEnumeration(transformEnum);
             }
-            if (encryption) {
+            if (encryptionEnabled) {
                 final DataKeyAndAAD dataKeyAndAAD = aesEncryptionProvider.createDataKeyAndAAD();
                 transformEnum = new EncryptionChunkEnumeration(
                     transformEnum,
                     () -> aesEncryptionProvider.encryptionCipher(dataKeyAndAAD));
                 encryptionMetadata = new SegmentEncryptionMetadataV1(dataKeyAndAAD.dataKey, dataKeyAndAAD.aad);
             }
-            final var transformFinisher =
+            final TransformFinisher transformFinisher =
                 new TransformFinisher(transformEnum, remoteLogSegmentMetadata.segmentSizeInBytes());
-            try (final var sis = new SequenceInputStream(transformFinisher)) {
-                final String fileKey =
-                    objectKey.key(remoteLogSegmentMetadata, ObjectKey.Suffix.LOG);
-                objectStorageFactory.fileUploader().upload(sis, fileKey);
-            }
-
+            uploadSegmentLog(remoteLogSegmentMetadata, transformFinisher);
 
             final ChunkIndex chunkIndex = transformFinisher.chunkIndex();
             final SegmentManifest segmentManifest =
-                new SegmentManifestV1(chunkIndex, compression, encryptionMetadata);
+                new SegmentManifestV1(chunkIndex, requiresCompression, encryptionMetadata);
             uploadManifest(remoteLogSegmentMetadata, segmentManifest);
-
 
             uploadIndexFile(remoteLogSegmentMetadata, Files.newInputStream(logSegmentData.offsetIndex()), OFFSET);
             uploadIndexFile(remoteLogSegmentMetadata, Files.newInputStream(logSegmentData.timeIndex()),
@@ -210,6 +206,34 @@ public class UniversalRemoteStorageManager implements RemoteStorageManager {
                 LEADER_EPOCH);
         } catch (final StorageBackEndException | IOException e) {
             throw new RemoteStorageException(e);
+        }
+    }
+
+    boolean requiresCompression(final LogSegmentData logSegmentData) {
+        boolean requiresCompression = false;
+        if (compressionEnabled) {
+            if (compressionHeuristic) {
+                try {
+                    final File segmentFile = logSegmentData.logSegment().toFile();
+                    final boolean alreadyCompressed = SegmentCompressionChecker.check(segmentFile);
+                    requiresCompression = !alreadyCompressed;
+                } catch (final InvalidRecordBatchException e) {
+                    // Log and leave value as false to upload uncompressed.
+                    log.warn("Failed to check compression on log segment: {}", logSegmentData.logSegment(), e);
+                }
+            } else {
+                requiresCompression = true;
+            }
+        }
+        return requiresCompression;
+    }
+
+    private void uploadSegmentLog(final RemoteLogSegmentMetadata remoteLogSegmentMetadata,
+                                  final TransformFinisher transformFinisher)
+        throws IOException, StorageBackEndException {
+        final String fileKey = objectKey.key(remoteLogSegmentMetadata, ObjectKey.Suffix.LOG);
+        try (final var sis = new SequenceInputStream(transformFinisher)) {
+            objectStorageFactory.fileUploader().upload(sis, fileKey);
         }
     }
 
