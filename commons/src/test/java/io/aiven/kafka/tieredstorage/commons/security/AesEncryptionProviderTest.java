@@ -24,22 +24,36 @@ import org.junit.jupiter.api.Test;
 
 import static org.assertj.core.api.Assertions.assertThat;
 
-public class EncryptionProviderTest extends RsaKeyAwareTest {
+public class AesEncryptionProviderTest extends RsaKeyAwareTest {
+
+    @Test
+    void keyAndAadMustBePresent() {
+        final AesEncryptionProvider aesProvider = new AesEncryptionProvider();
+        final DataKeyAndAAD dataKeyAndAAD = aesProvider.createDataKeyAndAAD();
+        assertThat(dataKeyAndAAD.dataKey.getEncoded()).isNotEmpty();
+        assertThat(dataKeyAndAAD.aad).isNotEmpty();
+    }
 
     @Test
     void alwaysGeneratesNewKey() {
         final AesEncryptionProvider aesProvider = new AesEncryptionProvider();
-        final var dataKey1 = aesProvider.createDataKey();
-        final var dataKey2 = aesProvider.createDataKey();
+        final DataKeyAndAAD dataKeyAndAad1 = aesProvider.createDataKeyAndAAD();
+        final DataKeyAndAAD dataKeyAndAad2 = aesProvider.createDataKeyAndAAD();
 
-        assertThat(dataKey1).isNotEqualTo(dataKey2);
+        assertThat(dataKeyAndAad1).isNotEqualTo(dataKeyAndAad2);
+    }
+
+    @Test
+    void keyMustBeDifferentFromAAD() {
+        final DataKeyAndAAD dataKeyAndAad = new AesEncryptionProvider().createDataKeyAndAAD();
+        assertThat(dataKeyAndAad.dataKey.getEncoded()).isNotEqualTo(dataKeyAndAad.aad);
     }
 
     @Test
     void decryptGeneratedKey() {
         final var rsaEncryptionProvider = RsaEncryptionProvider.of(publicKeyPem, privateKeyPem);
         final AesEncryptionProvider aesProvider = new AesEncryptionProvider();
-        final var dataKey = aesProvider.createDataKey();
+        final var dataKey = aesProvider.createDataKeyAndAAD().dataKey;
         final var encryptedKey = rsaEncryptionProvider.encryptDataKey(dataKey);
         final var restoredKey = rsaEncryptionProvider.decryptDataKey(encryptedKey);
 

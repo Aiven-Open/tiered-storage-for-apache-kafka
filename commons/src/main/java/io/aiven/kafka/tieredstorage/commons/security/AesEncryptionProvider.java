@@ -18,9 +18,7 @@ package io.aiven.kafka.tieredstorage.commons.security;
 
 import javax.crypto.Cipher;
 import javax.crypto.KeyGenerator;
-import javax.crypto.SecretKey;
 import javax.crypto.spec.IvParameterSpec;
-import javax.crypto.spec.SecretKeySpec;
 
 import java.security.NoSuchAlgorithmException;
 import java.security.NoSuchProviderException;
@@ -30,37 +28,26 @@ import io.aiven.kafka.tieredstorage.commons.manifest.SegmentEncryptionMetadata;
 
 public class AesEncryptionProvider implements Encryption, Decryption {
 
-    public static final int KEY_SIZE = 512;
-    public static final int KEY_AND_AAD_SIZE_BYTES = KEY_SIZE / 8 / 2;
+    public static final int KEY_SIZE = 256;
     public static final String AES_TRANSFORMATION = "AES/GCM/NoPadding";
 
     private final KeyGenerator aesKeyGenerator;
 
-    static KeyGenerator keyGenerator() {
+    public AesEncryptionProvider() {
         try {
-            final KeyGenerator kg = KeyGenerator.getInstance("AES", "BC");
-            kg.init(KEY_SIZE, SecureRandom.getInstanceStrong());
-            return kg;
+            this.aesKeyGenerator = KeyGenerator.getInstance("AES", "BC");
+            this.aesKeyGenerator.init(KEY_SIZE, SecureRandom.getInstanceStrong());
         } catch (final NoSuchAlgorithmException | NoSuchProviderException e) {
             throw new RuntimeException(e);
         }
     }
 
-    public AesEncryptionProvider() {
-        this.aesKeyGenerator = keyGenerator();
-    }
-
-    public SecretKey createDataKey() {
-        return aesKeyGenerator.generateKey();
-    }
-
     public DataKeyAndAAD createDataKeyAndAAD() {
-        final byte[] dataKeyAndAAD = createDataKey().getEncoded();
-        final byte[] dataKey = new byte[KEY_AND_AAD_SIZE_BYTES];
-        System.arraycopy(dataKeyAndAAD, 0, dataKey, 0, 32);
-        final byte[] aad = new byte[KEY_AND_AAD_SIZE_BYTES];
-        System.arraycopy(dataKeyAndAAD, 32, aad, 0, 32);
-        return new DataKeyAndAAD(new SecretKeySpec(dataKey, "AES"), aad);
+        // Attention: these two generateKey() calls must be separate!
+        // "Optimizing" them into one will result in a serious security flaw.
+        final var dataKey = aesKeyGenerator.generateKey();
+        final byte[] aad = aesKeyGenerator.generateKey().getEncoded();
+        return new DataKeyAndAAD(dataKey, aad);
     }
 
     public Cipher encryptionCipher(final DataKeyAndAAD dataKeyAndAAD) {
