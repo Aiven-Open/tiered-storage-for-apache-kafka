@@ -1,5 +1,5 @@
 /*
- * Copyright 2021 Aiven Oy
+ * Copyright 2023 Aiven Oy
  *
  * Licensed under the Apache License, Version 2.0 (the "License");
  * you may not use this file except in compliance with the License.
@@ -14,6 +14,21 @@
  * limitations under the License.
  */
 
-rootProject.name = 'kafka-tiered-storage'
-include 's3'
-include 'core'
+package io.aiven.kafka.tieredstorage.core.storage;
+
+import java.io.InputStream;
+
+public interface FileFetcher {
+    /**
+     * Fetch file.
+     * @param key file key.
+     */
+    InputStream fetch(String key) throws StorageBackEndException;
+
+    /**
+     * Fetch file.
+     * @param key file key.
+     * @param range range with inclusive start/end positions
+     */
+    InputStream fetch(String key, BytesRange range) throws StorageBackEndException;
+}

@@ -1,5 +1,5 @@
 /*
- * Copyright 2021 Aiven Oy
+ * Copyright 2023 Aiven Oy
  *
  * Licensed under the Apache License, Version 2.0 (the "License");
  * you may not use this file except in compliance with the License.
@@ -14,6 +14,15 @@
  * limitations under the License.
  */
 
-rootProject.name = 'kafka-tiered-storage'
-include 's3'
-include 'core'
+package io.aiven.kafka.tieredstorage.core.storage;
+
+public class KeyNotFoundException extends StorageBackEndException {
+
+    public KeyNotFoundException(final FileFetcher storage, final String key, final Exception e) {
+        super(getMessage(storage, key), e);
+    }
+
+    private static String getMessage(final FileFetcher storage, final String key) {
+        return "Key " + key + " does not exists in storage " + storage;
+    }
+}

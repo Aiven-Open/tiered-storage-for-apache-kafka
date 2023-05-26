@@ -1,5 +1,5 @@
 /*
- * Copyright 2021 Aiven Oy
+ * Copyright 2023 Aiven Oy
  *
  * Licensed under the Apache License, Version 2.0 (the "License");
  * you may not use this file except in compliance with the License.
@@ -14,6 +14,14 @@
  * limitations under the License.
  */
 
-rootProject.name = 'kafka-tiered-storage'
-include 's3'
-include 'core'
+package io.aiven.kafka.tieredstorage.core.storage;
+
+import java.io.InputStream;
+
+public interface FileUploader {
+    /**
+     * @param inputStream content to upload. Not closed as part of the upload.
+     * @param key path to an object within a storage backend.
+     */
+    void upload(InputStream inputStream, String key) throws StorageBackEndException;
+}
