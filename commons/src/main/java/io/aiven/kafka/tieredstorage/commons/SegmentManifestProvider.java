@@ -20,13 +20,10 @@ import java.io.IOException;
 import java.io.InputStream;
 import java.time.Duration;
 import java.util.Optional;
-import java.util.concurrent.CompletableFuture;
-import java.util.concurrent.CompletionException;
 import java.util.concurrent.ExecutionException;
 import java.util.concurrent.Executor;
 import java.util.concurrent.TimeUnit;
 import java.util.concurrent.TimeoutException;
-import java.util.function.Supplier;
 
 import org.apache.kafka.server.log.remote.storage.RemoteLogSegmentMetadata;
 
@@ -35,7 +32,6 @@ import io.aiven.kafka.tieredstorage.commons.storage.FileFetcher;
 import io.aiven.kafka.tieredstorage.commons.storage.StorageBackEndException;
 
 import com.fasterxml.jackson.databind.ObjectMapper;
-import com.github.benmanes.caffeine.cache.AsyncCacheLoader;
 import com.github.benmanes.caffeine.cache.AsyncLoadingCache;
 import com.github.benmanes.caffeine.cache.Caffeine;
 
@@ -60,31 +56,11 @@ class SegmentManifestProvider {
             .executor(executor);
         maxCacheSize.ifPresent(cacheBuilder::maximumSize);
         cacheRetention.ifPresent(cacheBuilder::expireAfterWrite);
-        this.cache = cacheBuilder.buildAsync(new Loader(fileFetcher, mapper));
-    }
-
-    private static class Loader implements AsyncCacheLoader<String, SegmentManifest> {
-        private final FileFetcher fileFetcher;
-        private final ObjectMapper mapper;
-
-        private Loader(final FileFetcher fileFetcher, final ObjectMapper mapper) {
-            this.fileFetcher = fileFetcher;
-            this.mapper = mapper;
-        }
-
-        @Override
-        public CompletableFuture<? extends SegmentManifest> asyncLoad(
-            final String key, final Executor executor) throws Exception {
-            final Supplier<SegmentManifest> fetcher = () -> {
-                try (final InputStream is = fileFetcher.fetch(key)) {
-                    return mapper.readValue(is, SegmentManifest.class);
-                } catch (final StorageBackEndException | IOException e) {
-                    // Wrap these exceptions to unwrap them later.
-                    throw new CompletionException(e);
-                }
-            };
-            return CompletableFuture.supplyAsync(fetcher, executor);
-        }
+        this.cache = cacheBuilder.buildAsync(key -> {
+            try (final InputStream is = fileFetcher.fetch(key)) {
+                return mapper.readValue(is, SegmentManifest.class);
+            }
+        });
     }
 
     SegmentManifest get(final RemoteLogSegmentMetadata remoteLogSegmentMetadata)
