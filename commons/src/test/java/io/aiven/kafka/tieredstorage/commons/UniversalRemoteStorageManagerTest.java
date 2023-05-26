@@ -18,7 +18,7 @@ package io.aiven.kafka.tieredstorage.commons;
 
 import javax.crypto.Cipher;
 import javax.crypto.SecretKey;
-import javax.crypto.spec.IvParameterSpec;
+import javax.crypto.spec.GCMParameterSpec;
 import javax.crypto.spec.SecretKeySpec;
 
 import java.io.File;
@@ -317,7 +317,7 @@ class UniversalRemoteStorageManagerTest extends RsaKeyAwareTest {
                     final int ivSize = iv.length;
                     final SecretKeySpec secretKeySpec = new SecretKeySpec(dataKey, "AES");
                     cipher.init(Cipher.DECRYPT_MODE, secretKeySpec,
-                        new IvParameterSpec(transformedChunk, 0, ivSize),
+                        new GCMParameterSpec(AesEncryptionProvider.GCM_TAG_LENGTH, transformedChunk, 0, ivSize),
                         SecureRandom.getInstanceStrong());
                     cipher.updateAAD(aad);
 

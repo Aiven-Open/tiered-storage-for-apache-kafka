@@ -18,16 +18,17 @@ package io.aiven.kafka.tieredstorage.commons;
 
 import javax.crypto.Cipher;
 import javax.crypto.NoSuchPaddingException;
-import javax.crypto.spec.IvParameterSpec;
+import javax.crypto.spec.GCMParameterSpec;
 import javax.crypto.spec.SecretKeySpec;
 
 import java.security.InvalidAlgorithmParameterException;
 import java.security.InvalidKeyException;
 import java.security.NoSuchAlgorithmException;
-import java.security.NoSuchProviderException;
 import java.security.SecureRandom;
 import java.security.Security;
 import java.util.Random;
+
+import io.aiven.kafka.tieredstorage.commons.security.AesEncryptionProvider;
 
 import org.bouncycastle.jce.provider.BouncyCastleProvider;
 import org.junit.jupiter.api.BeforeAll;
@@ -71,7 +72,7 @@ public class AesKeyAwareTest {
         try {
             final Cipher encryptCipher = getCipher();
             encryptCipher.init(Cipher.DECRYPT_MODE, secretKey,
-                new IvParameterSpec(encryptedChunk, 0, ivSize),
+                new GCMParameterSpec(AesEncryptionProvider.GCM_TAG_LENGTH, encryptedChunk, 0, ivSize),
                 SecureRandom.getInstanceStrong());
             encryptCipher.updateAAD(aad);
             return encryptCipher;
@@ -82,8 +83,8 @@ public class AesKeyAwareTest {
 
     protected static Cipher getCipher() {
         try {
-            return Cipher.getInstance("AES/GCM/NoPadding", "BC");
-        } catch (final NoSuchAlgorithmException | NoSuchProviderException | NoSuchPaddingException e) {
+            return Cipher.getInstance("AES/GCM/NoPadding");
+        } catch (final NoSuchAlgorithmException | NoSuchPaddingException e) {
             throw new RuntimeException(e);
         }
     }
