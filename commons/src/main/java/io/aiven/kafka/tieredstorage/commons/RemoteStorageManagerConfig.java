@@ -30,7 +30,7 @@ import io.aiven.kafka.tieredstorage.commons.cache.ChunkCache;
 import io.aiven.kafka.tieredstorage.commons.cache.UnboundInMemoryChunkCache;
 import io.aiven.kafka.tieredstorage.commons.storage.ObjectStorageFactory;
 
-public class UniversalRemoteStorageManagerConfig extends AbstractConfig {
+public class RemoteStorageManagerConfig extends AbstractConfig {
     private static final String OBJECT_STORAGE_PREFIX = "object.storage.";
 
     private static final String OBJECT_STORAGE_FACTORY_CONFIG = OBJECT_STORAGE_PREFIX + "factory";
@@ -173,7 +173,7 @@ public class UniversalRemoteStorageManagerConfig extends AbstractConfig {
     }
 
 
-    UniversalRemoteStorageManagerConfig(final Map<String, ?> props) {
+    RemoteStorageManagerConfig(final Map<String, ?> props) {
         super(CONFIG, props);
         validate();
     }
