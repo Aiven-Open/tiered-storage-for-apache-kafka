@@ -17,7 +17,9 @@
 package io.aiven.kafka.tieredstorage.commons.security;
 
 import javax.crypto.BadPaddingException;
+import javax.crypto.Cipher;
 import javax.crypto.IllegalBlockSizeException;
+import javax.crypto.NoSuchPaddingException;
 import javax.crypto.SecretKey;
 
 import java.io.IOException;
@@ -26,11 +28,15 @@ import java.io.InputStreamReader;
 import java.io.Reader;
 import java.nio.file.Files;
 import java.nio.file.Path;
+import java.security.InvalidKeyException;
+import java.security.Key;
 import java.security.KeyFactory;
 import java.security.KeyPair;
 import java.security.NoSuchAlgorithmException;
+import java.security.NoSuchProviderException;
 import java.security.PrivateKey;
 import java.security.PublicKey;
+import java.security.SecureRandom;
 import java.security.spec.InvalidKeySpecException;
 import java.security.spec.PKCS8EncodedKeySpec;
 import java.security.spec.X509EncodedKeySpec;
@@ -40,7 +46,7 @@ import org.bouncycastle.util.io.pem.PemReader;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
-public final class RsaEncryptionProvider implements Encryption, Decryption {
+public final class RsaEncryptionProvider {
 
     private static final Logger LOGGER = LoggerFactory.getLogger(RsaEncryptionProvider.class);
 
@@ -64,19 +70,42 @@ public final class RsaEncryptionProvider implements Encryption, Decryption {
 
     public byte[] encryptDataKey(final SecretKey dataKey) {
         try {
-            final var cipher = createEncryptingCipher(rsaKeyPair.getPublic(), RSA_TRANSFORMATION);
+            final var cipher = createEncryptingCipher(rsaKeyPair.getPublic());
             return cipher.doFinal(dataKey.getEncoded());
         } catch (final IllegalBlockSizeException | BadPaddingException e) {
             throw new RuntimeException("Couldn't encrypt AES key", e);
         }
     }
 
+    private Cipher createEncryptingCipher(final Key key) {
+        Objects.requireNonNull(key, "key cannot be null");
+        try {
+            final var cipher = Cipher.getInstance(RSA_TRANSFORMATION, "BC");
+            cipher.init(Cipher.ENCRYPT_MODE, key, SecureRandom.getInstanceStrong());
+            return cipher;
+        } catch (final NoSuchAlgorithmException | NoSuchPaddingException
+                       | InvalidKeyException | NoSuchProviderException e) {
+            throw new RuntimeException("Couldn't create encrypt cipher", e);
+        }
+    }
+
     public byte[] decryptDataKey(final byte[] bytes) {
         try {
-            final var cipher = createDecryptingCipher(rsaKeyPair.getPrivate(), RSA_TRANSFORMATION);
+            final Cipher cipher = createDecryptingCipher(rsaKeyPair.getPrivate());
             return cipher.doFinal(bytes);
         } catch (final IllegalBlockSizeException | BadPaddingException e) {
             throw new RuntimeException("Couldn't decrypt AES key", e);
+        }
+    }
+
+    private Cipher createDecryptingCipher(final Key key) {
+        try {
+            final var cipher = Cipher.getInstance(RSA_TRANSFORMATION, "BC");
+            cipher.init(Cipher.DECRYPT_MODE, key, SecureRandom.getInstanceStrong());
+            return cipher;
+        } catch (final NoSuchAlgorithmException | NoSuchPaddingException
+                       | InvalidKeyException | NoSuchProviderException e) {
+            throw new RuntimeException("Couldn't create decrypt cipher", e);
         }
     }
 

@@ -18,26 +18,33 @@ package io.aiven.kafka.tieredstorage.commons.security;
 
 import javax.crypto.Cipher;
 import javax.crypto.KeyGenerator;
-import javax.crypto.spec.IvParameterSpec;
+import javax.crypto.NoSuchPaddingException;
+import javax.crypto.spec.GCMParameterSpec;
 
+import java.security.InvalidAlgorithmParameterException;
+import java.security.InvalidKeyException;
+import java.security.Key;
 import java.security.NoSuchAlgorithmException;
-import java.security.NoSuchProviderException;
 import java.security.SecureRandom;
+import java.security.spec.AlgorithmParameterSpec;
+import java.util.Objects;
 
 import io.aiven.kafka.tieredstorage.commons.manifest.SegmentEncryptionMetadata;
 
-public class AesEncryptionProvider implements Encryption, Decryption {
+public class AesEncryptionProvider {
 
     public static final int KEY_SIZE = 256;
+    // By default, equals the AES block size, see GaloisCounterMode.DEFAULT_TAG_LEN.
+    public static final int GCM_TAG_LENGTH = 128;
     public static final String AES_TRANSFORMATION = "AES/GCM/NoPadding";
 
     private final KeyGenerator aesKeyGenerator;
 
     public AesEncryptionProvider() {
         try {
-            this.aesKeyGenerator = KeyGenerator.getInstance("AES", "BC");
+            this.aesKeyGenerator = KeyGenerator.getInstance("AES");
             this.aesKeyGenerator.init(KEY_SIZE, SecureRandom.getInstanceStrong());
-        } catch (final NoSuchAlgorithmException | NoSuchProviderException e) {
+        } catch (final NoSuchAlgorithmException e) {
             throw new RuntimeException(e);
         }
     }
@@ -51,16 +58,42 @@ public class AesEncryptionProvider implements Encryption, Decryption {
     }
 
     public Cipher encryptionCipher(final DataKeyAndAAD dataKeyAndAAD) {
-        final Cipher encryptCipher = createEncryptingCipher(dataKeyAndAAD.dataKey, AES_TRANSFORMATION);
+        final Cipher encryptCipher = createEncryptingCipher(dataKeyAndAAD.dataKey);
         encryptCipher.updateAAD(dataKeyAndAAD.aad);
         return encryptCipher;
     }
 
+    private Cipher createEncryptingCipher(final Key key) {
+        Objects.requireNonNull(key, "key cannot be null");
+        try {
+            final var cipher = Cipher.getInstance(AES_TRANSFORMATION);
+            cipher.init(Cipher.ENCRYPT_MODE, key, SecureRandom.getInstanceStrong());
+            return cipher;
+        } catch (final NoSuchAlgorithmException | NoSuchPaddingException | InvalidKeyException e) {
+            throw new RuntimeException("Couldn't create encrypt cipher", e);
+        }
+    }
+
     public Cipher decryptionCipher(final byte[] encryptedChunk,
                                    final SegmentEncryptionMetadata encryptionMetadata) {
-        final IvParameterSpec params = new IvParameterSpec(encryptedChunk, 0, encryptionMetadata.ivSize());
-        final Cipher encryptCipher = createDecryptingCipher(encryptionMetadata.dataKey(), params, AES_TRANSFORMATION);
+        final GCMParameterSpec params = new GCMParameterSpec(
+            GCM_TAG_LENGTH, encryptedChunk, 0, encryptionMetadata.ivSize());
+        final Cipher encryptCipher = createDecryptingCipher(encryptionMetadata.dataKey(), params);
         encryptCipher.updateAAD(encryptionMetadata.aad());
         return encryptCipher;
+    }
+
+    private Cipher createDecryptingCipher(final Key key,
+                                          final AlgorithmParameterSpec params) {
+        Objects.requireNonNull(key, "key cannot be null");
+        Objects.requireNonNull(params, "params cannot be null");
+        try {
+            final var cipher = Cipher.getInstance(AES_TRANSFORMATION);
+            cipher.init(Cipher.DECRYPT_MODE, key, params, SecureRandom.getInstanceStrong());
+            return cipher;
+        } catch (final NoSuchAlgorithmException | NoSuchPaddingException
+                       | InvalidKeyException | InvalidAlgorithmParameterException e) {
+            throw new RuntimeException("Couldn't create decrypt cipher", e);
+        }
     }
 }
