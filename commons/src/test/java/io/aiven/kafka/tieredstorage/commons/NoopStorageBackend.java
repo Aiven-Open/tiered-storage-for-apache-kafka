@@ -16,17 +16,17 @@
 
 package io.aiven.kafka.tieredstorage.commons;
 
+import java.io.InputStream;
 import java.util.Map;
 
 import org.apache.kafka.common.config.AbstractConfig;
 import org.apache.kafka.common.config.ConfigDef;
 
-import io.aiven.kafka.tieredstorage.commons.storage.FileDeleter;
-import io.aiven.kafka.tieredstorage.commons.storage.FileFetcher;
-import io.aiven.kafka.tieredstorage.commons.storage.FileUploader;
-import io.aiven.kafka.tieredstorage.commons.storage.ObjectStorageFactory;
+import io.aiven.kafka.tieredstorage.commons.storage.BytesRange;
+import io.aiven.kafka.tieredstorage.commons.storage.StorageBackend;
+import io.aiven.kafka.tieredstorage.commons.storage.StorageBackendException;
 
-public class TestObjectStorageFactory implements ObjectStorageFactory {
+public class NoopStorageBackend implements StorageBackend {
     public boolean configureCalled = false;
     public Config configuredWith;
 
@@ -37,19 +37,23 @@ public class TestObjectStorageFactory implements ObjectStorageFactory {
     }
 
     @Override
-    public FileUploader fileUploader() {
+    public void upload(final InputStream inputStream, final String key) throws StorageBackendException {
+    }
+
+    @Override
+    public InputStream fetch(final String key) throws StorageBackendException {
         return null;
     }
 
     @Override
-    public FileFetcher fileFetcher() {
+    public InputStream fetch(final String key, final BytesRange range) throws StorageBackendException {
         return null;
     }
 
     @Override
-    public FileDeleter fileDeleter() {
-        return null;
+    public void delete(final String key) throws StorageBackendException {
     }
+
 
     static class Config extends AbstractConfig {
 

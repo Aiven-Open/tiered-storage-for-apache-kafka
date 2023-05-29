@@ -32,8 +32,8 @@ import org.apache.kafka.server.log.remote.storage.RemoteLogSegmentMetadata;
 
 import io.aiven.kafka.tieredstorage.commons.manifest.SegmentManifestV1;
 import io.aiven.kafka.tieredstorage.commons.manifest.index.FixedSizeChunkIndex;
-import io.aiven.kafka.tieredstorage.commons.storage.FileFetcher;
-import io.aiven.kafka.tieredstorage.commons.storage.StorageBackEndException;
+import io.aiven.kafka.tieredstorage.commons.storage.StorageBackend;
+import io.aiven.kafka.tieredstorage.commons.storage.StorageBackendException;
 
 import com.fasterxml.jackson.databind.ObjectMapper;
 import com.fasterxml.jackson.datatype.jdk8.Jdk8Module;
@@ -78,14 +78,14 @@ class SegmentManifestProviderTest {
         23L, 2000L, 0, 0, 0, 1, Map.of(0, 0L));
 
     @Mock
-    FileFetcher fetcher;
+    StorageBackend storage;
 
     SegmentManifestProvider provider;
 
     @BeforeEach
     void setup() {
         provider = new SegmentManifestProvider(
-            OBJECT_KEY, Optional.of(1000L), Optional.empty(), fetcher, MAPPER,
+            OBJECT_KEY, Optional.of(1000L), Optional.empty(), storage, MAPPER,
             ForkJoinPool.commonPool());
     }
 
@@ -93,7 +93,7 @@ class SegmentManifestProviderTest {
     void unboundedShouldBeCreated() {
         assertThatNoException()
             .isThrownBy(() -> new SegmentManifestProvider(
-                OBJECT_KEY, Optional.empty(), Optional.of(Duration.ofMillis(1)), fetcher, MAPPER,
+                OBJECT_KEY, Optional.empty(), Optional.of(Duration.ofMillis(1)), storage, MAPPER,
                 ForkJoinPool.commonPool()));
     }
 
@@ -101,40 +101,40 @@ class SegmentManifestProviderTest {
     void withoutRetentionLimitsShouldBeCreated() {
         assertThatNoException()
             .isThrownBy(() -> new SegmentManifestProvider(
-                OBJECT_KEY, Optional.of(1L), Optional.empty(), fetcher, MAPPER,
+                OBJECT_KEY, Optional.of(1L), Optional.empty(), storage, MAPPER,
                 ForkJoinPool.commonPool()));
     }
 
     @Test
-    void shouldReturnAndCache() throws StorageBackEndException, IOException {
+    void shouldReturnAndCache() throws StorageBackendException, IOException {
         final String key = "topic-AAAAAAAAAAAAAAAAAAAAAQ/7/00000000000000000023-AAAAAAAAAAAAAAAAAAAAAA.rsm-manifest";
-        when(fetcher.fetch(key))
+        when(storage.fetch(key))
             .thenReturn(new ByteArrayInputStream(MANIFEST.getBytes()));
         final SegmentManifestV1 expectedManifest = new SegmentManifestV1(
             new FixedSizeChunkIndex(100, 1000, 110, 110),
             false, null
         );
         assertThat(provider.get(REMOTE_LOG_METADATA)).isEqualTo(expectedManifest);
-        verify(fetcher).fetch(key);
+        verify(storage).fetch(key);
         assertThat(provider.get(REMOTE_LOG_METADATA)).isEqualTo(expectedManifest);
-        verifyNoMoreInteractions(fetcher);
+        verifyNoMoreInteractions(storage);
     }
 
     @Test
-    void shouldPropagateStorageBackEndException() throws StorageBackEndException {
-        when(fetcher.fetch(anyString()))
-            .thenThrow(new StorageBackEndException("test"));
+    void shouldPropagateStorageBackendException() throws StorageBackendException {
+        when(storage.fetch(anyString()))
+            .thenThrow(new StorageBackendException("test"));
         assertThatThrownBy(() -> provider.get(REMOTE_LOG_METADATA))
-            .isInstanceOf(StorageBackEndException.class)
+            .isInstanceOf(StorageBackendException.class)
             .hasMessage("test");
     }
 
     @Test
-    void shouldPropagateIOException(@Mock final InputStream isMock) throws StorageBackEndException, IOException {
+    void shouldPropagateIOException(@Mock final InputStream isMock) throws StorageBackendException, IOException {
         doAnswer(invocation -> {
             throw new IOException("test");
         }).when(isMock).close();
-        when(fetcher.fetch(anyString()))
+        when(storage.fetch(anyString()))
             .thenReturn(isMock);
         assertThatThrownBy(() -> provider.get(REMOTE_LOG_METADATA))
             .isInstanceOf(IOException.class)

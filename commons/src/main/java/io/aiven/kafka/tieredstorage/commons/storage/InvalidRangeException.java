@@ -16,7 +16,7 @@
 
 package io.aiven.kafka.tieredstorage.commons.storage;
 
-public class InvalidRangeException extends StorageBackEndException {
+public class InvalidRangeException extends StorageBackendException {
     public InvalidRangeException(final String message) {
         super(message);
     }

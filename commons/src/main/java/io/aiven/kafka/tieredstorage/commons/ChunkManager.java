@@ -28,8 +28,8 @@ import io.aiven.kafka.tieredstorage.commons.cache.ChunkCache;
 import io.aiven.kafka.tieredstorage.commons.manifest.SegmentEncryptionMetadata;
 import io.aiven.kafka.tieredstorage.commons.manifest.SegmentManifest;
 import io.aiven.kafka.tieredstorage.commons.security.AesEncryptionProvider;
-import io.aiven.kafka.tieredstorage.commons.storage.FileFetcher;
-import io.aiven.kafka.tieredstorage.commons.storage.StorageBackEndException;
+import io.aiven.kafka.tieredstorage.commons.storage.ObjectFetcher;
+import io.aiven.kafka.tieredstorage.commons.storage.StorageBackendException;
 import io.aiven.kafka.tieredstorage.commons.transform.BaseDetransformChunkEnumeration;
 import io.aiven.kafka.tieredstorage.commons.transform.DecompressionChunkEnumeration;
 import io.aiven.kafka.tieredstorage.commons.transform.DecryptionChunkEnumeration;
@@ -39,14 +39,14 @@ import io.aiven.kafka.tieredstorage.commons.transform.DetransformFinisher;
 import org.apache.commons.io.IOUtils;
 
 public class ChunkManager {
-    private final FileFetcher fileFetcher;
+    private final ObjectFetcher fetcher;
     private final ObjectKey objectKey;
     private final AesEncryptionProvider aesEncryptionProvider;
     private final ChunkCache chunkCache;
 
-    public ChunkManager(final FileFetcher fileFetcher, final ObjectKey objectKey,
+    public ChunkManager(final ObjectFetcher fetcher, final ObjectKey objectKey,
                         final AesEncryptionProvider aesEncryptionProvider, final ChunkCache chunkCache) {
-        this.fileFetcher = fileFetcher;
+        this.fetcher = fetcher;
         this.objectKey = objectKey;
         this.aesEncryptionProvider = aesEncryptionProvider;
         this.chunkCache = chunkCache;
@@ -58,7 +58,7 @@ public class ChunkManager {
      * @return an {@link InputStream} of the chunk, plain text (i.e. decrypted and decompressed).
      */
     public InputStream getChunk(final RemoteLogSegmentMetadata remoteLogSegmentMetadata, final SegmentManifest manifest,
-                                final int chunkId) throws StorageBackEndException {
+                                final int chunkId) throws StorageBackendException {
         final Chunk chunk = manifest.chunkIndex().chunks().get(chunkId);
         final InputStream chunkContent = getChunkContent(remoteLogSegmentMetadata, chunk);
         DetransformChunkEnumeration detransformEnum = new BaseDetransformChunkEnumeration(chunkContent, List.of(chunk));
@@ -78,7 +78,7 @@ public class ChunkManager {
     }
 
     private InputStream getChunkContent(final RemoteLogSegmentMetadata remoteLogSegmentMetadata,
-                                        final Chunk chunk) throws StorageBackEndException {
+                                        final Chunk chunk) throws StorageBackendException {
         final InputStream chunkContent;
         if (chunkCache != null) {
             chunkContent = getChunkFromCache(remoteLogSegmentMetadata, chunk);
@@ -89,7 +89,7 @@ public class ChunkManager {
     }
 
     private InputStream getChunkFromCache(final RemoteLogSegmentMetadata remoteLogSegmentMetadata,
-                                          final Chunk chunk) throws StorageBackEndException {
+                                          final Chunk chunk) throws StorageBackendException {
         final ChunkKey chunkKey = new ChunkKey(remoteLogSegmentMetadata.remoteLogSegmentId().id(), chunk.id);
         final Optional<InputStream> inputStream = chunkCache.get(chunkKey);
         final byte[] contentBytes;
@@ -98,7 +98,7 @@ public class ChunkManager {
             try {
                 contentBytes = IOUtils.toByteArray(content);
             } catch (final IOException e) {
-                throw new StorageBackEndException(
+                throw new StorageBackendException(
                     "Failed to read chunk with chunkKey " + chunkKey + " from remote storage", e);
             }
             final String tempFilename = chunkCache.storeTemporarily(contentBytes);
@@ -110,9 +110,9 @@ public class ChunkManager {
     }
 
     private InputStream getChunkFromStorage(final RemoteLogSegmentMetadata remoteLogSegmentMetadata,
-                                            final Chunk chunk) throws StorageBackEndException {
+                                            final Chunk chunk) throws StorageBackendException {
         final String segmentKey = objectKey.key(remoteLogSegmentMetadata, ObjectKey.Suffix.LOG);
-        return fileFetcher.fetch(segmentKey, chunk.range());
+        return fetcher.fetch(segmentKey, chunk.range());
 
     }
 }

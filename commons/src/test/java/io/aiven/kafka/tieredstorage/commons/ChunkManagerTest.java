@@ -33,8 +33,8 @@ import io.aiven.kafka.tieredstorage.commons.manifest.SegmentManifestV1;
 import io.aiven.kafka.tieredstorage.commons.manifest.index.FixedSizeChunkIndex;
 import io.aiven.kafka.tieredstorage.commons.security.AesEncryptionProvider;
 import io.aiven.kafka.tieredstorage.commons.security.DataKeyAndAAD;
-import io.aiven.kafka.tieredstorage.commons.storage.FileFetcher;
-import io.aiven.kafka.tieredstorage.commons.storage.StorageBackEndException;
+import io.aiven.kafka.tieredstorage.commons.storage.StorageBackend;
+import io.aiven.kafka.tieredstorage.commons.storage.StorageBackendException;
 
 import com.github.luben.zstd.ZstdCompressCtx;
 import org.junit.jupiter.api.BeforeEach;
@@ -57,7 +57,7 @@ class ChunkManagerTest extends AesKeyAwareTest {
     @Mock
     RemoteLogSegmentMetadata remoteLogSegmentMetadata;
     @Mock
-    private FileFetcher fileFetcher;
+    private StorageBackend storage;
     @Mock
     private ObjectKey objectKey;
 
@@ -67,39 +67,39 @@ class ChunkManagerTest extends AesKeyAwareTest {
     }
 
     @Test
-    void testGetChunk() throws StorageBackEndException {
+    void testGetChunk() throws StorageBackendException {
         final FixedSizeChunkIndex chunkIndex = new FixedSizeChunkIndex(10, 10, 10, 10);
 
         final SegmentManifest manifest = new SegmentManifestV1(chunkIndex, false, null);
-        final ChunkManager chunkManager = new ChunkManager(fileFetcher, objectKey, null, null);
-        when(fileFetcher.fetch("test.log", chunkIndex.chunks().get(0).range())).thenReturn(
+        final ChunkManager chunkManager = new ChunkManager(storage, objectKey, null, null);
+        when(storage.fetch("test.log", chunkIndex.chunks().get(0).range())).thenReturn(
             new ByteArrayInputStream("0123456789".getBytes()));
 
         assertThat(chunkManager.getChunk(remoteLogSegmentMetadata, manifest, 0)).hasContent("0123456789");
-        verify(fileFetcher).fetch("test.log", chunkIndex.chunks().get(0).range());
+        verify(storage).fetch("test.log", chunkIndex.chunks().get(0).range());
     }
 
     @Test
-    void testGetChunkWithCaching() throws StorageBackEndException {
+    void testGetChunkWithCaching() throws StorageBackendException {
         final FixedSizeChunkIndex chunkIndex = new FixedSizeChunkIndex(10, 10, 10, 10);
 
         when(remoteLogSegmentMetadata.remoteLogSegmentId()).thenReturn(
             new RemoteLogSegmentId(new TopicIdPartition(Uuid.randomUuid(), new TopicPartition("test-topic", 0)),
                 Uuid.randomUuid()));
-        when(fileFetcher.fetch("test.log", chunkIndex.chunks().get(0).range())).thenReturn(
+        when(storage.fetch("test.log", chunkIndex.chunks().get(0).range())).thenReturn(
             new ByteArrayInputStream("0123456789".getBytes()));
 
         final SegmentManifest manifest = new SegmentManifestV1(chunkIndex, false, null);
-        final ChunkManager chunkManager = new ChunkManager(fileFetcher,
+        final ChunkManager chunkManager = new ChunkManager(storage,
             objectKey,
             null,
             new UnboundInMemoryChunkCache());
 
         assertThat(chunkManager.getChunk(remoteLogSegmentMetadata, manifest, 0)).hasContent("0123456789");
-        verify(fileFetcher).fetch("test.log", chunkIndex.chunks().get(0).range());
+        verify(storage).fetch("test.log", chunkIndex.chunks().get(0).range());
 
         assertThat(chunkManager.getChunk(remoteLogSegmentMetadata, manifest, 0)).hasContent("0123456789");
-        verifyNoMoreInteractions(fileFetcher);
+        verifyNoMoreInteractions(storage);
     }
 
     @Test
@@ -118,21 +118,21 @@ class ChunkManagerTest extends AesKeyAwareTest {
         when(remoteLogSegmentMetadata.remoteLogSegmentId()).thenReturn(
             new RemoteLogSegmentId(new TopicIdPartition(Uuid.randomUuid(), new TopicPartition("test-topic", 0)),
                 Uuid.randomUuid()));
-        when(fileFetcher.fetch("test.log", chunkIndex.chunks().get(0).range())).thenReturn(
+        when(storage.fetch("test.log", chunkIndex.chunks().get(0).range())).thenReturn(
             new ByteArrayInputStream(encrypted));
 
         final SegmentManifest manifest = new SegmentManifestV1(chunkIndex, false,
             new SegmentEncryptionMetadataV1(dataKeyAndAAD.dataKey, dataKeyAndAAD.aad));
-        final ChunkManager chunkManager = new ChunkManager(fileFetcher,
+        final ChunkManager chunkManager = new ChunkManager(storage,
             objectKey,
             aesEncryptionProvider,
             new UnboundInMemoryChunkCache());
 
         assertThat(chunkManager.getChunk(remoteLogSegmentMetadata, manifest, 0)).hasBinaryContent(TEST_CHUNK_CONTENT);
-        verify(fileFetcher).fetch("test.log", chunkIndex.chunks().get(0).range());
+        verify(storage).fetch("test.log", chunkIndex.chunks().get(0).range());
 
         assertThat(chunkManager.getChunk(remoteLogSegmentMetadata, manifest, 0)).hasBinaryContent(TEST_CHUNK_CONTENT);
-        verifyNoMoreInteractions(fileFetcher);
+        verifyNoMoreInteractions(storage);
     }
 
     @Test
@@ -145,22 +145,22 @@ class ChunkManagerTest extends AesKeyAwareTest {
         }
         final FixedSizeChunkIndex chunkIndex = new FixedSizeChunkIndex(10, 10, compressed.length, compressed.length);
 
-        when(fileFetcher.fetch("test.log", chunkIndex.chunks().get(0).range())).thenReturn(
+        when(storage.fetch("test.log", chunkIndex.chunks().get(0).range())).thenReturn(
             new ByteArrayInputStream(compressed));
         when(remoteLogSegmentMetadata.remoteLogSegmentId()).thenReturn(
             new RemoteLogSegmentId(new TopicIdPartition(Uuid.randomUuid(), new TopicPartition("test-topic", 0)),
                 Uuid.randomUuid()));
 
         final SegmentManifest manifest = new SegmentManifestV1(chunkIndex, true, null);
-        final ChunkManager chunkManager = new ChunkManager(fileFetcher,
+        final ChunkManager chunkManager = new ChunkManager(storage,
             objectKey,
             null,
             new UnboundInMemoryChunkCache());
 
         assertThat(chunkManager.getChunk(remoteLogSegmentMetadata, manifest, 0)).hasBinaryContent(TEST_CHUNK_CONTENT);
-        verify(fileFetcher).fetch("test.log", chunkIndex.chunks().get(0).range());
+        verify(storage).fetch("test.log", chunkIndex.chunks().get(0).range());
 
         assertThat(chunkManager.getChunk(remoteLogSegmentMetadata, manifest, 0)).hasBinaryContent(TEST_CHUNK_CONTENT);
-        verifyNoMoreInteractions(fileFetcher);
+        verifyNoMoreInteractions(storage);
     }
 }

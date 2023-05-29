@@ -16,6 +16,6 @@
 
 package io.aiven.kafka.tieredstorage.commons.storage;
 
-public interface FileDeleter {
-    void delete(String key) throws StorageBackEndException;
+public interface ObjectDeleter {
+    void delete(String key) throws StorageBackendException;
 }

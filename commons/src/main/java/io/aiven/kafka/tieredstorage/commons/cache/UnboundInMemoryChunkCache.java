@@ -26,7 +26,7 @@ import java.util.concurrent.ConcurrentHashMap;
 import java.util.concurrent.ThreadLocalRandom;
 
 import io.aiven.kafka.tieredstorage.commons.ChunkKey;
-import io.aiven.kafka.tieredstorage.commons.storage.StorageBackEndException;
+import io.aiven.kafka.tieredstorage.commons.storage.StorageBackendException;
 
 /**
  * An unbound memory-backed chunk cache.
@@ -46,7 +46,7 @@ public class UnboundInMemoryChunkCache implements ChunkCache {
     }
 
     @Override
-    public String storeTemporarily(final byte[] chunk) throws StorageBackEndException {
+    public String storeTemporarily(final byte[] chunk) throws StorageBackendException {
         Objects.requireNonNull(chunk, "chunk cannot be null");
 
         final byte[] randomBytes = new byte[20];
@@ -54,19 +54,19 @@ public class UnboundInMemoryChunkCache implements ChunkCache {
         final String tempId = Base64.getEncoder().encodeToString(randomBytes);
         // This should never happen practically if the source of randomness is fair.
         if (tempStorage.putIfAbsent(tempId, chunk) != null) {
-            throw new StorageBackEndException("Temporary ID conflict in chunk cache");
+            throw new StorageBackendException("Temporary ID conflict in chunk cache");
         }
         return tempId;
     }
 
     @Override
-    public void store(final String tempId, final ChunkKey chunkKey) throws StorageBackEndException {
+    public void store(final String tempId, final ChunkKey chunkKey) throws StorageBackendException {
         Objects.requireNonNull(tempId, "tempId cannot be null");
         Objects.requireNonNull(chunkKey, "chunkKey cannot be null");
 
         final byte[] bytes = tempStorage.get(tempId);
         if (bytes == null) {
-            throw new StorageBackEndException("Temporary ID " + tempId + " not found in chunk cache");
+            throw new StorageBackendException("Temporary ID " + tempId + " not found in chunk cache");
         }
         permanentStorage.putIfAbsent(chunkKey, bytes);
         tempStorage.remove(tempId);
