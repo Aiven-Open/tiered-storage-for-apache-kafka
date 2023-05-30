@@ -14,21 +14,35 @@
  * limitations under the License.
  */
 
+plugins {
+    id 'java-library'
+}
+
 ext {
+    bouncyCastleVersion = "1.70"
+    caffeineVersion = "3.1.4"
     zstdVersion = "1.5.4-2"
     jacksonVersion = "2.15.0"
 }
 
 dependencies {
-    // The client of a library should provide a runtime dependency. For now taking the version from kafka-storage-api
+    implementation project(":storage:core")
+
+    implementation "org.bouncycastle:bcprov-jdk15on:$bouncyCastleVersion"
+
+    // Should be provided at the run time.
     compileOnly "com.fasterxml.jackson.core:jackson-databind:$jacksonVersion"
     implementation "com.fasterxml.jackson.datatype:jackson-datatype-jdk8:$jacksonVersion"
-    // The client of a library should provide a runtime dependency.
-    // For now taking the version from kafka-clients
+
+    // Should be provided at the run time.
     compileOnly "com.github.luben:zstd-jni:$zstdVersion"
+
+    implementation "com.github.ben-manes.caffeine:caffeine:$caffeineVersion"
+
+    implementation "commons-io:commons-io:$apacheCommonsIOVersion"
+
+    testImplementation(testFixtures(project(":storage:core")))
+    testImplementation(project(":storage:filesystem"))
+
     testImplementation "com.github.luben:zstd-jni:$zstdVersion"
-    implementation "commons-io:commons-io:2.11.0"
-    implementation 'com.amazonaws:aws-java-sdk-s3:1.12.418'
-    testImplementation "org.testcontainers:localstack:$testcontainersVersion"
-    implementation 'com.github.ben-manes.caffeine:caffeine:3.1.4'
 }

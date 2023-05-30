@@ -24,7 +24,7 @@ import java.util.Map;
 import org.apache.kafka.common.config.ConfigException;
 
 import io.aiven.kafka.tieredstorage.commons.cache.TestChunkCache;
-import io.aiven.kafka.tieredstorage.commons.storage.StorageBackend;
+import io.aiven.kafka.tieredstorage.storage.StorageBackend;
 
 import org.junit.jupiter.api.Test;
 

@@ -29,8 +29,8 @@ import io.aiven.kafka.tieredstorage.commons.Chunk;
 import io.aiven.kafka.tieredstorage.commons.ChunkManager;
 import io.aiven.kafka.tieredstorage.commons.manifest.SegmentManifest;
 import io.aiven.kafka.tieredstorage.commons.manifest.index.ChunkIndex;
-import io.aiven.kafka.tieredstorage.commons.storage.BytesRange;
-import io.aiven.kafka.tieredstorage.commons.storage.StorageBackendException;
+import io.aiven.kafka.tieredstorage.storage.BytesRange;
+import io.aiven.kafka.tieredstorage.storage.StorageBackendException;
 
 import org.apache.commons.io.input.BoundedInputStream;
 

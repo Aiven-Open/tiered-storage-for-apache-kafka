@@ -28,8 +28,8 @@ import java.util.concurrent.TimeoutException;
 import org.apache.kafka.server.log.remote.storage.RemoteLogSegmentMetadata;
 
 import io.aiven.kafka.tieredstorage.commons.manifest.SegmentManifest;
-import io.aiven.kafka.tieredstorage.commons.storage.ObjectFetcher;
-import io.aiven.kafka.tieredstorage.commons.storage.StorageBackendException;
+import io.aiven.kafka.tieredstorage.storage.ObjectFetcher;
+import io.aiven.kafka.tieredstorage.storage.StorageBackendException;
 
 import com.fasterxml.jackson.databind.ObjectMapper;
 import com.github.benmanes.caffeine.cache.AsyncLoadingCache;

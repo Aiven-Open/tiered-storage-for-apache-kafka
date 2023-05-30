@@ -26,7 +26,7 @@ import java.util.concurrent.ConcurrentHashMap;
 import java.util.concurrent.ThreadLocalRandom;
 
 import io.aiven.kafka.tieredstorage.commons.ChunkKey;
-import io.aiven.kafka.tieredstorage.commons.storage.StorageBackendException;
+import io.aiven.kafka.tieredstorage.storage.StorageBackendException;
 
 /**
  * An unbound memory-backed chunk cache.
