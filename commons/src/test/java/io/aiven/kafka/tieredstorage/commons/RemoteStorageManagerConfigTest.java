@@ -31,10 +31,10 @@ import org.junit.jupiter.api.Test;
 import static org.assertj.core.api.Assertions.assertThat;
 import static org.assertj.core.api.Assertions.assertThatThrownBy;
 
-class UniversalRemoteStorageManagerConfigTest {
+class RemoteStorageManagerConfigTest {
     @Test
     void minimalConfig() {
-        final var config = new UniversalRemoteStorageManagerConfig(
+        final var config = new RemoteStorageManagerConfig(
             Map.of(
                 "object.storage.factory", TestObjectStorageFactory.class.getCanonicalName(),
                 "chunk.size", "123"
@@ -54,7 +54,7 @@ class UniversalRemoteStorageManagerConfigTest {
 
     @Test
     void segmentManifestCacheSizeUnbounded() {
-        final var config = new UniversalRemoteStorageManagerConfig(
+        final var config = new RemoteStorageManagerConfig(
             Map.of(
                 "object.storage.factory", TestObjectStorageFactory.class.getCanonicalName(),
                 "chunk.size", "123",
@@ -66,7 +66,7 @@ class UniversalRemoteStorageManagerConfigTest {
 
     @Test
     void segmentManifestCacheSizeBounded() {
-        final var config = new UniversalRemoteStorageManagerConfig(
+        final var config = new RemoteStorageManagerConfig(
             Map.of(
                 "object.storage.factory", TestObjectStorageFactory.class.getCanonicalName(),
                 "chunk.size", "123",
@@ -78,7 +78,7 @@ class UniversalRemoteStorageManagerConfigTest {
 
     @Test
     void segmentManifestCacheRetentionForever() {
-        final var config = new UniversalRemoteStorageManagerConfig(
+        final var config = new RemoteStorageManagerConfig(
             Map.of(
                 "object.storage.factory", TestObjectStorageFactory.class.getCanonicalName(),
                 "chunk.size", "123",
@@ -90,7 +90,7 @@ class UniversalRemoteStorageManagerConfigTest {
 
     @Test
     void segmentManifestCacheRetentionLimited() {
-        final var config = new UniversalRemoteStorageManagerConfig(
+        final var config = new RemoteStorageManagerConfig(
             Map.of(
                 "object.storage.factory", TestObjectStorageFactory.class.getCanonicalName(),
                 "chunk.size", "123",
@@ -102,7 +102,7 @@ class UniversalRemoteStorageManagerConfigTest {
 
     @Test
     void compression() {
-        final var config = new UniversalRemoteStorageManagerConfig(
+        final var config = new RemoteStorageManagerConfig(
             Map.of(
                 "object.storage.factory", TestObjectStorageFactory.class.getCanonicalName(),
                 "chunk.size", "123",
@@ -116,7 +116,7 @@ class UniversalRemoteStorageManagerConfigTest {
 
     @Test
     void encryption() {
-        final var config = new UniversalRemoteStorageManagerConfig(
+        final var config = new RemoteStorageManagerConfig(
             Map.of(
                 "object.storage.factory", TestObjectStorageFactory.class.getCanonicalName(),
                 "chunk.size", "123",
@@ -137,7 +137,7 @@ class UniversalRemoteStorageManagerConfigTest {
             "chunk.size", "123",
             "encryption.enabled", "true"
         );
-        assertThatThrownBy(() -> new UniversalRemoteStorageManagerConfig(config1))
+        assertThatThrownBy(() -> new RemoteStorageManagerConfig(config1))
             .isInstanceOf(ConfigException.class)
             .hasMessage("encryption.public.key.file must be provided if encryption is enabled");
 
@@ -147,14 +147,14 @@ class UniversalRemoteStorageManagerConfigTest {
             "encryption.enabled", "true",
             "encryption.public.key.file", "public.key"
         );
-        assertThatThrownBy(() -> new UniversalRemoteStorageManagerConfig(config2))
+        assertThatThrownBy(() -> new RemoteStorageManagerConfig(config2))
             .isInstanceOf(ConfigException.class)
             .hasMessage("encryption.private.key.file must be provided if encryption is enabled");
     }
 
     @Test
     void objectStorageFactoryIncorrectClass() {
-        assertThatThrownBy(() -> new UniversalRemoteStorageManagerConfig(
+        assertThatThrownBy(() -> new RemoteStorageManagerConfig(
             Map.of(
                 "object.storage.factory", "x"
             )
@@ -168,7 +168,7 @@ class UniversalRemoteStorageManagerConfigTest {
         props.put("object.storage.factory", TestObjectStorageFactory.class);
         props.put("key.prefix", null);
 
-        assertThatThrownBy(() -> new UniversalRemoteStorageManagerConfig(props))
+        assertThatThrownBy(() -> new RemoteStorageManagerConfig(props))
             .isInstanceOf(ConfigException.class)
             .hasMessage("Invalid value null for configuration key.prefix: entry must be non null");
     }
@@ -180,17 +180,17 @@ class UniversalRemoteStorageManagerConfigTest {
         props.put("object.storage.factory", TestObjectStorageFactory.class);
         props.put("chunk.size", "123");
         props.put("key.prefix", testPrefix);
-        final UniversalRemoteStorageManagerConfig config = new UniversalRemoteStorageManagerConfig(props);
+        final RemoteStorageManagerConfig config = new RemoteStorageManagerConfig(props);
         assertThat(config.keyPrefix()).isEqualTo(testPrefix);
     }
 
     @Test
     void missingRequiredFields() {
-        assertThatThrownBy(() -> new UniversalRemoteStorageManagerConfig(Map.of()))
+        assertThatThrownBy(() -> new RemoteStorageManagerConfig(Map.of()))
             .isInstanceOf(ConfigException.class)
             .hasMessage("Missing required configuration \"object.storage.factory\" which has no default value.");
 
-        assertThatThrownBy(() -> new UniversalRemoteStorageManagerConfig(
+        assertThatThrownBy(() -> new RemoteStorageManagerConfig(
             Map.of(
                 "object.storage.factory", TestObjectStorageFactory.class.getCanonicalName()
             )
@@ -200,7 +200,7 @@ class UniversalRemoteStorageManagerConfigTest {
 
     @Test
     void objectStorageFactoryIsConfigured() {
-        final var config = new UniversalRemoteStorageManagerConfig(
+        final var config = new RemoteStorageManagerConfig(
             Map.of(
                 "object.storage.factory", TestObjectStorageFactory.class.getCanonicalName(),
                 "object.storage.config1", "aaa",
@@ -221,7 +221,7 @@ class UniversalRemoteStorageManagerConfigTest {
 
     @Test
     void invalidChunkSizeRange() {
-        assertThatThrownBy(() -> new UniversalRemoteStorageManagerConfig(
+        assertThatThrownBy(() -> new RemoteStorageManagerConfig(
             Map.of(
                 "object.storage.factory", TestObjectStorageFactory.class.getCanonicalName(),
                 "chunk.size", "0"
@@ -229,7 +229,7 @@ class UniversalRemoteStorageManagerConfigTest {
         )).isInstanceOf(ConfigException.class)
             .hasMessage("Invalid value 0 for configuration chunk.size: Value must be at least 1");
 
-        assertThatThrownBy(() -> new UniversalRemoteStorageManagerConfig(
+        assertThatThrownBy(() -> new RemoteStorageManagerConfig(
             Map.of(
                 "object.storage.factory", TestObjectStorageFactory.class.getCanonicalName(),
                 "chunk.size", Long.toString((long) Integer.MAX_VALUE + 1)
@@ -245,7 +245,7 @@ class UniversalRemoteStorageManagerConfigTest {
         props1.put("chunk.size", 123);
         props1.put("chunk.cache.class", "x");
 
-        assertThatThrownBy(() -> new UniversalRemoteStorageManagerConfig(props1))
+        assertThatThrownBy(() -> new RemoteStorageManagerConfig(props1))
             .isInstanceOf(ConfigException.class)
             .hasMessage("Invalid value x for configuration chunk.cache.class: Class x could not be found.");
 
@@ -254,7 +254,7 @@ class UniversalRemoteStorageManagerConfigTest {
         props2.put("chunk.size", 123);
         props2.put("chunk.cache.class", Object.class);
 
-        assertThatThrownBy(() -> new UniversalRemoteStorageManagerConfig(props2))
+        assertThatThrownBy(() -> new RemoteStorageManagerConfig(props2))
             .isInstanceOf(ConfigException.class)
             .hasMessage("chunk.cache.class must be an implementation "
                 + "of io.aiven.kafka.tieredstorage.commons.cache.ChunkCache");
@@ -267,13 +267,13 @@ class UniversalRemoteStorageManagerConfigTest {
         props.put("chunk.size", 123);
         props.put("chunk.cache.class", null);
 
-        final UniversalRemoteStorageManagerConfig config = new UniversalRemoteStorageManagerConfig(props);
+        final RemoteStorageManagerConfig config = new RemoteStorageManagerConfig(props);
         assertThat(config.chunkCache()).isNull();
     }
 
     @Test
     void chuckCacheIsConfigured() {
-        final var config = new UniversalRemoteStorageManagerConfig(
+        final var config = new RemoteStorageManagerConfig(
             Map.of(
                 "object.storage.factory", TestObjectStorageFactory.class.getCanonicalName(),
                 "chunk.size", "123",
@@ -295,7 +295,7 @@ class UniversalRemoteStorageManagerConfigTest {
 
     @Test
     void invalidCompressionConfig() {
-        assertThatThrownBy(() -> new UniversalRemoteStorageManagerConfig(
+        assertThatThrownBy(() -> new RemoteStorageManagerConfig(
             Map.of(
                 "object.storage.factory", TestObjectStorageFactory.class.getCanonicalName(),
                 "chunk.size", "123",

@@ -42,7 +42,6 @@ import org.apache.kafka.common.utils.Time;
 import org.apache.kafka.server.log.remote.storage.LogSegmentData;
 import org.apache.kafka.server.log.remote.storage.RemoteLogSegmentMetadata;
 import org.apache.kafka.server.log.remote.storage.RemoteStorageException;
-import org.apache.kafka.server.log.remote.storage.RemoteStorageManager;
 
 import io.aiven.kafka.tieredstorage.commons.manifest.SegmentEncryptionMetadataV1;
 import io.aiven.kafka.tieredstorage.commons.manifest.SegmentManifest;
@@ -75,8 +74,8 @@ import static org.apache.kafka.server.log.remote.storage.RemoteStorageManager.In
 import static org.apache.kafka.server.log.remote.storage.RemoteStorageManager.IndexType.TIMESTAMP;
 import static org.apache.kafka.server.log.remote.storage.RemoteStorageManager.IndexType.TRANSACTION;
 
-public class UniversalRemoteStorageManager implements RemoteStorageManager {
-    private static final Logger log = LoggerFactory.getLogger(UniversalRemoteStorageManager.class);
+public class RemoteStorageManager implements org.apache.kafka.server.log.remote.storage.RemoteStorageManager {
+    private static final Logger log = LoggerFactory.getLogger(RemoteStorageManager.class);
 
     private final Metrics metrics;
     private final Sensor segmentCopyPerSec;
@@ -96,12 +95,12 @@ public class UniversalRemoteStorageManager implements RemoteStorageManager {
 
     private SegmentManifestProvider segmentManifestProvider;
 
-    public UniversalRemoteStorageManager() {
+    public RemoteStorageManager() {
         this(Time.SYSTEM);
     }
 
     // for testing
-    UniversalRemoteStorageManager(final Time time) {
+    RemoteStorageManager(final Time time) {
         final JmxReporter reporter = new JmxReporter();
         metrics = new Metrics(
             new MetricConfig(), List.of(reporter), time,
@@ -115,7 +114,7 @@ public class UniversalRemoteStorageManager implements RemoteStorageManager {
     @Override
     public void configure(final Map<String, ?> configs) {
         Objects.requireNonNull(configs, "configs must not be null");
-        final UniversalRemoteStorageManagerConfig config = new UniversalRemoteStorageManagerConfig(configs);
+        final RemoteStorageManagerConfig config = new RemoteStorageManagerConfig(configs);
         objectStorageFactory = config.objectStorageFactory();
         objectKey = new ObjectKey(config.keyPrefix());
         encryptionEnabled = config.encryptionEnabled();

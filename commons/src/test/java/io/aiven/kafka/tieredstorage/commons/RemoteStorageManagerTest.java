@@ -50,7 +50,6 @@ import org.apache.kafka.server.log.remote.storage.LogSegmentData;
 import org.apache.kafka.server.log.remote.storage.RemoteLogSegmentId;
 import org.apache.kafka.server.log.remote.storage.RemoteLogSegmentMetadata;
 import org.apache.kafka.server.log.remote.storage.RemoteStorageException;
-import org.apache.kafka.server.log.remote.storage.RemoteStorageManager;
 
 import io.aiven.kafka.tieredstorage.commons.manifest.index.ChunkIndex;
 import io.aiven.kafka.tieredstorage.commons.manifest.serde.DataKeyDeserializer;
@@ -72,8 +71,8 @@ import org.junit.jupiter.params.provider.MethodSource;
 
 import static org.assertj.core.api.Assertions.assertThat;
 
-class UniversalRemoteStorageManagerTest extends RsaKeyAwareTest {
-    UniversalRemoteStorageManager rsm;
+class RemoteStorageManagerTest extends RsaKeyAwareTest {
+    RemoteStorageManager rsm;
 
     RsaEncryptionProvider rsaEncryptionProvider;
     AesEncryptionProvider aesEncryptionProvider;
@@ -121,7 +120,7 @@ class UniversalRemoteStorageManagerTest extends RsaKeyAwareTest {
 
     @BeforeEach
     void init() throws IOException {
-        rsm = new UniversalRemoteStorageManager();
+        rsm = new RemoteStorageManager();
 
         rsaEncryptionProvider = RsaEncryptionProvider.of(publicKeyPem, privateKeyPem);
         aesEncryptionProvider = new AesEncryptionProvider();
@@ -255,28 +254,28 @@ class UniversalRemoteStorageManagerTest extends RsaKeyAwareTest {
 
     private void checkIndexContents(final boolean hasTxnIndex) throws IOException, RemoteStorageException {
         try (final var inputStream = rsm.fetchIndex(REMOTE_LOG_METADATA,
-            RemoteStorageManager.IndexType.OFFSET)) {
+            org.apache.kafka.server.log.remote.storage.RemoteStorageManager.IndexType.OFFSET)) {
             assertThat(inputStream.readAllBytes())
                 .isEqualTo(Files.readAllBytes(offsetIndexFilePath));
         }
         try (final var inputStream = rsm.fetchIndex(REMOTE_LOG_METADATA,
-            RemoteStorageManager.IndexType.TIMESTAMP)) {
+            org.apache.kafka.server.log.remote.storage.RemoteStorageManager.IndexType.TIMESTAMP)) {
             assertThat(inputStream.readAllBytes())
                 .isEqualTo(Files.readAllBytes(timeIndexFilePath));
         }
         try (final var inputStream = rsm.fetchIndex(REMOTE_LOG_METADATA,
-            RemoteStorageManager.IndexType.PRODUCER_SNAPSHOT)) {
+            org.apache.kafka.server.log.remote.storage.RemoteStorageManager.IndexType.PRODUCER_SNAPSHOT)) {
             assertThat(inputStream.readAllBytes())
                 .isEqualTo(Files.readAllBytes(producerSnapshotFilePath));
         }
         try (final var inputStream = rsm.fetchIndex(REMOTE_LOG_METADATA,
-            RemoteStorageManager.IndexType.LEADER_EPOCH)) {
+            org.apache.kafka.server.log.remote.storage.RemoteStorageManager.IndexType.LEADER_EPOCH)) {
             assertThat(inputStream.readAllBytes())
                 .isEqualTo(LEADER_EPOCH_INDEX_BYTES);
         }
         if (hasTxnIndex) {
             try (final var inputStream = rsm.fetchIndex(REMOTE_LOG_METADATA,
-                RemoteStorageManager.IndexType.TRANSACTION)) {
+                org.apache.kafka.server.log.remote.storage.RemoteStorageManager.IndexType.TRANSACTION)) {
                 assertThat(inputStream.readAllBytes())
                     .isEqualTo(Files.readAllBytes(txnIndexFilePath));
             }

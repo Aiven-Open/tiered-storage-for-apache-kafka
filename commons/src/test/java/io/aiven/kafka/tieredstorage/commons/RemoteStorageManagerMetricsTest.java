@@ -51,13 +51,13 @@ import static org.assertj.core.api.AssertionsForClassTypes.assertThat;
 import static org.mockito.Mockito.when;
 
 @ExtendWith(MockitoExtension.class)
-class UniversalRemoteStorageManagerMetricsTest {
+class RemoteStorageManagerMetricsTest {
     static final MBeanServer MBEAN_SERVER = ManagementFactory.getPlatformMBeanServer();
 
     static final long METRIC_TIME_WINDOW_SEC =
         TimeUnit.SECONDS.convert(new MetricConfig().timeWindowMs(), TimeUnit.MILLISECONDS);
 
-    static UniversalRemoteStorageManager rsm;
+    static RemoteStorageManager rsm;
 
     static final RemoteLogSegmentMetadata REMOTE_LOG_SEGMENT_METADATA =
         new RemoteLogSegmentMetadata(
@@ -72,7 +72,7 @@ class UniversalRemoteStorageManagerMetricsTest {
     static void setup(@TempDir final Path tmpDir,
                       @Mock final Time time) throws IOException {
         when(time.milliseconds()).thenReturn(0L);
-        rsm = new UniversalRemoteStorageManager(time);
+        rsm = new RemoteStorageManager(time);
 
         final Path target = tmpDir.resolve("target");
         Files.createDirectories(target);
