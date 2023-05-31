@@ -17,6 +17,7 @@
 plugins {
     id 'java-library'
 }
+archivesBaseName = "core"
 
 ext {
     bouncyCastleVersion = "1.70"

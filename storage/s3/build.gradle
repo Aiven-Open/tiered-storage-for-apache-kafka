@@ -14,6 +14,8 @@
  * limitations under the License.
  */
 
+archivesBaseName = "storage-s3"
+
 ext {
     testcontainersVersion = "1.18.0"
 }

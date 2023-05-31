@@ -19,6 +19,8 @@ plugins {
     id 'java-test-fixtures'
 }
 
+archivesBaseName = "storage-core"
+
 dependencies {
     compileOnly "org.apache.kafka:kafka-clients:$kafkaVersion"
 
