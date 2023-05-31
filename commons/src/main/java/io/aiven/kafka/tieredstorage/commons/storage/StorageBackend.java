@@ -16,13 +16,7 @@
 
 package io.aiven.kafka.tieredstorage.commons.storage;
 
-public class StorageBackEndException extends Exception {
+import org.apache.kafka.common.Configurable;
 
-    public StorageBackEndException(final String message) {
-        super(message);
-    }
-
-    public StorageBackEndException(final String message, final Throwable e) {
-        super(message, e);
-    }
+public interface StorageBackend extends Configurable, ObjectUploader, ObjectFetcher, ObjectDeleter {
 }

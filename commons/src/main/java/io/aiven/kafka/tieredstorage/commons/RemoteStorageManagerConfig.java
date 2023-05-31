@@ -28,16 +28,17 @@ import org.apache.kafka.common.utils.Utils;
 
 import io.aiven.kafka.tieredstorage.commons.cache.ChunkCache;
 import io.aiven.kafka.tieredstorage.commons.cache.UnboundInMemoryChunkCache;
-import io.aiven.kafka.tieredstorage.commons.storage.ObjectStorageFactory;
+import io.aiven.kafka.tieredstorage.commons.storage.StorageBackend;
 
 public class RemoteStorageManagerConfig extends AbstractConfig {
-    private static final String OBJECT_STORAGE_PREFIX = "object.storage.";
+    private static final String STORAGE_PREFIX = "storage.";
 
-    private static final String OBJECT_STORAGE_FACTORY_CONFIG = OBJECT_STORAGE_PREFIX + "factory";
-    private static final String OBJECT_STORAGE_FACTORY_DOC = "The factory of an object storage implementation";
+    private static final String STORAGE_BACKEND_CLASS_NAME_CONFIG = STORAGE_PREFIX + "backend.class.name";
+    private static final String STORAGE_BACKEND_CLASS_NAME_DOC = "The storage back-end implementation class name "
+        + "to instantiate";
 
-    private static final String OBJECT_STORAGE_KEY_PREFIX_CONFIG = "key.prefix";
-    private static final String OBJECT_STORAGE_KEY_PREFIX_DOC = "The object storage path prefix";
+    private static final String OBJECT_KEY_PREFIX_CONFIG = "key.prefix";
+    private static final String OBJECT_KEY_PREFIX_DOC = "The object storage path prefix";
 
     private static final String SEGMENT_MANIFEST_CACHE_PREFIX = "segment.manifest.cache.";
     private static final String SEGMENT_MANIFEST_CACHE_SIZE_CONFIG = SEGMENT_MANIFEST_CACHE_PREFIX + "size";
@@ -83,20 +84,20 @@ public class RemoteStorageManagerConfig extends AbstractConfig {
         // TODO checkers
 
         CONFIG.define(
-            OBJECT_STORAGE_FACTORY_CONFIG,
+            STORAGE_BACKEND_CLASS_NAME_CONFIG,
             ConfigDef.Type.CLASS,
             ConfigDef.NO_DEFAULT_VALUE,
             ConfigDef.Importance.HIGH,
-            OBJECT_STORAGE_FACTORY_DOC
+            STORAGE_BACKEND_CLASS_NAME_DOC
         );
 
         CONFIG.define(
-            OBJECT_STORAGE_KEY_PREFIX_CONFIG,
+            OBJECT_KEY_PREFIX_CONFIG,
             ConfigDef.Type.STRING,
             "",
             new ConfigDef.NonNullValidator(),
             ConfigDef.Importance.HIGH,
-            OBJECT_STORAGE_KEY_PREFIX_DOC
+            OBJECT_KEY_PREFIX_DOC
         );
 
         CONFIG.define(
@@ -210,11 +211,11 @@ public class RemoteStorageManagerConfig extends AbstractConfig {
         }
     }
 
-    ObjectStorageFactory objectStorageFactory() {
-        final ObjectStorageFactory objectFactory = Utils.newInstance(
-            getClass(OBJECT_STORAGE_FACTORY_CONFIG), ObjectStorageFactory.class);
-        objectFactory.configure(this.originalsWithPrefix(OBJECT_STORAGE_PREFIX));
-        return objectFactory;
+    StorageBackend storage() {
+        final Class<?> storageClass = getClass(STORAGE_BACKEND_CLASS_NAME_CONFIG);
+        final StorageBackend storage = Utils.newInstance(storageClass, StorageBackend.class);
+        storage.configure(this.originalsWithPrefix(STORAGE_PREFIX));
+        return storage;
     }
 
     Optional<Long> segmentManifestCacheSize() {
@@ -245,7 +246,7 @@ public class RemoteStorageManagerConfig extends AbstractConfig {
     }
 
     String keyPrefix() {
-        return getString(OBJECT_STORAGE_KEY_PREFIX_CONFIG);
+        return getString(OBJECT_KEY_PREFIX_CONFIG);
     }
 
     int chunkSize() {

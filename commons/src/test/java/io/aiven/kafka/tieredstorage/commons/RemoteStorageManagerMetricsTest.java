@@ -79,9 +79,9 @@ class RemoteStorageManagerMetricsTest {
 
         rsm.configure(Map.of(
             "chunk.size", "123",
-            "object.storage.factory",
-            "io.aiven.kafka.tieredstorage.commons.storage.filesystem.FileSystemStorageFactory",
-            "object.storage.root", target.toString()
+            "storage.backend.class.name",
+            "io.aiven.kafka.tieredstorage.commons.storage.filesystem.FileSystemStorage",
+            "storage.root", target.toString()
         ));
 
         final Path source = tmpDir.resolve("source");

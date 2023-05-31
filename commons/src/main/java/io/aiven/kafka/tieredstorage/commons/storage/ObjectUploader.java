@@ -18,17 +18,10 @@ package io.aiven.kafka.tieredstorage.commons.storage;
 
 import java.io.InputStream;
 
-public interface FileFetcher {
+public interface ObjectUploader {
     /**
-     * Fetch file.
-     * @param key file key.
+     * @param inputStream content to upload. Not closed as part of the upload.
+     * @param key path to an object within a storage backend.
      */
-    InputStream fetch(String key) throws StorageBackEndException;
-
-    /**
-     * Fetch file.
-     * @param key file key.
-     * @param range range with inclusive start/end positions
-     */
-    InputStream fetch(String key, BytesRange range) throws StorageBackEndException;
+    void upload(InputStream inputStream, String key) throws StorageBackendException;
 }

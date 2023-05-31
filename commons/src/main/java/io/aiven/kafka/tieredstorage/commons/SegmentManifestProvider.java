@@ -28,8 +28,8 @@ import java.util.concurrent.TimeoutException;
 import org.apache.kafka.server.log.remote.storage.RemoteLogSegmentMetadata;
 
 import io.aiven.kafka.tieredstorage.commons.manifest.SegmentManifest;
-import io.aiven.kafka.tieredstorage.commons.storage.FileFetcher;
-import io.aiven.kafka.tieredstorage.commons.storage.StorageBackEndException;
+import io.aiven.kafka.tieredstorage.commons.storage.ObjectFetcher;
+import io.aiven.kafka.tieredstorage.commons.storage.StorageBackendException;
 
 import com.fasterxml.jackson.databind.ObjectMapper;
 import com.github.benmanes.caffeine.cache.AsyncLoadingCache;
@@ -48,7 +48,7 @@ class SegmentManifestProvider {
     SegmentManifestProvider(final ObjectKey objectKey,
                             final Optional<Long> maxCacheSize,
                             final Optional<Duration> cacheRetention,
-                            final FileFetcher fileFetcher,
+                            final ObjectFetcher fileFetcher,
                             final ObjectMapper mapper,
                             final Executor executor) {
         this.objectKey = objectKey;
@@ -64,7 +64,7 @@ class SegmentManifestProvider {
     }
 
     SegmentManifest get(final RemoteLogSegmentMetadata remoteLogSegmentMetadata)
-        throws StorageBackEndException, IOException {
+        throws StorageBackendException, IOException {
         final String key = objectKey.key(remoteLogSegmentMetadata, ObjectKey.Suffix.MANIFEST);
         try {
             return cache.get(key).get(GET_TIMEOUT_SEC, TimeUnit.SECONDS);
@@ -77,8 +77,8 @@ class SegmentManifestProvider {
             if (cause == null) {
                 throw new RuntimeException(e);
             }
-            if (e.getCause() instanceof StorageBackEndException) {
-                throw (StorageBackEndException) e.getCause();
+            if (e.getCause() instanceof StorageBackendException) {
+                throw (StorageBackendException) e.getCause();
             }
             if (e.getCause() instanceof IOException) {
                 throw (IOException) e.getCause();

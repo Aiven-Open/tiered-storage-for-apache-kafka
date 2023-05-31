@@ -19,12 +19,11 @@ package io.aiven.kafka.tieredstorage.commons.storage.filesystem;
 import java.io.IOException;
 import java.nio.file.Files;
 import java.nio.file.Path;
+import java.util.Map;
 
 import io.aiven.kafka.tieredstorage.commons.storage.BaseStorageTest;
-import io.aiven.kafka.tieredstorage.commons.storage.FileDeleter;
-import io.aiven.kafka.tieredstorage.commons.storage.FileFetcher;
-import io.aiven.kafka.tieredstorage.commons.storage.FileUploader;
-import io.aiven.kafka.tieredstorage.commons.storage.StorageBackEndException;
+import io.aiven.kafka.tieredstorage.commons.storage.StorageBackend;
+import io.aiven.kafka.tieredstorage.commons.storage.StorageBackendException;
 
 import org.junit.jupiter.api.Test;
 import org.junit.jupiter.api.io.TempDir;
@@ -38,18 +37,10 @@ class FileSystemStorageTest extends BaseStorageTest {
     Path root;
 
     @Override
-    protected FileUploader uploader() {
-        return new FileSystemStorage(root);
-    }
-
-    @Override
-    protected FileFetcher fetcher() {
-        return new FileSystemStorage(root);
-    }
-
-    @Override
-    protected FileDeleter deleter() {
-        return new FileSystemStorage(root);
+    protected StorageBackend storage() {
+        final FileSystemStorage storage = new FileSystemStorage();
+        storage.configure(Map.of("root", root.toString()));
+        return storage;
     }
 
     @Test
@@ -57,7 +48,10 @@ class FileSystemStorageTest extends BaseStorageTest {
         final Path wrongRoot = root.resolve("file_instead");
         Files.writeString(wrongRoot, "Wrong root");
 
-        assertThatThrownBy(() -> new FileSystemStorage(wrongRoot))
+        assertThatThrownBy(() -> {
+            final FileSystemStorage storage = new FileSystemStorage();
+            storage.configure(Map.of("root", wrongRoot.toString()));
+        })
             .isInstanceOf(IllegalArgumentException.class)
             .hasMessage(wrongRoot + " must be a writable directory");
     }
@@ -67,17 +61,21 @@ class FileSystemStorageTest extends BaseStorageTest {
         final Path nonWritableDir = root.resolve("non_writable");
         Files.createDirectory(nonWritableDir).toFile().setReadOnly();
 
-        assertThatThrownBy(() -> new FileSystemStorage(nonWritableDir))
+        assertThatThrownBy(() -> {
+            final FileSystemStorage storage = new FileSystemStorage();
+            storage.configure(Map.of("root", nonWritableDir.toString()));
+        })
             .isInstanceOf(IllegalArgumentException.class)
             .hasMessage(nonWritableDir + " must be a writable directory");
     }
 
     @Test
-    void testDeleteAllParentsButRoot() throws IOException, StorageBackEndException {
+    void testDeleteAllParentsButRoot() throws IOException, StorageBackendException {
         final Path keyPath = root.resolve(TOPIC_PARTITION_SEGMENT_KEY);
         Files.createDirectories(keyPath.getParent());
         Files.writeString(keyPath, "test");
-        final FileSystemStorage storage = new FileSystemStorage(root);
+        final FileSystemStorage storage = new FileSystemStorage();
+        storage.configure(Map.of("root", root.toString()));
         storage.delete(TOPIC_PARTITION_SEGMENT_KEY);
 
         assertThat(keyPath).doesNotExist(); // segment key
@@ -87,7 +85,7 @@ class FileSystemStorageTest extends BaseStorageTest {
     }
 
     @Test
-    void testDeleteDoesNotRemoveParentDir() throws IOException, StorageBackEndException {
+    void testDeleteDoesNotRemoveParentDir() throws IOException, StorageBackendException {
         final String parent = "parent";
         final String key = "key";
         final Path parentPath = root.resolve(parent);
@@ -95,7 +93,8 @@ class FileSystemStorageTest extends BaseStorageTest {
         Files.writeString(parentPath.resolve("another"), "test");
         final Path keyPath = parentPath.resolve(key);
         Files.writeString(keyPath, "test");
-        final FileSystemStorage storage = new FileSystemStorage(root);
+        final FileSystemStorage storage = new FileSystemStorage();
+        storage.configure(Map.of("root", root.toString()));
         storage.delete(parent + "/" + key);
 
         assertThat(keyPath).doesNotExist();

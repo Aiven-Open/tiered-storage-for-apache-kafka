@@ -16,10 +16,10 @@
 
 package io.aiven.kafka.tieredstorage.commons.storage.s3;
 
+import java.util.Map;
+
 import io.aiven.kafka.tieredstorage.commons.storage.BaseStorageTest;
-import io.aiven.kafka.tieredstorage.commons.storage.FileDeleter;
-import io.aiven.kafka.tieredstorage.commons.storage.FileFetcher;
-import io.aiven.kafka.tieredstorage.commons.storage.FileUploader;
+import io.aiven.kafka.tieredstorage.commons.storage.StorageBackend;
 
 import com.amazonaws.auth.AWSStaticCredentialsProvider;
 import com.amazonaws.auth.BasicAWSCredentials;
@@ -72,17 +72,15 @@ public class S3StorageTest extends BaseStorageTest {
     }
 
     @Override
-    protected FileUploader uploader() {
-        return new S3Storage(s3Client, bucketName);
-    }
-
-    @Override
-    protected FileFetcher fetcher() {
-        return new S3Storage(s3Client, bucketName);
-    }
-
-    @Override
-    protected FileDeleter deleter() {
-        return new S3Storage(s3Client, bucketName);
+    protected StorageBackend storage() {
+        final S3Storage s3Storage = new S3Storage();
+        final Map<String, Object> configs = Map.of(
+            "s3.bucket.name", bucketName,
+            "s3.region", LOCALSTACK.getRegion(),
+            "s3.endpoint.url", LOCALSTACK.getEndpointOverride(LocalStackContainer.Service.S3).toString(),
+            "s3.path.style.access.enabled", true
+        );
+        s3Storage.configure(configs);
+        return s3Storage;
     }
 }

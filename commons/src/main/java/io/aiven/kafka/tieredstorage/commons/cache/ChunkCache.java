@@ -22,7 +22,7 @@ import java.util.Optional;
 import org.apache.kafka.common.Configurable;
 
 import io.aiven.kafka.tieredstorage.commons.ChunkKey;
-import io.aiven.kafka.tieredstorage.commons.storage.StorageBackEndException;
+import io.aiven.kafka.tieredstorage.commons.storage.StorageBackendException;
 
 /**
  * A chunk cache.
@@ -51,7 +51,7 @@ public interface ChunkCache extends Configurable {
      * Gets a cached chunk if present.
      * @return the requested chunk if present; empty otherwise.
      */
-    Optional<InputStream> get(ChunkKey chunkKey) throws StorageBackEndException;
+    Optional<InputStream> get(ChunkKey chunkKey) throws StorageBackendException;
 
     /**
      * Stores a chunk temporarily.
@@ -64,7 +64,7 @@ public interface ChunkCache extends Configurable {
      *
      * @return temporary ID (e.g. a file name).
      */
-    String storeTemporarily(byte[] chunk) throws StorageBackEndException;
+    String storeTemporarily(byte[] chunk) throws StorageBackendException;
 
     /**
      * Stores permanently a chunk that was stored temporarily previously.
@@ -73,5 +73,5 @@ public interface ChunkCache extends Configurable {
      *
      * <p>See the class' Javadoc for the details.
      */
-    void store(String tempId, ChunkKey chunkKey) throws StorageBackEndException;
+    void store(String tempId, ChunkKey chunkKey) throws StorageBackendException;
 }

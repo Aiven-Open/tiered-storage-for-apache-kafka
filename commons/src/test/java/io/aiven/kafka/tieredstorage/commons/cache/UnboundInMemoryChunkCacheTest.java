@@ -23,7 +23,7 @@ import java.util.Optional;
 import org.apache.kafka.common.Uuid;
 
 import io.aiven.kafka.tieredstorage.commons.ChunkKey;
-import io.aiven.kafka.tieredstorage.commons.storage.StorageBackEndException;
+import io.aiven.kafka.tieredstorage.commons.storage.StorageBackendException;
 
 import org.junit.jupiter.api.Test;
 
@@ -48,13 +48,13 @@ class UnboundInMemoryChunkCacheTest {
     }
 
     @Test
-    void storePermanentlyWithoutStoringTemporarily() throws StorageBackEndException {
+    void storePermanentlyWithoutStoringTemporarily() throws StorageBackendException {
         final var cache = new UnboundInMemoryChunkCache();
         // Store something, but the name is different.
         cache.storeTemporarily(new byte[1]);
 
         assertThatThrownBy(() -> cache.store("aaa", CHUNK_KEY))
-            .isInstanceOf(StorageBackEndException.class)
+            .isInstanceOf(StorageBackendException.class)
             .hasMessage("Temporary ID aaa not found in chunk cache");
     }
 

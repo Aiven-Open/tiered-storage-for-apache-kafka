@@ -53,8 +53,10 @@ import io.aiven.kafka.tieredstorage.commons.security.AesEncryptionProvider;
 import io.aiven.kafka.tieredstorage.commons.security.DataKeyAndAAD;
 import io.aiven.kafka.tieredstorage.commons.security.RsaEncryptionProvider;
 import io.aiven.kafka.tieredstorage.commons.storage.BytesRange;
-import io.aiven.kafka.tieredstorage.commons.storage.ObjectStorageFactory;
-import io.aiven.kafka.tieredstorage.commons.storage.StorageBackEndException;
+import io.aiven.kafka.tieredstorage.commons.storage.ObjectDeleter;
+import io.aiven.kafka.tieredstorage.commons.storage.ObjectFetcher;
+import io.aiven.kafka.tieredstorage.commons.storage.ObjectUploader;
+import io.aiven.kafka.tieredstorage.commons.storage.StorageBackendException;
 import io.aiven.kafka.tieredstorage.commons.transform.BaseTransformChunkEnumeration;
 import io.aiven.kafka.tieredstorage.commons.transform.CompressionChunkEnumeration;
 import io.aiven.kafka.tieredstorage.commons.transform.EncryptionChunkEnumeration;
@@ -82,7 +84,9 @@ public class RemoteStorageManager implements org.apache.kafka.server.log.remote.
 
     private final Executor executor = new ForkJoinPool();
 
-    private ObjectStorageFactory objectStorageFactory;
+    private ObjectFetcher fetcher;
+    private ObjectUploader uploader;
+    private ObjectDeleter deleter;
     private boolean compressionEnabled;
     private boolean compressionHeuristic;
     private boolean encryptionEnabled;
@@ -115,7 +119,9 @@ public class RemoteStorageManager implements org.apache.kafka.server.log.remote.
     public void configure(final Map<String, ?> configs) {
         Objects.requireNonNull(configs, "configs must not be null");
         final RemoteStorageManagerConfig config = new RemoteStorageManagerConfig(configs);
-        objectStorageFactory = config.objectStorageFactory();
+        fetcher = config.storage();
+        uploader = config.storage();
+        deleter = config.storage();
         objectKey = new ObjectKey(config.keyPrefix());
         encryptionEnabled = config.encryptionEnabled();
         if (encryptionEnabled) {
@@ -126,7 +132,7 @@ public class RemoteStorageManager implements org.apache.kafka.server.log.remote.
             aesEncryptionProvider = new AesEncryptionProvider();
         }
         chunkManager = new ChunkManager(
-            objectStorageFactory.fileFetcher(),
+            fetcher,
             objectKey,
             aesEncryptionProvider,
             config.chunkCache()
@@ -142,7 +148,7 @@ public class RemoteStorageManager implements org.apache.kafka.server.log.remote.
             objectKey,
             config.segmentManifestCacheSize(),
             config.segmentManifestCacheRetention(),
-            objectStorageFactory.fileFetcher(),
+            fetcher,
             mapper,
             executor);
     }
@@ -204,7 +210,7 @@ public class RemoteStorageManager implements org.apache.kafka.server.log.remote.
             }
             final ByteBufferInputStream leaderEpoch = new ByteBufferInputStream(logSegmentData.leaderEpochIndex());
             uploadIndexFile(remoteLogSegmentMetadata, leaderEpoch, LEADER_EPOCH);
-        } catch (final StorageBackEndException | IOException e) {
+        } catch (final StorageBackendException | IOException e) {
             throw new RemoteStorageException(e);
         }
     }
@@ -230,31 +236,31 @@ public class RemoteStorageManager implements org.apache.kafka.server.log.remote.
 
     private void uploadSegmentLog(final RemoteLogSegmentMetadata remoteLogSegmentMetadata,
                                   final TransformFinisher transformFinisher)
-        throws IOException, StorageBackEndException {
+        throws IOException, StorageBackendException {
         final String fileKey = objectKey.key(remoteLogSegmentMetadata, ObjectKey.Suffix.LOG);
         try (final var sis = new SequenceInputStream(transformFinisher)) {
-            objectStorageFactory.fileUploader().upload(sis, fileKey);
+            uploader.upload(sis, fileKey);
         }
     }
 
     private void uploadIndexFile(final RemoteLogSegmentMetadata remoteLogSegmentMetadata,
                                  final InputStream index,
                                  final IndexType indexType)
-        throws StorageBackEndException, IOException {
+        throws StorageBackendException, IOException {
         final String key = objectKey.key(remoteLogSegmentMetadata, ObjectKey.Suffix.fromIndexType(indexType));
         try (index) {
-            objectStorageFactory.fileUploader().upload(index, key);
+            uploader.upload(index, key);
         }
     }
 
     private void uploadManifest(final RemoteLogSegmentMetadata remoteLogSegmentMetadata,
                                 final SegmentManifest segmentManifest)
-        throws StorageBackEndException, IOException {
+        throws StorageBackendException, IOException {
         final String manifest = mapper.writeValueAsString(segmentManifest);
         final String manifestFileKey = objectKey.key(remoteLogSegmentMetadata, ObjectKey.Suffix.MANIFEST);
 
         try (final ByteArrayInputStream manifestContent = new ByteArrayInputStream(manifest.getBytes())) {
-            objectStorageFactory.fileUploader().upload(manifestContent, manifestFileKey);
+            uploader.upload(manifestContent, manifestFileKey);
         }
     }
 
@@ -286,7 +292,7 @@ public class RemoteStorageManager implements org.apache.kafka.server.log.remote.
                 range
             );
             return new SequenceInputStream(fetchChunkEnumeration);
-        } catch (final StorageBackEndException | IOException e) {
+        } catch (final StorageBackendException | IOException e) {
             throw new RemoteStorageException(e);
         }
     }
@@ -295,9 +301,9 @@ public class RemoteStorageManager implements org.apache.kafka.server.log.remote.
     public InputStream fetchIndex(final RemoteLogSegmentMetadata remoteLogSegmentMetadata,
                                   final IndexType indexType) throws RemoteStorageException {
         try {
-            return objectStorageFactory.fileFetcher()
-                .fetch(objectKey.key(remoteLogSegmentMetadata, ObjectKey.Suffix.fromIndexType(indexType)));
-        } catch (final StorageBackEndException e) {
+            final String key = objectKey.key(remoteLogSegmentMetadata, ObjectKey.Suffix.fromIndexType(indexType));
+            return fetcher.fetch(key);
+        } catch (final StorageBackendException e) {
             // TODO: should be aligned with upstream implementation
             if (indexType == TRANSACTION) {
                 return null;
@@ -313,10 +319,10 @@ public class RemoteStorageManager implements org.apache.kafka.server.log.remote.
         throws RemoteStorageException {
         try {
             for (final ObjectKey.Suffix suffix : ObjectKey.Suffix.values()) {
-                objectStorageFactory.fileDeleter()
-                    .delete(objectKey.key(remoteLogSegmentMetadata, suffix));
+                final String key = objectKey.key(remoteLogSegmentMetadata, suffix);
+                deleter.delete(key);
             }
-        } catch (final StorageBackEndException e) {
+        } catch (final StorageBackendException e) {
             throw new RemoteStorageException(e);
         }
     }

@@ -22,30 +22,32 @@ import java.io.OutputStream;
 import java.nio.file.Files;
 import java.nio.file.NoSuchFileException;
 import java.nio.file.Path;
+import java.util.Map;
 
 import io.aiven.kafka.tieredstorage.commons.storage.BytesRange;
-import io.aiven.kafka.tieredstorage.commons.storage.FileDeleter;
-import io.aiven.kafka.tieredstorage.commons.storage.FileFetcher;
-import io.aiven.kafka.tieredstorage.commons.storage.FileUploader;
 import io.aiven.kafka.tieredstorage.commons.storage.InvalidRangeException;
 import io.aiven.kafka.tieredstorage.commons.storage.KeyNotFoundException;
-import io.aiven.kafka.tieredstorage.commons.storage.StorageBackEndException;
+import io.aiven.kafka.tieredstorage.commons.storage.StorageBackend;
+import io.aiven.kafka.tieredstorage.commons.storage.StorageBackendException;
 
 import org.apache.commons.io.file.PathUtils;
 import org.apache.commons.io.input.BoundedInputStream;
 
-class FileSystemStorage implements FileUploader, FileFetcher, FileDeleter {
-    private final Path fsRoot;
+public class FileSystemStorage implements StorageBackend {
 
-    FileSystemStorage(final Path fsRoot) {
+    private Path fsRoot;
+
+    @Override
+    public void configure(final Map<String, ?> configs) {
+        final FileSystemStorageConfig config = new FileSystemStorageConfig(configs);
+        this.fsRoot = config.root();
         if (!Files.isDirectory(fsRoot) || !Files.isWritable(fsRoot)) {
             throw new IllegalArgumentException(fsRoot + " must be a writable directory");
         }
-        this.fsRoot = fsRoot;
     }
 
     @Override
-    public void upload(final InputStream inputStream, final String key) throws StorageBackEndException {
+    public void upload(final InputStream inputStream, final String key) throws StorageBackendException {
         try {
             final Path path = fsRoot.resolve(key);
             Files.createDirectories(path.getParent());
@@ -53,24 +55,24 @@ class FileSystemStorage implements FileUploader, FileFetcher, FileDeleter {
                 inputStream.transferTo(outputStream);
             }
         } catch (final IOException e) {
-            throw new StorageBackEndException("Failed to upload " + key, e);
+            throw new StorageBackendException("Failed to upload " + key, e);
         }
     }
 
     @Override
-    public InputStream fetch(final String key) throws StorageBackEndException {
+    public InputStream fetch(final String key) throws StorageBackendException {
         try {
             final Path path = fsRoot.resolve(key);
             return Files.newInputStream(path);
         } catch (final NoSuchFileException e) {
             throw new KeyNotFoundException(this, key, e);
         } catch (final IOException e) {
-            throw new StorageBackEndException("Failed to fetch " + key, e);
+            throw new StorageBackendException("Failed to fetch " + key, e);
         }
     }
 
     @Override
-    public InputStream fetch(final String key, final BytesRange range) throws StorageBackEndException {
+    public InputStream fetch(final String key, final BytesRange range) throws StorageBackendException {
         try {
             final Path path = fsRoot.resolve(key);
             final long fileSize = Files.size(path);
@@ -86,12 +88,12 @@ class FileSystemStorage implements FileUploader, FileFetcher, FileDeleter {
         } catch (final NoSuchFileException e) {
             throw new KeyNotFoundException(this, key, e);
         } catch (final IOException e) {
-            throw new StorageBackEndException("Failed to fetch " + key + ", with range " + range, e);
+            throw new StorageBackendException("Failed to fetch " + key + ", with range " + range, e);
         }
     }
 
     @Override
-    public void delete(final String key) throws StorageBackEndException {
+    public void delete(final String key) throws StorageBackendException {
         try {
             final Path path = fsRoot.resolve(key);
             Files.deleteIfExists(path);
@@ -102,7 +104,7 @@ class FileSystemStorage implements FileUploader, FileFetcher, FileDeleter {
                 parent = parent.getParent();
             }
         } catch (final IOException e) {
-            throw new StorageBackEndException("Error when deleting " + key, e);
+            throw new StorageBackendException("Error when deleting " + key, e);
         }
     }
 
