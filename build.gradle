@@ -20,6 +20,10 @@ buildscript {
     }
 }
 
+plugins {
+    id "java-library"
+}
+
 wrapper {
     distributionType = 'ALL'
     doLast {
@@ -112,4 +116,18 @@ subprojects {
             }
         }
     }
+}
+
+tasks.create(name: "releaseTarGz", dependsOn: configurations.archives.artifacts, type: Tar) {
+    into "${rootProject.name}-${archiveVersion.get()}"
+    compression = Compression.GZIP
+    duplicatesStrategy "exclude"
+    from(project(":commons").jar)
+    from(project(":commons").configurations.runtimeClasspath)
+    from(project(":storage:core").jar)
+    from(project(":storage:core").configurations.runtimeClasspath)
+    from(project(":storage:s3").jar)
+    from(project(":storage:s3").configurations.runtimeClasspath)
+    from(project(":storage:filesystem").jar)
+    from(project(":storage:filesystem").configurations.runtimeClasspath)
 }
