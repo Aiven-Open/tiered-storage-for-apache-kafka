@@ -14,7 +14,7 @@
  * limitations under the License.
  */
 
-package io.aiven.kafka.tieredstorage;
+package io.aiven.kafka.tieredstorage.chunkmanager;
 
 import java.util.Objects;
 
@@ -22,8 +22,8 @@ import org.apache.kafka.common.Uuid;
 import org.apache.kafka.server.log.remote.storage.RemoteLogSegmentId;
 
 public class ChunkKey {
-    private final Uuid uuid;
-    private final int chunkId;
+    public final Uuid uuid;
+    public final int chunkId;
 
     /**
      * @param uuid segment UUID, see {@link RemoteLogSegmentId#id()}.

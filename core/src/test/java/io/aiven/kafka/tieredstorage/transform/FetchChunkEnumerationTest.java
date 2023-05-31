@@ -21,7 +21,7 @@ import java.util.NoSuchElementException;
 
 import org.apache.kafka.server.log.remote.storage.RemoteLogSegmentMetadata;
 
-import io.aiven.kafka.tieredstorage.ChunkManager;
+import io.aiven.kafka.tieredstorage.chunkmanager.DefaultChunkManager;
 import io.aiven.kafka.tieredstorage.manifest.SegmentManifest;
 import io.aiven.kafka.tieredstorage.manifest.SegmentManifestV1;
 import io.aiven.kafka.tieredstorage.manifest.index.FixedSizeChunkIndex;
@@ -40,7 +40,7 @@ import static org.mockito.Mockito.when;
 @ExtendWith(MockitoExtension.class)
 class FetchChunkEnumerationTest {
     @Mock
-    ChunkManager chunkManager;
+    DefaultChunkManager chunkManager;
     @Mock
     RemoteLogSegmentMetadata remoteLogSegmentMetadata;
 

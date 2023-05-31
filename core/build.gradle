@@ -46,5 +46,6 @@ dependencies {
     testImplementation(project(":storage:filesystem"))
 
     testImplementation "com.github.luben:zstd-jni:$zstdVersion"
+    testImplementation "org.awaitility:awaitility:4.2.0"
     integrationTestImplementation sourceSets.test.output
 }

@@ -19,6 +19,7 @@ package io.aiven.kafka.tieredstorage.transform;
 import java.io.ByteArrayInputStream;
 import java.io.IOException;
 import java.io.InputStream;
+import java.nio.file.Files;
 import java.util.ArrayList;
 import java.util.List;
 import java.util.Map;
@@ -29,10 +30,11 @@ import org.apache.kafka.common.Uuid;
 import org.apache.kafka.server.log.remote.storage.RemoteLogSegmentId;
 import org.apache.kafka.server.log.remote.storage.RemoteLogSegmentMetadata;
 
-import io.aiven.kafka.tieredstorage.ChunkManager;
 import io.aiven.kafka.tieredstorage.ObjectKey;
-import io.aiven.kafka.tieredstorage.cache.ChunkCache;
-import io.aiven.kafka.tieredstorage.cache.UnboundInMemoryChunkCache;
+import io.aiven.kafka.tieredstorage.chunkmanager.ChunkManager;
+import io.aiven.kafka.tieredstorage.chunkmanager.ChunkManagerFactory;
+import io.aiven.kafka.tieredstorage.chunkmanager.cache.DiskBasedChunkCache;
+import io.aiven.kafka.tieredstorage.chunkmanager.cache.InMemoryChunkCache;
 import io.aiven.kafka.tieredstorage.manifest.SegmentManifest;
 import io.aiven.kafka.tieredstorage.manifest.SegmentManifestV1;
 import io.aiven.kafka.tieredstorage.manifest.index.FixedSizeChunkIndex;
@@ -94,10 +96,16 @@ class FetchChunkEnumerationSourceInputStreamClosingTest {
 
     @ParameterizedTest
     @MethodSource("testParams")
-    void test(final ChunkCache chunkCache,
+    void test(final Map<String, String> config,
               final boolean readFully,
               final BytesRange range) throws StorageBackendException, IOException {
-        final var chunkManager = new ChunkManager(fetcher, objectKey, null, chunkCache);
+        final ChunkManagerFactory chunkManagerFactory = new ChunkManagerFactory();
+        chunkManagerFactory.configure(config);
+        final ChunkManager chunkManager = chunkManagerFactory.initChunkManager(
+                fetcher,
+                objectKey,
+                null
+        );
         final var is = new FetchChunkEnumeration(chunkManager, REMOTE_LOG_SEGMENT_METADATA, SEGMENT_MANIFEST, range)
             .toInputStream();
         if (readFully) {
@@ -109,15 +117,42 @@ class FetchChunkEnumerationSourceInputStreamClosingTest {
         fetcher.assertAllStreamsWereClosed(readFully);
     }
 
-    static List<Arguments> testParams() {
+    static List<Arguments> testParams() throws IOException {
         final BytesRange smallRange = BytesRange.ofFromPositionAndSize(3, 5);
         final BytesRange bigRange = BytesRange.ofFromPositionAndSize(3, 25);
 
         final List<Arguments> result = new ArrayList<>();
         for (final var readFully : List.of(Named.of("read fully", true), Named.of("read partially", false))) {
             for (final BytesRange range : List.of(smallRange, bigRange)) {
-                result.add(Arguments.of(Named.of("with cache", new UnboundInMemoryChunkCache()), readFully, range));
-                result.add(Arguments.of(Named.of("without cache", null), readFully, range));
+                result.add(Arguments.of(
+                        Named.of(
+                                "without cache",
+                                Map.of()
+                        ),
+                        readFully,
+                        range)
+                );
+                result.add(Arguments.of(
+                        Named.of("with in-memory cache",
+                                Map.of(
+                                        "chunk.cache.class", InMemoryChunkCache.class.getCanonicalName(),
+                                        "chunk.cache.size", "-1"
+                                )
+                        ),
+                        readFully,
+                        range)
+                );
+                result.add(Arguments.of(
+                        Named.of("with disk-based cache",
+                                Map.of(
+                                        "chunk.cache.class", DiskBasedChunkCache.class.getCanonicalName(),
+                                        "chunk.cache.path", Files.createTempDirectory("cache").toString(),
+                                        "chunk.cache.size", "-1"
+                                )
+                        ),
+                        readFully,
+                        range)
+                );
             }
         }
         return result;

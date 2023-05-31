@@ -35,6 +35,8 @@ import org.apache.kafka.server.log.remote.storage.LogSegmentData;
 import org.apache.kafka.server.log.remote.storage.RemoteLogSegmentMetadata;
 import org.apache.kafka.server.log.remote.storage.RemoteStorageException;
 
+import io.aiven.kafka.tieredstorage.chunkmanager.ChunkManager;
+import io.aiven.kafka.tieredstorage.chunkmanager.ChunkManagerFactory;
 import io.aiven.kafka.tieredstorage.manifest.SegmentEncryptionMetadataV1;
 import io.aiven.kafka.tieredstorage.manifest.SegmentManifest;
 import io.aiven.kafka.tieredstorage.manifest.SegmentManifestV1;
@@ -119,13 +121,11 @@ public class RemoteStorageManager implements org.apache.kafka.server.log.remote.
             );
             aesEncryptionProvider = new AesEncryptionProvider();
         }
-        chunkManager = new ChunkManager(
-            fetcher,
-            objectKey,
-            aesEncryptionProvider,
-            config.chunkCache()
-        );
-
+        final ChunkManagerFactory chunkManagerFactory = new ChunkManagerFactory();
+        chunkManagerFactory.configure(configs);
+        chunkManager = chunkManagerFactory.initChunkManager(fetcher,
+                                                            objectKey,
+                                                            aesEncryptionProvider);
         chunkSize = config.chunkSize();
         compressionEnabled = config.compressionEnabled();
         compressionHeuristic = config.compressionHeuristicEnabled();

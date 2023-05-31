@@ -26,7 +26,6 @@ import org.apache.kafka.common.config.ConfigDef;
 import org.apache.kafka.common.config.ConfigException;
 import org.apache.kafka.common.utils.Utils;
 
-import io.aiven.kafka.tieredstorage.cache.ChunkCache;
 import io.aiven.kafka.tieredstorage.storage.StorageBackend;
 
 public class RemoteStorageManagerConfig extends AbstractConfig {
@@ -54,10 +53,6 @@ public class RemoteStorageManagerConfig extends AbstractConfig {
 
     private static final String CHUNK_SIZE_CONFIG = "chunk.size";
     private static final String CHUNK_SIZE_DOC = "The chunk size of log files";
-
-    private static final String CHUNK_CACHE_PREFIX = "chunk.cache.";
-    private static final String CHUNK_CACHE_CONFIG = CHUNK_CACHE_PREFIX + "class";
-    private static final String CHUNK_CACHE_DOC = "The chunk cache implementation";
 
     private static final String COMPRESSION_ENABLED_CONFIG = "compression.enabled";
     private static final String COMPRESSION_ENABLED_DOC = "Whether to enable compression";
@@ -126,14 +121,6 @@ public class RemoteStorageManagerConfig extends AbstractConfig {
         );
 
         CONFIG.define(
-            CHUNK_CACHE_CONFIG,
-            ConfigDef.Type.CLASS,
-            null,
-            ConfigDef.Importance.MEDIUM,
-            CHUNK_CACHE_DOC
-        );
-
-        CONFIG.define(
             COMPRESSION_ENABLED_CONFIG,
             ConfigDef.Type.BOOLEAN,
             false,
@@ -180,21 +167,12 @@ public class RemoteStorageManagerConfig extends AbstractConfig {
     private void validate() {
         validateEncryption();
         validateCompression();
-        validateCaching();
     }
 
     private void validateCompression() {
         if (getBoolean(COMPRESSION_HEURISTIC_ENABLED_CONFIG) && !getBoolean(COMPRESSION_ENABLED_CONFIG)) {
             throw new ConfigException(
                 COMPRESSION_ENABLED_CONFIG + " must be enabled if " + COMPRESSION_HEURISTIC_ENABLED_CONFIG + " is");
-        }
-    }
-
-    private void validateCaching() {
-        final Class<?> chunkCacheClass = getClass(CHUNK_CACHE_CONFIG);
-        if (chunkCacheClass != null && !ChunkCache.class.isAssignableFrom(chunkCacheClass)) {
-            throw new ConfigException(
-                CHUNK_CACHE_CONFIG + " must be an implementation of " + ChunkCache.class.getCanonicalName());
         }
     }
 
@@ -230,17 +208,6 @@ public class RemoteStorageManagerConfig extends AbstractConfig {
             return Optional.empty();
         }
         return Optional.of(Duration.ofMillis(rawValue));
-    }
-
-    ChunkCache chunkCache() {
-        final Class<?> chunkCacheClass = getClass(CHUNK_CACHE_CONFIG);
-        if (chunkCacheClass != null) {
-            final ChunkCache chunkCache = Utils.newInstance(chunkCacheClass, ChunkCache.class);
-            chunkCache.configure(this.originalsWithPrefix(CHUNK_CACHE_PREFIX));
-            return chunkCache;
-        } else {
-            return null;
-        }
     }
 
     String keyPrefix() {

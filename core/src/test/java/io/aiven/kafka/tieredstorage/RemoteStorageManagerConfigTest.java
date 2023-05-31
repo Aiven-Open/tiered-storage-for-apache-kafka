@@ -23,7 +23,6 @@ import java.util.Map;
 
 import org.apache.kafka.common.config.ConfigException;
 
-import io.aiven.kafka.tieredstorage.cache.TestChunkCache;
 import io.aiven.kafka.tieredstorage.storage.StorageBackend;
 
 import org.junit.jupiter.api.Test;
@@ -50,7 +49,6 @@ class RemoteStorageManagerConfigTest {
         assertThat(config.encryptionPrivateKeyFile()).isNull();
         assertThat(config.encryptionPublicKeyFile()).isNull();
         assertThat(config.keyPrefix()).isEmpty();
-        assertThat(config.chunkCache()).isNull();
     }
 
     @Test
@@ -239,60 +237,6 @@ class RemoteStorageManagerConfigTest {
             .hasMessage("Invalid value 2147483648 for configuration chunk.size: Not a number of type INT");
     }
 
-    @Test
-    void invalidChunkCacheClass() {
-        final HashMap<String, Object> props1 = new HashMap<>();
-        props1.put("storage.backend.class", NoopStorageBackend.class);
-        props1.put("chunk.size", 123);
-        props1.put("chunk.cache.class", "x");
-
-        assertThatThrownBy(() -> new RemoteStorageManagerConfig(props1))
-            .isInstanceOf(ConfigException.class)
-            .hasMessage("Invalid value x for configuration chunk.cache.class: Class x could not be found.");
-
-        final HashMap<String, Object> props2 = new HashMap<>();
-        props2.put("storage.backend.class", NoopStorageBackend.class);
-        props2.put("chunk.size", 123);
-        props2.put("chunk.cache.class", Object.class);
-
-        assertThatThrownBy(() -> new RemoteStorageManagerConfig(props2))
-            .isInstanceOf(ConfigException.class)
-            .hasMessage("chunk.cache.class must be an implementation "
-                + "of io.aiven.kafka.tieredstorage.cache.ChunkCache");
-    }
-
-    @Test
-    void disabledChunkCache() {
-        final HashMap<String, Object> props = new HashMap<>();
-        props.put("storage.backend.class", NoopStorageBackend.class);
-        props.put("chunk.size", 123);
-        props.put("chunk.cache.class", null);
-
-        final RemoteStorageManagerConfig config = new RemoteStorageManagerConfig(props);
-        assertThat(config.chunkCache()).isNull();
-    }
-
-    @Test
-    void chuckCacheIsConfigured() {
-        final var config = new RemoteStorageManagerConfig(
-            Map.of(
-                "storage.backend.class", NoopStorageBackend.class.getCanonicalName(),
-                "chunk.size", "123",
-                "chunk.cache.class", TestChunkCache.class.getCanonicalName(),
-                "chunk.cache.config1", "aaa",
-                "chunk.cache.config2", "123",
-                "chunk.cache.config3", "true"
-            )
-        );
-        final TestChunkCache chunkCache = (TestChunkCache) config.chunkCache();
-        assertThat(chunkCache.configureCalled).isTrue();
-        assertThat(chunkCache.configuredWith).isEqualTo(Map.of(
-            "class", TestChunkCache.class.getCanonicalName(),
-            "config1", "aaa",
-            "config2", "123",
-            "config3", "true"
-        ));
-    }
 
     @Test
     void invalidCompressionConfig() {

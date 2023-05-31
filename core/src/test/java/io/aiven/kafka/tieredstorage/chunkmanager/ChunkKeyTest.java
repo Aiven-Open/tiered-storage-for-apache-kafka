@@ -14,7 +14,7 @@
  * limitations under the License.
  */
 
-package io.aiven.kafka.tieredstorage;
+package io.aiven.kafka.tieredstorage.chunkmanager;
 
 import org.apache.kafka.common.Uuid;
 
