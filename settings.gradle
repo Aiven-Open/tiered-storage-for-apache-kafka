@@ -14,5 +14,9 @@
  * limitations under the License.
  */
 
-rootProject.name = 'kafka-tiered-storage'
+rootProject.name = 'tiered-storage-for-apache-kafka'
 include 'commons'
+include 'storage'
+include 'storage:core'
+include 'storage:filesystem'
+include 'storage:s3'

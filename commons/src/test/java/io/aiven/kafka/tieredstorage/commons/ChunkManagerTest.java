@@ -33,8 +33,8 @@ import io.aiven.kafka.tieredstorage.commons.manifest.SegmentManifestV1;
 import io.aiven.kafka.tieredstorage.commons.manifest.index.FixedSizeChunkIndex;
 import io.aiven.kafka.tieredstorage.commons.security.AesEncryptionProvider;
 import io.aiven.kafka.tieredstorage.commons.security.DataKeyAndAAD;
-import io.aiven.kafka.tieredstorage.commons.storage.StorageBackend;
-import io.aiven.kafka.tieredstorage.commons.storage.StorageBackendException;
+import io.aiven.kafka.tieredstorage.storage.StorageBackend;
+import io.aiven.kafka.tieredstorage.storage.StorageBackendException;
 
 import com.github.luben.zstd.ZstdCompressCtx;
 import org.junit.jupiter.api.BeforeEach;

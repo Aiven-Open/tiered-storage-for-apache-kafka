@@ -28,7 +28,7 @@ import org.apache.kafka.common.utils.Utils;
 
 import io.aiven.kafka.tieredstorage.commons.cache.ChunkCache;
 import io.aiven.kafka.tieredstorage.commons.cache.UnboundInMemoryChunkCache;
-import io.aiven.kafka.tieredstorage.commons.storage.StorageBackend;
+import io.aiven.kafka.tieredstorage.storage.StorageBackend;
 
 public class RemoteStorageManagerConfig extends AbstractConfig {
     private static final String STORAGE_PREFIX = "storage.";

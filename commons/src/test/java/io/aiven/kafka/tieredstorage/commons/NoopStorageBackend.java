@@ -22,9 +22,9 @@ import java.util.Map;
 import org.apache.kafka.common.config.AbstractConfig;
 import org.apache.kafka.common.config.ConfigDef;
 
-import io.aiven.kafka.tieredstorage.commons.storage.BytesRange;
-import io.aiven.kafka.tieredstorage.commons.storage.StorageBackend;
-import io.aiven.kafka.tieredstorage.commons.storage.StorageBackendException;
+import io.aiven.kafka.tieredstorage.storage.BytesRange;
+import io.aiven.kafka.tieredstorage.storage.StorageBackend;
+import io.aiven.kafka.tieredstorage.storage.StorageBackendException;
 
 public class NoopStorageBackend implements StorageBackend {
     public boolean configureCalled = false;

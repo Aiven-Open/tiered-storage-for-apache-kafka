@@ -16,7 +16,7 @@
 
 package io.aiven.kafka.tieredstorage.commons;
 
-import io.aiven.kafka.tieredstorage.commons.storage.BytesRange;
+import io.aiven.kafka.tieredstorage.storage.BytesRange;
 
 public class Chunk {
     public final int id;

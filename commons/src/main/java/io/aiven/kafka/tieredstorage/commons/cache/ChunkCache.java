@@ -22,7 +22,7 @@ import java.util.Optional;
 import org.apache.kafka.common.Configurable;
 
 import io.aiven.kafka.tieredstorage.commons.ChunkKey;
-import io.aiven.kafka.tieredstorage.commons.storage.StorageBackendException;
+import io.aiven.kafka.tieredstorage.storage.StorageBackendException;
 
 /**
  * A chunk cache.

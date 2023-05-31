@@ -176,7 +176,7 @@ class RemoteStorageManagerTest extends RsaKeyAwareTest {
         final Map<String, String> config = new HashMap<>(Map.of(
             "chunk.size", Integer.toString(chunkSize),
             "storage.backend.class.name",
-            "io.aiven.kafka.tieredstorage.commons.storage.filesystem.FileSystemStorage",
+            "io.aiven.kafka.tieredstorage.storage.filesystem.FileSystemStorage",
             "key.prefix", "test/",
             "storage.root", targetDir.toString(),
             "compression.enabled", Boolean.toString(compression),
@@ -404,7 +404,7 @@ class RemoteStorageManagerTest extends RsaKeyAwareTest {
         final Map<String, ?> config = new HashMap<>(Map.of(
             "chunk.size", Integer.toString(chunkSize),
             "storage.backend.class.name",
-            "io.aiven.kafka.tieredstorage.commons.storage.filesystem.FileSystemStorage",
+            "io.aiven.kafka.tieredstorage.storage.filesystem.FileSystemStorage",
             "key.prefix", "test/",
             "storage.root", targetDir.toString(),
             "compression.enabled", "true",

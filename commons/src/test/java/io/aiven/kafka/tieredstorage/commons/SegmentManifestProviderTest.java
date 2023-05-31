@@ -32,8 +32,8 @@ import org.apache.kafka.server.log.remote.storage.RemoteLogSegmentMetadata;
 
 import io.aiven.kafka.tieredstorage.commons.manifest.SegmentManifestV1;
 import io.aiven.kafka.tieredstorage.commons.manifest.index.FixedSizeChunkIndex;
-import io.aiven.kafka.tieredstorage.commons.storage.StorageBackend;
-import io.aiven.kafka.tieredstorage.commons.storage.StorageBackendException;
+import io.aiven.kafka.tieredstorage.storage.StorageBackend;
+import io.aiven.kafka.tieredstorage.storage.StorageBackendException;
 
 import com.fasterxml.jackson.databind.ObjectMapper;
 import com.fasterxml.jackson.datatype.jdk8.Jdk8Module;

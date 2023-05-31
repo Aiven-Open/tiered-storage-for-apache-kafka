@@ -28,13 +28,13 @@ import io.aiven.kafka.tieredstorage.commons.cache.ChunkCache;
 import io.aiven.kafka.tieredstorage.commons.manifest.SegmentEncryptionMetadata;
 import io.aiven.kafka.tieredstorage.commons.manifest.SegmentManifest;
 import io.aiven.kafka.tieredstorage.commons.security.AesEncryptionProvider;
-import io.aiven.kafka.tieredstorage.commons.storage.ObjectFetcher;
-import io.aiven.kafka.tieredstorage.commons.storage.StorageBackendException;
 import io.aiven.kafka.tieredstorage.commons.transform.BaseDetransformChunkEnumeration;
 import io.aiven.kafka.tieredstorage.commons.transform.DecompressionChunkEnumeration;
 import io.aiven.kafka.tieredstorage.commons.transform.DecryptionChunkEnumeration;
 import io.aiven.kafka.tieredstorage.commons.transform.DetransformChunkEnumeration;
 import io.aiven.kafka.tieredstorage.commons.transform.DetransformFinisher;
+import io.aiven.kafka.tieredstorage.storage.ObjectFetcher;
+import io.aiven.kafka.tieredstorage.storage.StorageBackendException;
 
 import org.apache.commons.io.IOUtils;
 

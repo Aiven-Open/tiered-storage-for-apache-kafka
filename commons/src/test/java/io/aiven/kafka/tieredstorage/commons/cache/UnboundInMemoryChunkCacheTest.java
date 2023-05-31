@@ -23,7 +23,7 @@ import java.util.Optional;
 import org.apache.kafka.common.Uuid;
 
 import io.aiven.kafka.tieredstorage.commons.ChunkKey;
-import io.aiven.kafka.tieredstorage.commons.storage.StorageBackendException;
+import io.aiven.kafka.tieredstorage.storage.StorageBackendException;
 
 import org.junit.jupiter.api.Test;
 
