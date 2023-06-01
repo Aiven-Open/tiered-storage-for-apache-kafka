@@ -13,8 +13,8 @@ retention=1000000000 # 1G
 local_retention=300000000 # 300M
 
 kafka-topic:
-	${KAFKA_HOME}/bin/kafka-topics.sh \
-		--bootstrap-server localhost:9092 \
+	docker exec kafka kafka-topics.sh \
+		--bootstrap-server kafka:29092 \
 		--create \
 		--config remote.storage.enable=true \
 		--config segment.bytes=$(segment) \

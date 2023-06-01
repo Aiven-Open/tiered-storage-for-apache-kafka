@@ -15,14 +15,6 @@ Docker compose environment to try out tiered storage plugins.
 
 Build plugin before starting Docker compose:
 
-#### Build plugin libraries
-
-On root directory:
-
-```shell
-./gradlew clean installDist
-```
-
 #### Using Encryption mechanisms
 
 Generate RSA key pair:
@@ -45,9 +37,9 @@ and set paths on `compose.yml` file:
       - config/server.properties
       # ...
       - --override
-      - rsm.config.s3.public_key_pem=/kafka/plugins/public.pem
+      - rsm.config.encryption.public.key.file=/kafka/plugins/public.pem
       - --override
-      - rsm.config.s3.private_key_pem=/kafka/plugins/private.pem
+      - rsm.config.encryption.private.key.file=/kafka/plugins/private.pem
       # ...
 ```
 
@@ -56,16 +48,7 @@ and set paths on `compose.yml` file:
 > for AWS S3 try [./s3](./s3) directory and
 > for Minio S3 try [./s3-minio](./s3-minio) directory
 
-`compose.yml` is mounting the distribution directory:
-
-```yaml
-kafka:
-  # ...
-  volumes:
-    - ./../../s3/build/install/s3:/kafka/plugins/tiered-storage-s3
-```
-
-and then:
+Start docker compose (will build image if needed):
 
 ```shell
 docker-compose up -d
@@ -85,20 +68,15 @@ and use variables on `compose.yml`:
 ```yaml
   kafka:
     # ...
-    volumes:
-      # ...
-      - ./private.pem:/kafka/plugins/private.pem
-      - ./public.pem:/kafka/plugins/public.pem
     command:
       - kafka-server-start.sh
       - config/server.properties
       # ...
       - --override
-      - rsm.config.s3.client.aws_access_key_id=${AWS_ACCESS_KEY_ID}
+      - rsm.config.storage.aws.access.key.id=${AWS_ACCESS_KEY_ID}
       - --override
-      - rsm.config.s3.client.aws_secret_access_key=${AWS_SECRET_ACCESS_KEY}
+      - rsm.config.storage.aws.secret.access.key=${AWS_SECRET_ACCESS_KEY}
 ```
-
 
 ### Kafka
 
@@ -108,6 +86,5 @@ Creating topics with Tiered storage:
 make kafka-topic
 ```
 
-creates a topic t1 with 6 partitions, 10MB segments, retention bytes 100MB, and 20MB local retention.
-
-
+creates a topic t1 with 6 partitions, 10MB segments, retention bytes 100MB, and 20MB local retention,
+and start writing messages to test retention and shipping logs to tiered-storage.

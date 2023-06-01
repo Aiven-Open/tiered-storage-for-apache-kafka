@@ -8,13 +8,10 @@ services:
 
   kafka:
     image: kafka-ts-test
+    container_name: kafka
     build:
-      context: ../kafka/.
-      # Override branch used to build docker image
-      # args:
-      #   - AK_REPO=https://github.com/aiven/kafka
-      #   - AK_BRANCH=3.0-2022-03-31-tiered-storage
-      #   - KAFKA_VERSION=3.0.1-SNAPSHOT
+      context: ../../.
+      dockerfile: ./docker/kafka/Dockerfile
     ports:
       - "9092:9092"
     environment:
@@ -39,16 +36,16 @@ services:
       - remote.log.storage.system.enable=true
       # Tiered Storage: RLMM config
       - --override
-      - remote.log.storage.manager.class.name=org.apache.kafka.server.log.remote.storage.LocalTieredStorage
-      - --override
-      - remote.log.storage.manager.class.path=
-      - --override
       - remote.log.metadata.manager.class.name=org.apache.kafka.server.log.remote.metadata.storage.TopicBasedRemoteLogMetadataManager
       - --override
       - rlmm.config.remote.log.metadata.common.client.bootstrap.servers=kafka:29092
       - --override
       - rlmm.config.remote.log.metadata.topic.replication.factor=1
       # Tiered storage S3 plugin
+      - --override
+      - remote.log.storage.manager.class.name=org.apache.kafka.server.log.remote.storage.LocalTieredStorage
+      - --override
+      - remote.log.storage.manager.class.path=
       - --override
       # dir at /kafka/kafka-tiered-storage/data
       - rsm.config.dir=/data
