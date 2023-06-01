@@ -1,5 +1,5 @@
 /*
- * Copyright 2021 Aiven Oy
+ * Copyright 2023 Aiven Oy
  *
  * Licensed under the Apache License, Version 2.0 (the "License");
  * you may not use this file except in compliance with the License.
@@ -14,9 +14,19 @@
  * limitations under the License.
  */
 
-rootProject.name = 'tiered-storage-for-apache-kafka'
-include 'core'
-include 'storage'
-include 'storage:core'
-include 'storage:filesystem'
-include 'storage:s3'
+archivesBaseName = "storage-s3"
+
+ext {
+    testcontainersVersion = "1.18.0"
+}
+
+dependencies {
+    implementation project(":storage:core")
+
+    implementation 'com.amazonaws:aws-java-sdk-s3:1.12.418'
+
+    testImplementation(testFixtures(project(":storage:core")))
+
+    testImplementation "org.testcontainers:junit-jupiter:$testcontainersVersion"
+    testImplementation "org.testcontainers:localstack:$testcontainersVersion"
+}
