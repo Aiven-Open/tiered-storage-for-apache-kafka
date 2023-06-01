@@ -17,7 +17,7 @@ RUN git clone ${AK_REPO}
 WORKDIR /kafka
 RUN git checkout ${AK_BRANCH}
 
-ARG SCALA_VERSION=2.12
+ARG SCALA_VERSION=2.13
 
 RUN ./gradlew -PscalaVersion=${SCALA_VERSION} testJar releaseTarGz
 WORKDIR /kafka/core/build/distributions
@@ -25,7 +25,7 @@ RUN tar xf kafka_${SCALA_VERSION}-${KAFKA_VERSION}.tgz;
 
 FROM eclipse-temurin:11-jre AS kafka
 
-ARG SCALA_VERSION=2.12
+ARG SCALA_VERSION=2.13
 ARG KAFKA_VERSION=3.0.1-SNAPSHOT
 
 COPY --from=base /kafka/core/build/distributions/kafka_${SCALA_VERSION}-${KAFKA_VERSION} /kafka
