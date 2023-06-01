@@ -74,7 +74,7 @@ subprojects {
         mockitoVersion = "5.1.1"
 
         // Don't bump this version without need, as this is the min supported version for the plugin.
-        kafkaVersion = "3.0.0"
+        kafkaVersion = "3.4.0"
 
         assertJVersion = "3.24.2"
 
