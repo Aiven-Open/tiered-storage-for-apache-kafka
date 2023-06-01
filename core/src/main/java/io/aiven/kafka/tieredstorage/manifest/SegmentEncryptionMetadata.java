@@ -14,19 +14,14 @@
  * limitations under the License.
  */
 
-archivesBaseName = "storage-s3"
+package io.aiven.kafka.tieredstorage.manifest;
 
-ext {
-    testcontainersVersion = "1.18.0"
-}
+import javax.crypto.SecretKey;
 
-dependencies {
-    implementation project(":storage:core")
+public interface SegmentEncryptionMetadata {
+    int ivSize();
 
-    implementation 'com.amazonaws:aws-java-sdk-s3:1.12.418'
+    SecretKey dataKey();
 
-    testImplementation(testFixtures(project(":storage:core")))
-
-    testImplementation "org.testcontainers:junit-jupiter:$testcontainersVersion"
-    testImplementation "org.testcontainers:localstack:$testcontainersVersion"
+    byte[] aad();
 }

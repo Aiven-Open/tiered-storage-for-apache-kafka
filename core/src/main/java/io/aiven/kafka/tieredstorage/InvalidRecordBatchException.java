@@ -14,19 +14,14 @@
  * limitations under the License.
  */
 
-archivesBaseName = "storage-s3"
+package io.aiven.kafka.tieredstorage;
 
-ext {
-    testcontainersVersion = "1.18.0"
-}
+public class InvalidRecordBatchException extends Exception {
+    public InvalidRecordBatchException(final String message) {
+        super(message);
+    }
 
-dependencies {
-    implementation project(":storage:core")
-
-    implementation 'com.amazonaws:aws-java-sdk-s3:1.12.418'
-
-    testImplementation(testFixtures(project(":storage:core")))
-
-    testImplementation "org.testcontainers:junit-jupiter:$testcontainersVersion"
-    testImplementation "org.testcontainers:localstack:$testcontainersVersion"
+    public InvalidRecordBatchException(final String message, final Exception e) {
+        super(message, e);
+    }
 }

@@ -14,19 +14,16 @@
  * limitations under the License.
  */
 
-archivesBaseName = "storage-s3"
+package io.aiven.kafka.tieredstorage.transform;
 
-ext {
-    testcontainersVersion = "1.18.0"
-}
+import java.util.Enumeration;
 
-dependencies {
-    implementation project(":storage:core")
-
-    implementation 'com.amazonaws:aws-java-sdk-s3:1.12.418'
-
-    testImplementation(testFixtures(project(":storage:core")))
-
-    testImplementation "org.testcontainers:junit-jupiter:$testcontainersVersion"
-    testImplementation "org.testcontainers:localstack:$testcontainersVersion"
+/**
+ * The enumeration of chunks being de-transformed.
+ *
+ * <p>There are supposed to be multiple implementation doing different de-transformations
+ * (like decompression and decryption).
+ * These implementations are supposed to be composable.
+ */
+public interface DetransformChunkEnumeration extends Enumeration<byte[]> {
 }

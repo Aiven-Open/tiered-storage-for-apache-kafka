@@ -122,8 +122,8 @@ tasks.create(name: "releaseTarGz", dependsOn: configurations.archives.artifacts,
     into "${rootProject.name}-${archiveVersion.get()}"
     compression = Compression.GZIP
     duplicatesStrategy "exclude"
-    from(project(":commons").jar)
-    from(project(":commons").configurations.runtimeClasspath)
+    from(project(":core").jar)
+    from(project(":core").configurations.runtimeClasspath)
     from(project(":storage:core").jar)
     from(project(":storage:core").configurations.runtimeClasspath)
     from(project(":storage:s3").jar)
