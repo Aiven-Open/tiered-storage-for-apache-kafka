@@ -126,8 +126,10 @@ public class RemoteStorageManager implements org.apache.kafka.server.log.remote.
         encryptionEnabled = config.encryptionEnabled();
         if (encryptionEnabled) {
             rsaEncryptionProvider = RsaEncryptionProvider.of(
-                config.encryptionPublicKeyFile(),
-                config.encryptionPrivateKeyFile()
+                config.encryptionPublicKey(),
+                config.encryptionPublicKeyFormat(),
+                config.encryptionPrivateKey(),
+                config.encryptionPrivateKeyFormat()
             );
             aesEncryptionProvider = new AesEncryptionProvider();
         }

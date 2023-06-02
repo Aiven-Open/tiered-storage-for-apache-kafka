@@ -26,6 +26,7 @@ import io.aiven.kafka.tieredstorage.manifest.index.FixedSizeChunkIndex;
 import io.aiven.kafka.tieredstorage.manifest.serde.DataKeyDeserializer;
 import io.aiven.kafka.tieredstorage.manifest.serde.DataKeySerializer;
 import io.aiven.kafka.tieredstorage.security.RsaEncryptionProvider;
+import io.aiven.kafka.tieredstorage.security.RsaKeyFormat;
 
 import com.fasterxml.jackson.core.JsonProcessingException;
 import com.fasterxml.jackson.databind.ObjectMapper;
@@ -61,7 +62,8 @@ class SegmentManifestV1SerdeTest extends RsaKeyAwareTest {
     void init() {
         mapper = new ObjectMapper();
         mapper.registerModule(new Jdk8Module());
-        rsaEncryptionProvider = RsaEncryptionProvider.of(publicKeyPem, privateKeyPem);
+        rsaEncryptionProvider = RsaEncryptionProvider.of(
+            publicKeyPem, RsaKeyFormat.PEM, privateKeyPem, RsaKeyFormat.PEM);
 
         final SimpleModule simpleModule = new SimpleModule();
         simpleModule.addSerializer(SecretKey.class, new DataKeySerializer(rsaEncryptionProvider::encryptDataKey));
