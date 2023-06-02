@@ -25,22 +25,16 @@ import java.security.InvalidAlgorithmParameterException;
 import java.security.InvalidKeyException;
 import java.security.NoSuchAlgorithmException;
 import java.security.SecureRandom;
-import java.security.Security;
 import java.util.Random;
 
 import io.aiven.kafka.tieredstorage.security.AesEncryptionProvider;
 
-import org.bouncycastle.jce.provider.BouncyCastleProvider;
 import org.junit.jupiter.api.BeforeAll;
 
 public class AesKeyAwareTest {
     protected static int ivSize;
     protected static SecretKeySpec secretKey;
     protected static byte[] aad;
-
-    static {
-        Security.addProvider(new BouncyCastleProvider());
-    }
 
     @BeforeAll
     static void initCrypto() {
