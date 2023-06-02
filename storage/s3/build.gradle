@@ -17,7 +17,7 @@
 archivesBaseName = "storage-s3"
 
 ext {
-    testcontainersVersion = "1.18.0"
+    testcontainersVersion = "1.18.3"
 }
 
 dependencies {
