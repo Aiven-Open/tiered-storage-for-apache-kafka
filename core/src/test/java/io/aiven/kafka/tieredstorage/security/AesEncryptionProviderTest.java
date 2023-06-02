@@ -51,7 +51,8 @@ public class AesEncryptionProviderTest extends RsaKeyAwareTest {
 
     @Test
     void decryptGeneratedKey() {
-        final var rsaEncryptionProvider = RsaEncryptionProvider.of(publicKeyPem, privateKeyPem);
+        final var rsaEncryptionProvider = RsaEncryptionProvider.of(
+            publicKeyPem, RsaKeyFormat.PEM, privateKeyPem, RsaKeyFormat.PEM);
         final AesEncryptionProvider aesProvider = new AesEncryptionProvider();
         final var dataKey = aesProvider.createDataKeyAndAAD().dataKey;
         final var encryptedKey = rsaEncryptionProvider.encryptDataKey(dataKey);

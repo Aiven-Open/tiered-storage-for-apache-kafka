@@ -16,7 +16,6 @@
 
 package io.aiven.kafka.tieredstorage;
 
-import java.nio.file.Path;
 import java.time.Duration;
 import java.util.Map;
 import java.util.Optional;
@@ -28,6 +27,7 @@ import org.apache.kafka.common.utils.Utils;
 
 import io.aiven.kafka.tieredstorage.cache.ChunkCache;
 import io.aiven.kafka.tieredstorage.cache.UnboundInMemoryChunkCache;
+import io.aiven.kafka.tieredstorage.security.RsaKeyFormat;
 import io.aiven.kafka.tieredstorage.storage.StorageBackend;
 
 public class RemoteStorageManagerConfig extends AbstractConfig {
@@ -70,13 +70,27 @@ public class RemoteStorageManagerConfig extends AbstractConfig {
 
     private static final String ENCRYPTION_CONFIG = "encryption.enabled";
     private static final String ENCRYPTION_DOC = "Whether to enable encryption";
-    private static final String ENCRYPTION_PUBLIC_KEY_FILE_CONFIG = "encryption.public.key.file";
-    private static final String ENCRYPTION_PUBLIC_KEY_FILE_DOC = "The path to the RSA public key file";
-    private static final String ENCRYPTION_PRIVATE_KEY_FILE_CONFIG = "encryption.private.key.file";
-    private static final String ENCRYPTION_PRIVATE_KEY_FILE_DOC = "The path to the RSA private key file";
-    // TODO add possibility to pass keys as strings
+    private static final String ENCRYPTION_PUBLIC_KEY_CONFIG = "encryption.public.key";
+    private static final String ENCRYPTION_PUBLIC_KEY_DOC = "The RSA public key";
+    private static final String ENCRYPTION_PUBLIC_KEY_FORMAT_CONFIG = "encryption.public.key.format";
+    private static final String ENCRYPTION_PUBLIC_KEY_FORMAT_DOC = "The RSA public key format";
+    private static final String ENCRYPTION_PRIVATE_KEY_CONFIG = "encryption.private.key";
+    private static final String ENCRYPTION_PRIVATE_KEY_DOC = "The RSA private key";
+    private static final String ENCRYPTION_PRIVATE_KEY_FORMAT_CONFIG = "encryption.private.key.format";
+    private static final String ENCRYPTION_PRIVATE_KEY_FORMAT_DOC = "The RSA private key format";
 
     private static final ConfigDef CONFIG;
+
+    private static final ConfigDef.Validator ENCRYPTION_KEY_FORMAT_VALIDATOR;
+
+    static {
+        final RsaKeyFormat[] values = RsaKeyFormat.values();
+        final String[] array = new String[values.length];
+        for (int i = 0; i < values.length; i++) {
+            array[i] = values[i].name;
+        }
+        ENCRYPTION_KEY_FORMAT_VALIDATOR = ConfigDef.ValidString.in(array);
+    }
 
     static {
         CONFIG = new ConfigDef();
@@ -158,21 +172,36 @@ public class RemoteStorageManagerConfig extends AbstractConfig {
             ENCRYPTION_DOC
         );
         CONFIG.define(
-            ENCRYPTION_PUBLIC_KEY_FILE_CONFIG,
+            ENCRYPTION_PUBLIC_KEY_CONFIG,
             ConfigDef.Type.STRING,
             null,
             ConfigDef.Importance.HIGH,
-            ENCRYPTION_PUBLIC_KEY_FILE_DOC
+            ENCRYPTION_PUBLIC_KEY_DOC
         );
         CONFIG.define(
-            ENCRYPTION_PRIVATE_KEY_FILE_CONFIG,
+            ENCRYPTION_PUBLIC_KEY_FORMAT_CONFIG,
+            ConfigDef.Type.STRING,
+            RsaKeyFormat.PEM.name,
+            ENCRYPTION_KEY_FORMAT_VALIDATOR,
+            ConfigDef.Importance.MEDIUM,
+            ENCRYPTION_PUBLIC_KEY_FORMAT_DOC
+        );
+        CONFIG.define(
+            ENCRYPTION_PRIVATE_KEY_CONFIG,
             ConfigDef.Type.STRING,
             null,
             ConfigDef.Importance.HIGH,
-            ENCRYPTION_PRIVATE_KEY_FILE_DOC
+            ENCRYPTION_PRIVATE_KEY_DOC
+        );
+        CONFIG.define(
+            ENCRYPTION_PRIVATE_KEY_FORMAT_CONFIG,
+            ConfigDef.Type.STRING,
+            RsaKeyFormat.PEM.name,
+            ENCRYPTION_KEY_FORMAT_VALIDATOR,
+            ConfigDef.Importance.MEDIUM,
+            ENCRYPTION_PRIVATE_KEY_FORMAT_DOC
         );
     }
-
 
     RemoteStorageManagerConfig(final Map<String, ?> props) {
         super(CONFIG, props);
@@ -201,13 +230,13 @@ public class RemoteStorageManagerConfig extends AbstractConfig {
     }
 
     private void validateEncryption() {
-        if (getBoolean(ENCRYPTION_CONFIG) && getString(ENCRYPTION_PUBLIC_KEY_FILE_CONFIG) == null) {
+        if (getBoolean(ENCRYPTION_CONFIG) && getString(ENCRYPTION_PUBLIC_KEY_CONFIG) == null) {
             throw new ConfigException(
-                ENCRYPTION_PUBLIC_KEY_FILE_CONFIG + " must be provided if encryption is enabled");
+                ENCRYPTION_PUBLIC_KEY_CONFIG + " must be provided if encryption is enabled");
         }
-        if (getBoolean(ENCRYPTION_CONFIG) && getString(ENCRYPTION_PRIVATE_KEY_FILE_CONFIG) == null) {
+        if (getBoolean(ENCRYPTION_CONFIG) && getString(ENCRYPTION_PRIVATE_KEY_CONFIG) == null) {
             throw new ConfigException(
-                ENCRYPTION_PRIVATE_KEY_FILE_CONFIG + " must be provided if encryption is enabled");
+                ENCRYPTION_PRIVATE_KEY_CONFIG + " must be provided if encryption is enabled");
         }
     }
 
@@ -265,19 +294,19 @@ public class RemoteStorageManagerConfig extends AbstractConfig {
         return getBoolean(ENCRYPTION_CONFIG);
     }
 
-    Path encryptionPublicKeyFile() {
-        final String value = getString(ENCRYPTION_PUBLIC_KEY_FILE_CONFIG);
-        if (value == null) {
-            return null;
-        }
-        return Path.of(value);
+    String encryptionPublicKey() {
+        return getString(ENCRYPTION_PUBLIC_KEY_CONFIG);
     }
 
-    Path encryptionPrivateKeyFile() {
-        final String value = getString(ENCRYPTION_PRIVATE_KEY_FILE_CONFIG);
-        if (value == null) {
-            return null;
-        }
-        return Path.of(value);
+    RsaKeyFormat encryptionPublicKeyFormat() {
+        return RsaKeyFormat.parse(getString(ENCRYPTION_PUBLIC_KEY_FORMAT_CONFIG));
+    }
+
+    String encryptionPrivateKey() {
+        return getString(ENCRYPTION_PRIVATE_KEY_CONFIG);
+    }
+
+    RsaKeyFormat encryptionPrivateKeyFormat() {
+        return RsaKeyFormat.parse(getString(ENCRYPTION_PRIVATE_KEY_FORMAT_CONFIG));
     }
 }

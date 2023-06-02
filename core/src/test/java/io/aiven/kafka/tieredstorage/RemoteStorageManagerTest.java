@@ -57,6 +57,7 @@ import io.aiven.kafka.tieredstorage.manifest.serde.DataKeySerializer;
 import io.aiven.kafka.tieredstorage.security.AesEncryptionProvider;
 import io.aiven.kafka.tieredstorage.security.DataKeyAndAAD;
 import io.aiven.kafka.tieredstorage.security.RsaEncryptionProvider;
+import io.aiven.kafka.tieredstorage.security.RsaKeyFormat;
 
 import com.fasterxml.jackson.databind.JsonNode;
 import com.fasterxml.jackson.databind.ObjectMapper;
@@ -122,7 +123,8 @@ class RemoteStorageManagerTest extends RsaKeyAwareTest {
     void init() throws IOException {
         rsm = new RemoteStorageManager();
 
-        rsaEncryptionProvider = RsaEncryptionProvider.of(publicKeyPem, privateKeyPem);
+        rsaEncryptionProvider = RsaEncryptionProvider.of(
+            publicKeyPem, RsaKeyFormat.PEM, privateKeyPem, RsaKeyFormat.PEM);
         aesEncryptionProvider = new AesEncryptionProvider();
 
         sourceDir = Path.of(tmpDir.toString(), "source");
@@ -183,8 +185,10 @@ class RemoteStorageManagerTest extends RsaKeyAwareTest {
             "encryption.enabled", Boolean.toString(encryption)
         ));
         if (encryption) {
-            config.put("encryption.public.key.file", publicKeyPem.toString());
-            config.put("encryption.private.key.file", privateKeyPem.toString());
+            config.put("encryption.public.key", publicKeyPem);
+            config.put("encryption.public.key.format", RsaKeyFormat.PEM.name);
+            config.put("encryption.private.key", privateKeyPem);
+            config.put("encryption.private.key.format", RsaKeyFormat.PEM.name);
         }
         rsm.configure(config);
 

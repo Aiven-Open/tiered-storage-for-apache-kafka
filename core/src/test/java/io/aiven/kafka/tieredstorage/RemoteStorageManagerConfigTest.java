@@ -16,7 +16,6 @@
 
 package io.aiven.kafka.tieredstorage;
 
-import java.nio.file.Path;
 import java.time.Duration;
 import java.util.HashMap;
 import java.util.Map;
@@ -24,6 +23,7 @@ import java.util.Map;
 import org.apache.kafka.common.config.ConfigException;
 
 import io.aiven.kafka.tieredstorage.cache.TestChunkCache;
+import io.aiven.kafka.tieredstorage.security.RsaKeyFormat;
 import io.aiven.kafka.tieredstorage.storage.StorageBackend;
 
 import org.junit.jupiter.api.Test;
@@ -47,8 +47,10 @@ class RemoteStorageManagerConfigTest {
         assertThat(config.compressionEnabled()).isFalse();
         assertThat(config.compressionHeuristicEnabled()).isFalse();
         assertThat(config.encryptionEnabled()).isFalse();
-        assertThat(config.encryptionPrivateKeyFile()).isNull();
-        assertThat(config.encryptionPublicKeyFile()).isNull();
+        assertThat(config.encryptionPrivateKey()).isNull();
+        assertThat(config.encryptionPrivateKeyFormat()).isEqualTo(RsaKeyFormat.PEM);
+        assertThat(config.encryptionPublicKey()).isNull();
+        assertThat(config.encryptionPublicKeyFormat()).isEqualTo(RsaKeyFormat.PEM);
         assertThat(config.keyPrefix()).isEmpty();
     }
 
@@ -121,13 +123,16 @@ class RemoteStorageManagerConfigTest {
                 "storage.backend.class.name", NoopStorageBackend.class.getCanonicalName(),
                 "chunk.size", "123",
                 "encryption.enabled", "true",
-                "encryption.public.key.file", "public.key",
-                "encryption.private.key.file", "private.key"
+                "encryption.public.key", "public.key",
+                "encryption.public.key.format", "pem_file",
+                "encryption.private.key", "private.key",
+                "encryption.private.key.format", "pem_file"
             )
         );
         assertThat(config.encryptionEnabled()).isTrue();
-        assertThat(config.encryptionPrivateKeyFile()).isEqualTo(Path.of("private.key"));
-        assertThat(config.encryptionPublicKeyFile()).isEqualTo(Path.of("public.key"));
+        assertThat(config.encryptionPrivateKey()).isEqualTo("private.key");
+        assertThat(config.encryptionPrivateKeyFormat()).isEqualTo(RsaKeyFormat.PEM_FILE);
+        assertThat(config.encryptionPublicKeyFormat()).isEqualTo(RsaKeyFormat.PEM_FILE);
     }
 
     @Test
@@ -139,17 +144,18 @@ class RemoteStorageManagerConfigTest {
         );
         assertThatThrownBy(() -> new RemoteStorageManagerConfig(config1))
             .isInstanceOf(ConfigException.class)
-            .hasMessage("encryption.public.key.file must be provided if encryption is enabled");
+            .hasMessage("encryption.public.key must be provided if encryption is enabled");
 
         final var config2 = Map.of(
             "storage.backend.class.name", NoopStorageBackend.class.getCanonicalName(),
             "chunk.size", "123",
             "encryption.enabled", "true",
-            "encryption.public.key.file", "public.key"
+            "encryption.public.key.format", "pem_file",
+            "encryption.public.key", "public.key"
         );
         assertThatThrownBy(() -> new RemoteStorageManagerConfig(config2))
             .isInstanceOf(ConfigException.class)
-            .hasMessage("encryption.private.key.file must be provided if encryption is enabled");
+            .hasMessage("encryption.private.key must be provided if encryption is enabled");
     }
 
     @Test

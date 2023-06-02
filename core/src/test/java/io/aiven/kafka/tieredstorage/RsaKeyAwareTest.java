@@ -16,10 +16,9 @@
 
 package io.aiven.kafka.tieredstorage;
 
+import java.io.BufferedWriter;
 import java.io.IOException;
-import java.nio.file.Files;
-import java.nio.file.Path;
-import java.nio.file.Paths;
+import java.io.StringWriter;
 import java.security.KeyPair;
 import java.security.KeyPairGenerator;
 import java.security.NoSuchAlgorithmException;
@@ -34,41 +33,37 @@ import org.bouncycastle.jce.provider.BouncyCastleProvider;
 import org.bouncycastle.util.io.pem.PemObject;
 import org.bouncycastle.util.io.pem.PemWriter;
 import org.junit.jupiter.api.BeforeAll;
-import org.junit.jupiter.api.io.TempDir;
 
 public abstract class RsaKeyAwareTest {
 
     public static KeyPair rsaKeyPair;
 
-    public static Path publicKeyPem;
+    public static String publicKeyPem;
 
-    public static Path privateKeyPem;
+    public static String privateKeyPem;
 
     static {
         Security.addProvider(new BouncyCastleProvider());
     }
 
     @BeforeAll
-    static void generateRsaKeyPair(@TempDir final Path tmpFolder)
+    static void generateRsaKeyPair()
             throws NoSuchAlgorithmException, IOException, NoSuchProviderException {
         final var keyPair = KeyPairGenerator.getInstance("RSA", "BC");
         keyPair.initialize(2048, SecureRandom.getInstanceStrong());
         rsaKeyPair = keyPair.generateKeyPair();
 
-        publicKeyPem = tmpFolder.resolve(Paths.get("test_public.pem"));
-        privateKeyPem = tmpFolder.resolve(Paths.get("test_private.pem"));
-
-        writePemFile(publicKeyPem, new X509EncodedKeySpec(rsaKeyPair.getPublic().getEncoded()));
-        writePemFile(privateKeyPem, new PKCS8EncodedKeySpec(rsaKeyPair.getPrivate().getEncoded()));
+        publicKeyPem = encodeAsPem(new X509EncodedKeySpec(rsaKeyPair.getPublic().getEncoded()));
+        privateKeyPem = encodeAsPem(new PKCS8EncodedKeySpec(rsaKeyPair.getPrivate().getEncoded()));
     }
 
-    protected static void writePemFile(final Path path, final EncodedKeySpec encodedKeySpec) throws IOException {
-        try (var pemWriter = new PemWriter(Files.newBufferedWriter(path))) {
+    protected static String encodeAsPem(final EncodedKeySpec encodedKeySpec) throws IOException {
+        final StringWriter result = new StringWriter();
+        try (var pemWriter = new PemWriter(new BufferedWriter(result))) {
             final var pemObject = new PemObject("SOME KEY", encodedKeySpec.getEncoded());
             pemWriter.writeObject(pemObject);
             pemWriter.flush();
         }
+        return result.toString();
     }
-
-
 }
