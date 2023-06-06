@@ -27,7 +27,6 @@ import org.apache.kafka.common.config.ConfigException;
 import org.apache.kafka.common.utils.Utils;
 
 import io.aiven.kafka.tieredstorage.cache.ChunkCache;
-import io.aiven.kafka.tieredstorage.cache.UnboundInMemoryChunkCache;
 import io.aiven.kafka.tieredstorage.storage.StorageBackend;
 
 public class RemoteStorageManagerConfig extends AbstractConfig {
@@ -130,7 +129,7 @@ public class RemoteStorageManagerConfig extends AbstractConfig {
         CONFIG.define(
             CHUNK_CACHE_CONFIG,
             ConfigDef.Type.CLASS,
-            UnboundInMemoryChunkCache.class,
+            null,
             ConfigDef.Importance.MEDIUM,
             CHUNK_CACHE_DOC
         );

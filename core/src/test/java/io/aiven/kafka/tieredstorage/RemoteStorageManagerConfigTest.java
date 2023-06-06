@@ -50,6 +50,7 @@ class RemoteStorageManagerConfigTest {
         assertThat(config.encryptionPrivateKeyFile()).isNull();
         assertThat(config.encryptionPublicKeyFile()).isNull();
         assertThat(config.keyPrefix()).isEmpty();
+        assertThat(config.chunkCache()).isNull();
     }
 
     @Test
