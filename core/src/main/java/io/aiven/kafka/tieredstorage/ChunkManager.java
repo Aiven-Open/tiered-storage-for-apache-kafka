@@ -44,8 +44,10 @@ public class ChunkManager {
     private final AesEncryptionProvider aesEncryptionProvider;
     private final ChunkCache chunkCache;
 
-    public ChunkManager(final ObjectFetcher fetcher, final ObjectKey objectKey,
-                        final AesEncryptionProvider aesEncryptionProvider, final ChunkCache chunkCache) {
+    public ChunkManager(final ObjectFetcher fetcher,
+                        final ObjectKey objectKey,
+                        final AesEncryptionProvider aesEncryptionProvider,
+                        final ChunkCache chunkCache) {
         this.fetcher = fetcher;
         this.objectKey = objectKey;
         this.aesEncryptionProvider = aesEncryptionProvider;
@@ -91,11 +93,10 @@ public class ChunkManager {
     private InputStream getChunkFromCache(final RemoteLogSegmentMetadata remoteLogSegmentMetadata,
                                           final Chunk chunk) throws StorageBackendException {
         final ChunkKey chunkKey = new ChunkKey(remoteLogSegmentMetadata.remoteLogSegmentId().id(), chunk.id);
-        final Optional<InputStream> inputStream = chunkCache.get(chunkKey);
-        final byte[] contentBytes;
-        if (inputStream.isEmpty()) {
-            final InputStream content = getChunkFromStorage(remoteLogSegmentMetadata, chunk);
-            try {
+        final Optional<InputStream> maybeContent = chunkCache.get(chunkKey);
+        if (maybeContent.isEmpty()) {
+            final byte[] contentBytes;
+            try (final InputStream content = getChunkFromStorage(remoteLogSegmentMetadata, chunk)) {
                 contentBytes = IOUtils.toByteArray(content);
             } catch (final IOException e) {
                 throw new StorageBackendException(
@@ -105,7 +106,7 @@ public class ChunkManager {
             chunkCache.store(tempFilename, chunkKey);
             return new ByteArrayInputStream(contentBytes);
         } else {
-            return inputStream.get();
+            return maybeContent.get();
         }
     }
 
@@ -113,6 +114,5 @@ public class ChunkManager {
                                             final Chunk chunk) throws StorageBackendException {
         final String segmentKey = objectKey.key(remoteLogSegmentMetadata, ObjectKey.Suffix.LOG);
         return fetcher.fetch(segmentKey, chunk.range());
-
     }
 }
