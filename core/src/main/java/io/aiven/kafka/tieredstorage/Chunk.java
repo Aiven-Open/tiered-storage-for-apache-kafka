@@ -62,7 +62,7 @@ public class Chunk {
     }
 
     BytesRange range() {
-        return BytesRange.of(transformedPosition, transformedPosition + transformedSize);
+        return BytesRange.ofFromPositionAndSize(transformedPosition, transformedSize);
     }
 
     @Override

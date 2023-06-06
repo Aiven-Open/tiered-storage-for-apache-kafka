@@ -24,10 +24,19 @@ import static org.assertj.core.api.Assertions.assertThatThrownBy;
 class BytesRangeTest {
 
     @Test
+    void testMinimalRange() {
+        final BytesRange range = BytesRange.of(1, 1);
+        assertThat(range.from).isEqualTo(1);
+        assertThat(range.to).isEqualTo(1);
+        assertThat(range.size()).isEqualTo(1);
+    }
+
+    @Test
     void testProperRange() {
         final BytesRange range = BytesRange.of(1, 2);
         assertThat(range.from).isEqualTo(1);
         assertThat(range.to).isEqualTo(2);
+        assertThat(range.size()).isEqualTo(2);
     }
 
     @Test

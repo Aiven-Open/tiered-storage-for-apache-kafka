@@ -18,6 +18,7 @@ package io.aiven.kafka.tieredstorage.storage;
 
 /**
  * Byte range with from and to edges; where to cannot be less than from.
+ * Both, from and to, are inclusive positions.
  */
 public class BytesRange {
     public final int from;
@@ -32,6 +33,10 @@ public class BytesRange {
         }
         this.from = from;
         this.to = to;
+    }
+
+    public int size() {
+        return to - from + 1;
     }
 
     @Override
@@ -64,4 +69,9 @@ public class BytesRange {
     public static BytesRange of(final int from, final int to) {
         return new BytesRange(from, to);
     }
+
+    public static BytesRange ofFromPositionAndSize(final int from, final int size) {
+        return new BytesRange(from, from + size - 1);
+    }
+
 }
