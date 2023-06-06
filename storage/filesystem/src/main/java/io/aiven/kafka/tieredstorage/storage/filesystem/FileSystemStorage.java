@@ -24,6 +24,8 @@ import java.nio.file.NoSuchFileException;
 import java.nio.file.Path;
 import java.util.Map;
 
+import org.apache.kafka.common.config.ConfigException;
+
 import io.aiven.kafka.tieredstorage.storage.BytesRange;
 import io.aiven.kafka.tieredstorage.storage.InvalidRangeException;
 import io.aiven.kafka.tieredstorage.storage.KeyNotFoundException;
@@ -41,8 +43,15 @@ public class FileSystemStorage implements StorageBackend {
     public void configure(final Map<String, ?> configs) {
         final FileSystemStorageConfig config = new FileSystemStorageConfig(configs);
         this.fsRoot = config.root();
+        if (!Files.exists(fsRoot)) {
+            try {
+                Files.createDirectories(fsRoot);
+            } catch (final IOException e) {
+                throw new ConfigException("Failed to try to create root directory", e);
+            }
+        }
         if (!Files.isDirectory(fsRoot) || !Files.isWritable(fsRoot)) {
-            throw new IllegalArgumentException(fsRoot + " must be a writable directory");
+            throw new ConfigException(fsRoot + " must be a writable directory");
         }
     }
 

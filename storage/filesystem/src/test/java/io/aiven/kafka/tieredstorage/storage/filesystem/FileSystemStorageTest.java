@@ -21,6 +21,8 @@ import java.nio.file.Files;
 import java.nio.file.Path;
 import java.util.Map;
 
+import org.apache.kafka.common.config.ConfigException;
+
 import io.aiven.kafka.tieredstorage.storage.BaseStorageTest;
 import io.aiven.kafka.tieredstorage.storage.StorageBackend;
 import io.aiven.kafka.tieredstorage.storage.StorageBackendException;
@@ -44,6 +46,17 @@ class FileSystemStorageTest extends BaseStorageTest {
     }
 
     @Test
+    void testRootIsCreatedIfNotExist() throws IOException {
+        final Path newDir = Files.createTempDirectory("root");
+        Files.deleteIfExists(newDir);
+        assertThat(newDir).doesNotExist();
+
+        final FileSystemStorage storage = new FileSystemStorage();
+        storage.configure(Map.of("root", newDir.toString()));
+        assertThat(newDir).exists();
+    }
+
+    @Test
     void testRootCannotBeAFile() throws IOException {
         final Path wrongRoot = root.resolve("file_instead");
         Files.writeString(wrongRoot, "Wrong root");
@@ -52,7 +65,7 @@ class FileSystemStorageTest extends BaseStorageTest {
             final FileSystemStorage storage = new FileSystemStorage();
             storage.configure(Map.of("root", wrongRoot.toString()));
         })
-            .isInstanceOf(IllegalArgumentException.class)
+            .isInstanceOf(ConfigException.class)
             .hasMessage(wrongRoot + " must be a writable directory");
     }
 
@@ -65,7 +78,7 @@ class FileSystemStorageTest extends BaseStorageTest {
             final FileSystemStorage storage = new FileSystemStorage();
             storage.configure(Map.of("root", nonWritableDir.toString()));
         })
-            .isInstanceOf(IllegalArgumentException.class)
+            .isInstanceOf(ConfigException.class)
             .hasMessage(nonWritableDir + " must be a writable directory");
     }
 
