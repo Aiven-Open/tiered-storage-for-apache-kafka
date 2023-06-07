@@ -36,6 +36,8 @@ import org.apache.kafka.common.metrics.KafkaMetricsContext;
 import org.apache.kafka.common.metrics.MetricConfig;
 import org.apache.kafka.common.metrics.Metrics;
 import org.apache.kafka.common.metrics.Sensor;
+import org.apache.kafka.common.metrics.stats.Avg;
+import org.apache.kafka.common.metrics.stats.Max;
 import org.apache.kafka.common.metrics.stats.Rate;
 import org.apache.kafka.common.utils.ByteBufferInputStream;
 import org.apache.kafka.common.utils.Time;
@@ -79,8 +81,12 @@ import static org.apache.kafka.server.log.remote.storage.RemoteStorageManager.In
 public class RemoteStorageManager implements org.apache.kafka.server.log.remote.storage.RemoteStorageManager {
     private static final Logger log = LoggerFactory.getLogger(RemoteStorageManager.class);
 
+    private final Time time;
+
     private final Metrics metrics;
     private final Sensor segmentCopyPerSec;
+    private final Sensor segmentCopyTime;
+    private final Sensor segmentFetchPerSec;
 
     private final Executor executor = new ForkJoinPool();
 
@@ -105,14 +111,23 @@ public class RemoteStorageManager implements org.apache.kafka.server.log.remote.
 
     // for testing
     RemoteStorageManager(final Time time) {
+        this.time = time;
+
         final JmxReporter reporter = new JmxReporter();
         metrics = new Metrics(
             new MetricConfig(), List.of(reporter), time,
             new KafkaMetricsContext("aiven.kafka.server.tieredstorage")
         );
         segmentCopyPerSec = metrics.sensor("segment-copy");
-        segmentCopyPerSec.add(
-            metrics.metricName("segment-copy-rate", "remote-storage-manager-metrics"), new Rate());
+        final String metricGroup = "remote-storage-manager-metrics";
+        segmentCopyPerSec.add(metrics.metricName("segment-copy-rate", metricGroup), new Rate());
+
+        segmentCopyTime = metrics.sensor("segment-copy-time");
+        segmentCopyTime.add(metrics.metricName("segment-copy-time-avg", metricGroup), new Avg());
+        segmentCopyTime.add(metrics.metricName("segment-copy-time-max", metricGroup), new Max());
+
+        segmentFetchPerSec = metrics.sensor("segment-fetch");
+        segmentFetchPerSec.add(metrics.metricName("segment-fetch-rate", metricGroup), new Rate());
     }
 
     @Override
@@ -174,6 +189,8 @@ public class RemoteStorageManager implements org.apache.kafka.server.log.remote.
 
         segmentCopyPerSec.record();
 
+        final long startedMs = time.milliseconds();
+
         try {
             TransformChunkEnumeration transformEnum = new BaseTransformChunkEnumeration(
                 Files.newInputStream(logSegmentData.logSegment()), chunkSize);
@@ -213,6 +230,8 @@ public class RemoteStorageManager implements org.apache.kafka.server.log.remote.
         } catch (final StorageBackendException | IOException e) {
             throw new RemoteStorageException(e);
         }
+
+        segmentCopyTime.record(time.milliseconds() - startedMs);
     }
 
     boolean requiresCompression(final LogSegmentData logSegmentData) {
@@ -278,6 +297,8 @@ public class RemoteStorageManager implements org.apache.kafka.server.log.remote.
     public InputStream fetchLogSegment(final RemoteLogSegmentMetadata remoteLogSegmentMetadata,
                                        final int startPosition,
                                        final int endPosition) throws RemoteStorageException {
+        segmentFetchPerSec.record();
+
         try {
             final SegmentManifest segmentManifest = segmentManifestProvider.get(remoteLogSegmentMetadata);
 

@@ -21,6 +21,7 @@ import javax.management.MBeanServer;
 import javax.management.ObjectName;
 
 import java.io.IOException;
+import java.io.InputStream;
 import java.lang.management.ManagementFactory;
 import java.nio.ByteBuffer;
 import java.nio.file.Files;
@@ -96,14 +97,24 @@ class RemoteStorageManagerMetricsTest {
     }
 
     @Test
-    void metricsShouldBeReported() throws RemoteStorageException, JMException {
+    void metricsShouldBeReported() throws RemoteStorageException, JMException, IOException {
         rsm.copyLogSegmentData(REMOTE_LOG_SEGMENT_METADATA, logSegmentData);
         rsm.copyLogSegmentData(REMOTE_LOG_SEGMENT_METADATA, logSegmentData);
         rsm.copyLogSegmentData(REMOTE_LOG_SEGMENT_METADATA, logSegmentData);
+
+        final InputStream resultInputStream = rsm.fetchLogSegment(REMOTE_LOG_SEGMENT_METADATA, 0);
 
         final ObjectName segmentCopyPerSecName = ObjectName.getInstance(
             "aiven.kafka.server.tieredstorage:type=remote-storage-manager-metrics");
         assertThat((double) MBEAN_SERVER.getAttribute(segmentCopyPerSecName, "segment-copy-rate"))
             .isEqualTo(3.0 / METRIC_TIME_WINDOW_SEC);
+
+        assertThat((double) MBEAN_SERVER.getAttribute(segmentCopyPerSecName, "segment-copy-time-avg"))
+            .isZero();
+        assertThat((double) MBEAN_SERVER.getAttribute(segmentCopyPerSecName, "segment-copy-time-max"))
+            .isZero();
+
+        assertThat((double) MBEAN_SERVER.getAttribute(segmentCopyPerSecName, "segment-fetch-rate"))
+            .isEqualTo(1.0 / METRIC_TIME_WINDOW_SEC);
     }
 }
