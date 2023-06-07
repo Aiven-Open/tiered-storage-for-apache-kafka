@@ -111,7 +111,7 @@ public class FetchChunkEnumeration implements Enumeration<InputStream> {
             final int toSkip = range.from - chunkStartPosition;
             try {
                 chunkContent.skip(toSkip);
-                final int chunkSize = range.to - range.from + 1;
+                final int chunkSize = range.size();
                 chunkContent = new BoundedInputStream(chunkContent, chunkSize);
             } catch (final IOException e) {
                 throw new RuntimeException(e);
