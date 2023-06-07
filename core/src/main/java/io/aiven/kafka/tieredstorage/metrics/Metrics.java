@@ -16,6 +16,7 @@
 
 package io.aiven.kafka.tieredstorage.metrics;
 
+import java.io.InputStream;
 import java.util.List;
 
 import org.apache.kafka.common.metrics.JmxReporter;
@@ -39,6 +40,7 @@ public class Metrics {
     private final Sensor segmentCopyPerSec;
     private final Sensor segmentCopyTime;
     private final Sensor segmentFetchPerSec;
+    private final Sensor segmentFetchToFirstByteFromRemoteTime;
 
     public Metrics(final Time time) {
         this.time = time;
@@ -59,6 +61,14 @@ public class Metrics {
 
         segmentFetchPerSec = metrics.sensor("segment-fetch");
         segmentFetchPerSec.add(metrics.metricName("segment-fetch-rate", metricGroup), new Rate());
+
+        // Measures the time between the first byte(s) of a segment was requested from the remote storage and
+        // it's being available.
+        segmentFetchToFirstByteFromRemoteTime = metrics.sensor("segment-fetch-to-first-byte-from-remote-time");
+        segmentFetchToFirstByteFromRemoteTime.add(
+            metrics.metricName("segment-fetch-to-first-byte-from-remote-time-avg", metricGroup), new Avg());
+        segmentFetchToFirstByteFromRemoteTime.add(metrics.metricName(
+            "segment-fetch-to-first-byte-from-remote-time-max", metricGroup), new Max());
     }
 
     public void recordSegmentCopy() {
@@ -71,6 +81,10 @@ public class Metrics {
 
     public void recordSegmentFetch() {
         segmentFetchPerSec.record();
+    }
+
+    public InputStream measureInputStreamFromRemote(final InputStream inputStream) {
+        return new TimeToFirstByteMeasuringInputStream(inputStream, time, segmentFetchToFirstByteFromRemoteTime);
     }
 
     public void close() {

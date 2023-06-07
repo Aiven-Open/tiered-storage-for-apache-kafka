@@ -71,7 +71,7 @@ class ChunkManagerTest extends AesKeyAwareTest {
         final FixedSizeChunkIndex chunkIndex = new FixedSizeChunkIndex(10, 10, 10, 10);
 
         final SegmentManifest manifest = new SegmentManifestV1(chunkIndex, false, null);
-        final ChunkManager chunkManager = new ChunkManager(storage, objectKey, null, null);
+        final ChunkManager chunkManager = new ChunkManager(storage, objectKey, null, null, null);
         when(storage.fetch("test.log", chunkIndex.chunks().get(0).range()))
             .thenReturn(new ByteArrayInputStream("0123456789".getBytes()));
 
@@ -96,7 +96,8 @@ class ChunkManagerTest extends AesKeyAwareTest {
             storage,
             objectKey,
             null,
-            new UnboundInMemoryChunkCache()
+            new UnboundInMemoryChunkCache(),
+            null
         );
 
         assertThat(chunkManager.getChunk(remoteLogSegmentMetadata, manifest, 0)).hasContent("0123456789");
@@ -133,7 +134,8 @@ class ChunkManagerTest extends AesKeyAwareTest {
             storage,
             objectKey,
             aesEncryptionProvider,
-            new UnboundInMemoryChunkCache()
+            new UnboundInMemoryChunkCache(),
+            null
         );
 
         assertThat(chunkManager.getChunk(remoteLogSegmentMetadata, manifest, 0)).hasBinaryContent(TEST_CHUNK_CONTENT);
@@ -166,7 +168,8 @@ class ChunkManagerTest extends AesKeyAwareTest {
             storage,
             objectKey,
             null,
-            new UnboundInMemoryChunkCache()
+            new UnboundInMemoryChunkCache(),
+            null
         );
 
         assertThat(chunkManager.getChunk(remoteLogSegmentMetadata, manifest, 0)).hasBinaryContent(TEST_CHUNK_CONTENT);

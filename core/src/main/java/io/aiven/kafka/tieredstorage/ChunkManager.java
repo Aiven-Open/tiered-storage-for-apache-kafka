@@ -28,6 +28,7 @@ import org.apache.kafka.server.log.remote.storage.RemoteLogSegmentMetadata;
 import io.aiven.kafka.tieredstorage.cache.ChunkCache;
 import io.aiven.kafka.tieredstorage.manifest.SegmentEncryptionMetadata;
 import io.aiven.kafka.tieredstorage.manifest.SegmentManifest;
+import io.aiven.kafka.tieredstorage.metrics.Metrics;
 import io.aiven.kafka.tieredstorage.security.AesEncryptionProvider;
 import io.aiven.kafka.tieredstorage.storage.ObjectFetcher;
 import io.aiven.kafka.tieredstorage.storage.StorageBackendException;
@@ -44,15 +45,18 @@ public class ChunkManager {
     private final ObjectKey objectKey;
     private final AesEncryptionProvider aesEncryptionProvider;
     private final ChunkCache chunkCache;
+    private final Metrics metrics;
 
     public ChunkManager(final ObjectFetcher fetcher,
                         final ObjectKey objectKey,
                         final AesEncryptionProvider aesEncryptionProvider,
-                        final ChunkCache chunkCache) {
+                        final ChunkCache chunkCache,
+                        final Metrics metrics) {
         this.fetcher = fetcher;
         this.objectKey = objectKey;
         this.aesEncryptionProvider = aesEncryptionProvider;
         this.chunkCache = chunkCache;
+        this.metrics = metrics;
     }
 
     /**
@@ -114,6 +118,12 @@ public class ChunkManager {
     private InputStream getChunkFromStorage(final RemoteLogSegmentMetadata remoteLogSegmentMetadata,
                                             final Chunk chunk) throws StorageBackendException {
         final String segmentKey = objectKey.key(remoteLogSegmentMetadata, ObjectKey.Suffix.LOG);
-        return fetcher.fetch(segmentKey, chunk.range());
+        final InputStream inputStream = fetcher.fetch(segmentKey, chunk.range());
+
+        if (metrics != null) {
+            return metrics.measureInputStreamFromRemote(inputStream);
+        } else {
+            return inputStream;
+        }
     }
 }

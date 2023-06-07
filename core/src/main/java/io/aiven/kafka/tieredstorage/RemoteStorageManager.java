@@ -124,7 +124,8 @@ public class RemoteStorageManager implements org.apache.kafka.server.log.remote.
             fetcher,
             objectKey,
             aesEncryptionProvider,
-            config.chunkCache()
+            config.chunkCache(),
+            metrics
         );
 
         chunkSize = config.chunkSize();
@@ -301,6 +302,10 @@ public class RemoteStorageManager implements org.apache.kafka.server.log.remote.
             }
         }
 
+    }
+
+    private InputStream timeToFirstByteMeasureWrapper(final InputStream is) {
+        return is;
     }
 
     @Override

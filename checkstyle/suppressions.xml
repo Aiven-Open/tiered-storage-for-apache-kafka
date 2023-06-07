@@ -26,6 +26,7 @@
     <suppress checks="ClassDataAbstractionCoupling" files="S3RemoteStorageManagerConfig.java"/>
     <suppress checks="ClassDataAbstractionCoupling" files="S3StorageConfig.java"/>
     <suppress checks="ClassDataAbstractionCoupling" files="ChunkManager.java"/>
+    <suppress checks="ClassDataAbstractionCoupling" files="Metrics.java"/>
     <suppress checks="AbbreviationAsWordInName" files="DataKeyAndAADEqualsTest"/>
     <suppress checks="ClassDataAbstractionCoupling" files="RemoteStorageManager.java"/>
 </suppressions>

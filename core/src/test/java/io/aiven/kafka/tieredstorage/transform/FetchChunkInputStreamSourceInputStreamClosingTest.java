@@ -96,7 +96,7 @@ class FetchChunkInputStreamSourceInputStreamClosingTest {
     void test(final ChunkCache chunkCache,
               final boolean readFully,
               final BytesRange range) throws StorageBackendException, IOException {
-        final var chunkManager = new ChunkManager(fetcher, objectKey, null, chunkCache);
+        final var chunkManager = new ChunkManager(fetcher, objectKey, null, chunkCache, null);
         final var is = new FetchChunkInputStream(chunkManager, REMOTE_LOG_SEGMENT_METADATA, SEGMENT_MANIFEST, range);
         if (readFully) {
             is.readAllBytes();

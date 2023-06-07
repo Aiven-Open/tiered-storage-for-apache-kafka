@@ -116,5 +116,12 @@ class RemoteStorageManagerMetricsTest {
 
         assertThat((double) MBEAN_SERVER.getAttribute(segmentCopyPerSecName, "segment-fetch-rate"))
             .isEqualTo(1.0 / METRIC_TIME_WINDOW_SEC);
+
+        assertThat((double) MBEAN_SERVER.getAttribute(
+            segmentCopyPerSecName, "segment-fetch-to-first-byte-from-remote-time-avg"))
+            .isZero();
+        assertThat((double) MBEAN_SERVER.getAttribute(
+            segmentCopyPerSecName, "segment-fetch-to-first-byte-from-remote-time-max"))
+            .isZero();
     }
 }
