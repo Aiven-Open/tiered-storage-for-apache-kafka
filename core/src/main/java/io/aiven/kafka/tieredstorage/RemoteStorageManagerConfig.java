@@ -32,9 +32,8 @@ import io.aiven.kafka.tieredstorage.storage.StorageBackend;
 public class RemoteStorageManagerConfig extends AbstractConfig {
     private static final String STORAGE_PREFIX = "storage.";
 
-    private static final String STORAGE_BACKEND_CLASS_NAME_CONFIG = STORAGE_PREFIX + "backend.class.name";
-    private static final String STORAGE_BACKEND_CLASS_NAME_DOC = "The storage back-end implementation class name "
-        + "to instantiate";
+    private static final String STORAGE_BACKEND_CLASS_CONFIG = STORAGE_PREFIX + "backend.class";
+    private static final String STORAGE_BACKEND_CLASS_DOC = "The storage backend implementation class";
 
     private static final String OBJECT_KEY_PREFIX_CONFIG = "key.prefix";
     private static final String OBJECT_KEY_PREFIX_DOC = "The object storage path prefix";
@@ -83,11 +82,11 @@ public class RemoteStorageManagerConfig extends AbstractConfig {
         // TODO checkers
 
         CONFIG.define(
-            STORAGE_BACKEND_CLASS_NAME_CONFIG,
+            STORAGE_BACKEND_CLASS_CONFIG,
             ConfigDef.Type.CLASS,
             ConfigDef.NO_DEFAULT_VALUE,
             ConfigDef.Importance.HIGH,
-            STORAGE_BACKEND_CLASS_NAME_DOC
+            STORAGE_BACKEND_CLASS_DOC
         );
 
         CONFIG.define(
@@ -211,7 +210,7 @@ public class RemoteStorageManagerConfig extends AbstractConfig {
     }
 
     StorageBackend storage() {
-        final Class<?> storageClass = getClass(STORAGE_BACKEND_CLASS_NAME_CONFIG);
+        final Class<?> storageClass = getClass(STORAGE_BACKEND_CLASS_CONFIG);
         final StorageBackend storage = Utils.newInstance(storageClass, StorageBackend.class);
         storage.configure(this.originalsWithPrefix(STORAGE_PREFIX));
         return storage;

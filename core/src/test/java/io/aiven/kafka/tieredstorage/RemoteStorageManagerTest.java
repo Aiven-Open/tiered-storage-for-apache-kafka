@@ -175,7 +175,7 @@ class RemoteStorageManagerTest extends RsaKeyAwareTest {
         // Configure the RSM.
         final Map<String, String> config = new HashMap<>(Map.of(
             "chunk.size", Integer.toString(chunkSize),
-            "storage.backend.class.name",
+            "storage.backend.class",
             "io.aiven.kafka.tieredstorage.storage.filesystem.FileSystemStorage",
             "key.prefix", "test/",
             "storage.root", targetDir.toString(),
@@ -403,7 +403,7 @@ class RemoteStorageManagerTest extends RsaKeyAwareTest {
         final int chunkSize = 1024 * 1024;
         final Map<String, ?> config = new HashMap<>(Map.of(
             "chunk.size", Integer.toString(chunkSize),
-            "storage.backend.class.name",
+            "storage.backend.class",
             "io.aiven.kafka.tieredstorage.storage.filesystem.FileSystemStorage",
             "key.prefix", "test/",
             "storage.root", targetDir.toString(),
