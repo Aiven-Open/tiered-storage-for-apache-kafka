@@ -96,7 +96,8 @@ class FetchChunkEnumerationSourceInputStreamClosingTest {
     void test(final ChunkCache chunkCache,
               final boolean readFully,
               final BytesRange range) throws StorageBackendException, IOException {
-        final var chunkManager = new ChunkManager(fetcher, objectKey, null, chunkCache);
+        final TransformPipeline transformPipeline = TransformPipeline.newBuilder().build();
+        final var chunkManager = new ChunkManager(fetcher, objectKey, chunkCache, transformPipeline);
         final var is = new FetchChunkEnumeration(chunkManager, REMOTE_LOG_SEGMENT_METADATA, SEGMENT_MANIFEST, range)
             .toInputStream();
         if (readFully) {

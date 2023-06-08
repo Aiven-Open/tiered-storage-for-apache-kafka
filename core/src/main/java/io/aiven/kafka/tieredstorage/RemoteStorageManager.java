@@ -16,9 +16,6 @@
 
 package io.aiven.kafka.tieredstorage;
 
-import javax.crypto.SecretKey;
-import javax.crypto.spec.SecretKeySpec;
-
 import java.io.ByteArrayInputStream;
 import java.io.File;
 import java.io.IOException;
@@ -35,31 +32,17 @@ import org.apache.kafka.server.log.remote.storage.LogSegmentData;
 import org.apache.kafka.server.log.remote.storage.RemoteLogSegmentMetadata;
 import org.apache.kafka.server.log.remote.storage.RemoteStorageException;
 
-import io.aiven.kafka.tieredstorage.manifest.SegmentEncryptionMetadataV1;
 import io.aiven.kafka.tieredstorage.manifest.SegmentManifest;
-import io.aiven.kafka.tieredstorage.manifest.SegmentManifestV1;
-import io.aiven.kafka.tieredstorage.manifest.index.ChunkIndex;
-import io.aiven.kafka.tieredstorage.manifest.serde.DataKeyDeserializer;
-import io.aiven.kafka.tieredstorage.manifest.serde.DataKeySerializer;
 import io.aiven.kafka.tieredstorage.metrics.Metrics;
-import io.aiven.kafka.tieredstorage.security.AesEncryptionProvider;
-import io.aiven.kafka.tieredstorage.security.DataKeyAndAAD;
-import io.aiven.kafka.tieredstorage.security.RsaEncryptionProvider;
 import io.aiven.kafka.tieredstorage.storage.BytesRange;
 import io.aiven.kafka.tieredstorage.storage.ObjectDeleter;
 import io.aiven.kafka.tieredstorage.storage.ObjectFetcher;
 import io.aiven.kafka.tieredstorage.storage.ObjectUploader;
 import io.aiven.kafka.tieredstorage.storage.StorageBackendException;
-import io.aiven.kafka.tieredstorage.transform.BaseTransformChunkEnumeration;
-import io.aiven.kafka.tieredstorage.transform.CompressionChunkEnumeration;
-import io.aiven.kafka.tieredstorage.transform.EncryptionChunkEnumeration;
 import io.aiven.kafka.tieredstorage.transform.FetchChunkEnumeration;
-import io.aiven.kafka.tieredstorage.transform.TransformChunkEnumeration;
 import io.aiven.kafka.tieredstorage.transform.TransformFinisher;
+import io.aiven.kafka.tieredstorage.transform.TransformPipeline;
 
-import com.fasterxml.jackson.databind.ObjectMapper;
-import com.fasterxml.jackson.databind.module.SimpleModule;
-import com.fasterxml.jackson.datatype.jdk8.Jdk8Module;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
@@ -83,13 +66,9 @@ public class RemoteStorageManager implements org.apache.kafka.server.log.remote.
     private ObjectDeleter deleter;
     private boolean compressionEnabled;
     private boolean compressionHeuristic;
-    private boolean encryptionEnabled;
-    private int chunkSize;
-    private RsaEncryptionProvider rsaEncryptionProvider;
-    private AesEncryptionProvider aesEncryptionProvider;
-    private ObjectMapper mapper;
     private ChunkManager chunkManager;
     private ObjectKey objectKey;
+    private TransformPipeline transformPipeline;
 
     private SegmentManifestProvider segmentManifestProvider;
 
@@ -111,47 +90,25 @@ public class RemoteStorageManager implements org.apache.kafka.server.log.remote.
         uploader = config.storage();
         deleter = config.storage();
         objectKey = new ObjectKey(config.keyPrefix());
-        encryptionEnabled = config.encryptionEnabled();
-        if (encryptionEnabled) {
-            rsaEncryptionProvider = RsaEncryptionProvider.of(
-                config.encryptionPublicKeyFile(),
-                config.encryptionPrivateKeyFile()
-            );
-            aesEncryptionProvider = new AesEncryptionProvider();
-        }
-        chunkManager = new ChunkManager(
-            fetcher,
-            objectKey,
-            aesEncryptionProvider,
-            config.chunkCache()
-        );
 
-        chunkSize = config.chunkSize();
         compressionEnabled = config.compressionEnabled();
         compressionHeuristic = config.compressionHeuristicEnabled();
 
-        mapper = getObjectMapper();
+        transformPipeline = TransformPipeline.newBuilder().fromConfig(config).build();
 
+        chunkManager = new ChunkManager(
+            fetcher,
+            objectKey,
+            config.chunkCache(),
+            transformPipeline
+        );
         segmentManifestProvider = new SegmentManifestProvider(
             objectKey,
             config.segmentManifestCacheSize(),
             config.segmentManifestCacheRetention(),
             fetcher,
-            mapper,
+            transformPipeline.objectMapper(),
             executor);
-    }
-
-    private ObjectMapper getObjectMapper() {
-        final ObjectMapper objectMapper = new ObjectMapper();
-        objectMapper.registerModule(new Jdk8Module());
-        if (encryptionEnabled) {
-            final SimpleModule simpleModule = new SimpleModule();
-            simpleModule.addSerializer(SecretKey.class, new DataKeySerializer(rsaEncryptionProvider::encryptDataKey));
-            simpleModule.addDeserializer(SecretKey.class, new DataKeyDeserializer(
-                b -> new SecretKeySpec(rsaEncryptionProvider.decryptDataKey(b), "AES")));
-            objectMapper.registerModule(simpleModule);
-        }
-        return objectMapper;
     }
 
     @Override
@@ -165,27 +122,11 @@ public class RemoteStorageManager implements org.apache.kafka.server.log.remote.
         final long startedMs = time.milliseconds();
 
         try {
-            TransformChunkEnumeration transformEnum = new BaseTransformChunkEnumeration(
-                Files.newInputStream(logSegmentData.logSegment()), chunkSize);
-            SegmentEncryptionMetadataV1 encryptionMetadata = null;
-            final boolean requiresCompression = requiresCompression(logSegmentData);
-            if (requiresCompression) {
-                transformEnum = new CompressionChunkEnumeration(transformEnum);
-            }
-            if (encryptionEnabled) {
-                final DataKeyAndAAD dataKeyAndAAD = aesEncryptionProvider.createDataKeyAndAAD();
-                transformEnum = new EncryptionChunkEnumeration(
-                    transformEnum,
-                    () -> aesEncryptionProvider.encryptionCipher(dataKeyAndAAD));
-                encryptionMetadata = new SegmentEncryptionMetadataV1(dataKeyAndAAD.dataKey, dataKeyAndAAD.aad);
-            }
-            final TransformFinisher transformFinisher =
-                new TransformFinisher(transformEnum, remoteLogSegmentMetadata.segmentSizeInBytes());
+            final var inboundTransformChain = transformPipeline.inboundTransformChain(logSegmentData.logSegment());
+            final var transformFinisher = inboundTransformChain.complete();
             uploadSegmentLog(remoteLogSegmentMetadata, transformFinisher);
 
-            final ChunkIndex chunkIndex = transformFinisher.chunkIndex();
-            final SegmentManifest segmentManifest =
-                new SegmentManifestV1(chunkIndex, requiresCompression, encryptionMetadata);
+            final SegmentManifest segmentManifest = transformPipeline.segmentManifest(transformFinisher.chunkIndex());
             uploadManifest(remoteLogSegmentMetadata, segmentManifest);
 
             final InputStream offsetIndex = Files.newInputStream(logSegmentData.offsetIndex());
@@ -248,10 +189,9 @@ public class RemoteStorageManager implements org.apache.kafka.server.log.remote.
     private void uploadManifest(final RemoteLogSegmentMetadata remoteLogSegmentMetadata,
                                 final SegmentManifest segmentManifest)
         throws StorageBackendException, IOException {
-        final String manifest = mapper.writeValueAsString(segmentManifest);
-        final String manifestFileKey = objectKey.key(remoteLogSegmentMetadata, ObjectKey.Suffix.MANIFEST);
-
-        try (final ByteArrayInputStream manifestContent = new ByteArrayInputStream(manifest.getBytes())) {
+        final byte[] manifestBytes = transformPipeline.objectMapper().writeValueAsBytes(segmentManifest);
+        try (final var manifestContent = new ByteArrayInputStream(manifestBytes)) {
+            final String manifestFileKey = objectKey.key(remoteLogSegmentMetadata, ObjectKey.Suffix.MANIFEST);
             uploader.upload(manifestContent, manifestFileKey);
         }
     }
