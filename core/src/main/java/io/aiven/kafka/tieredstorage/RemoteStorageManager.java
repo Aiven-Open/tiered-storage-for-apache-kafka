@@ -62,7 +62,7 @@ import io.aiven.kafka.tieredstorage.storage.StorageBackendException;
 import io.aiven.kafka.tieredstorage.transform.BaseTransformChunkEnumeration;
 import io.aiven.kafka.tieredstorage.transform.CompressionChunkEnumeration;
 import io.aiven.kafka.tieredstorage.transform.EncryptionChunkEnumeration;
-import io.aiven.kafka.tieredstorage.transform.FetchChunkEnumeration;
+import io.aiven.kafka.tieredstorage.transform.FetchChunkInputStream;
 import io.aiven.kafka.tieredstorage.transform.TransformChunkEnumeration;
 import io.aiven.kafka.tieredstorage.transform.TransformFinisher;
 
@@ -306,13 +306,7 @@ public class RemoteStorageManager implements org.apache.kafka.server.log.remote.
                 startPosition,
                 Math.min(endPosition, remoteLogSegmentMetadata.segmentSizeInBytes() - 1)
             );
-            final FetchChunkEnumeration fetchChunkEnumeration = new FetchChunkEnumeration(
-                chunkManager,
-                remoteLogSegmentMetadata,
-                segmentManifest,
-                range
-            );
-            return new SequenceInputStream(fetchChunkEnumeration);
+            return new FetchChunkInputStream(chunkManager, remoteLogSegmentMetadata, segmentManifest, range);
         } catch (final StorageBackendException | IOException e) {
             throw new RemoteStorageException(e);
         }

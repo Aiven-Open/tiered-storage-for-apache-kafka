@@ -34,6 +34,7 @@ import io.aiven.kafka.tieredstorage.Chunk;
  */
 public class BaseDetransformChunkEnumeration implements DetransformChunkEnumeration {
     private final InputStream inputStream;
+    private boolean inputStreamClosed = false;
     private final Iterator<Chunk> chunksIter;
 
     private byte[] chunk = null;
@@ -69,7 +70,21 @@ public class BaseDetransformChunkEnumeration implements DetransformChunkEnumerat
 
         if (!chunksIter.hasNext()) {
             chunk = new byte[0];
+
+            if (!inputStreamClosed) {
+                try {
+                    inputStream.close();
+                    inputStreamClosed = true;
+                } catch (final IOException e) {
+                    throw new RuntimeException(e);
+                }
+            }
+
             return;
+        } else {
+            if (inputStreamClosed) {
+                throw new RuntimeException("Input stream already closed");
+            }
         }
 
         try {
