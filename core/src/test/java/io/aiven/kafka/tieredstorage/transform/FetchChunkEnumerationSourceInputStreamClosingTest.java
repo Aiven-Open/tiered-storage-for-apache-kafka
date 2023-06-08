@@ -56,7 +56,7 @@ import static org.mockito.Mockito.verify;
 import static org.mockito.Mockito.when;
 
 @ExtendWith(MockitoExtension.class)
-class FetchChunkInputStreamSourceInputStreamClosingTest {
+class FetchChunkEnumerationSourceInputStreamClosingTest {
     static final RemoteLogSegmentId REMOTE_LOG_SEGMENT_ID = new RemoteLogSegmentId(
         new TopicIdPartition(Uuid.METADATA_TOPIC_ID, new TopicPartition("topic", 7)),
         Uuid.ZERO_UUID);
@@ -97,7 +97,8 @@ class FetchChunkInputStreamSourceInputStreamClosingTest {
               final boolean readFully,
               final BytesRange range) throws StorageBackendException, IOException {
         final var chunkManager = new ChunkManager(fetcher, objectKey, null, chunkCache);
-        final var is = new FetchChunkInputStream(chunkManager, REMOTE_LOG_SEGMENT_METADATA, SEGMENT_MANIFEST, range);
+        final var is = new FetchChunkEnumeration(chunkManager, REMOTE_LOG_SEGMENT_METADATA, SEGMENT_MANIFEST, range)
+            .toInputStream();
         if (readFully) {
             is.readAllBytes();
         } else {

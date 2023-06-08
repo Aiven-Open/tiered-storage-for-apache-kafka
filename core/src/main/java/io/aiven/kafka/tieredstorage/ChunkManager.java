@@ -19,7 +19,6 @@ package io.aiven.kafka.tieredstorage;
 import java.io.ByteArrayInputStream;
 import java.io.IOException;
 import java.io.InputStream;
-import java.io.SequenceInputStream;
 import java.util.List;
 import java.util.Optional;
 
@@ -77,7 +76,7 @@ public class ChunkManager {
             detransformEnum = new DecompressionChunkEnumeration(detransformEnum);
         }
         final DetransformFinisher detransformFinisher = new DetransformFinisher(detransformEnum);
-        return new SequenceInputStream(detransformFinisher);
+        return detransformFinisher.toInputStream();
     }
 
     private InputStream getChunkContent(final RemoteLogSegmentMetadata remoteLogSegmentMetadata,
