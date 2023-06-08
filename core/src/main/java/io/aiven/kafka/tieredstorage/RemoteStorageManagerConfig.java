@@ -243,27 +243,27 @@ public class RemoteStorageManagerConfig extends AbstractConfig {
         }
     }
 
-    String keyPrefix() {
+    public String keyPrefix() {
         return getString(OBJECT_KEY_PREFIX_CONFIG);
     }
 
-    int chunkSize() {
+    public int chunkSize() {
         return getInt(CHUNK_SIZE_CONFIG);
     }
 
-    boolean compressionEnabled() {
+    public boolean compressionEnabled() {
         return getBoolean(COMPRESSION_ENABLED_CONFIG);
     }
 
-    boolean compressionHeuristicEnabled() {
+    public boolean compressionHeuristicEnabled() {
         return getBoolean(COMPRESSION_HEURISTIC_ENABLED_CONFIG);
     }
 
-    boolean encryptionEnabled() {
+    public boolean encryptionEnabled() {
         return getBoolean(ENCRYPTION_CONFIG);
     }
 
-    Path encryptionPublicKeyFile() {
+    public Path encryptionPublicKeyFile() {
         final String value = getString(ENCRYPTION_PUBLIC_KEY_FILE_CONFIG);
         if (value == null) {
             return null;
@@ -271,7 +271,7 @@ public class RemoteStorageManagerConfig extends AbstractConfig {
         return Path.of(value);
     }
 
-    Path encryptionPrivateKeyFile() {
+    public Path encryptionPrivateKeyFile() {
         final String value = getString(ENCRYPTION_PRIVATE_KEY_FILE_CONFIG);
         if (value == null) {
             return null;
