@@ -18,10 +18,12 @@ package io.aiven.kafka.tieredstorage.transform;
 
 import java.io.ByteArrayInputStream;
 import java.io.IOException;
+import java.util.List;
 import java.util.Random;
 
-import io.aiven.kafka.tieredstorage.AesKeyAwareTest;
-import io.aiven.kafka.tieredstorage.manifest.index.ChunkIndex;
+import io.aiven.kafka.tieredstorage.Chunk;
+import io.aiven.kafka.tieredstorage.RsaKeyAwareTest;
+import io.aiven.kafka.tieredstorage.manifest.SegmentManifest;
 
 import org.junit.jupiter.api.BeforeAll;
 import org.junit.jupiter.params.ParameterizedTest;
@@ -29,7 +31,7 @@ import org.junit.jupiter.params.provider.ValueSource;
 
 import static org.assertj.core.api.Assertions.assertThat;
 
-public class TransformsEndToEndTest extends AesKeyAwareTest {
+public class TransformPipelineTest extends RsaKeyAwareTest {
     static final int ORIGINAL_SIZE = 1812004;
 
     static byte[] original;
@@ -37,66 +39,65 @@ public class TransformsEndToEndTest extends AesKeyAwareTest {
     @BeforeAll
     static void init() {
         original = new byte[ORIGINAL_SIZE];
-        final var random = new Random();
+        final Random random = new Random();
         random.nextBytes(original);
     }
 
     @ParameterizedTest
     @ValueSource(ints = {1, 2, 3, 5, 13, 1024, 1024 * 2, 1024 * 5 + 3, ORIGINAL_SIZE - 1, ORIGINAL_SIZE * 2})
     void plaintext(final int chunkSize) throws IOException {
-        test(chunkSize, false, false);
+        test(TransformPipeline.newBuilder().withChunkSize(chunkSize).build());
     }
 
     @ParameterizedTest
     // Small chunks would make encryption and compression tests very slow, skipping them
     @ValueSource(ints = {1024 - 1, 1024, 1024 * 2 + 2, 1024 * 5 + 3, ORIGINAL_SIZE - 1, ORIGINAL_SIZE * 2})
     void encryption(final int chunkSize) throws IOException {
-        test(chunkSize, false, true);
+        test(TransformPipeline.newBuilder()
+            .withChunkSize(chunkSize)
+            .withEncryption(publicKeyPem, privateKeyPem)
+            .build());
     }
 
     @ParameterizedTest
     // Small chunks would make compression tests going very slowly, skipping them
     @ValueSource(ints = {1024 - 1, 1024, 1024 * 2 + 2, 1024 * 5 + 3, ORIGINAL_SIZE - 1, ORIGINAL_SIZE * 2})
     void compression(final int chunkSize) throws IOException {
-        test(chunkSize, true, false);
+        test(TransformPipeline.newBuilder()
+            .withChunkSize(chunkSize)
+            .withCompression()
+            .build());
     }
 
     @ParameterizedTest
     // Small chunks would make compression tests going very slowly, skipping them
     @ValueSource(ints = {1024 - 1, 1024, 1024 * 2 + 2, 1024 * 5 + 3, ORIGINAL_SIZE - 1, ORIGINAL_SIZE * 2})
     void compressionAndEncryption(final int chunkSize) throws IOException {
-        test(chunkSize, true, true);
+        test(TransformPipeline.newBuilder()
+            .withChunkSize(chunkSize)
+            .withCompression()
+            .withEncryption(publicKeyPem, privateKeyPem)
+            .build());
     }
 
-    private void test(final int chunkSize, final boolean compression, final boolean encryption) throws IOException {
+    private void test(final TransformPipeline pipeline) throws IOException {
         // Transform.
-        TransformChunkEnumeration transformEnum = new BaseTransformChunkEnumeration(
-            new ByteArrayInputStream(original), chunkSize);
-        if (compression) {
-            transformEnum = new CompressionChunkEnumeration(transformEnum);
-        }
-        if (encryption) {
-            transformEnum = new EncryptionChunkEnumeration(transformEnum, AesKeyAwareTest::encryptionCipherSupplier);
-        }
-        final var transformFinisher = new TransformFinisher(transformEnum, ORIGINAL_SIZE);
+        final ByteArrayInputStream inputContent = new ByteArrayInputStream(original);
+        final InboundTransformChain inboundTransformChain = pipeline.inboundTransformChain(inputContent, ORIGINAL_SIZE);
+        final TransformFinisher transformFinisher = inboundTransformChain.complete();
+
         final byte[] uploadedData;
-        final ChunkIndex chunkIndex;
         try (final var sis = transformFinisher.toInputStream()) {
             uploadedData = sis.readAllBytes();
-            chunkIndex = transformFinisher.chunkIndex();
         }
 
         // Detransform.
-        DetransformChunkEnumeration detransformEnum = new BaseDetransformChunkEnumeration(
-            new ByteArrayInputStream(uploadedData), chunkIndex.chunks());
-        if (encryption) {
-            detransformEnum = new DecryptionChunkEnumeration(
-                detransformEnum, ivSize, AesKeyAwareTest::decryptionCipherSupplier);
-        }
-        if (compression) {
-            detransformEnum = new DecompressionChunkEnumeration(detransformEnum);
-        }
-        final var detransformFinisher = new DetransformFinisher(detransformEnum);
+        final SegmentManifest segmentManifest = pipeline.segmentManifest(transformFinisher.chunkIndex());
+        final ByteArrayInputStream uploadedContent = new ByteArrayInputStream(uploadedData);
+        final List<Chunk> chunks = segmentManifest.chunkIndex().chunks();
+        final OutboundTransformChain outboundTransformChain =
+            pipeline.outboundTransformChain(uploadedContent, segmentManifest, chunks);
+        final var detransformFinisher = outboundTransformChain.complete();
         try (final var sis = detransformFinisher.toInputStream()) {
             final byte[] downloaded = sis.readAllBytes();
             assertThat(downloaded).isEqualTo(original);
