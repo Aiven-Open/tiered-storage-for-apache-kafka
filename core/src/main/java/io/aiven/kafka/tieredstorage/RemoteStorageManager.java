@@ -23,7 +23,6 @@ import java.io.ByteArrayInputStream;
 import java.io.File;
 import java.io.IOException;
 import java.io.InputStream;
-import java.io.SequenceInputStream;
 import java.nio.file.Files;
 import java.util.Map;
 import java.util.Objects;
@@ -54,7 +53,7 @@ import io.aiven.kafka.tieredstorage.storage.StorageBackendException;
 import io.aiven.kafka.tieredstorage.transform.BaseTransformChunkEnumeration;
 import io.aiven.kafka.tieredstorage.transform.CompressionChunkEnumeration;
 import io.aiven.kafka.tieredstorage.transform.EncryptionChunkEnumeration;
-import io.aiven.kafka.tieredstorage.transform.FetchChunkInputStream;
+import io.aiven.kafka.tieredstorage.transform.FetchChunkEnumeration;
 import io.aiven.kafka.tieredstorage.transform.TransformChunkEnumeration;
 import io.aiven.kafka.tieredstorage.transform.TransformFinisher;
 
@@ -231,7 +230,7 @@ public class RemoteStorageManager implements org.apache.kafka.server.log.remote.
                                   final TransformFinisher transformFinisher)
         throws IOException, StorageBackendException {
         final String fileKey = objectKey.key(remoteLogSegmentMetadata, ObjectKey.Suffix.LOG);
-        try (final var sis = new SequenceInputStream(transformFinisher)) {
+        try (final var sis = transformFinisher.toInputStream()) {
             uploader.upload(sis, fileKey);
         }
     }
@@ -280,7 +279,8 @@ public class RemoteStorageManager implements org.apache.kafka.server.log.remote.
                 startPosition,
                 Math.min(endPosition, remoteLogSegmentMetadata.segmentSizeInBytes() - 1)
             );
-            return new FetchChunkInputStream(chunkManager, remoteLogSegmentMetadata, segmentManifest, range);
+            return new FetchChunkEnumeration(chunkManager, remoteLogSegmentMetadata, segmentManifest, range)
+                .toInputStream();
         } catch (final StorageBackendException | IOException e) {
             throw new RemoteStorageException(e);
         }

@@ -81,4 +81,8 @@ public class TransformFinisher implements Enumeration<InputStream> {
         }
         return this.chunkIndex;
     }
+
+    public InputStream toInputStream() {
+        return new SequenceInputStream(this);
+    }
 }

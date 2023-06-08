@@ -18,6 +18,7 @@ package io.aiven.kafka.tieredstorage.transform;
 
 import java.io.IOException;
 import java.io.InputStream;
+import java.io.SequenceInputStream;
 import java.util.Enumeration;
 import java.util.List;
 import java.util.NoSuchElementException;
@@ -34,7 +35,7 @@ import io.aiven.kafka.tieredstorage.storage.StorageBackendException;
 
 import org.apache.commons.io.input.BoundedInputStream;
 
-class FetchChunkEnumeration implements Enumeration<InputStream> {
+public class FetchChunkEnumeration implements Enumeration<InputStream> {
     private final ChunkManager chunkManager;
     private final RemoteLogSegmentMetadata remoteLogSegmentMetadata;
     private final SegmentManifest manifest;
@@ -51,10 +52,10 @@ class FetchChunkEnumeration implements Enumeration<InputStream> {
      * @param manifest provides to index to build response from
      * @param range original offset range start/end position
      */
-    FetchChunkEnumeration(final ChunkManager chunkManager,
-                          final RemoteLogSegmentMetadata remoteLogSegmentMetadata,
-                          final SegmentManifest manifest,
-                          final BytesRange range) {
+    public FetchChunkEnumeration(final ChunkManager chunkManager,
+                                 final RemoteLogSegmentMetadata remoteLogSegmentMetadata,
+                                 final SegmentManifest manifest,
+                                 final BytesRange range) {
         this.chunkManager = Objects.requireNonNull(chunkManager, "chunkManager cannot be null");
         this.remoteLogSegmentMetadata =
             Objects.requireNonNull(remoteLogSegmentMetadata, "remoteLogSegmentMetadata cannot be null");
@@ -141,5 +142,9 @@ class FetchChunkEnumeration implements Enumeration<InputStream> {
         } catch (final StorageBackendException e) {
             throw new RuntimeException(e);
         }
+    }
+
+    public InputStream toInputStream() {
+        return new SequenceInputStream(this);
     }
 }

@@ -18,7 +18,6 @@ package io.aiven.kafka.tieredstorage.transform;
 
 import java.io.ByteArrayInputStream;
 import java.io.IOException;
-import java.io.SequenceInputStream;
 import java.util.Random;
 
 import io.aiven.kafka.tieredstorage.AesKeyAwareTest;
@@ -82,7 +81,7 @@ public class TransformsEndToEndTest extends AesKeyAwareTest {
         final var transformFinisher = new TransformFinisher(transformEnum, ORIGINAL_SIZE);
         final byte[] uploadedData;
         final ChunkIndex chunkIndex;
-        try (final var sis = new SequenceInputStream(transformFinisher)) {
+        try (final var sis = transformFinisher.toInputStream()) {
             uploadedData = sis.readAllBytes();
             chunkIndex = transformFinisher.chunkIndex();
         }
@@ -98,7 +97,7 @@ public class TransformsEndToEndTest extends AesKeyAwareTest {
             detransformEnum = new DecompressionChunkEnumeration(detransformEnum);
         }
         final var detransformFinisher = new DetransformFinisher(detransformEnum);
-        try (final var sis = new SequenceInputStream(detransformFinisher)) {
+        try (final var sis = detransformFinisher.toInputStream()) {
             final byte[] downloaded = sis.readAllBytes();
             assertThat(downloaded).isEqualTo(original);
         }
