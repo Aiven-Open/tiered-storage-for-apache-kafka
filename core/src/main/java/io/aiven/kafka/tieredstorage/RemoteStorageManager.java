@@ -25,20 +25,11 @@ import java.io.IOException;
 import java.io.InputStream;
 import java.io.SequenceInputStream;
 import java.nio.file.Files;
-import java.util.List;
 import java.util.Map;
 import java.util.Objects;
 import java.util.concurrent.Executor;
 import java.util.concurrent.ForkJoinPool;
 
-import org.apache.kafka.common.metrics.JmxReporter;
-import org.apache.kafka.common.metrics.KafkaMetricsContext;
-import org.apache.kafka.common.metrics.MetricConfig;
-import org.apache.kafka.common.metrics.Metrics;
-import org.apache.kafka.common.metrics.Sensor;
-import org.apache.kafka.common.metrics.stats.Avg;
-import org.apache.kafka.common.metrics.stats.Max;
-import org.apache.kafka.common.metrics.stats.Rate;
 import org.apache.kafka.common.utils.ByteBufferInputStream;
 import org.apache.kafka.common.utils.Time;
 import org.apache.kafka.server.log.remote.storage.LogSegmentData;
@@ -51,6 +42,7 @@ import io.aiven.kafka.tieredstorage.manifest.SegmentManifestV1;
 import io.aiven.kafka.tieredstorage.manifest.index.ChunkIndex;
 import io.aiven.kafka.tieredstorage.manifest.serde.DataKeyDeserializer;
 import io.aiven.kafka.tieredstorage.manifest.serde.DataKeySerializer;
+import io.aiven.kafka.tieredstorage.metrics.Metrics;
 import io.aiven.kafka.tieredstorage.security.AesEncryptionProvider;
 import io.aiven.kafka.tieredstorage.security.DataKeyAndAAD;
 import io.aiven.kafka.tieredstorage.security.RsaEncryptionProvider;
@@ -84,9 +76,6 @@ public class RemoteStorageManager implements org.apache.kafka.server.log.remote.
     private final Time time;
 
     private final Metrics metrics;
-    private final Sensor segmentCopyPerSec;
-    private final Sensor segmentCopyTime;
-    private final Sensor segmentFetchPerSec;
 
     private final Executor executor = new ForkJoinPool();
 
@@ -112,22 +101,7 @@ public class RemoteStorageManager implements org.apache.kafka.server.log.remote.
     // for testing
     RemoteStorageManager(final Time time) {
         this.time = time;
-
-        final JmxReporter reporter = new JmxReporter();
-        metrics = new Metrics(
-            new MetricConfig(), List.of(reporter), time,
-            new KafkaMetricsContext("aiven.kafka.server.tieredstorage")
-        );
-        segmentCopyPerSec = metrics.sensor("segment-copy");
-        final String metricGroup = "remote-storage-manager-metrics";
-        segmentCopyPerSec.add(metrics.metricName("segment-copy-rate", metricGroup), new Rate());
-
-        segmentCopyTime = metrics.sensor("segment-copy-time");
-        segmentCopyTime.add(metrics.metricName("segment-copy-time-avg", metricGroup), new Avg());
-        segmentCopyTime.add(metrics.metricName("segment-copy-time-max", metricGroup), new Max());
-
-        segmentFetchPerSec = metrics.sensor("segment-fetch");
-        segmentFetchPerSec.add(metrics.metricName("segment-fetch-rate", metricGroup), new Rate());
+        metrics = new Metrics(time);
     }
 
     @Override
@@ -187,7 +161,7 @@ public class RemoteStorageManager implements org.apache.kafka.server.log.remote.
         Objects.requireNonNull(remoteLogSegmentMetadata, "remoteLogSegmentId must not be null");
         Objects.requireNonNull(logSegmentData, "logSegmentData must not be null");
 
-        segmentCopyPerSec.record();
+        metrics.recordSegmentCopy();
 
         final long startedMs = time.milliseconds();
 
@@ -231,7 +205,7 @@ public class RemoteStorageManager implements org.apache.kafka.server.log.remote.
             throw new RemoteStorageException(e);
         }
 
-        segmentCopyTime.record(time.milliseconds() - startedMs);
+        metrics.recordSegmentCopyTime(startedMs, time.milliseconds());
     }
 
     boolean requiresCompression(final LogSegmentData logSegmentData) {
@@ -297,7 +271,7 @@ public class RemoteStorageManager implements org.apache.kafka.server.log.remote.
     public InputStream fetchLogSegment(final RemoteLogSegmentMetadata remoteLogSegmentMetadata,
                                        final int startPosition,
                                        final int endPosition) throws RemoteStorageException {
-        segmentFetchPerSec.record();
+        metrics.recordSegmentFetch();
 
         try {
             final SegmentManifest segmentManifest = segmentManifestProvider.get(remoteLogSegmentMetadata);
@@ -344,10 +318,6 @@ public class RemoteStorageManager implements org.apache.kafka.server.log.remote.
 
     @Override
     public void close() {
-        try {
-            metrics.close();
-        } catch (final Exception e) {
-            log.warn("Error while closing metrics", e);
-        }
+        metrics.close();
     }
 }
