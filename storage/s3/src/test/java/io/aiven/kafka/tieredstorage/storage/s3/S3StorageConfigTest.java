@@ -28,6 +28,7 @@ import com.amazonaws.regions.Regions;
 import com.amazonaws.services.s3.AmazonS3;
 import org.junit.jupiter.api.Test;
 
+import static io.aiven.kafka.tieredstorage.storage.s3.S3StorageConfig.S3_MULTIPART_UPLOAD_PART_SIZE_DEFAULT;
 import static io.aiven.kafka.tieredstorage.storage.s3.S3StorageConfig.S3_REGION_DEFAULT;
 import static org.assertj.core.api.Assertions.assertThat;
 import static org.assertj.core.api.Assertions.assertThatThrownBy;
@@ -50,6 +51,7 @@ class S3StorageConfigTest {
         final String expectedHost = "s3." + S3_REGION_DEFAULT + ".amazonaws.com";
         assertThat(s3.getUrl(bucketName, "test")).hasHost(expectedHost);
         assertThat(config.pathStyleAccessEnabled()).isNull();
+        assertThat(config.uploadPartSize()).isEqualTo(S3_MULTIPART_UPLOAD_PART_SIZE_DEFAULT);
     }
 
     // - Credential provider scenarios
@@ -86,11 +88,13 @@ class S3StorageConfigTest {
         final String region = Regions.US_EAST_2.getName();
         final String minioUrl = "http://minio";
         final String customConfigProvider = EnvironmentVariableCredentialsProvider.class.getName();
+        final int partSize = 10 * 1024 * 1024;
         final Map<String, Object> configs = Map.of(
             "s3.bucket.name", bucketName,
             "s3.region", region,
             "s3.endpoint.url", minioUrl,
             "s3.path.style.access.enabled", false,
+            "s3.multipart.upload.part.size", partSize,
             "aws.credentials.provider.class", customConfigProvider);
         final S3StorageConfig config = new S3StorageConfig(configs);
         assertThat(config.bucketName()).isEqualTo(bucketName);
@@ -105,6 +109,7 @@ class S3StorageConfigTest {
         assertThat(s3.getRegionName()).isEqualTo(region);
         assertThat(s3.getUrl(bucketName, "test")).hasHost("minio");
         assertThat(config.pathStyleAccessEnabled()).isFalse();
+        assertThat(config.uploadPartSize()).isEqualTo(partSize);
     }
 
     //   - With static credentials
@@ -209,6 +214,17 @@ class S3StorageConfigTest {
         assertThatThrownBy(() -> new S3StorageConfig(Map.of()))
             .isInstanceOf(ConfigException.class)
             .hasMessage("Missing required configuration \"s3.bucket.name\" which has no default value.");
+    }
+
+    @Test
+    void shouldRequirePartSizeLargerThan5MiB() {
+        assertThatThrownBy(() -> new S3StorageConfig(Map.of(
+            "s3.bucket.name", "test",
+            "s3.multipart.upload.part.size", 1024
+        )))
+            .isInstanceOf(ConfigException.class)
+            .hasMessage("Invalid value 1024 for configuration s3.multipart.upload.part.size: "
+                + "Value must be at least 5242880");
     }
 
     // - S3 client creation
