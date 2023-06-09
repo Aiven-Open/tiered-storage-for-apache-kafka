@@ -113,10 +113,19 @@ public class S3MultiPartOutputStream extends OutputStream {
             flushBuffer(partBuffer.arrayOffset(), partBuffer.position(), partBuffer.position());
         }
         if (Objects.nonNull(uploadId)) {
-            final CompleteMultipartUploadRequest request =
-                new CompleteMultipartUploadRequest(bucketName, key, uploadId, partETags);
-            final CompleteMultipartUploadResult result = client.completeMultipartUpload(request);
-            log.debug("Completed multipart upload {} with result {}", uploadId, result);
+            if (!partETags.isEmpty()) {
+                try {
+                    final CompleteMultipartUploadRequest request =
+                        new CompleteMultipartUploadRequest(bucketName, key, uploadId, partETags);
+                    final CompleteMultipartUploadResult result = client.completeMultipartUpload(request);
+                    log.debug("Completed multipart upload {} with result {}", uploadId, result);
+                } catch (final Exception e) {
+                    log.error("Failed to complete multipart upload {}, aborting transaction", uploadId, e);
+                    client.abortMultipartUpload(new AbortMultipartUploadRequest(bucketName, key, uploadId));
+                }
+            } else {
+                client.abortMultipartUpload(new AbortMultipartUploadRequest(bucketName, key, uploadId));
+            }
         }
         closed = true;
     }
