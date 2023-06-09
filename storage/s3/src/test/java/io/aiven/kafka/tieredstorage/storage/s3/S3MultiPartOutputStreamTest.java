@@ -16,11 +16,12 @@
 
 package io.aiven.kafka.tieredstorage.storage.s3;
 
-import java.io.ByteArrayInputStream;
 import java.io.IOException;
-import java.util.ArrayList;
-import java.util.List;
+import java.util.HashMap;
+import java.util.Map;
 import java.util.Random;
+import java.util.concurrent.ConcurrentHashMap;
+import java.util.stream.Collectors;
 
 import com.amazonaws.services.s3.AmazonS3;
 import com.amazonaws.services.s3.model.AbortMultipartUploadRequest;
@@ -83,7 +84,7 @@ class S3MultiPartOutputStreamTest {
                      new S3MultiPartOutputStream(BUCKET_NAME, FILE_KEY, 100, mockedS3)) {
                 out.write(new byte[] {1, 2, 3});
             }
-        }).isInstanceOf(IOException.class).hasCause(testException);
+        }).isInstanceOf(IOException.class).hasRootCause(testException);
 
         verify(mockedS3).initiateMultipartUpload(any(InitiateMultipartUploadRequest.class));
         verify(mockedS3).uploadPart(any(UploadPartRequest.class));
@@ -135,39 +136,48 @@ class S3MultiPartOutputStreamTest {
         verify(mockedS3).uploadPart(any(UploadPartRequest.class));
         verify(mockedS3).completeMultipartUpload(any(CompleteMultipartUploadRequest.class));
 
+        final UploadPartRequest value = uploadPartRequestCaptor.getValue();
         assertUploadPartRequest(
-            uploadPartRequestCaptor.getValue(),
+            value,
+            value.getInputStream().readAllBytes(),
             1,
             1,
             new byte[] {1});
         assertCompleteMultipartUploadRequest(
             completeMultipartUploadRequestCaptor.getValue(),
-            List.of(new PartETag(1, "SOME_ETAG"))
+            Map.of(1, "SOME_ETAG")
         );
     }
 
     @Test
     void writesMultipleMessages() throws Exception {
         final int bufferSize = 10;
-        final byte[] message = new byte[bufferSize];
 
         when(mockedS3.initiateMultipartUpload(any(InitiateMultipartUploadRequest.class)))
             .thenReturn(newInitiateMultipartUploadResult());
+
+        final Map<Integer, UploadPartRequest> uploadPartRequests = new ConcurrentHashMap<>();
+        final Map<Integer, byte[]> uploadPartContents = new ConcurrentHashMap<>();
         when(mockedS3.uploadPart(uploadPartRequestCaptor.capture()))
-            .thenAnswer(a -> {
-                final UploadPartRequest up = a.getArgument(0);
+            .thenAnswer(answer -> {
+                final UploadPartRequest up = answer.getArgument(0);
+                //emulate behave of S3 client otherwise we will get wrong array in the memory
+                uploadPartRequests.put(up.getPartNumber(), up);
+                uploadPartContents.put(up.getPartNumber(), up.getInputStream().readAllBytes());
+
                 return newUploadPartResult(up.getPartNumber(), "SOME_TAG#" + up.getPartNumber());
             });
         when(mockedS3.completeMultipartUpload(completeMultipartUploadRequestCaptor.capture()))
             .thenReturn(new CompleteMultipartUploadResult());
 
-        final List<byte[]> expectedMessagesList = new ArrayList<>();
+        final Map<Integer, byte[]> expectedMessageParts = new HashMap<>();
         try (final S3MultiPartOutputStream out =
                  new S3MultiPartOutputStream(BUCKET_NAME, FILE_KEY, bufferSize, mockedS3)) {
             for (int i = 0; i < 3; i++) {
+                final byte[] message = new byte[bufferSize];
                 random.nextBytes(message);
                 out.write(message, 0, message.length);
-                expectedMessagesList.add(message);
+                expectedMessageParts.put(i + 1, message);
             }
         }
 
@@ -175,21 +185,20 @@ class S3MultiPartOutputStreamTest {
         verify(mockedS3, times(3)).uploadPart(any(UploadPartRequest.class));
         verify(mockedS3).completeMultipartUpload(any(CompleteMultipartUploadRequest.class));
 
-        final List<UploadPartRequest> uploadRequests = uploadPartRequestCaptor.getAllValues();
-        int counter = 0;
-        for (final byte[] expectedMessage : expectedMessagesList) {
+        for (final Integer part : expectedMessageParts.keySet()) {
             assertUploadPartRequest(
-                uploadRequests.get(counter),
+                uploadPartRequests.get(part),
+                uploadPartContents.get(part),
                 bufferSize,
-                counter + 1,
-                expectedMessage);
-            counter++;
+                part,
+                expectedMessageParts.get(part)
+            );
         }
         assertCompleteMultipartUploadRequest(
             completeMultipartUploadRequestCaptor.getValue(),
-            List.of(new PartETag(1, "SOME_TAG#1"),
-                new PartETag(2, "SOME_TAG#2"),
-                new PartETag(3, "SOME_TAG#3"))
+            Map.of(1, "SOME_TAG#1",
+                2, "SOME_TAG#2",
+                3, "SOME_TAG#3")
         );
     }
 
@@ -197,40 +206,46 @@ class S3MultiPartOutputStreamTest {
     void writesTailMessages() throws Exception {
         final int messageSize = 20;
 
-        final List<UploadPartRequest> uploadPartRequests = new ArrayList<>();
+        final Map<Integer, UploadPartRequest> uploadPartRequests = new ConcurrentHashMap<>();
+        final Map<Integer, byte[]> uploadPartContents = new ConcurrentHashMap<>();
 
         when(mockedS3.initiateMultipartUpload(any(InitiateMultipartUploadRequest.class)))
             .thenReturn(newInitiateMultipartUploadResult());
         when(mockedS3.uploadPart(any(UploadPartRequest.class)))
-            .thenAnswer(a -> {
-                final UploadPartRequest up = a.getArgument(0);
+            .thenAnswer(answer -> {
+                final UploadPartRequest up = answer.getArgument(0);
                 //emulate behave of S3 client otherwise we will get wrong array in the memory
-                up.setInputStream(new ByteArrayInputStream(up.getInputStream().readAllBytes()));
-                uploadPartRequests.add(up);
+                uploadPartRequests.put(up.getPartNumber(), up);
+                uploadPartContents.put(up.getPartNumber(), up.getInputStream().readAllBytes());
 
                 return newUploadPartResult(up.getPartNumber(), "SOME_TAG#" + up.getPartNumber());
             });
         when(mockedS3.completeMultipartUpload(completeMultipartUploadRequestCaptor.capture()))
             .thenReturn(new CompleteMultipartUploadResult());
 
-        final byte[] message = new byte[messageSize];
 
         final byte[] expectedFullMessage = new byte[messageSize + 10];
         final byte[] expectedTailMessage = new byte[10];
 
-        final S3MultiPartOutputStream
-            out = new S3MultiPartOutputStream(BUCKET_NAME, FILE_KEY, messageSize + 10, mockedS3);
-        random.nextBytes(message);
-        out.write(message);
-        System.arraycopy(message, 0, expectedFullMessage, 0, message.length);
-        random.nextBytes(message);
-        out.write(message);
-        System.arraycopy(message, 0, expectedFullMessage, 20, 10);
-        System.arraycopy(message, 10, expectedTailMessage, 0, 10);
+        final var out = new S3MultiPartOutputStream(BUCKET_NAME, FILE_KEY, messageSize + 10, mockedS3);
+        {
+            final byte[] message = new byte[messageSize];
+            random.nextBytes(message);
+            out.write(message);
+            System.arraycopy(message, 0, expectedFullMessage, 0, message.length);
+        }
+        {
+            final byte[] message = new byte[messageSize];
+            random.nextBytes(message);
+            out.write(message);
+            System.arraycopy(message, 0, expectedFullMessage, 20, 10);
+            System.arraycopy(message, 10, expectedTailMessage, 0, 10);
+        }
         out.close();
 
-        assertUploadPartRequest(uploadPartRequests.get(0), 30, 1, expectedFullMessage);
-        assertUploadPartRequest(uploadPartRequests.get(1), 10, 2, expectedTailMessage);
+        assertThat(uploadPartRequests).hasSize(2);
+        assertUploadPartRequest(uploadPartRequests.get(1), uploadPartContents.get(1), 30, 1, expectedFullMessage);
+        assertUploadPartRequest(uploadPartRequests.get(2), uploadPartContents.get(2), 10, 2, expectedTailMessage);
 
         verify(mockedS3).initiateMultipartUpload(any(InitiateMultipartUploadRequest.class));
         verify(mockedS3, times(2)).uploadPart(any(UploadPartRequest.class));
@@ -251,6 +266,7 @@ class S3MultiPartOutputStreamTest {
     }
 
     private static void assertUploadPartRequest(final UploadPartRequest uploadPartRequest,
+                                                final byte[] bytes,
                                                 final int expectedPartSize,
                                                 final int expectedPartNumber,
                                                 final byte[] expectedBytes) {
@@ -259,23 +275,18 @@ class S3MultiPartOutputStreamTest {
         assertThat(uploadPartRequest.getPartNumber()).isEqualTo(expectedPartNumber);
         assertThat(uploadPartRequest.getBucketName()).isEqualTo(BUCKET_NAME);
         assertThat(uploadPartRequest.getKey()).isEqualTo(FILE_KEY);
-        assertThat(uploadPartRequest.getInputStream()).hasBinaryContent(expectedBytes);
+        assertThat(bytes).isEqualTo(expectedBytes);
     }
 
     private static void assertCompleteMultipartUploadRequest(final CompleteMultipartUploadRequest request,
-                                                             final List<PartETag> expectedETags) {
+                                                             final Map<Integer, String> expectedETags) {
         assertThat(request.getBucketName()).isEqualTo(BUCKET_NAME);
         assertThat(request.getKey()).isEqualTo(FILE_KEY);
         assertThat(request.getUploadId()).isEqualTo(UPLOAD_ID);
-        assertThat(request.getPartETags()).hasSameSizeAs(expectedETags);
-
-        for (int i = 0; i < expectedETags.size(); i++) {
-            final PartETag expectedETag = expectedETags.get(i);
-            final PartETag etag = request.getPartETags().get(i);
-
-            assertThat(etag.getPartNumber()).isEqualTo(expectedETag.getPartNumber());
-            assertThat(etag.getETag()).isEqualTo(expectedETag.getETag());
-        }
+        final Map<Integer, String> tags = request.getPartETags().stream()
+            .collect(Collectors.toMap(PartETag::getPartNumber, PartETag::getETag));
+        assertThat(tags).hasSameSizeAs(expectedETags)
+            .containsAllEntriesOf(expectedETags);
     }
 
     private static void assertAbortMultipartUploadRequest(final AbortMultipartUploadRequest request) {
