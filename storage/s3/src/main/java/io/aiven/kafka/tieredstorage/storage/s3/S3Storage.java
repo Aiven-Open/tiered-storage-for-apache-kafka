@@ -35,22 +35,27 @@ public class S3Storage implements StorageBackend {
 
     private AmazonS3 s3Client;
     private String bucketName;
+    private int partSize;
 
     @Override
     public void configure(final Map<String, ?> configs) {
         final S3StorageConfig config = new S3StorageConfig(configs);
         this.s3Client = config.s3Client();
         this.bucketName = config.bucketName();
+        this.partSize = config.uploadPartSize();
     }
 
     @Override
     public void upload(final InputStream inputStream, final String key) throws StorageBackendException {
-        // TODO make multipart part size configurable
-        try (final S3MultiPartOutputStream out = new S3MultiPartOutputStream(bucketName, key, s3Client)) {
+        try (final var out = s3OutputStream(key)) {
             inputStream.transferTo(out);
         } catch (final AmazonS3Exception | IOException e) {
             throw new StorageBackendException("Failed to upload " + key, e);
         }
+    }
+
+    S3MultiPartOutputStream s3OutputStream(final String key) {
+        return new S3MultiPartOutputStream(bucketName, key, partSize, s3Client);
     }
 
     @Override
@@ -100,6 +105,7 @@ public class S3Storage implements StorageBackend {
     public String toString() {
         return "S3Storage{"
             + "bucketName='" + bucketName + '\''
+            + ", partSize=" + partSize
             + '}';
     }
 }

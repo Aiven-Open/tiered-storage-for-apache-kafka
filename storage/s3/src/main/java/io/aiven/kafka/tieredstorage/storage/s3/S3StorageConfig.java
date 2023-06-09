@@ -48,6 +48,15 @@ public class S3StorageConfig extends AbstractConfig {
         + "By default, empty value means S3 library will auto-detect. "
         + "Amazon S3 uses virtual hosts by default (true), but other S3-compatible backends may differ (e.g. minio).";
 
+    private static final String S3_MULTIPART_UPLOAD_PART_SIZE_CONFIG = "s3.multipart.upload.part.size";
+    // AWS limits to 5GiB, but 2GiB are used here as ByteBuffer allocation is based on int
+    private static final String S3_MULTIPART_UPLOAD_PART_SIZE_DOC = "Size of parts in bytes to use when uploading. "
+        + "All parts but the last one will have this size. "
+        + "Valid values: between 5MiB and 2GiB";
+    static final int S3_MULTIPART_UPLOAD_PART_SIZE_MIN = 5 * 1024 * 1024; // 5MiB
+    static final int S3_MULTIPART_UPLOAD_PART_SIZE_MAX = Integer.MAX_VALUE;
+    static final int S3_MULTIPART_UPLOAD_PART_SIZE_DEFAULT = S3_MULTIPART_UPLOAD_PART_SIZE_MIN;
+
     public static final String AWS_CREDENTIALS_PROVIDER_CLASS_CONFIG = "aws.credentials.provider.class";
     private static final String AWS_CREDENTIALS_PROVIDER_CLASS_DOC = "AWS credentials provider. "
         + "If not set, AWS SDK uses the default "
@@ -89,6 +98,13 @@ public class S3StorageConfig extends AbstractConfig {
                 null,
                 ConfigDef.Importance.LOW,
                 S3_PATH_STYLE_ENABLED_DOC)
+            .define(
+                S3_MULTIPART_UPLOAD_PART_SIZE_CONFIG,
+                ConfigDef.Type.INT,
+                S3_MULTIPART_UPLOAD_PART_SIZE_DEFAULT,
+                ConfigDef.Range.between(S3_MULTIPART_UPLOAD_PART_SIZE_MIN, S3_MULTIPART_UPLOAD_PART_SIZE_MAX),
+                ConfigDef.Importance.MEDIUM,
+                S3_MULTIPART_UPLOAD_PART_SIZE_DOC)
             .define(
                 AWS_CREDENTIALS_PROVIDER_CLASS_CONFIG,
                 ConfigDef.Type.CLASS,
@@ -187,6 +203,9 @@ public class S3StorageConfig extends AbstractConfig {
         return getBoolean(S3_PATH_STYLE_ENABLED_CONFIG);
     }
 
+    public int uploadPartSize() {
+        return getInt(S3_MULTIPART_UPLOAD_PART_SIZE_CONFIG);
+    }
 
     private static class RegionValidator implements ConfigDef.Validator {
         @Override

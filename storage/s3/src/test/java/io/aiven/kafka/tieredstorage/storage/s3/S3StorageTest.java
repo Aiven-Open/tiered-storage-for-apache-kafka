@@ -16,6 +16,7 @@
 
 package io.aiven.kafka.tieredstorage.storage.s3;
 
+import java.io.IOException;
 import java.util.Map;
 
 import io.aiven.kafka.tieredstorage.storage.BaseStorageTest;
@@ -28,11 +29,14 @@ import com.amazonaws.services.s3.AmazonS3;
 import com.amazonaws.services.s3.AmazonS3ClientBuilder;
 import org.junit.jupiter.api.BeforeAll;
 import org.junit.jupiter.api.BeforeEach;
+import org.junit.jupiter.api.Test;
 import org.junit.jupiter.api.TestInfo;
 import org.testcontainers.containers.localstack.LocalStackContainer;
 import org.testcontainers.junit.jupiter.Container;
 import org.testcontainers.junit.jupiter.Testcontainers;
 import org.testcontainers.utility.DockerImageName;
+
+import static org.assertj.core.api.Assertions.assertThat;
 
 @Testcontainers
 public class S3StorageTest extends BaseStorageTest {
@@ -40,6 +44,7 @@ public class S3StorageTest extends BaseStorageTest {
     public static final LocalStackContainer LOCALSTACK = new LocalStackContainer(
         DockerImageName.parse("localstack/localstack:2.0.2")
     ).withServices(LocalStackContainer.Service.S3);
+    public static final int PART_SIZE = 8 * 1024 * 1024; // 8MiB
 
     static AmazonS3 s3Client;
     private String bucketName;
@@ -78,9 +83,17 @@ public class S3StorageTest extends BaseStorageTest {
             "s3.bucket.name", bucketName,
             "s3.region", LOCALSTACK.getRegion(),
             "s3.endpoint.url", LOCALSTACK.getEndpointOverride(LocalStackContainer.Service.S3).toString(),
-            "s3.path.style.access.enabled", true
+            "s3.path.style.access.enabled", true,
+            "s3.multipart.upload.part.size", PART_SIZE
         );
         s3Storage.configure(configs);
         return s3Storage;
+    }
+
+    @Test
+    void partSizePassedToStream() throws IOException {
+        try (final var os = ((S3Storage) storage()).s3OutputStream("test")) {
+            assertThat(os.partSize).isEqualTo(PART_SIZE);
+        }
     }
 }

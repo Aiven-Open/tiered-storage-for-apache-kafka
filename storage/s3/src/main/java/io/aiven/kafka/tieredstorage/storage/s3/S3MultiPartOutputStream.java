@@ -47,24 +47,16 @@ public class S3MultiPartOutputStream extends OutputStream {
 
     private static final Logger log = LoggerFactory.getLogger(S3MultiPartOutputStream.class);
 
-    public static final int DEFAULT_PART_SIZE = 5 * 1024 * 1024;
-
     private final AmazonS3 client;
     private final ByteBuffer partBuffer;
     private final String bucketName;
     private final String key;
-    private final int partSize;
+    final int partSize;
 
     private final String uploadId;
     private final List<PartETag> partETags = new ArrayList<>();
 
     private boolean closed;
-
-    public S3MultiPartOutputStream(final String bucketName,
-                                   final String key,
-                                   final AmazonS3 client) {
-        this(bucketName, key, DEFAULT_PART_SIZE, client);
-    }
 
     public S3MultiPartOutputStream(final String bucketName,
                                    final String key,
@@ -102,7 +94,7 @@ public class S3MultiPartOutputStream extends OutputStream {
             partBuffer.put(source.array(), offset, transferred);
             source.position(source.position() + transferred);
             if (!partBuffer.hasRemaining()) {
-                flushBuffer(0, partSize, partSize);
+                flushBuffer(0, partSize);
             }
         }
     }
@@ -110,7 +102,7 @@ public class S3MultiPartOutputStream extends OutputStream {
     @Override
     public void close() throws IOException {
         if (partBuffer.position() > 0) {
-            flushBuffer(partBuffer.arrayOffset(), partBuffer.position(), partBuffer.position());
+            flushBuffer(partBuffer.arrayOffset(), partBuffer.position());
         }
         if (Objects.nonNull(uploadId)) {
             if (!partETags.isEmpty()) {
@@ -131,11 +123,10 @@ public class S3MultiPartOutputStream extends OutputStream {
     }
 
     private void flushBuffer(final int offset,
-                             final int length,
-                             final int partSize) throws IOException {
+                             final int actualPartSize) throws IOException {
         try {
-            final ByteArrayInputStream in = new ByteArrayInputStream(partBuffer.array(), offset, length);
-            uploadPart(in, partSize);
+            final ByteArrayInputStream in = new ByteArrayInputStream(partBuffer.array(), offset, actualPartSize);
+            uploadPart(in, actualPartSize);
             partBuffer.clear();
         } catch (final Exception e) {
             log.error("Failed to upload part in multipart upload {}, aborting transaction", uploadId, e);
@@ -145,14 +136,14 @@ public class S3MultiPartOutputStream extends OutputStream {
         }
     }
 
-    private void uploadPart(final InputStream in, final int partSize) {
+    private void uploadPart(final InputStream in, final int actualPartSize) {
         final int partNumber = partETags.size() + 1;
         final UploadPartRequest uploadPartRequest =
             new UploadPartRequest()
                 .withBucketName(bucketName)
                 .withKey(key)
                 .withUploadId(uploadId)
-                .withPartSize(partSize)
+                .withPartSize(actualPartSize)
                 .withPartNumber(partNumber)
                 .withInputStream(in);
         final UploadPartResult uploadResult = client.uploadPart(uploadPartRequest);
