@@ -19,39 +19,32 @@ package io.aiven.kafka.tieredstorage;
 import java.io.ByteArrayInputStream;
 import java.io.IOException;
 import java.io.InputStream;
-import java.util.List;
 import java.util.Optional;
 
 import org.apache.kafka.server.log.remote.storage.RemoteLogSegmentMetadata;
 
 import io.aiven.kafka.tieredstorage.cache.ChunkCache;
-import io.aiven.kafka.tieredstorage.manifest.SegmentEncryptionMetadata;
 import io.aiven.kafka.tieredstorage.manifest.SegmentManifest;
-import io.aiven.kafka.tieredstorage.security.AesEncryptionProvider;
 import io.aiven.kafka.tieredstorage.storage.ObjectFetcher;
 import io.aiven.kafka.tieredstorage.storage.StorageBackendException;
-import io.aiven.kafka.tieredstorage.transform.BaseDetransformChunkEnumeration;
-import io.aiven.kafka.tieredstorage.transform.DecompressionChunkEnumeration;
-import io.aiven.kafka.tieredstorage.transform.DecryptionChunkEnumeration;
-import io.aiven.kafka.tieredstorage.transform.DetransformChunkEnumeration;
-import io.aiven.kafka.tieredstorage.transform.DetransformFinisher;
+import io.aiven.kafka.tieredstorage.transform.TransformPipeline;
 
 import org.apache.commons.io.IOUtils;
 
 public class ChunkManager {
     private final ObjectFetcher fetcher;
     private final ObjectKey objectKey;
-    private final AesEncryptionProvider aesEncryptionProvider;
     private final ChunkCache chunkCache;
+    private final TransformPipeline transformPipeline;
 
     public ChunkManager(final ObjectFetcher fetcher,
                         final ObjectKey objectKey,
-                        final AesEncryptionProvider aesEncryptionProvider,
-                        final ChunkCache chunkCache) {
+                        final ChunkCache chunkCache,
+                        final TransformPipeline transformPipeline) {
         this.fetcher = fetcher;
         this.objectKey = objectKey;
-        this.aesEncryptionProvider = aesEncryptionProvider;
         this.chunkCache = chunkCache;
+        this.transformPipeline = transformPipeline;
     }
 
     /**
@@ -63,19 +56,8 @@ public class ChunkManager {
                                 final int chunkId) throws StorageBackendException {
         final Chunk chunk = manifest.chunkIndex().chunks().get(chunkId);
         final InputStream chunkContent = getChunkContent(remoteLogSegmentMetadata, chunk);
-        DetransformChunkEnumeration detransformEnum = new BaseDetransformChunkEnumeration(chunkContent, List.of(chunk));
-        final Optional<SegmentEncryptionMetadata> encryptionMetadata = manifest.encryption();
-        if (encryptionMetadata.isPresent()) {
-            detransformEnum = new DecryptionChunkEnumeration(
-                detransformEnum,
-                encryptionMetadata.get().ivSize(),
-                encryptedChunk -> aesEncryptionProvider.decryptionCipher(encryptedChunk, encryptionMetadata.get())
-            );
-        }
-        if (manifest.compression()) {
-            detransformEnum = new DecompressionChunkEnumeration(detransformEnum);
-        }
-        final DetransformFinisher detransformFinisher = new DetransformFinisher(detransformEnum);
+        final var detransformFinisher = transformPipeline.outboundTransformChain(chunkContent, manifest, chunk)
+            .complete();
         return detransformFinisher.toInputStream();
     }
 

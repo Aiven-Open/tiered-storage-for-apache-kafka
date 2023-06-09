@@ -35,6 +35,7 @@ import io.aiven.kafka.tieredstorage.security.AesEncryptionProvider;
 import io.aiven.kafka.tieredstorage.security.DataKeyAndAAD;
 import io.aiven.kafka.tieredstorage.storage.StorageBackend;
 import io.aiven.kafka.tieredstorage.storage.StorageBackendException;
+import io.aiven.kafka.tieredstorage.transform.TransformPipeline;
 
 import com.github.luben.zstd.ZstdCompressCtx;
 import org.junit.jupiter.api.BeforeEach;
@@ -51,7 +52,7 @@ import static org.mockito.Mockito.verifyNoMoreInteractions;
 import static org.mockito.Mockito.when;
 
 @ExtendWith(MockitoExtension.class)
-class ChunkManagerTest extends AesKeyAwareTest {
+class ChunkManagerTest extends RsaKeyAwareTest {
 
     static final byte[] TEST_CHUNK_CONTENT = "0123456789".getBytes();
     @Mock
@@ -71,7 +72,8 @@ class ChunkManagerTest extends AesKeyAwareTest {
         final FixedSizeChunkIndex chunkIndex = new FixedSizeChunkIndex(10, 10, 10, 10);
 
         final SegmentManifest manifest = new SegmentManifestV1(chunkIndex, false, null);
-        final ChunkManager chunkManager = new ChunkManager(storage, objectKey, null, null);
+        final TransformPipeline transformPipeline = TransformPipeline.newBuilder().build();
+        final ChunkManager chunkManager = new ChunkManager(storage, objectKey, null, transformPipeline);
         when(storage.fetch("test.log", chunkIndex.chunks().get(0).range()))
             .thenReturn(new ByteArrayInputStream("0123456789".getBytes()));
 
@@ -95,8 +97,8 @@ class ChunkManagerTest extends AesKeyAwareTest {
         final ChunkManager chunkManager = new ChunkManager(
             storage,
             objectKey,
-            null,
-            new UnboundInMemoryChunkCache()
+            new UnboundInMemoryChunkCache(),
+            TransformPipeline.newBuilder().build()
         );
 
         assertThat(chunkManager.getChunk(remoteLogSegmentMetadata, manifest, 0)).hasContent("0123456789");
@@ -132,8 +134,8 @@ class ChunkManagerTest extends AesKeyAwareTest {
         final ChunkManager chunkManager = new ChunkManager(
             storage,
             objectKey,
-            aesEncryptionProvider,
-            new UnboundInMemoryChunkCache()
+            new UnboundInMemoryChunkCache(),
+            TransformPipeline.newBuilder().withEncryption(publicKeyPem, privateKeyPem).build()
         );
 
         assertThat(chunkManager.getChunk(remoteLogSegmentMetadata, manifest, 0)).hasBinaryContent(TEST_CHUNK_CONTENT);
@@ -165,8 +167,8 @@ class ChunkManagerTest extends AesKeyAwareTest {
         final ChunkManager chunkManager = new ChunkManager(
             storage,
             objectKey,
-            null,
-            new UnboundInMemoryChunkCache()
+            new UnboundInMemoryChunkCache(),
+            TransformPipeline.newBuilder().withCompression().build()
         );
 
         assertThat(chunkManager.getChunk(remoteLogSegmentMetadata, manifest, 0)).hasBinaryContent(TEST_CHUNK_CONTENT);
