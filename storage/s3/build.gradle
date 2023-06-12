@@ -16,10 +16,6 @@
 
 archivesBaseName = "storage-s3"
 
-ext {
-    testcontainersVersion = "1.18.3"
-}
-
 dependencies {
     implementation project(":storage:core")
 
