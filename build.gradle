@@ -26,6 +26,8 @@ plugins {
     id "distribution"
 }
 
+apply plugin: 'info.solidsoft.pitest.aggregator'
+
 wrapper {
     distributionType = 'ALL'
     doLast {
@@ -33,6 +35,10 @@ wrapper {
         propertiesFile << "distributionSha256Sum=${sha256Sum}\n"
         println "Added checksum to wrapper properties"
     }
+}
+
+repositories {
+    mavenCentral()
 }
 
 subprojects {
@@ -78,6 +84,10 @@ subprojects {
         threads = Runtime.getRuntime().availableProcessors()
         outputFormats.addAll('XML', 'HTML')
         mutators.add('ALL')
+        exportLineCoverage = true
+        if (project.name in ['storage']) {
+            failWhenNoMutations = false
+        }
     }
 
 
