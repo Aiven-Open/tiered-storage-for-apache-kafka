@@ -46,4 +46,5 @@ dependencies {
     testImplementation(project(":storage:filesystem"))
 
     testImplementation "com.github.luben:zstd-jni:$zstdVersion"
+    integrationTestImplementation sourceSets.test.output
 }

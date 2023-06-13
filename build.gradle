@@ -105,6 +105,50 @@ subprojects {
         useJUnitPlatform()
     }
 
+    sourceSets {
+        integrationTest {
+            java {
+                srcDirs = ['src/integration-test/java']
+            }
+            resources {
+                srcDirs = ['src/integration-test/resources']
+            }
+
+            compileClasspath += sourceSets.main.output + configurations.testRuntimeClasspath
+            runtimeClasspath += output + compileClasspath
+        }
+    }
+
+    idea {
+        module {
+            testSourceDirs += sourceSets.integrationTest.java.srcDirs
+            testSourceDirs += sourceSets.integrationTest.resources.srcDirs
+        }
+    }
+
+    configurations {
+        integrationTestImplementation.extendsFrom testImplementation
+        integrationTestRuntime.extendsFrom testRuntimeClasspath
+    }
+
+    tasks.register('integrationTest', Test) {
+        description = 'Runs the integration tests.'
+        group = 'verification'
+        testClassesDirs = sourceSets.integrationTest.output.classesDirs
+        classpath = sourceSets.integrationTest.runtimeClasspath
+
+        shouldRunAfter test, distTar
+
+        useJUnitPlatform()
+
+        // Run always.
+        outputs.upToDateWhen { false }
+    }
+
+    check.configure {
+        dependsOn tasks.named("integrationTest")
+    }
+
     distributions {
         main {
             contents {
