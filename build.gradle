@@ -22,6 +22,7 @@ buildscript {
 
 plugins {
     id "java-library"
+    id "distribution"
 }
 
 wrapper {
@@ -51,9 +52,6 @@ subprojects {
     repositories {
         // Use Maven Central for resolving dependencies.
         mavenCentral()
-        flatDir {
-            dirs rootProject.file('lib')
-        }
     }
 
     java {
@@ -65,8 +63,8 @@ subprojects {
     }
 
     checkstyle {
-        toolVersion "8.44"
-        getConfigDirectory().set(rootProject.file("checkstyle/"))
+        toolVersion = "10.12.0"
+        configDirectory = rootProject.file("checkstyle/")
     }
 
     ext {
@@ -118,16 +116,22 @@ subprojects {
     }
 }
 
-tasks.create(name: "releaseTarGz", dependsOn: configurations.archives.artifacts, type: Tar) {
-    into "${rootProject.name}-${archiveVersion.get()}"
+distributions {
+    main {
+        contents {
+            from(project(":core").jar)
+            from(project(":core").configurations.runtimeClasspath)
+            from(project(":storage:core").jar)
+            from(project(":storage:core").configurations.runtimeClasspath)
+            from(project(":storage:s3").jar)
+            from(project(":storage:s3").configurations.runtimeClasspath)
+            from(project(":storage:filesystem").jar)
+            from(project(":storage:filesystem").configurations.runtimeClasspath)
+        }
+    }
+}
+
+tasks.distTar {
     compression = Compression.GZIP
-    duplicatesStrategy "exclude"
-    from(project(":core").jar)
-    from(project(":core").configurations.runtimeClasspath)
-    from(project(":storage:core").jar)
-    from(project(":storage:core").configurations.runtimeClasspath)
-    from(project(":storage:s3").jar)
-    from(project(":storage:s3").configurations.runtimeClasspath)
-    from(project(":storage:filesystem").jar)
-    from(project(":storage:filesystem").configurations.runtimeClasspath)
+    duplicatesStrategy DuplicatesStrategy.EXCLUDE
 }
