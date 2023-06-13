@@ -18,12 +18,14 @@ package io.aiven.kafka.tieredstorage.storage.s3;
 
 import java.io.ByteArrayInputStream;
 import java.io.IOException;
-import java.io.InputStream;
 import java.io.OutputStream;
 import java.nio.ByteBuffer;
 import java.util.ArrayList;
+import java.util.Collections;
 import java.util.List;
 import java.util.Objects;
+import java.util.concurrent.CompletableFuture;
+import java.util.concurrent.ExecutionException;
 
 import com.amazonaws.services.s3.AmazonS3;
 import com.amazonaws.services.s3.model.AbortMultipartUploadRequest;
@@ -33,7 +35,6 @@ import com.amazonaws.services.s3.model.InitiateMultipartUploadRequest;
 import com.amazonaws.services.s3.model.InitiateMultipartUploadResult;
 import com.amazonaws.services.s3.model.PartETag;
 import com.amazonaws.services.s3.model.UploadPartRequest;
-import com.amazonaws.services.s3.model.UploadPartResult;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
@@ -54,7 +55,8 @@ public class S3MultiPartOutputStream extends OutputStream {
     final int partSize;
 
     private final String uploadId;
-    private final List<PartETag> partETags = new ArrayList<>();
+    private final List<PartETag> partETags = Collections.synchronizedList(new ArrayList<>());
+    private final List<CompletableFuture<Void>> partUploads = new ArrayList<>();
 
     private boolean closed;
 
@@ -88,13 +90,17 @@ public class S3MultiPartOutputStream extends OutputStream {
         }
         final ByteBuffer source = ByteBuffer.wrap(b, off, len);
         while (source.hasRemaining()) {
-            final int transferred = Math.min(partBuffer.remaining(), source.remaining());
-            final int offset = source.arrayOffset() + source.position();
-            // TODO: get rid of this array copying
-            partBuffer.put(source.array(), offset, transferred);
-            source.position(source.position() + transferred);
+            final int toCopy = Math.min(partBuffer.remaining(), source.remaining());
+            final int positionAfterCopying = source.position() + toCopy;
+            source.limit(positionAfterCopying);
+            partBuffer.put(source.slice());
+            source.clear(); // reset limit
+            source.position(positionAfterCopying);
             if (!partBuffer.hasRemaining()) {
-                flushBuffer(0, partSize);
+                partBuffer.position(0);
+                partBuffer.limit(partSize);
+                flushBuffer(partBuffer.slice(), partSize);
+                partBuffer.clear();
             }
         }
     }
@@ -102,18 +108,26 @@ public class S3MultiPartOutputStream extends OutputStream {
     @Override
     public void close() throws IOException {
         if (partBuffer.position() > 0) {
-            flushBuffer(partBuffer.arrayOffset(), partBuffer.position());
+            final int actualPartSize = partBuffer.position();
+            partBuffer.position(0);
+            partBuffer.limit(actualPartSize);
+            flushBuffer(partBuffer.slice(), actualPartSize);
         }
         if (Objects.nonNull(uploadId)) {
-            if (!partETags.isEmpty()) {
+            if (!partUploads.isEmpty()) {
                 try {
-                    final CompleteMultipartUploadRequest request =
-                        new CompleteMultipartUploadRequest(bucketName, key, uploadId, partETags);
-                    final CompleteMultipartUploadResult result = client.completeMultipartUpload(request);
-                    log.debug("Completed multipart upload {} with result {}", uploadId, result);
-                } catch (final Exception e) {
+                    CompletableFuture.allOf(partUploads.toArray(new CompletableFuture[0]))
+                        .thenAccept(unused -> {
+                            final CompleteMultipartUploadRequest request =
+                                new CompleteMultipartUploadRequest(bucketName, key, uploadId, partETags);
+                            final CompleteMultipartUploadResult result = client.completeMultipartUpload(request);
+                            log.debug("Completed multipart upload {} with result {}", uploadId, result);
+                        })
+                        .get(); // TODO: maybe set a timeout?
+                } catch (final InterruptedException | ExecutionException e) {
                     log.error("Failed to complete multipart upload {}, aborting transaction", uploadId, e);
                     client.abortMultipartUpload(new AbortMultipartUploadRequest(bucketName, key, uploadId));
+                    throw new IOException(e);
                 }
             } else {
                 client.abortMultipartUpload(new AbortMultipartUploadRequest(bucketName, key, uploadId));
@@ -122,31 +136,30 @@ public class S3MultiPartOutputStream extends OutputStream {
         closed = true;
     }
 
-    private void flushBuffer(final int offset,
-                             final int actualPartSize) throws IOException {
+    private void flushBuffer(final ByteBuffer partBuffer, final int actualPartSize) throws IOException {
         try {
-            final ByteArrayInputStream in = new ByteArrayInputStream(partBuffer.array(), offset, actualPartSize);
-            uploadPart(in, actualPartSize);
-            partBuffer.clear();
+            final byte[] array = new byte[actualPartSize];
+            partBuffer.get(array, 0, actualPartSize);
+            final UploadPartRequest uploadPartRequest =
+                new UploadPartRequest()
+                    .withBucketName(bucketName)
+                    .withKey(key)
+                    .withUploadId(uploadId)
+                    .withPartSize(actualPartSize)
+                    .withPartNumber(partUploads.size() + 1)
+                    .withInputStream(new ByteArrayInputStream(array));
+
+            // Run request async
+            final CompletableFuture<Void> upload =
+                CompletableFuture.supplyAsync(() -> client.uploadPart(uploadPartRequest))
+                    .thenAccept(uploadPartResult -> partETags.add(uploadPartResult.getPartETag()));
+
+            partUploads.add(upload);
         } catch (final Exception e) {
             log.error("Failed to upload part in multipart upload {}, aborting transaction", uploadId, e);
             client.abortMultipartUpload(new AbortMultipartUploadRequest(bucketName, key, uploadId));
             closed = true;
             throw new IOException(e);
         }
-    }
-
-    private void uploadPart(final InputStream in, final int actualPartSize) {
-        final int partNumber = partETags.size() + 1;
-        final UploadPartRequest uploadPartRequest =
-            new UploadPartRequest()
-                .withBucketName(bucketName)
-                .withKey(key)
-                .withUploadId(uploadId)
-                .withPartSize(actualPartSize)
-                .withPartNumber(partNumber)
-                .withInputStream(in);
-        final UploadPartResult uploadResult = client.uploadPart(uploadPartRequest);
-        partETags.add(uploadResult.getPartETag());
     }
 }
