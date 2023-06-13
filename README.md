@@ -1,25 +1,24 @@
 # Tiered Storage for Apache Kafka®
 
-This project is a collection of `RemoteStorageManagers` for Apache Kafka tiered storage.
+This project is an implementation of `RemoteStorageManager` for Apache Kafka tiered storage.
 
-## Current development
+The implementation will have multiple configurable storage backends. Currently, AWS S3 is supported. We intend to support Google Cloud Storage and Azure Blob Storage in the near future.
 
 The project follows the API specifications according to the latest version of [KIP-405: Kafka Tiered Storage](https://cwiki.apache.org/confluence/x/KJDQBQ).
-
-Currently, support for `S3` storage is built.
-
-## Future plans
-
-We intend to add support for `GCS` storage in the future, along with other cloud provider storage solutions.
 
 ## Design
 
 ### Requirements
 
 Conceptually, `RemoteStorageManagers` is very simple and exposes a CRUD interface for uploading, (ranged) fetching, and deleting Kafka log segment files. This implementation was done with few additional requirements:
-1. Compression. It must provide optional (configurable) compression. The compression must be conditional and double compression of Kafka-compressed log segments should be avoided.
-2. Encryption. It must provide optional (configurable) encryption with key rotation support.
-3. Small download overhead. It must avoid wasted download from remote storage.
+1. Support for AWS S3, Google Cloud Storage, and Azure Blob Storage.
+2. Compression. It must provide optional (configurable) compression. The compression must be conditional and double compression of Kafka-compressed log segments should be avoided.
+3. Encryption. It must provide optional (configurable) encryption with key rotation support.
+4. Small download overhead. It must avoid wasted download from remote storage.
+
+### Storage backends
+
+There's little difference in how data is written to and read from different cloud object storages, mostly in using different SDKs. This implementation abstracts away the concept of storage backend. This allows to select the storage backend with configuration.
 
 ### Chunking
 
