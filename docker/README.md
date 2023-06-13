@@ -2,33 +2,64 @@
 
 Docker compose environment to try out tiered storage plugins.
 
-> NOTE: Consider this playground environments unstable until future releases.
+The project uses a Docker image built from Aiven Kafka fork (e.g. https://github.com/aiven/kafka/tree/3.3-2022-10-06-tiered-storage) and https://github.com/aiven/tiered-storage-for-apache-kafka.
+
+## Requirements
+
+- Docker Compose
+- `make`
+- `kcat`
 
 ## Structure
 
-- A [docker image](./kafka/Dockerfile) is built from a Kafka repository branch
-- Each plugin will have a Docker compose, e.g. [S3](./s3/compose.yml), to start an environment with Kafka, Zookeeper, plugin setup, and dependencies.
+- S3:
+  - s3/compose.yml: Expects environment variables to connect to AWS S3.
+  - s3-minio/compose.yml: Starts a local MinIO server to connect via S3 API.
+- Local:
+  - filesystem/compose.yml: Creates a local temporal directory with Tiered Storage plugin.
 
 ## How to use
 
-### Pre-requisites
+### Preparation
 
-Build plugin before starting Docker compose:
+#### Connection to S3
 
-#### Build plugin libraries
+Set AWS credentials on `.env` file on `./s3` directory:
 
-On root directory:
-
-```shell
-./gradlew clean installDist
+```properties .env
+AWS_S3_BUCKET=test-kafka-ts
+AWS_REGION=us-west-1
+AWS_ACCESS_KEY_ID=...
+AWS_SECRET_ACCESS_KEY=...
+# ... e.g. AWS_SESSION_TOKEN
 ```
+
+### Running
+
+- Start docker compose environments by running `make run_kafka_*`
+- Create the topic: `make create_topic`.
+- Fill the topic: `make fill_topic`.
+- Wait for a few seconds for old segment files in `/var/lib/kafka/data/t1-0` to be removed or renamed with `.deleted` suffix.
+
+To check files are shipped to tiered-storage:
+
+- File-system:
+  - Run `make check_fs_remote_data` to list data within the target directory.
+- S3:
+  - Access AWS S3 console or MinIO console (http://localhost:9090) to list and check files on remote storage
+
+And consume data from remote storage via Kafka Consumer:
+
+- Running kcat `make consume` and check previous offsets if needed `make consume args="-p 0 -o 120000"` 
+
+### Additional features
 
 #### Using Encryption mechanisms
 
 Generate RSA key pair:
 
 ```shell
-make rsa-keys
+make rsa_keys
 ```
 
 and set paths on `compose.yml` file:
@@ -38,76 +69,12 @@ and set paths on `compose.yml` file:
     # ...
     volumes:
       # ...
-      - ./private.pem:/kafka/plugins/private.pem
       - ./public.pem:/kafka/plugins/public.pem
-    command:
-      - kafka-server-start.sh
-      - config/server.properties
-      # ...
-      - --override
-      - rsm.config.s3.public_key_pem=/kafka/plugins/public.pem
-      - --override
-      - rsm.config.s3.private_key_pem=/kafka/plugins/private.pem
-      # ...
-```
-
-### S3
-
-> for AWS S3 try [./s3](./s3) directory and
-> for Minio S3 try [./s3-minio](./s3-minio) directory
-
-`compose.yml` is mounting the distribution directory:
-
-```yaml
-kafka:
-  # ...
-  volumes:
-    - ./../../s3/build/install/s3:/kafka/plugins/tiered-storage-s3
-```
-
-and then:
-
-```shell
-docker-compose up -d
-```
-
-#### Connect to AWS S3
-
-Set AWS credentials on `.env` file:
-
-```properties .env
-AWS_ACCESS_KEY_ID=...
-AWS_SECRET_ACCESS_KEY=...
-```
-
-and use variables on `compose.yml`:
-
-```yaml
-  kafka:
-    # ...
-    volumes:
-      # ...
       - ./private.pem:/kafka/plugins/private.pem
-      - ./public.pem:/kafka/plugins/public.pem
-    command:
-      - kafka-server-start.sh
-      - config/server.properties
+    environment:
       # ...
-      - --override
-      - rsm.config.s3.client.aws_access_key_id=${AWS_ACCESS_KEY_ID}
-      - --override
-      - rsm.config.s3.client.aws_secret_access_key=${AWS_SECRET_ACCESS_KEY}
+      KAFKA_RSM_CONFIG_STORAGE_ENCRYPTION_ENABLED: true
+      KAFKA_RSM_CONFIG_STORAGE_ENCRYPTION_PUBLIC_KEY_FILE: /kafka/plugins/public.pem
+      KAFKA_RSM_CONFIG_STORAGE_ENCRYPTION_PRIVATE_KEY_FILE: /kafka/plugins/private.pem
+      # ...
 ```
-
-
-### Kafka
-
-Creating topics with Tiered storage:
-
-```shell
-make kafka-topic
-```
-
-creates a topic t1 with 6 partitions, 10MB segments, retention bytes 100MB, and 20MB local retention.
-
-

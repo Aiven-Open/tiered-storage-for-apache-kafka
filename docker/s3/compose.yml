@@ -1,67 +1,48 @@
 version: '3.8'
 services:
   zookeeper:
-    image: kafka-ts-s3-aws
-    command:
-      - zookeeper-server-start.sh
-      - config/zookeeper.properties
+    image: "confluentinc/cp-zookeeper:7.3.3"
+    ports:
+      - "2181:2181"
+    environment:
+      ZOOKEEPER_CLIENT_PORT: 2181
 
   kafka:
-    image: kafka-ts-s3-aws
-    build:
-      context: ../kafka/.
-      # Override branch used to build docker image
-      # args:
-      #   - AK_REPO=https://github.com/aiven/kafka
-      #   - AK_BRANCH=3.0-2022-03-31-tiered-storage
-      #   - KAFKA_VERSION=3.0.1-SNAPSHOT
+    image: "aivenoy/kafka:3.3-2022-10-06-tiered-storage-1-ts-1"
+    container_name: "kafka-ts"
+    depends_on:
+      - zookeeper
     ports:
       - "9092:9092"
-    volumes:
-      # mount plugin
-      - ./../../s3/build/install/s3:/kafka/plugins/tiered-storage-s3
-      # encryption keys
-      - ./../private.pem:/kafka/plugins/private.pem
-      - ./../public.pem:/kafka/plugins/public.pem
-    command:
-      - kafka-server-start.sh
-      - config/server.properties
-      - --override
-      - zookeeper.connect=zookeeper:2181
-      - --override
-      - listeners=BROKER://kafka:29092,EXTERNAL://kafka:9092
-      - --override
-      - advertised.listeners=BROKER://kafka:29092,EXTERNAL://localhost:9092
-      - --override
-      - listener.security.protocol.map=BROKER:PLAINTEXT,EXTERNAL:PLAINTEXT
-      - --override
-      - inter.broker.listener.name=BROKER
-      # Enable Tiered storage
-      - --override
-      - remote.log.storage.system.enable=true
-      # Tiered Storage: RLMM config
-      - --override
-      - remote.log.metadata.manager.class.name=org.apache.kafka.server.log.remote.metadata.storage.TopicBasedRemoteLogMetadataManager
-      - --override
-      - rlmm.config.remote.log.metadata.common.client.bootstrap.servers=kafka:29092
-      - --override
-      - rlmm.config.remote.log.metadata.topic.replication.factor=1
-      # Tiered storage S3 plugin
-      - --override
-      - remote.log.storage.manager.class.name=io.aiven.kafka.tiered.storage.s3.S3RemoteStorageManager
-      - --override
-      - remote.log.storage.manager.class.path=/kafka/plugins/tiered-storage-s3/*
-      - --override
-      - rsm.config.s3.bucket.name=kafka-ts-us-east-1
-      - --override
-      - rsm.config.s3.region=us-east-1
-      - --override
-      - rsm.config.s3.credentials.provider.class=com.amazonaws.auth.AWSStaticCredentialsProvider
-      - --override
-      - rsm.config.s3.client.aws_access_key_id=${AWS_ACCESS_KEY_ID}
-      - --override
-      - rsm.config.s3.client.aws_secret_access_key=${AWS_SECRET_ACCESS_KEY}
-      - --override
-      - rsm.config.s3.public_key_pem=/kafka/plugins/public.pem
-      - --override
-      - rsm.config.s3.private_key_pem=/kafka/plugins/private.pem
+    env_file:
+      - .env
+    environment:
+      KAFKA_BROKER_ID: 0
+      KAFKA_ZOOKEEPER_CONNECT: "zookeeper:2181"
+      KAFKA_LISTENERS: "PLAINTEXT://0.0.0.0:9092,BROKER://0.0.0.0:29092"
+      KAFKA_ADVERTISED_LISTENERS: "PLAINTEXT://localhost:9092,BROKER://kafka:29092"
+      KAFKA_LISTENER_SECURITY_PROTOCOL_MAP: "PLAINTEXT:PLAINTEXT,BROKER:PLAINTEXT"
+      KAFKA_INTER_BROKER_LISTENER_NAME: "BROKER"
+      KAFKA_OFFSETS_TOPIC_REPLICATION_FACTOR: 1
+      KAFKA_OFFSETS_TOPIC_NUM_PARTITIONS: 1
+      KAFKA_TRANSACTION_STATE_LOG_REPLICATION_FACTOR: 1
+      KAFKA_TRANSACTION_STATE_LOG_MIN_ISR: 1
+      KAFKA_AUTO_CREATE_TOPICS_ENABLE: false
+      # Tweak retention checking
+      KAFKA_LOG_RETENTION_CHECK_INTERVAL_MS: 10000
+      # Enable Tiered Storage
+      KAFKA_REMOTE_LOG_STORAGE_SYSTEM_ENABLE: true
+      KAFKA_REMOTE_LOG_MANAGER_TASK_INTERVAL_MS: 5000
+      # Tiered Storage Remote Metadata Manager
+      KAFKA_REMOTE_LOG_METADATA_MANAGER_CLASS_NAME: "org.apache.kafka.server.log.remote.metadata.storage.TopicBasedRemoteLogMetadataManager"
+      KAFKA_RLMM_CONFIG_REMOTE_LOG_METADATA_TOPIC_REPLICATION_FACTOR: 1
+      KAFKA_REMOTE_LOG_METADATA_MANAGER_LISTENER_NAME: BROKER
+      # Tiered Storage Remote Storage Manager
+      KAFKA_REMOTE_LOG_STORAGE_MANAGER_CLASS_NAME: "io.aiven.kafka.tieredstorage.RemoteStorageManager"
+      KAFKA_REMOTE_LOG_STORAGE_MANAGER_CLASS_PATH: "/tiered-storage-for-apache-kafka/*"
+      KAFKA_RSM_CONFIG_CHUNK_SIZE: 1048576
+      ## Storage Backend config
+      KAFKA_RSM_CONFIG_KEY_PREFIX: "tiered-storage-demo/"
+      KAFKA_RSM_CONFIG_STORAGE_BACKEND_CLASS: "io.aiven.kafka.tieredstorage.storage.s3.S3Storage"
+      KAFKA_RSM_CONFIG_STORAGE_S3_BUCKET_NAME: ${AWS_S3_BUCKET}
+      KAFKA_RSM_CONFIG_STORAGE_S3_REGION: ${AWS_REGION}
