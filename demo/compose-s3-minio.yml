@@ -1,3 +1,18 @@
+##
+# Copyright 2023 Aiven Oy
+#
+# Licensed under the Apache License, Version 2.0 (the "License");
+# you may not use this file except in compliance with the License.
+# You may obtain a copy of the License at
+#
+# http://www.apache.org/licenses/LICENSE-2.0
+#
+# Unless required by applicable law or agreed to in writing, software
+# distributed under the License is distributed on an "AS IS" BASIS,
+# WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
+# See the License for the specific language governing permissions and
+# limitations under the License.
+##
 version: '3.8'
 services:
   zookeeper:
@@ -8,14 +23,13 @@ services:
       ZOOKEEPER_CLIENT_PORT: 2181
 
   kafka:
-    image: "aivenoy/kafka:3.3-2022-10-06-tiered-storage-1-ts-1"
+    image: "aivenoy/kafka:3.3-2022-10-06-tiered-storage-1-ts-2"
     container_name: "kafka-ts"
     depends_on:
       - zookeeper
+      - minio
     ports:
       - "9092:9092"
-    env_file:
-      - .env
     environment:
       KAFKA_BROKER_ID: 0
       KAFKA_ZOOKEEPER_CONNECT: "zookeeper:2181"
@@ -33,16 +47,39 @@ services:
       # Enable Tiered Storage
       KAFKA_REMOTE_LOG_STORAGE_SYSTEM_ENABLE: true
       KAFKA_REMOTE_LOG_MANAGER_TASK_INTERVAL_MS: 5000
-      # Tiered Storage Remote Metadata Manager
+      # Remote metadata manager
       KAFKA_REMOTE_LOG_METADATA_MANAGER_CLASS_NAME: "org.apache.kafka.server.log.remote.metadata.storage.TopicBasedRemoteLogMetadataManager"
       KAFKA_RLMM_CONFIG_REMOTE_LOG_METADATA_TOPIC_REPLICATION_FACTOR: 1
       KAFKA_REMOTE_LOG_METADATA_MANAGER_LISTENER_NAME: BROKER
-      # Tiered Storage Remote Storage Manager
-      KAFKA_REMOTE_LOG_STORAGE_MANAGER_CLASS_NAME: "io.aiven.kafka.tieredstorage.RemoteStorageManager"
+      # Remote storage manager
       KAFKA_REMOTE_LOG_STORAGE_MANAGER_CLASS_PATH: "/tiered-storage-for-apache-kafka/*"
+      KAFKA_REMOTE_LOG_STORAGE_MANAGER_CLASS_NAME: "io.aiven.kafka.tieredstorage.RemoteStorageManager"
       KAFKA_RSM_CONFIG_CHUNK_SIZE: 1048576
-      ## Storage Backend config
+      # Storage backend
       KAFKA_RSM_CONFIG_KEY_PREFIX: "tiered-storage-demo/"
       KAFKA_RSM_CONFIG_STORAGE_BACKEND_CLASS: "io.aiven.kafka.tieredstorage.storage.s3.S3Storage"
-      KAFKA_RSM_CONFIG_STORAGE_S3_BUCKET_NAME: ${AWS_S3_BUCKET}
-      KAFKA_RSM_CONFIG_STORAGE_S3_REGION: ${AWS_REGION}
+      KAFKA_RSM_CONFIG_STORAGE_S3_ENDPOINT_URL: "http://minio:9000"
+      KAFKA_RSM_CONFIG_STORAGE_S3_BUCKET_NAME: "test-bucket"
+      KAFKA_RSM_CONFIG_STORAGE_S3_REGION: "us-east-1"
+      KAFKA_RSM_CONFIG_STORAGE_S3_PATH_STYLE_ACCESS_ENABLED: true
+      KAFKA_RSM_CONFIG_STORAGE_AWS_ACCESS_KEY_ID: "minioadmin"
+      KAFKA_RSM_CONFIG_STORAGE_AWS_SECRET_ACCESS_KEY: "minioadmin"
+
+  minio:
+    image: quay.io/minio/minio
+    ports:
+      - "9000:9000"
+      - "9090:9090"
+    command: server /data --console-address ":9090"
+
+  minio-createbucket:
+    image: quay.io/minio/mc
+    restart: "no"
+    depends_on:
+      - minio
+    entrypoint: >
+      /bin/sh -c "
+      /usr/bin/mc config host add local http://minio:9000 minioadmin minioadmin;
+      /usr/bin/mc mb local/test-bucket;
+      exit 0;
+      "

@@ -6,6 +6,10 @@ The implementation will have multiple configurable storage backends. Currently, 
 
 The project follows the API specifications according to the latest version of [KIP-405: Kafka Tiered Storage](https://cwiki.apache.org/confluence/x/KJDQBQ).
 
+## Getting started
+
+See the [demo/](demo/) directory.
+
 ## Design
 
 ### Requirements
