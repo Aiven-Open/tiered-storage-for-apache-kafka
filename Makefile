@@ -14,7 +14,7 @@
 # limitations under the License.
 ##
 VERSION=0.0.1-SNAPSHOT
-IMAGE_TAG=aivenoy/kafka:3.3-2022-10-06-tiered-storage-1-ts-1
+IMAGE_TAG=aivenoy/kafka:3.3-2022-10-06-tiered-storage-1-ts-2
 
 .PHONY: clean
 clean:
