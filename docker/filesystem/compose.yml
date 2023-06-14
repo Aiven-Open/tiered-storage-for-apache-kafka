@@ -12,7 +12,6 @@ services:
     container_name: "kafka-ts"
     depends_on:
       - zookeeper
-      - minio
     ports:
       - "9092:9092"
     environment:
@@ -42,27 +41,5 @@ services:
       KAFKA_RSM_CONFIG_CHUNK_SIZE: 1048576
       ## Storage Backend config
       KAFKA_RSM_CONFIG_KEY_PREFIX: "tiered-storage-demo/"
-      KAFKA_RSM_CONFIG_STORAGE_BACKEND_CLASS: "io.aiven.kafka.tieredstorage.storage.s3.S3Storage"
-      KAFKA_RSM_CONFIG_STORAGE_S3_ENDPOINT_URL: "http://minio:9000"
-      KAFKA_RSM_CONFIG_STORAGE_S3_BUCKET_NAME: "test-bucket"
-      KAFKA_RSM_CONFIG_STORAGE_S3_REGION: "us-east-1"
-      KAFKA_RSM_CONFIG_STORAGE_S3_PATH_STYLE_ACCESS_ENABLED: true
-      KAFKA_RSM_CONFIG_STORAGE_AWS_ACCESS_KEY_ID: "minioadmin"
-      KAFKA_RSM_CONFIG_STORAGE_AWS_SECRET_ACCESS_KEY: "minioadmin"
-
-  minio:
-    image: quay.io/minio/minio
-    ports:
-      - "9000:9000"
-      - "9090:9090"
-    command: server /data --console-address ":9090"
-  minio-createbucket:
-    image: quay.io/minio/mc
-    depends_on:
-      - minio
-    entrypoint: >
-      /bin/sh -c "
-      /usr/bin/mc config host add local http://minio:9000 minioadmin minioadmin;
-      /usr/bin/mc mb local/test-bucket;
-      exit 0;
-      "
+      KAFKA_RSM_CONFIG_STORAGE_BACKEND_CLASS: "io.aiven.kafka.tieredstorage.storage.filesystem.FileSystemStorage"
+      KAFKA_RSM_CONFIG_STORAGE_ROOT: "/home/appuser/kafka/kafka-tiered-storage"
