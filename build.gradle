@@ -21,9 +21,12 @@ buildscript {
 }
 
 plugins {
+    id 'info.solidsoft.pitest' version '1.9.11' apply false
     id "java-library"
     id "distribution"
 }
+
+apply plugin: 'info.solidsoft.pitest.aggregator'
 
 wrapper {
     distributionType = 'ALL'
@@ -32,6 +35,10 @@ wrapper {
         propertiesFile << "distributionSha256Sum=${sha256Sum}\n"
         println "Added checksum to wrapper properties"
     }
+}
+
+repositories {
+    mavenCentral()
 }
 
 subprojects {
@@ -48,6 +55,7 @@ subprojects {
     apply plugin: "distribution"
 
     apply plugin: "idea"
+    apply plugin: 'info.solidsoft.pitest'
 
     repositories {
         // Use Maven Central for resolving dependencies.
@@ -66,6 +74,22 @@ subprojects {
         toolVersion = "10.12.0"
         configDirectory = rootProject.file("checkstyle/")
     }
+
+    pitest {
+        //adds dependency to org.pitest:pitest-junit5-plugin and sets "testPlugin" to "junit5"
+        junit5PluginVersion = '1.1.0'
+        pitestVersion = '1.14.1'
+        targetClasses.add("io.aiven.kafka.tieredstorage.*")  //by default "${project.group}.*"
+        targetTests.add("io.aiven.kafka.tieredstorage.*")  //by default "${project.group}.*"
+        threads = Runtime.getRuntime().availableProcessors()
+        outputFormats.addAll('XML', 'HTML')
+        mutators.add('ALL')
+        exportLineCoverage = true
+        if (project.name in ['storage']) {
+            failWhenNoMutations = false
+        }
+    }
+
 
     ext {
         junitVersion = "5.9.3"
