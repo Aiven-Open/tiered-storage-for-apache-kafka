@@ -41,7 +41,6 @@ import org.mockito.junit.jupiter.MockitoExtension;
 import static org.assertj.core.api.Assertions.assertThat;
 import static org.assertj.core.api.Assertions.assertThatThrownBy;
 import static org.mockito.ArgumentMatchers.any;
-import static org.mockito.Mockito.doNothing;
 import static org.mockito.Mockito.never;
 import static org.mockito.Mockito.times;
 import static org.mockito.Mockito.verify;
@@ -70,12 +69,11 @@ class S3MultiPartOutputStreamTest {
 
     @Test
     void sendAbortForAnyExceptionWhileWriting() {
-        when(mockedS3.initiateMultipartUpload(any(InitiateMultipartUploadRequest.class)))
+        when(mockedS3.initiateMultipartUpload(any()))
             .thenReturn(newInitiateMultipartUploadResult());
-        doNothing().when(mockedS3).abortMultipartUpload(abortMultipartUploadRequestCaptor.capture());
 
         final RuntimeException testException = new RuntimeException("test");
-        when(mockedS3.uploadPart(any(UploadPartRequest.class)))
+        when(mockedS3.uploadPart(any()))
             .thenThrow(testException);
 
         assertThatThrownBy(() -> {
@@ -87,18 +85,17 @@ class S3MultiPartOutputStreamTest {
 
         verify(mockedS3).initiateMultipartUpload(any(InitiateMultipartUploadRequest.class));
         verify(mockedS3).uploadPart(any(UploadPartRequest.class));
-        verify(mockedS3).abortMultipartUpload(abortMultipartUploadRequestCaptor.getValue());
+        verify(mockedS3).abortMultipartUpload(abortMultipartUploadRequestCaptor.capture());
 
         assertAbortMultipartUploadRequest(abortMultipartUploadRequestCaptor.getValue());
     }
 
     @Test
     void sendAbortForAnyExceptionWhenClose() throws Exception {
-        when(mockedS3.initiateMultipartUpload(any(InitiateMultipartUploadRequest.class)))
+        when(mockedS3.initiateMultipartUpload(any()))
             .thenReturn(newInitiateMultipartUploadResult());
-        doNothing().when(mockedS3).abortMultipartUpload(abortMultipartUploadRequestCaptor.capture());
 
-        when(mockedS3.uploadPart(any(UploadPartRequest.class)))
+        when(mockedS3.uploadPart(any()))
             .thenThrow(RuntimeException.class);
 
         final S3MultiPartOutputStream out = new S3MultiPartOutputStream(BUCKET_NAME, FILE_KEY, 10, mockedS3);
@@ -113,18 +110,18 @@ class S3MultiPartOutputStreamTest {
             .isInstanceOf(RuntimeException.class);
 
         verify(mockedS3, never()).completeMultipartUpload(any(CompleteMultipartUploadRequest.class));
-        verify(mockedS3).abortMultipartUpload(abortMultipartUploadRequestCaptor.getValue());
+        verify(mockedS3).abortMultipartUpload(abortMultipartUploadRequestCaptor.capture());
 
         assertAbortMultipartUploadRequest(abortMultipartUploadRequestCaptor.getValue());
     }
 
     @Test
     void writesOneByte() throws Exception {
-        when(mockedS3.initiateMultipartUpload(any(InitiateMultipartUploadRequest.class)))
+        when(mockedS3.initiateMultipartUpload(any()))
             .thenReturn(newInitiateMultipartUploadResult());
-        when(mockedS3.uploadPart(uploadPartRequestCaptor.capture()))
+        when(mockedS3.uploadPart(any()))
             .thenReturn(newUploadPartResult(1, "SOME_ETAG"));
-        when(mockedS3.completeMultipartUpload(completeMultipartUploadRequestCaptor.capture()))
+        when(mockedS3.completeMultipartUpload(any()))
             .thenReturn(new CompleteMultipartUploadResult());
 
         try (final S3MultiPartOutputStream out = new S3MultiPartOutputStream(BUCKET_NAME, FILE_KEY, 100, mockedS3)) {
@@ -132,8 +129,8 @@ class S3MultiPartOutputStreamTest {
         }
 
         verify(mockedS3).initiateMultipartUpload(any(InitiateMultipartUploadRequest.class));
-        verify(mockedS3).uploadPart(any(UploadPartRequest.class));
-        verify(mockedS3).completeMultipartUpload(any(CompleteMultipartUploadRequest.class));
+        verify(mockedS3).uploadPart(uploadPartRequestCaptor.capture());
+        verify(mockedS3).completeMultipartUpload(completeMultipartUploadRequestCaptor.capture());
 
         assertUploadPartRequest(
             uploadPartRequestCaptor.getValue(),
@@ -151,14 +148,14 @@ class S3MultiPartOutputStreamTest {
         final int bufferSize = 10;
         final byte[] message = new byte[bufferSize];
 
-        when(mockedS3.initiateMultipartUpload(any(InitiateMultipartUploadRequest.class)))
+        when(mockedS3.initiateMultipartUpload(any()))
             .thenReturn(newInitiateMultipartUploadResult());
-        when(mockedS3.uploadPart(uploadPartRequestCaptor.capture()))
+        when(mockedS3.uploadPart(any()))
             .thenAnswer(a -> {
                 final UploadPartRequest up = a.getArgument(0);
                 return newUploadPartResult(up.getPartNumber(), "SOME_TAG#" + up.getPartNumber());
             });
-        when(mockedS3.completeMultipartUpload(completeMultipartUploadRequestCaptor.capture()))
+        when(mockedS3.completeMultipartUpload(any()))
             .thenReturn(new CompleteMultipartUploadResult());
 
         final List<byte[]> expectedMessagesList = new ArrayList<>();
@@ -172,8 +169,8 @@ class S3MultiPartOutputStreamTest {
         }
 
         verify(mockedS3).initiateMultipartUpload(any(InitiateMultipartUploadRequest.class));
-        verify(mockedS3, times(3)).uploadPart(any(UploadPartRequest.class));
-        verify(mockedS3).completeMultipartUpload(any(CompleteMultipartUploadRequest.class));
+        verify(mockedS3, times(3)).uploadPart(uploadPartRequestCaptor.capture());
+        verify(mockedS3).completeMultipartUpload(completeMultipartUploadRequestCaptor.capture());
 
         final List<UploadPartRequest> uploadRequests = uploadPartRequestCaptor.getAllValues();
         int counter = 0;
@@ -199,18 +196,18 @@ class S3MultiPartOutputStreamTest {
 
         final List<UploadPartRequest> uploadPartRequests = new ArrayList<>();
 
-        when(mockedS3.initiateMultipartUpload(any(InitiateMultipartUploadRequest.class)))
+        when(mockedS3.initiateMultipartUpload(any()))
             .thenReturn(newInitiateMultipartUploadResult());
-        when(mockedS3.uploadPart(any(UploadPartRequest.class)))
+        when(mockedS3.uploadPart(any()))
             .thenAnswer(a -> {
                 final UploadPartRequest up = a.getArgument(0);
                 //emulate behave of S3 client otherwise we will get wrong array in the memory
                 up.setInputStream(new ByteArrayInputStream(up.getInputStream().readAllBytes()));
                 uploadPartRequests.add(up);
 
-                return newUploadPartResult(up.getPartNumber(), "SOME_TAG#" + up.getPartNumber());
+                return newUploadPartResult(up.getPartNumber(), "SOME_ETAG#" + up.getPartNumber());
             });
-        when(mockedS3.completeMultipartUpload(completeMultipartUploadRequestCaptor.capture()))
+        when(mockedS3.completeMultipartUpload(any()))
             .thenReturn(new CompleteMultipartUploadResult());
 
         final byte[] message = new byte[messageSize];
@@ -235,6 +232,8 @@ class S3MultiPartOutputStreamTest {
         verify(mockedS3).initiateMultipartUpload(any(InitiateMultipartUploadRequest.class));
         verify(mockedS3, times(2)).uploadPart(any(UploadPartRequest.class));
         verify(mockedS3).completeMultipartUpload(completeMultipartUploadRequestCaptor.capture());
+        assertCompleteMultipartUploadRequest(completeMultipartUploadRequestCaptor.getValue(),
+            List.of(new PartETag(1, "SOME_ETAG#1"), new PartETag(2, "SOME_ETAG#2")));
     }
 
     private static InitiateMultipartUploadResult newInitiateMultipartUploadResult() {
