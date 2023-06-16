@@ -60,13 +60,14 @@ class RemoteStorageManagerMetricsTest {
 
     static RemoteStorageManager rsm;
 
+    static final int LOG_SEGMENT_BYTES = 10;
     static final RemoteLogSegmentMetadata REMOTE_LOG_SEGMENT_METADATA =
         new RemoteLogSegmentMetadata(
             new RemoteLogSegmentId(
                 new TopicIdPartition(Uuid.randomUuid(), new TopicPartition("topic", 0)),
                 Uuid.randomUuid()),
             1, -1, -1, -1, 1L,
-            1, Collections.singletonMap(1, 100L));
+            LOG_SEGMENT_BYTES, Collections.singletonMap(1, 100L));
     static LogSegmentData logSegmentData;
 
     @BeforeAll
@@ -88,7 +89,7 @@ class RemoteStorageManagerMetricsTest {
         final Path source = tmpDir.resolve("source");
         Files.createDirectories(source);
         final Path sourceFile = source.resolve("file");
-        Files.write(sourceFile, new byte[10]);
+        Files.write(sourceFile, new byte[LOG_SEGMENT_BYTES]);
 
         logSegmentData = new LogSegmentData(
             sourceFile, sourceFile, sourceFile, Optional.empty(), sourceFile,
@@ -115,6 +116,11 @@ class RemoteStorageManagerMetricsTest {
             .isZero();
         assertThat((double) MBEAN_SERVER.getAttribute(segmentCopyPerSecName, "segment-copy-time-max"))
             .isZero();
+
+        assertThat((double) MBEAN_SERVER.getAttribute(segmentCopyPerSecName, "segment-copy-bytes-rate"))
+            .isEqualTo(30.0 / METRIC_TIME_WINDOW_SEC);
+        assertThat((double) MBEAN_SERVER.getAttribute(segmentCopyPerSecName, "segment-copy-bytes-total"))
+            .isEqualTo(30.0);
 
         assertThat((double) MBEAN_SERVER.getAttribute(segmentCopyPerSecName, "segment-fetch-rate"))
             .isEqualTo(1.0 / METRIC_TIME_WINDOW_SEC);
