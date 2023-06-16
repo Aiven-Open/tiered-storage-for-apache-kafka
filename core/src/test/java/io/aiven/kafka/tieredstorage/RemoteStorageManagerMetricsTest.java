@@ -97,7 +97,7 @@ class RemoteStorageManagerMetricsTest {
     }
 
     @Test
-    void metricsShouldBeReported() throws RemoteStorageException, JMException, IOException {
+    void metricsShouldBeReported() throws RemoteStorageException, JMException {
         rsm.copyLogSegmentData(REMOTE_LOG_SEGMENT_METADATA, logSegmentData);
         rsm.copyLogSegmentData(REMOTE_LOG_SEGMENT_METADATA, logSegmentData);
         rsm.copyLogSegmentData(REMOTE_LOG_SEGMENT_METADATA, logSegmentData);
@@ -108,6 +108,8 @@ class RemoteStorageManagerMetricsTest {
             "aiven.kafka.server.tieredstorage:type=remote-storage-manager-metrics");
         assertThat((double) MBEAN_SERVER.getAttribute(segmentCopyPerSecName, "segment-copy-rate"))
             .isEqualTo(3.0 / METRIC_TIME_WINDOW_SEC);
+        assertThat((double) MBEAN_SERVER.getAttribute(segmentCopyPerSecName, "segment-copy-total"))
+            .isEqualTo(3.0);
 
         assertThat((double) MBEAN_SERVER.getAttribute(segmentCopyPerSecName, "segment-copy-time-avg"))
             .isZero();
