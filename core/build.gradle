@@ -33,7 +33,7 @@ dependencies {
 
     // Should be provided at the run time.
     compileOnly "com.fasterxml.jackson.core:jackson-databind:$jacksonVersion"
-    implementation "com.fasterxml.jackson.datatype:jackson-datatype-jdk8:$jacksonVersion"
+    compileOnly "com.fasterxml.jackson.datatype:jackson-datatype-jdk8:$jacksonVersion"
 
     // Should be provided at the run time.
     compileOnly "com.github.luben:zstd-jni:$zstdVersion"
@@ -46,5 +46,9 @@ dependencies {
     testImplementation(project(":storage:filesystem"))
 
     testImplementation "com.github.luben:zstd-jni:$zstdVersion"
+
+    testImplementation "com.fasterxml.jackson.core:jackson-databind:$jacksonVersion"
+    testImplementation "com.fasterxml.jackson.datatype:jackson-datatype-jdk8:$jacksonVersion"
+
     integrationTestImplementation sourceSets.test.output
 }

@@ -18,15 +18,24 @@ archivesBaseName = "storage-s3"
 
 ext {
     testcontainersVersion = "1.18.3"
+
+    s3SdkVersion = "1.12.418"
 }
 
 dependencies {
     implementation project(":storage:core")
 
-    implementation 'com.amazonaws:aws-java-sdk-s3:1.12.418'
+    implementation("com.amazonaws:aws-java-sdk-s3:$s3SdkVersion") {
+        // Should be provided at the run time.
+        exclude group: 'com.fasterxml.jackson.core', module: 'jackson-core'
+        exclude group: 'com.fasterxml.jackson.core', module: 'jackson-databind'
+        exclude group: 'com.fasterxml.jackson.datatype', module: 'jackson-datatype-jdk8'
+    }
 
     testImplementation(testFixtures(project(":storage:core")))
 
     testImplementation "org.testcontainers:junit-jupiter:$testcontainersVersion"
     testImplementation "org.testcontainers:localstack:$testcontainersVersion"
+
+    testImplementation("com.amazonaws:aws-java-sdk-s3:$s3SdkVersion")
 }
