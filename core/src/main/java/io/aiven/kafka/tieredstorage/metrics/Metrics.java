@@ -23,6 +23,8 @@ import org.apache.kafka.common.metrics.KafkaMetricsContext;
 import org.apache.kafka.common.metrics.MetricConfig;
 import org.apache.kafka.common.metrics.Sensor;
 import org.apache.kafka.common.metrics.stats.Avg;
+import org.apache.kafka.common.metrics.stats.CumulativeCount;
+import org.apache.kafka.common.metrics.stats.CumulativeSum;
 import org.apache.kafka.common.metrics.stats.Max;
 import org.apache.kafka.common.metrics.stats.Rate;
 import org.apache.kafka.common.utils.Time;
@@ -36,8 +38,11 @@ public class Metrics {
     private final Time time;
 
     private final org.apache.kafka.common.metrics.Metrics metrics;
-    private final Sensor segmentCopyPerSec;
+
+    private final Sensor segmentCopyRequests;
     private final Sensor segmentCopyTime;
+    private final Sensor segmentCopyBytes;
+
     private final Sensor segmentFetchPerSec;
 
     public Metrics(final Time time) {
@@ -49,9 +54,15 @@ public class Metrics {
             new MetricConfig(), List.of(reporter), time,
             new KafkaMetricsContext("aiven.kafka.server.tieredstorage")
         );
-        segmentCopyPerSec = metrics.sensor("segment-copy");
         final String metricGroup = "remote-storage-manager-metrics";
-        segmentCopyPerSec.add(metrics.metricName("segment-copy-rate", metricGroup), new Rate());
+
+        segmentCopyRequests = metrics.sensor("segment-copy");
+        segmentCopyRequests.add(metrics.metricName("segment-copy-rate", metricGroup), new Rate());
+        segmentCopyRequests.add(metrics.metricName("segment-copy-total", metricGroup), new CumulativeCount());
+
+        segmentCopyBytes = metrics.sensor("segment-copy-bytes");
+        segmentCopyBytes.add(metrics.metricName("segment-copy-bytes-rate", metricGroup), new Rate());
+        segmentCopyBytes.add(metrics.metricName("segment-copy-bytes-total", metricGroup), new CumulativeSum());
 
         segmentCopyTime = metrics.sensor("segment-copy-time");
         segmentCopyTime.add(metrics.metricName("segment-copy-time-avg", metricGroup), new Avg());
@@ -61,8 +72,9 @@ public class Metrics {
         segmentFetchPerSec.add(metrics.metricName("segment-fetch-rate", metricGroup), new Rate());
     }
 
-    public void recordSegmentCopy() {
-        segmentCopyPerSec.record();
+    public void recordSegmentCopy(final int bytes) {
+        segmentCopyRequests.record();
+        segmentCopyBytes.record(bytes);
     }
 
     public void recordSegmentCopyTime(final long startMs, final long endMs) {

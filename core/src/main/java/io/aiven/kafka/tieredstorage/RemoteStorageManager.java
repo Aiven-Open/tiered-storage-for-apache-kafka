@@ -160,7 +160,7 @@ public class RemoteStorageManager implements org.apache.kafka.server.log.remote.
         Objects.requireNonNull(remoteLogSegmentMetadata, "remoteLogSegmentId must not be null");
         Objects.requireNonNull(logSegmentData, "logSegmentData must not be null");
 
-        metrics.recordSegmentCopy();
+        metrics.recordSegmentCopy(remoteLogSegmentMetadata.segmentSizeInBytes());
 
         final long startedMs = time.milliseconds();
 
