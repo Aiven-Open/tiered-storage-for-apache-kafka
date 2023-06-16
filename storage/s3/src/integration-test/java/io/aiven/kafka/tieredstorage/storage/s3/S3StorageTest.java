@@ -34,16 +34,13 @@ import org.junit.jupiter.api.TestInfo;
 import org.testcontainers.containers.localstack.LocalStackContainer;
 import org.testcontainers.junit.jupiter.Container;
 import org.testcontainers.junit.jupiter.Testcontainers;
-import org.testcontainers.utility.DockerImageName;
 
 import static org.assertj.core.api.Assertions.assertThat;
 
 @Testcontainers
 public class S3StorageTest extends BaseStorageTest {
     @Container
-    public static final LocalStackContainer LOCALSTACK = new LocalStackContainer(
-        DockerImageName.parse("localstack/localstack:2.0.2")
-    ).withServices(LocalStackContainer.Service.S3);
+    public static final LocalStackContainer LOCALSTACK = S3TestContainer.container();
     public static final int PART_SIZE = 8 * 1024 * 1024; // 8MiB
 
     static AmazonS3 s3Client;
