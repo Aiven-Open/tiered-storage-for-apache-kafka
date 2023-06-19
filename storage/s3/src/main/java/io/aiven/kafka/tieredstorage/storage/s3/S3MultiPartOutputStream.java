@@ -23,12 +23,10 @@ import java.io.OutputStream;
 import java.nio.ByteBuffer;
 import java.util.ArrayList;
 import java.util.List;
-import java.util.Objects;
 
 import com.amazonaws.services.s3.AmazonS3;
 import com.amazonaws.services.s3.model.AbortMultipartUploadRequest;
 import com.amazonaws.services.s3.model.CompleteMultipartUploadRequest;
-import com.amazonaws.services.s3.model.CompleteMultipartUploadResult;
 import com.amazonaws.services.s3.model.InitiateMultipartUploadRequest;
 import com.amazonaws.services.s3.model.InitiateMultipartUploadResult;
 import com.amazonaws.services.s3.model.PartETag;
@@ -42,6 +40,8 @@ import org.slf4j.LoggerFactory;
  * Enable uploads to S3 with unknown size by feeding input bytes to multiple parts and upload them on close.
  *
  * <p>Requires S3 client and starts a multipart transaction when instantiated. Do not reuse.
+ *
+ * <p>{@link S3MultiPartOutputStream} is not thread-safe.
  */
 public class S3MultiPartOutputStream extends OutputStream {
 
@@ -80,60 +80,79 @@ public class S3MultiPartOutputStream extends OutputStream {
 
     @Override
     public void write(final byte[] b, final int off, final int len) throws IOException {
-        if (closed) {
+        if (isClosed()) {
             throw new IllegalStateException("Already closed");
         }
         if (b.length == 0) {
             return;
         }
-        final ByteBuffer source = ByteBuffer.wrap(b, off, len);
-        while (source.hasRemaining()) {
-            final int transferred = Math.min(partBuffer.remaining(), source.remaining());
-            final int offset = source.arrayOffset() + source.position();
-            // TODO: get rid of this array copying
-            partBuffer.put(source.array(), offset, transferred);
-            source.position(source.position() + transferred);
-            if (!partBuffer.hasRemaining()) {
-                flushBuffer(0, partSize);
+        try {
+            final ByteBuffer source = ByteBuffer.wrap(b, off, len);
+            while (source.hasRemaining()) {
+                final int transferred = Math.min(partBuffer.remaining(), source.remaining());
+                final int offset = source.arrayOffset() + source.position();
+                // TODO: get rid of this array copying
+                partBuffer.put(source.array(), offset, transferred);
+                source.position(source.position() + transferred);
+                if (!partBuffer.hasRemaining()) {
+                    flushBuffer(0, partSize);
+                }
             }
+        } catch (final RuntimeException e) {
+            log.error("Failed to write to stream on upload {}, aborting transaction", uploadId, e);
+            abortUpload();
+            throw new IOException(e);
         }
     }
 
     @Override
     public void close() throws IOException {
-        if (partBuffer.position() > 0) {
-            flushBuffer(partBuffer.arrayOffset(), partBuffer.position());
-        }
-        if (Objects.nonNull(uploadId)) {
+        if (!isClosed()) {
+            if (partBuffer.position() > 0) {
+                try {
+                    flushBuffer(partBuffer.arrayOffset(), partBuffer.position());
+                } catch (final RuntimeException e) {
+                    log.error("Failed to upload last part {}, aborting transaction", uploadId, e);
+                    abortUpload();
+                    throw new IOException(e);
+                }
+            }
             if (!partETags.isEmpty()) {
                 try {
-                    final CompleteMultipartUploadRequest request =
-                        new CompleteMultipartUploadRequest(bucketName, key, uploadId, partETags);
-                    final CompleteMultipartUploadResult result = client.completeMultipartUpload(request);
-                    log.debug("Completed multipart upload {} with result {}", uploadId, result);
-                } catch (final Exception e) {
+                    completeUpload();
+                    log.debug("Completed multipart upload {}", uploadId);
+                } catch (final RuntimeException e) {
                     log.error("Failed to complete multipart upload {}, aborting transaction", uploadId, e);
-                    client.abortMultipartUpload(new AbortMultipartUploadRequest(bucketName, key, uploadId));
+                    abortUpload();
+                    throw new IOException(e);
                 }
             } else {
-                client.abortMultipartUpload(new AbortMultipartUploadRequest(bucketName, key, uploadId));
+                abortUpload();
             }
         }
+    }
+
+    public boolean isClosed() {
+        return closed;
+    }
+
+    private void completeUpload() {
+        final var request = new CompleteMultipartUploadRequest(bucketName, key, uploadId, partETags);
+        client.completeMultipartUpload(request);
+        closed = true;
+    }
+
+    private void abortUpload() {
+        final var request = new AbortMultipartUploadRequest(bucketName, key, uploadId);
+        client.abortMultipartUpload(request);
         closed = true;
     }
 
     private void flushBuffer(final int offset,
-                             final int actualPartSize) throws IOException {
-        try {
-            final ByteArrayInputStream in = new ByteArrayInputStream(partBuffer.array(), offset, actualPartSize);
-            uploadPart(in, actualPartSize);
-            partBuffer.clear();
-        } catch (final Exception e) {
-            log.error("Failed to upload part in multipart upload {}, aborting transaction", uploadId, e);
-            client.abortMultipartUpload(new AbortMultipartUploadRequest(bucketName, key, uploadId));
-            closed = true;
-            throw new IOException(e);
-        }
+                             final int actualPartSize) {
+        final ByteArrayInputStream in = new ByteArrayInputStream(partBuffer.array(), offset, actualPartSize);
+        uploadPart(in, actualPartSize);
+        partBuffer.clear();
     }
 
     private void uploadPart(final InputStream in, final int actualPartSize) {
