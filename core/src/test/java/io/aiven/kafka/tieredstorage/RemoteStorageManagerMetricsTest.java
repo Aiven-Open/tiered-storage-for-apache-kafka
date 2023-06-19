@@ -124,5 +124,19 @@ class RemoteStorageManagerMetricsTest {
 
         assertThat((double) MBEAN_SERVER.getAttribute(segmentCopyPerSecName, "segment-fetch-rate"))
             .isEqualTo(1.0 / METRIC_TIME_WINDOW_SEC);
+
+        rsm.deleteLogSegmentData(REMOTE_LOG_SEGMENT_METADATA);
+        rsm.deleteLogSegmentData(REMOTE_LOG_SEGMENT_METADATA);
+
+        assertThat((double) MBEAN_SERVER.getAttribute(segmentCopyPerSecName, "segment-delete-rate"))
+            .isEqualTo(2.0 / METRIC_TIME_WINDOW_SEC);
+        assertThat((double) MBEAN_SERVER.getAttribute(segmentCopyPerSecName, "segment-delete-total"))
+            .isEqualTo(2.0);
+
+        assertThat((double) MBEAN_SERVER.getAttribute(segmentCopyPerSecName, "segment-delete-bytes-rate"))
+            .isEqualTo(20.0 / METRIC_TIME_WINDOW_SEC);
+        assertThat((double) MBEAN_SERVER.getAttribute(segmentCopyPerSecName, "segment-delete-bytes-total"))
+            .isEqualTo(20.0);
+
     }
 }

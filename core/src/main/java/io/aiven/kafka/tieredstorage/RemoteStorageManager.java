@@ -306,6 +306,8 @@ public class RemoteStorageManager implements org.apache.kafka.server.log.remote.
     @Override
     public void deleteLogSegmentData(final RemoteLogSegmentMetadata remoteLogSegmentMetadata)
         throws RemoteStorageException {
+        metrics.recordSegmentDelete(remoteLogSegmentMetadata.segmentSizeInBytes());
+
         try {
             for (final ObjectKey.Suffix suffix : ObjectKey.Suffix.values()) {
                 final String key = objectKey.key(remoteLogSegmentMetadata, suffix);
