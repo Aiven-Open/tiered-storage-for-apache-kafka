@@ -22,6 +22,7 @@
     <suppress checks="ClassDataAbstractionCoupling" files=".*Test\.java"/>
     <suppress checks="ClassFanOutComplexity" files=".*Test\.java"/>
     <suppress checks="ClassFanOutComplexity" files="RemoteStorageManager.java"/>
+    <suppress checks="ClassDataAbstractionCoupling" files="S3MultiPartOutputStream.java"/>
     <suppress checks="ClassDataAbstractionCoupling" files="S3StorageConfig.java"/>
     <suppress checks="ClassDataAbstractionCoupling" files="RemoteStorageManager.java"/>
     <suppress checks="ClassDataAbstractionCoupling" files="Metrics.java"/>
