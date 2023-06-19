@@ -308,6 +308,8 @@ public class RemoteStorageManager implements org.apache.kafka.server.log.remote.
         throws RemoteStorageException {
         metrics.recordSegmentDelete(remoteLogSegmentMetadata.segmentSizeInBytes());
 
+        final long startedMs = time.milliseconds();
+
         try {
             for (final ObjectKey.Suffix suffix : ObjectKey.Suffix.values()) {
                 final String key = objectKey.key(remoteLogSegmentMetadata, suffix);
@@ -316,6 +318,8 @@ public class RemoteStorageManager implements org.apache.kafka.server.log.remote.
         } catch (final StorageBackendException e) {
             throw new RemoteStorageException(e);
         }
+
+        metrics.recordSegmentDeleteTime(startedMs, time.milliseconds());
     }
 
     @Override

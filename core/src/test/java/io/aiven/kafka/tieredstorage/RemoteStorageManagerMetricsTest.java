@@ -136,5 +136,10 @@ class RemoteStorageManagerMetricsTest {
             .isEqualTo(20.0 / METRIC_TIME_WINDOW_SEC);
         assertThat(MBEAN_SERVER.getAttribute(rsmMetricsName, "segment-delete-bytes-total"))
             .isEqualTo(20.0);
+
+        assertThat(MBEAN_SERVER.getAttribute(rsmMetricsName, "segment-delete-time-avg"))
+            .isEqualTo(0.0);
+        assertThat(MBEAN_SERVER.getAttribute(rsmMetricsName, "segment-delete-time-max"))
+            .isEqualTo(0.0);
     }
 }

@@ -43,6 +43,7 @@ public class Metrics {
 
     private final Sensor segmentDeleteRequests;
     private final Sensor segmentDeleteBytes;
+    private final Sensor segmentDeleteTime;
 
     private final Sensor segmentFetchPerSec;
 
@@ -75,6 +76,10 @@ public class Metrics {
         segmentDeleteBytes.add(metrics.metricName("segment-delete-bytes-rate", metricGroup), new Rate());
         segmentDeleteBytes.add(metrics.metricName("segment-delete-bytes-total", metricGroup), new CumulativeSum());
 
+        segmentDeleteTime = metrics.sensor("segment-delete-time");
+        segmentDeleteTime.add(metrics.metricName("segment-delete-time-avg", metricGroup), new Avg());
+        segmentDeleteTime.add(metrics.metricName("segment-delete-time-max", metricGroup), new Max());
+
         segmentFetchPerSec = metrics.sensor("segment-fetch");
         segmentFetchPerSec.add(metrics.metricName("segment-fetch-rate", metricGroup), new Rate());
     }
@@ -91,6 +96,10 @@ public class Metrics {
     public void recordSegmentDelete(final int bytes) {
         segmentDeleteRequests.record();
         segmentDeleteBytes.record(bytes);
+    }
+
+    public void recordSegmentDeleteTime(final long startMs, final long endMs) {
+        segmentDeleteTime.record(endMs - startMs);
     }
 
     public void recordSegmentFetch() {
