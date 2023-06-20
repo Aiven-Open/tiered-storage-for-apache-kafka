@@ -153,3 +153,11 @@ and set paths on `compose.yml` file:
       KAFKA_RSM_CONFIG_STORAGE_ENCRYPTION_PRIVATE_KEY_FILE: /kafka/plugins/private.pem
       # ...
 ```
+
+### Metrics
+
+Metrics are available as JMX MBeans, and exposed using [JMX Exporter](https://github.com/prometheus/jmx_exporter) at port `7000`
+
+```shell
+curl http://localhost:7000 | grep kafka_tiered
+```
