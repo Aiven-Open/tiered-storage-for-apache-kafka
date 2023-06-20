@@ -171,6 +171,7 @@ public class S3StorageConfig extends AbstractConfig {
         if (credentialsProvider != null) {
             s3ClientBuilder.setCredentials(credentialsProvider);
         }
+        s3ClientBuilder.setMetricsCollector(new MetricCollector());
         return s3ClientBuilder.build();
     }
 
