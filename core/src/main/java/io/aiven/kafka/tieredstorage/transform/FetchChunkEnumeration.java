@@ -44,6 +44,7 @@ public class FetchChunkEnumeration implements Enumeration<InputStream> {
     final int lastChunkId;
     private final ChunkIndex chunkIndex;
     int currentChunkId;
+    public boolean closed;
 
     /**
      *
@@ -92,7 +93,7 @@ public class FetchChunkEnumeration implements Enumeration<InputStream> {
 
     @Override
     public boolean hasMoreElements() {
-        return currentChunkId <= lastChunkId;
+        return !closed && currentChunkId <= lastChunkId;
     }
 
     @Override
@@ -145,6 +146,29 @@ public class FetchChunkEnumeration implements Enumeration<InputStream> {
     }
 
     public InputStream toInputStream() {
-        return new SequenceInputStream(this);
+        return new LazySequenceInputStream(this);
+    }
+
+    public void close() {
+        closed = true;
+    }
+
+    /**
+     * This class overrides the behavior of {@link SequenceInputStream#close()} to avoid unnecessary calls to
+     * {@link FetchChunkEnumeration#nextElement()} since {@link FetchChunkEnumeration} is supposed
+     * to be lazy and does not create inout streams unless there was such a call.
+     */
+    private static class LazySequenceInputStream extends SequenceInputStream {
+        private final FetchChunkEnumeration closeableEnumeration;
+
+        LazySequenceInputStream(final FetchChunkEnumeration e) {
+            super(e);
+            this.closeableEnumeration = e;
+        }
+
+        public void close() throws IOException {
+            closeableEnumeration.close();
+            super.close();
+        }
     }
 }
