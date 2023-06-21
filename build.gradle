@@ -173,6 +173,11 @@ subprojects {
         dependsOn tasks.named("integrationTest")
     }
 
+    tasks.javadoc {
+        // disable missing javadoc lint and show only warning and error messages
+        options.addStringOption('Xdoclint:all,-missing', '-quiet')
+    }
+
     distributions {
         main {
             contents {
