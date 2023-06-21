@@ -49,6 +49,7 @@ import org.junit.jupiter.params.provider.MethodSource;
 import org.mockito.Mock;
 import org.mockito.junit.jupiter.MockitoExtension;
 
+import static org.assertj.core.api.Assertions.assertThat;
 import static org.mockito.ArgumentMatchers.any;
 import static org.mockito.ArgumentMatchers.eq;
 import static org.mockito.Mockito.spy;
@@ -69,11 +70,11 @@ class FetchChunkEnumerationSourceInputStreamClosingTest {
     static final int CHUNK_SIZE = 10;
 
     static final BytesRange RANGE1 = BytesRange.ofFromPositionAndSize(0, CHUNK_SIZE);
-    static final byte[] DATA1 = new byte[] {0, 1, 2, 3, 4, 5, 6, 7, 8, 9};
+    static final byte[] DATA1 = {0, 1, 2, 3, 4, 5, 6, 7, 8, 9};
     static final BytesRange RANGE2 = BytesRange.ofFromPositionAndSize(10, CHUNK_SIZE);
-    static final byte[] DATA2 = new byte[] {10, 11, 12, 13, 14, 15, 16, 17, 18, 19};
+    static final byte[] DATA2 = {10, 11, 12, 13, 14, 15, 16, 17, 18, 19};
     static final BytesRange RANGE3 = BytesRange.ofFromPositionAndSize(20, CHUNK_SIZE);
-    static final byte[] DATA3 = new byte[] {20, 21, 22, 23, 24, 25, 26, 27, 28, 29};
+    static final byte[] DATA3 = {20, 21, 22, 23, 24, 25, 26, 27, 28, 29};
 
     static final FixedSizeChunkIndex CHUNK_INDEX = new FixedSizeChunkIndex(
         CHUNK_SIZE, CHUNK_SIZE * 3, CHUNK_SIZE, CHUNK_SIZE);
@@ -105,7 +106,7 @@ class FetchChunkEnumerationSourceInputStreamClosingTest {
             is.read();
         }
         is.close();
-        fetcher.assertAllStreamsWereClosed();
+        fetcher.assertAllStreamsWereClosed(readFully);
     }
 
     static List<Arguments> testParams() {
@@ -150,9 +151,14 @@ class FetchChunkEnumerationSourceInputStreamClosingTest {
             return is;
         }
 
-        public void assertAllStreamsWereClosed() throws IOException {
-            for (final var is : openInputStreams) {
-                verify(is).close();
+        public void assertAllStreamsWereClosed(final boolean readFully) throws IOException {
+            if (readFully) {
+                for (final var is : openInputStreams) {
+                    verify(is).close();
+                }
+            } else {
+                assertThat(openInputStreams).hasSize(1);
+                verify(openInputStreams.get(0)).close();
             }
         }
     }
