@@ -89,6 +89,15 @@ TBD
 
 TBD
 
+### Uploads
+
+#### S3 Multipart Upload
+
+When uploading processed segments and indexes, multipart upload is used to put files on S3 back-end.
+
+Even though, multipart transactions are aborted when an exception happens while processing, there's a chance that initiated transactions are not completed or aborted (e.g. broker process is killed) and incomplete part uploads hang without completing a transaction.
+For these scenarios, is recommended to set a bucket lifecycle policy to periodically abort incomplete multipart uploads: <https://docs.aws.amazon.com/AmazonS3/latest/userguide/mpu-abort-incomplete-mpu-lifecycle-config.html>
+
 ### Ranged queries
 
 TBD
