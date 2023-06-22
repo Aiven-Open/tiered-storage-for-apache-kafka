@@ -50,11 +50,11 @@ public class S3UploadWithAwsS3Bench extends S3UploadBench {
 
     public static void main(final String[] args) throws Exception {
         new Runner(new OptionsBuilder()
-            .include(S3UploadWithMinioBench.class.getSimpleName())
+            .include(S3UploadWithAwsS3Bench.class.getSimpleName())
             .addProfiler(AsyncProfiler.class, "-output=flamegraph;event=cpu")
             .build()).run();
         new Runner(new OptionsBuilder()
-            .include(S3UploadWithMinioBench.class.getSimpleName())
+            .include(S3UploadWithAwsS3Bench.class.getSimpleName())
             .addProfiler(AsyncProfiler.class, "-output=flamegraph;event=alloc")
             .build()).run();
     }
