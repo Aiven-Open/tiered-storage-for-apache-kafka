@@ -190,24 +190,18 @@ public class S3MultiPartOutputStream extends OutputStream {
     private void uploadPart(final ByteBuffer partBuffer, final int actualPartSize) {
         final byte[] partContent = new byte[actualPartSize];
         partBuffer.get(partContent, 0, actualPartSize);
-        final var is = new ByteArrayInputStream(partContent);
+
+        final var uploadPartRequest = new UploadPartRequest()
+            .withBucketName(bucketName)
+            .withKey(key)
+            .withUploadId(uploadId)
+            .withPartSize(actualPartSize)
+            .withPartNumber(partNumber.incrementAndGet())
+            .withInputStream(new ByteArrayInputStream(partContent));
 
         // Run request async
         partUploads = partUploads.thenCombine(
-            CompletableFuture.supplyAsync(() -> {
-                try (final var content = is) { // inputStream not closed by upload part
-                    final var uploadPartRequest = new UploadPartRequest()
-                        .withBucketName(bucketName)
-                        .withKey(key)
-                        .withUploadId(uploadId)
-                        .withPartSize(actualPartSize)
-                        .withPartNumber(partNumber.incrementAndGet())
-                        .withInputStream(content);
-                    return client.uploadPart(uploadPartRequest);
-                } catch (IOException e) {
-                    throw new RuntimeException(e);
-                }
-            }),
+            CompletableFuture.supplyAsync(() -> client.uploadPart(uploadPartRequest)),
             (partETags, result) -> {
                 partETags.add(result.getPartETag());
                 return partETags;
