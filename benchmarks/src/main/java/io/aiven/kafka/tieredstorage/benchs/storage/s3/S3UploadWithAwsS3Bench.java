@@ -23,7 +23,6 @@ import org.openjdk.jmh.annotations.Setup;
 import org.openjdk.jmh.annotations.TearDown;
 import org.openjdk.jmh.profile.AsyncProfiler;
 import org.openjdk.jmh.runner.Runner;
-import org.openjdk.jmh.runner.options.Options;
 import org.openjdk.jmh.runner.options.OptionsBuilder;
 
 public class S3UploadWithAwsS3Bench extends S3UploadBench {
@@ -50,10 +49,13 @@ public class S3UploadWithAwsS3Bench extends S3UploadBench {
 
 
     public static void main(final String[] args) throws Exception {
-        final Options opts = new OptionsBuilder()
-            .include(S3UploadWithAwsS3Bench.class.getSimpleName())
-            .addProfiler(AsyncProfiler.class, "output=flamegraph")
-            .build();
-        new Runner(opts).run();
+        new Runner(new OptionsBuilder()
+            .include(S3UploadWithMinioBench.class.getSimpleName())
+            .addProfiler(AsyncProfiler.class, "-output=flamegraph;event=cpu")
+            .build()).run();
+        new Runner(new OptionsBuilder()
+            .include(S3UploadWithMinioBench.class.getSimpleName())
+            .addProfiler(AsyncProfiler.class, "-output=flamegraph;event=alloc")
+            .build()).run();
     }
 }

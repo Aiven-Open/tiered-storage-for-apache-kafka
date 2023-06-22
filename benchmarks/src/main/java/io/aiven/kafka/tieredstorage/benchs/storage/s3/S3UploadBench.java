@@ -53,15 +53,11 @@ import org.openjdk.jmh.annotations.Setup;
 import org.openjdk.jmh.annotations.State;
 import org.openjdk.jmh.annotations.TearDown;
 import org.openjdk.jmh.annotations.Warmup;
-import org.openjdk.jmh.profile.AsyncProfiler;
-import org.openjdk.jmh.runner.Runner;
-import org.openjdk.jmh.runner.options.Options;
-import org.openjdk.jmh.runner.options.OptionsBuilder;
 
 @State(Scope.Benchmark)
 @Fork(value = 1)
-@Warmup(iterations = 5)
-@Measurement(iterations = 10)
+@Warmup(iterations = 3)
+@Measurement(iterations = 5, time = 30)
 @BenchmarkMode({Mode.SampleTime})
 @OutputTimeUnit(TimeUnit.MILLISECONDS)
 public abstract class S3UploadBench {
