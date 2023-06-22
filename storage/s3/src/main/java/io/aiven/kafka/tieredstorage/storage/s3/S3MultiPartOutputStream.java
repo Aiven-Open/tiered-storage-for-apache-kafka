@@ -204,7 +204,7 @@ public class S3MultiPartOutputStream extends OutputStream {
                         .withPartNumber(partNumber.incrementAndGet())
                         .withInputStream(content);
                     return client.uploadPart(uploadPartRequest);
-                } catch (final IOException e) {
+                } catch (IOException e) {
                     throw new RuntimeException(e);
                 }
             }),
