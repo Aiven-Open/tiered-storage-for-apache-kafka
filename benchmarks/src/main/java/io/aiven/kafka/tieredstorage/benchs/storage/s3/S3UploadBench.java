@@ -22,17 +22,14 @@ import java.io.InputStream;
 import java.nio.file.Files;
 import java.nio.file.Path;
 import java.security.SecureRandom;
+import java.time.Instant;
 import java.util.ArrayList;
 import java.util.List;
 import java.util.concurrent.TimeUnit;
 
 import io.aiven.kafka.tieredstorage.storage.s3.S3MultiPartOutputStream;
 
-import com.amazonaws.auth.AWSStaticCredentialsProvider;
-import com.amazonaws.auth.BasicAWSCredentials;
-import com.amazonaws.client.builder.AwsClientBuilder;
 import com.amazonaws.services.s3.AmazonS3;
-import com.amazonaws.services.s3.AmazonS3ClientBuilder;
 import com.amazonaws.services.s3.model.AbortMultipartUploadRequest;
 import com.amazonaws.services.s3.model.AmazonS3Exception;
 import com.amazonaws.services.s3.model.CompleteMultipartUploadRequest;
@@ -60,49 +57,31 @@ import org.openjdk.jmh.profile.AsyncProfiler;
 import org.openjdk.jmh.runner.Runner;
 import org.openjdk.jmh.runner.options.Options;
 import org.openjdk.jmh.runner.options.OptionsBuilder;
-import org.testcontainers.containers.localstack.LocalStackContainer;
-import org.testcontainers.utility.DockerImageName;
 
 @State(Scope.Benchmark)
 @Fork(value = 1)
-@Warmup(iterations = 2)
-@Measurement(iterations = 3)
+@Warmup(iterations = 5)
+@Measurement(iterations = 10)
 @BenchmarkMode({Mode.SampleTime})
 @OutputTimeUnit(TimeUnit.MILLISECONDS)
-public class S3UploadBench {
+public abstract class S3UploadBench {
 
-    static final LocalStackContainer LOCALSTACK = new LocalStackContainer(
-        DockerImageName.parse("localstack/localstack:2.0.2")
-    ).withServices(LocalStackContainer.Service.S3);
-    static final String BUCKET_NAME = "test";
-    static final String OBJECT_KEY = "topic/partition/log";
-    static final int DEFAULT_PART_SIZE = 5 * 1024 * 1024;
+    static final String BUCKET_NAME = "kafka-ts-benchmark-test";
+    public static final String OBJECT_PREFIX = "topic/partition";
+    static final String OBJECT_KEY = OBJECT_PREFIX + "/log";
 
     static AmazonS3 s3Client;
     static Path segmentPath;
-    @Param({"10485760", "104857600", "524288000", "1073741824"})
-    public int contentLength; // 10MiB, 100MiB, 500MiB, 1GiB
+    @Param({"104857600", "209715200", "524288000", "2147483000"})
+    public int contentLength; // 100MiB, 200MiB, 500MiB, 1GiB, 2GiB
+
+    @Param({"5242880", "8388608", "10485760", "52428800", "83886080"})
+    public int partSize; // 5MiB, 8MiB, 10MiB, 50MiB, 80MiB
+
+    abstract AmazonS3 s3();
 
     @Setup(Level.Trial)
     public void setup() {
-        LOCALSTACK.start();
-
-        s3Client = AmazonS3ClientBuilder
-            .standard()
-            .withEndpointConfiguration(
-                new AwsClientBuilder.EndpointConfiguration(
-                    LOCALSTACK.getEndpointOverride(LocalStackContainer.Service.S3).toString(),
-                    LOCALSTACK.getRegion()
-                )
-            )
-            .withCredentials(
-                new AWSStaticCredentialsProvider(
-                    new BasicAWSCredentials(LOCALSTACK.getAccessKey(), LOCALSTACK.getSecretKey())
-                )
-            )
-            .build();
-        s3Client.createBucket(BUCKET_NAME);
-
         try {
             segmentPath = Files.createTempFile("segment", ".log");
             // to fill with random bytes.
@@ -119,7 +98,6 @@ public class S3UploadBench {
 
     @TearDown
     public void teardown() {
-        LOCALSTACK.stop();
         try {
             Files.deleteIfExists(segmentPath);
         } catch (final IOException e) {
@@ -129,7 +107,8 @@ public class S3UploadBench {
 
     @Benchmark
     public Object multiPartUploadBenchmark() {
-        try (final var out = new S3MultiPartOutputStream(BUCKET_NAME, OBJECT_KEY, DEFAULT_PART_SIZE, s3Client);
+        final var key = OBJECT_KEY + "_" + Instant.now().toString();
+        try (final var out = new S3MultiPartOutputStream(BUCKET_NAME, key, partSize, s3Client);
              final InputStream inputStream = Files.newInputStream(segmentPath)) {
             inputStream.transferTo(out);
         } catch (final AmazonS3Exception | IOException e) {
@@ -143,9 +122,10 @@ public class S3UploadBench {
         final ObjectMetadata metadata = new ObjectMetadata();
         metadata.setContentLength(contentLength);
         try (final InputStream in = Files.newInputStream(segmentPath)) {
+            final var key = OBJECT_KEY + "_" + Instant.now().toString();
             final PutObjectRequest offsetPutRequest = new PutObjectRequest(
                 BUCKET_NAME,
-                OBJECT_KEY,
+                key,
                 in,
                 metadata);
             return s3Client.putObject(offsetPutRequest);
@@ -155,14 +135,15 @@ public class S3UploadBench {
     }
 
     @Benchmark
-    public Object alternativeMultiPartUpload() {
+    public Object blockingMultiPartUpload() {
         final List<PartETag> partETags = new ArrayList<>();
+        final var key = OBJECT_KEY + "_" + Instant.now().toString();
         final InitiateMultipartUploadRequest multipartRequest =
-            new InitiateMultipartUploadRequest(BUCKET_NAME, OBJECT_KEY);
+            new InitiateMultipartUploadRequest(BUCKET_NAME, key);
         InitiateMultipartUploadResult initiated = null;
         try {
             initiated = s3Client.initiateMultipartUpload(multipartRequest);
-            long partSize = DEFAULT_PART_SIZE;
+            long partSize = this.partSize;
             long filePosition = 0;
             final File file = segmentPath.toFile();
             for (int i = 1; filePosition < contentLength; i++) {
@@ -172,7 +153,7 @@ public class S3UploadBench {
                 // Create the request to upload a part.
                 final UploadPartRequest uploadRequest = new UploadPartRequest()
                     .withBucketName(BUCKET_NAME)
-                    .withKey(OBJECT_KEY)
+                    .withKey(key)
                     .withUploadId(initiated.getUploadId())
                     .withPartNumber(i)
                     .withFileOffset(filePosition)
@@ -188,7 +169,7 @@ public class S3UploadBench {
             // Complete the multipart upload.
             final CompleteMultipartUploadRequest compRequest = new CompleteMultipartUploadRequest(
                 BUCKET_NAME,
-                OBJECT_KEY,
+                key,
                 initiated.getUploadId(),
                 partETags
             );
@@ -196,18 +177,10 @@ public class S3UploadBench {
         } catch (final Exception e) {
             if (initiated != null) {
                 final AbortMultipartUploadRequest abortRequest =
-                    new AbortMultipartUploadRequest(BUCKET_NAME, OBJECT_KEY, initiated.getUploadId());
+                    new AbortMultipartUploadRequest(BUCKET_NAME, key, initiated.getUploadId());
                 s3Client.abortMultipartUpload(abortRequest);
             }
             throw new RuntimeException(e);
         }
-    }
-
-    public static void main(final String[] args) throws Exception {
-        final Options opts = new OptionsBuilder()
-            .include(S3UploadBench.class.getSimpleName())
-            .addProfiler(AsyncProfiler.class, "output=flamegraph")
-            .build();
-        new Runner(opts).run();
     }
 }
