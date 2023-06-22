@@ -56,8 +56,8 @@ import org.openjdk.jmh.annotations.Warmup;
 
 @State(Scope.Benchmark)
 @Fork(value = 1)
-@Warmup(iterations = 3)
-@Measurement(iterations = 5, time = 30)
+@Warmup(iterations = 2)
+@Measurement(iterations = 3)
 @BenchmarkMode({Mode.SampleTime})
 @OutputTimeUnit(TimeUnit.MILLISECONDS)
 public abstract class S3UploadBench {
@@ -68,8 +68,8 @@ public abstract class S3UploadBench {
 
     static AmazonS3 s3Client;
     static Path segmentPath;
-    @Param({"209715200", "524288000", "2147483000"})
-    public int contentLength; // 200MiB, 500MiB, 2GiB
+    @Param({"209715200", "524288000", "1073741824"})
+    public int contentLength; // 200MiB, 500MiB, 1GiB
 
     @Param({"5242880", "10485760", "83886080"})
     public int partSize; // 5MiB, 10MiB, 80MiB

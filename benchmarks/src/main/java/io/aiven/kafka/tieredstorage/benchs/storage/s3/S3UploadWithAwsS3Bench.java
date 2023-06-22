@@ -31,7 +31,6 @@ public class S3UploadWithAwsS3Bench extends S3UploadBench {
     AmazonS3 s3() {
         return AmazonS3ClientBuilder
             .standard()
-//            .withRegion(System.getenv("AWS_REGION"))
             .build();
     }
 
