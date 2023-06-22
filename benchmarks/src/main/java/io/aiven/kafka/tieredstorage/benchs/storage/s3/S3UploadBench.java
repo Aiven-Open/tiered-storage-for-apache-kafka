@@ -68,11 +68,11 @@ public abstract class S3UploadBench {
 
     static AmazonS3 s3Client;
     static Path segmentPath;
-    @Param({"104857600", "209715200", "524288000", "2147483000"})
-    public int contentLength; // 100MiB, 200MiB, 500MiB, 1GiB, 2GiB
+    @Param({"209715200", "524288000", "2147483000"})
+    public int contentLength; // 200MiB, 500MiB, 2GiB
 
-    @Param({"5242880", "8388608", "10485760", "52428800", "83886080"})
-    public int partSize; // 5MiB, 8MiB, 10MiB, 50MiB, 80MiB
+    @Param({"5242880", "10485760", "83886080"})
+    public int partSize; // 5MiB, 10MiB, 80MiB
 
     abstract AmazonS3 s3();
 
