@@ -48,13 +48,16 @@ public class S3UploadWithAwsS3Bench extends S3UploadBench {
 
 
     public static void main(final String[] args) throws Exception {
+        final String event;
+        if (args.length > 0 && args[0].equals("alloc")) {
+            event = "event=alloc";
+        } else {
+            event = "event=cpu";
+        }
+
         new Runner(new OptionsBuilder()
             .include(S3UploadWithAwsS3Bench.class.getSimpleName())
-            .addProfiler(AsyncProfiler.class, "-output=flamegraph;event=cpu")
-            .build()).run();
-        new Runner(new OptionsBuilder()
-            .include(S3UploadWithAwsS3Bench.class.getSimpleName())
-            .addProfiler(AsyncProfiler.class, "-output=flamegraph;event=alloc")
+            .addProfiler(AsyncProfiler.class, "-output=flamegraph;" + event)
             .build()).run();
     }
 }
