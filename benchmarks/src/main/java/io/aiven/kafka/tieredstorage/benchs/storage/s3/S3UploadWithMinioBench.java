@@ -65,7 +65,7 @@ public class S3UploadWithMinioBench extends S3UploadBench {
         super.setup();
     }
 
-    @TearDown
+    @TearDown(Level.Trial)
     public void teardown() {
         LOCALSTACK.stop();
 

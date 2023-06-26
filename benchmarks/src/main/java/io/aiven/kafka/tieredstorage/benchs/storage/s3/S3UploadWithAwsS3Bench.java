@@ -41,7 +41,7 @@ public class S3UploadWithAwsS3Bench extends S3UploadBench {
         super.setup();
     }
 
-    @TearDown
+    @TearDown(Level.Trial)
     public void teardown() {
         super.teardown();
     }

@@ -76,7 +76,6 @@ public abstract class S3UploadBench {
 
     abstract AmazonS3 s3();
 
-    @Setup(Level.Trial)
     public void setup() {
         try {
             segmentPath = Files.createTempFile("segment", ".log");
@@ -92,7 +91,6 @@ public abstract class S3UploadBench {
         }
     }
 
-    @TearDown
     public void teardown() {
         try {
             Files.deleteIfExists(segmentPath);
