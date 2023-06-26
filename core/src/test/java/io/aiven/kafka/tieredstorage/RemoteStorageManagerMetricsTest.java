@@ -123,6 +123,8 @@ class RemoteStorageManagerMetricsTest {
 
         assertThat(MBEAN_SERVER.getAttribute(rsmMetricsName, "segment-fetch-rate"))
             .isEqualTo(1.0 / METRIC_TIME_WINDOW_SEC);
+        assertThat(MBEAN_SERVER.getAttribute(rsmMetricsName, "segment-fetch-total"))
+            .isEqualTo(1.0);
 
         rsm.deleteLogSegmentData(REMOTE_LOG_SEGMENT_METADATA);
         rsm.deleteLogSegmentData(REMOTE_LOG_SEGMENT_METADATA);
