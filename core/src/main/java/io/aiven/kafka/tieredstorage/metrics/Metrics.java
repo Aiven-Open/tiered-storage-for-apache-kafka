@@ -46,6 +46,7 @@ public class Metrics {
     private final Sensor segmentDeleteTime;
 
     private final Sensor segmentFetchRequests;
+    private final Sensor segmentFetchRequestedBytes;
 
     public Metrics(final Time time) {
         final JmxReporter reporter = new JmxReporter();
@@ -83,6 +84,14 @@ public class Metrics {
         segmentFetchRequests = metrics.sensor("segment-fetch");
         segmentFetchRequests.add(metrics.metricName("segment-fetch-rate", metricGroup), new Rate());
         segmentFetchRequests.add(metrics.metricName("segment-fetch-total", metricGroup), new CumulativeCount());
+
+        segmentFetchRequestedBytes = metrics.sensor("segment-fetch-requested-bytes");
+        segmentFetchRequestedBytes.add(
+            metrics.metricName("segment-fetch-requested-bytes-rate", metricGroup),
+            new Rate());
+        segmentFetchRequestedBytes.add(
+            metrics.metricName("segment-fetch-requested-bytes-total", metricGroup),
+            new CumulativeSum());
     }
 
     public void recordSegmentCopy(final int bytes) {
@@ -103,8 +112,9 @@ public class Metrics {
         segmentDeleteTime.record(endMs - startMs);
     }
 
-    public void recordSegmentFetch() {
+    public void recordSegmentFetch(final int bytes) {
         segmentFetchRequests.record();
+        segmentFetchRequestedBytes.record(bytes);
     }
 
     public void close() {
