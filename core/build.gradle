@@ -20,7 +20,7 @@ plugins {
 archivesBaseName = "core"
 
 ext {
-    bouncyCastleVersion = "1.70"
+    bouncyCastleVersion = "1.75"
     caffeineVersion = "3.1.6"
     zstdVersion = "1.5.4-2"
     jacksonVersion = "2.15.0"
@@ -29,7 +29,7 @@ ext {
 dependencies {
     implementation project(":storage:core")
 
-    implementation "org.bouncycastle:bcprov-jdk15on:$bouncyCastleVersion"
+    implementation "org.bouncycastle:bcprov-jdk18on:$bouncyCastleVersion"
 
     // Should be provided at the run time.
     compileOnly "com.fasterxml.jackson.core:jackson-databind:$jacksonVersion"
