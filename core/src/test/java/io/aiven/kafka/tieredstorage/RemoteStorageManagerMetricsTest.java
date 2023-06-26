@@ -21,7 +21,6 @@ import javax.management.MBeanServer;
 import javax.management.ObjectName;
 
 import java.io.IOException;
-import java.io.InputStream;
 import java.lang.management.ManagementFactory;
 import java.nio.ByteBuffer;
 import java.nio.file.Files;
@@ -103,40 +102,39 @@ class RemoteStorageManagerMetricsTest {
         rsm.copyLogSegmentData(REMOTE_LOG_SEGMENT_METADATA, logSegmentData);
         rsm.copyLogSegmentData(REMOTE_LOG_SEGMENT_METADATA, logSegmentData);
 
-        final InputStream resultInputStream = rsm.fetchLogSegment(REMOTE_LOG_SEGMENT_METADATA, 0);
+        rsm.fetchLogSegment(REMOTE_LOG_SEGMENT_METADATA, 0);
 
-        final ObjectName segmentCopyPerSecName = ObjectName.getInstance(
+        final ObjectName rsmMetricsName = ObjectName.getInstance(
             "aiven.kafka.server.tieredstorage:type=remote-storage-manager-metrics");
-        assertThat((double) MBEAN_SERVER.getAttribute(segmentCopyPerSecName, "segment-copy-rate"))
+        assertThat(MBEAN_SERVER.getAttribute(rsmMetricsName, "segment-copy-rate"))
             .isEqualTo(3.0 / METRIC_TIME_WINDOW_SEC);
-        assertThat((double) MBEAN_SERVER.getAttribute(segmentCopyPerSecName, "segment-copy-total"))
+        assertThat(MBEAN_SERVER.getAttribute(rsmMetricsName, "segment-copy-total"))
             .isEqualTo(3.0);
 
-        assertThat((double) MBEAN_SERVER.getAttribute(segmentCopyPerSecName, "segment-copy-time-avg"))
-            .isZero();
-        assertThat((double) MBEAN_SERVER.getAttribute(segmentCopyPerSecName, "segment-copy-time-max"))
-            .isZero();
-
-        assertThat((double) MBEAN_SERVER.getAttribute(segmentCopyPerSecName, "segment-copy-bytes-rate"))
+        assertThat(MBEAN_SERVER.getAttribute(rsmMetricsName, "segment-copy-bytes-rate"))
             .isEqualTo(30.0 / METRIC_TIME_WINDOW_SEC);
-        assertThat((double) MBEAN_SERVER.getAttribute(segmentCopyPerSecName, "segment-copy-bytes-total"))
+        assertThat(MBEAN_SERVER.getAttribute(rsmMetricsName, "segment-copy-bytes-total"))
             .isEqualTo(30.0);
 
-        assertThat((double) MBEAN_SERVER.getAttribute(segmentCopyPerSecName, "segment-fetch-rate"))
+        assertThat(MBEAN_SERVER.getAttribute(rsmMetricsName, "segment-copy-time-avg"))
+            .isEqualTo(0.0);
+        assertThat(MBEAN_SERVER.getAttribute(rsmMetricsName, "segment-copy-time-max"))
+            .isEqualTo(0.0);
+
+        assertThat(MBEAN_SERVER.getAttribute(rsmMetricsName, "segment-fetch-rate"))
             .isEqualTo(1.0 / METRIC_TIME_WINDOW_SEC);
 
         rsm.deleteLogSegmentData(REMOTE_LOG_SEGMENT_METADATA);
         rsm.deleteLogSegmentData(REMOTE_LOG_SEGMENT_METADATA);
 
-        assertThat((double) MBEAN_SERVER.getAttribute(segmentCopyPerSecName, "segment-delete-rate"))
+        assertThat(MBEAN_SERVER.getAttribute(rsmMetricsName, "segment-delete-rate"))
             .isEqualTo(2.0 / METRIC_TIME_WINDOW_SEC);
-        assertThat((double) MBEAN_SERVER.getAttribute(segmentCopyPerSecName, "segment-delete-total"))
+        assertThat(MBEAN_SERVER.getAttribute(rsmMetricsName, "segment-delete-total"))
             .isEqualTo(2.0);
 
-        assertThat((double) MBEAN_SERVER.getAttribute(segmentCopyPerSecName, "segment-delete-bytes-rate"))
+        assertThat(MBEAN_SERVER.getAttribute(rsmMetricsName, "segment-delete-bytes-rate"))
             .isEqualTo(20.0 / METRIC_TIME_WINDOW_SEC);
-        assertThat((double) MBEAN_SERVER.getAttribute(segmentCopyPerSecName, "segment-delete-bytes-total"))
+        assertThat(MBEAN_SERVER.getAttribute(rsmMetricsName, "segment-delete-bytes-total"))
             .isEqualTo(20.0);
-
     }
 }

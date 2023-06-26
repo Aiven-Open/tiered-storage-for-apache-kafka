@@ -35,13 +35,11 @@ import org.slf4j.LoggerFactory;
 public class Metrics {
     private static final Logger log = LoggerFactory.getLogger(Metrics.class);
 
-    private final Time time;
-
     private final org.apache.kafka.common.metrics.Metrics metrics;
 
     private final Sensor segmentCopyRequests;
-    private final Sensor segmentCopyTime;
     private final Sensor segmentCopyBytes;
+    private final Sensor segmentCopyTime;
 
     private final Sensor segmentDeleteRequests;
     private final Sensor segmentDeleteBytes;
@@ -49,8 +47,6 @@ public class Metrics {
     private final Sensor segmentFetchPerSec;
 
     public Metrics(final Time time) {
-        this.time = time;
-
         final JmxReporter reporter = new JmxReporter();
 
         metrics = new org.apache.kafka.common.metrics.Metrics(
@@ -88,13 +84,13 @@ public class Metrics {
         segmentCopyBytes.record(bytes);
     }
 
+    public void recordSegmentCopyTime(final long startMs, final long endMs) {
+        segmentCopyTime.record(endMs - startMs);
+    }
+
     public void recordSegmentDelete(final int bytes) {
         segmentDeleteRequests.record();
         segmentDeleteBytes.record(bytes);
-    }
-
-    public void recordSegmentCopyTime(final long startMs, final long endMs) {
-        segmentCopyTime.record(endMs - startMs);
     }
 
     public void recordSegmentFetch() {
