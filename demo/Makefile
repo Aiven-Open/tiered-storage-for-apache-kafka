@@ -75,14 +75,18 @@ create_topic_no_ts_by_time:
 		--partitions $(partitions) \
 		--topic $(topic)
 
+num_records = 60000
+record_size = 1024
+throughput = 1000
+
 .PHONY: fill_topic
 fill_topic:
 	docker exec $(kafka_container) \
 		kafka-producer-perf-test --producer-props bootstrap.servers=$(bootstrap_server) \
 		--topic $(topic) \
-		--num-records 30000 \
-		--record-size 10000 \
-		--throughput -1
+		--num-records $(num_records) \
+		--record-size $(record_size) \
+		--throughput $(throughput)
 
 .PHONY: run_local_fs
 run_local_fs:
