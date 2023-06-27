@@ -114,7 +114,7 @@ show_local_data:
 .PHONY: show_remote_data_fs
 show_remote_data_fs:
 	docker exec $(kafka_container) \
-		/usr/bin/bash -c 'ls -lah /home/appuser/kafka-tiered-storage/tiered-storage-demo/topic1-*/0/'
+		/usr/bin/bash -c 'ls -lah /home/appuser/kafka-tiered-storage/tiered-storage-demo/$(topic)-*/0/'
 
 .PHONY: show_remote_data_s3_aws
 show_remote_data_s3_aws:
@@ -123,7 +123,7 @@ show_remote_data_s3_aws:
 .PHONY: show_remote_data_s3_minio
 show_remote_data_s3_minio:
 	docker run --rm --network=host --entrypoint /usr/bin/bash quay.io/minio/mc \
-		-c "mc alias set mycloud http://localhost:9000 minioadmin minioadmin && mc ls --recursive mycloud/test-bucket"
+		-c "mc alias set mycloud http://localhost:9000 minioadmin minioadmin && mc ls --recursive mycloud/test-bucket | grep $(topic)"
 
 offset = 0
 consume = 10
