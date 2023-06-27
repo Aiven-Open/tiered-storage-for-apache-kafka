@@ -21,12 +21,27 @@ bootstrap_server_host=localhost:9092
 # Topic defaults
 topic=topic1
 partitions=1
-segment=100000000 # 100M
+segment=1000000 # 1MB
+retention_bytes=20000000 # 20MB
+local_retention_bytes=5000000 # 5MB
 retention_ms=360000000 # 100 hours
 local_retention_ms=1000 # 1 second
 
-.PHONY: create_topic
-create_topic:
+.PHONY: create_topic_ts_by_size
+create_topic_ts_by_size:
+	docker exec $(kafka_container) \
+		kafka-topics \
+		--bootstrap-server $(bootstrap_server) \
+		--create \
+		--config remote.storage.enable=true \
+		--config segment.bytes=$(segment) \
+		--config retention.bytes=$(retention_bytes) \
+		--config local.retention.bytes=$(local_retention_bytes) \
+		--partitions $(partitions) \
+		--topic $(topic)
+
+.PHONY: create_topic_ts_by_time
+create_topic_ts_by_time:
 	docker exec $(kafka_container) \
 		kafka-topics \
 		--bootstrap-server $(bootstrap_server) \
@@ -35,6 +50,28 @@ create_topic:
 		--config segment.bytes=$(segment) \
 		--config retention.ms=$(retention_ms) \
 		--config local.retention.ms=$(local_retention_ms) \
+		--partitions $(partitions) \
+		--topic $(topic)
+
+.PHONY: create_topic_no_ts_by_size
+create_topic_no_ts_by_size:
+	docker exec $(kafka_container) \
+		kafka-topics \
+		--bootstrap-server $(bootstrap_server) \
+		--create \
+		--config segment.bytes=$(segment) \
+		--config retention.bytes=$(retention_bytes) \
+		--partitions $(partitions) \
+		--topic $(topic)
+
+.PHONY: create_topic_no_ts_by_time
+create_topic_no_ts_by_time:
+	docker exec $(kafka_container) \
+		kafka-topics \
+		--bootstrap-server $(bootstrap_server) \
+		--create \
+		--config segment.bytes=$(segment) \
+		--config retention.ms=$(retention_ms) \
 		--partitions $(partitions) \
 		--topic $(topic)
 
