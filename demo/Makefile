@@ -125,10 +125,12 @@ show_remote_data_s3_minio:
 	docker run --rm --network=host --entrypoint /usr/bin/bash quay.io/minio/mc \
 		-c "mc alias set mycloud http://localhost:9000 minioadmin minioadmin && mc ls --recursive mycloud/test-bucket"
 
+offset = 0
+consume = 10
 .PHONY: consume
 consume:
 	docker run --rm --network=host edenhill/kcat:1.7.1 \
-		-b $(bootstrap_server_host) -C -t topic1 -c 10 -o 0 -e -f '%t-%p-%o\n'
+		-b $(bootstrap_server_host) -C -t $(topic) -c $(consume) -o $(offset) -e -f '%t-%p-%o\n'
 
 .env:
 	echo "AWS_ACCESS_KEY_ID=" > .env
