@@ -13,7 +13,7 @@
 # See the License for the specific language governing permissions and
 # limitations under the License.
 ##
-FROM aivenoy/kafka:tiered-storage-2023-06-28-1
+FROM aivenoy/kafka:upstream-trunk-tiered-storage-2023-06-28-1
 
 ARG _VERSION
 

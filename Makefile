@@ -14,7 +14,7 @@
 # limitations under the License.
 ##
 VERSION=0.0.1-SNAPSHOT
-IMAGE_TAG=aivenoy/kafka:tiered-storage-2023-06-28-1
+IMAGE_TAG=aivenoy/kafka:upstream-trunk-tiered-storage-2023-06-28-1
 
 .PHONY: clean
 clean:
@@ -28,7 +28,7 @@ docker_image: build/distributions/tiered-storage-for-apache-kafka-$(VERSION).tgz
 	docker build . \
 		-f docker/Dockerfile \
 		--build-arg _VERSION=$(VERSION) \
-		-t $(IMAGE_TAG)
+		-t $(IMAGE_TAG) --no-cache
 
 .PHONY: docker_push
 docker_push:
