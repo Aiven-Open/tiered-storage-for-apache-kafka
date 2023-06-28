@@ -42,6 +42,8 @@ services:
       KAFKA_TRANSACTION_STATE_LOG_REPLICATION_FACTOR: 1
       KAFKA_TRANSACTION_STATE_LOG_MIN_ISR: 1
       KAFKA_AUTO_CREATE_TOPICS_ENABLE: false
+      # Increase Tiered Storage log level
+      KAFKA_LOG4J_LOGGERS: "kafka.log.remote=TRACE"
       # Tweak retention checking
       KAFKA_LOG_RETENTION_CHECK_INTERVAL_MS: 10000
       # Enable Tiered Storage
