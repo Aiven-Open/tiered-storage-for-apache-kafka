@@ -23,7 +23,7 @@ services:
       ZOOKEEPER_CLIENT_PORT: 2181
 
   kafka:
-    image: "aivenoy/kafka:3.3-2022-10-06-tiered-storage-1-ts-2"
+    image: "aivenoy/kafka:upstream-trunk-tiered-storage-2023-06-28-1"
     container_name: "kafka-ts"
     depends_on:
       - zookeeper
@@ -43,7 +43,7 @@ services:
       KAFKA_TRANSACTION_STATE_LOG_MIN_ISR: 1
       KAFKA_AUTO_CREATE_TOPICS_ENABLE: false
       # Increase Tiered Storage log level
-      KAFKA_LOG4J_LOGGERS: "kafka.log.remote=TRACE"
+      KAFKA_LOG4J_LOGGERS: "kafka.log.remote=TRACE,kafka.server.ReplicaManager=DEBUG"
       # Tweak retention checking
       KAFKA_LOG_RETENTION_CHECK_INTERVAL_MS: 10000
       # Enable Tiered Storage
@@ -51,11 +51,13 @@ services:
       KAFKA_REMOTE_LOG_MANAGER_TASK_INTERVAL_MS: 5000
       # Remote metadata manager
       KAFKA_REMOTE_LOG_METADATA_MANAGER_CLASS_NAME: "org.apache.kafka.server.log.remote.metadata.storage.TopicBasedRemoteLogMetadataManager"
+      KAFKA_REMOTE_LOG_METADATA_MANAGER_IMPL_PREFIX: "rlmm.config."
+      KAFKA_RLMM_CONFIG_REMOTE_LOG_METADATA_COMMON_CLIENT_BOOTSTRAP_SERVERS: "kafka:29092"
       KAFKA_RLMM_CONFIG_REMOTE_LOG_METADATA_TOPIC_REPLICATION_FACTOR: 1
-      KAFKA_REMOTE_LOG_METADATA_MANAGER_LISTENER_NAME: BROKER
       # Remote storage manager
       KAFKA_REMOTE_LOG_STORAGE_MANAGER_CLASS_PATH: "/tiered-storage-for-apache-kafka/*"
       KAFKA_REMOTE_LOG_STORAGE_MANAGER_CLASS_NAME: "io.aiven.kafka.tieredstorage.RemoteStorageManager"
+      KAFKA_REMOTE_LOG_STORAGE_MANAGER_IMPL_PREFIX: "rsm.config."
       KAFKA_RSM_CONFIG_CHUNK_SIZE: 1048576
       # Storage backend
       KAFKA_RSM_CONFIG_KEY_PREFIX: "tiered-storage-demo/"
