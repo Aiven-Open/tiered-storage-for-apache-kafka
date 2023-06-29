@@ -35,22 +35,20 @@ import org.slf4j.LoggerFactory;
 public class Metrics {
     private static final Logger log = LoggerFactory.getLogger(Metrics.class);
 
-    private final Time time;
-
     private final org.apache.kafka.common.metrics.Metrics metrics;
 
     private final Sensor segmentCopyRequests;
-    private final Sensor segmentCopyTime;
     private final Sensor segmentCopyBytes;
+    private final Sensor segmentCopyTime;
 
     private final Sensor segmentDeleteRequests;
     private final Sensor segmentDeleteBytes;
+    private final Sensor segmentDeleteTime;
 
-    private final Sensor segmentFetchPerSec;
+    private final Sensor segmentFetchRequests;
+    private final Sensor segmentFetchRequestedBytes;
 
     public Metrics(final Time time) {
-        this.time = time;
-
         final JmxReporter reporter = new JmxReporter();
 
         metrics = new org.apache.kafka.common.metrics.Metrics(
@@ -79,8 +77,21 @@ public class Metrics {
         segmentDeleteBytes.add(metrics.metricName("segment-delete-bytes-rate", metricGroup), new Rate());
         segmentDeleteBytes.add(metrics.metricName("segment-delete-bytes-total", metricGroup), new CumulativeSum());
 
-        segmentFetchPerSec = metrics.sensor("segment-fetch");
-        segmentFetchPerSec.add(metrics.metricName("segment-fetch-rate", metricGroup), new Rate());
+        segmentDeleteTime = metrics.sensor("segment-delete-time");
+        segmentDeleteTime.add(metrics.metricName("segment-delete-time-avg", metricGroup), new Avg());
+        segmentDeleteTime.add(metrics.metricName("segment-delete-time-max", metricGroup), new Max());
+
+        segmentFetchRequests = metrics.sensor("segment-fetch");
+        segmentFetchRequests.add(metrics.metricName("segment-fetch-rate", metricGroup), new Rate());
+        segmentFetchRequests.add(metrics.metricName("segment-fetch-total", metricGroup), new CumulativeCount());
+
+        segmentFetchRequestedBytes = metrics.sensor("segment-fetch-requested-bytes");
+        segmentFetchRequestedBytes.add(
+            metrics.metricName("segment-fetch-requested-bytes-rate", metricGroup),
+            new Rate());
+        segmentFetchRequestedBytes.add(
+            metrics.metricName("segment-fetch-requested-bytes-total", metricGroup),
+            new CumulativeSum());
     }
 
     public void recordSegmentCopy(final int bytes) {
@@ -88,17 +99,22 @@ public class Metrics {
         segmentCopyBytes.record(bytes);
     }
 
+    public void recordSegmentCopyTime(final long startMs, final long endMs) {
+        segmentCopyTime.record(endMs - startMs);
+    }
+
     public void recordSegmentDelete(final int bytes) {
         segmentDeleteRequests.record();
         segmentDeleteBytes.record(bytes);
     }
 
-    public void recordSegmentCopyTime(final long startMs, final long endMs) {
-        segmentCopyTime.record(endMs - startMs);
+    public void recordSegmentDeleteTime(final long startMs, final long endMs) {
+        segmentDeleteTime.record(endMs - startMs);
     }
 
-    public void recordSegmentFetch() {
-        segmentFetchPerSec.record();
+    public void recordSegmentFetch(final int bytes) {
+        segmentFetchRequests.record();
+        segmentFetchRequestedBytes.record(bytes);
     }
 
     public void close() {

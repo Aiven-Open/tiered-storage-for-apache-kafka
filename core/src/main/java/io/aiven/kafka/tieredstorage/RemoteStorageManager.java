@@ -270,15 +270,15 @@ public class RemoteStorageManager implements org.apache.kafka.server.log.remote.
     public InputStream fetchLogSegment(final RemoteLogSegmentMetadata remoteLogSegmentMetadata,
                                        final int startPosition,
                                        final int endPosition) throws RemoteStorageException {
-        metrics.recordSegmentFetch();
-
         try {
-            final SegmentManifest segmentManifest = segmentManifestProvider.get(remoteLogSegmentMetadata);
-
             final BytesRange range = BytesRange.of(
                 startPosition,
                 Math.min(endPosition, remoteLogSegmentMetadata.segmentSizeInBytes() - 1)
             );
+            metrics.recordSegmentFetch(range.size());
+
+            final SegmentManifest segmentManifest = segmentManifestProvider.get(remoteLogSegmentMetadata);
+
             return new FetchChunkEnumeration(chunkManager, remoteLogSegmentMetadata, segmentManifest, range)
                 .toInputStream();
         } catch (final StorageBackendException | IOException e) {
@@ -308,6 +308,8 @@ public class RemoteStorageManager implements org.apache.kafka.server.log.remote.
         throws RemoteStorageException {
         metrics.recordSegmentDelete(remoteLogSegmentMetadata.segmentSizeInBytes());
 
+        final long startedMs = time.milliseconds();
+
         try {
             for (final ObjectKey.Suffix suffix : ObjectKey.Suffix.values()) {
                 final String key = objectKey.key(remoteLogSegmentMetadata, suffix);
@@ -316,6 +318,8 @@ public class RemoteStorageManager implements org.apache.kafka.server.log.remote.
         } catch (final StorageBackendException e) {
             throw new RemoteStorageException(e);
         }
+
+        metrics.recordSegmentDeleteTime(startedMs, time.milliseconds());
     }
 
     @Override
