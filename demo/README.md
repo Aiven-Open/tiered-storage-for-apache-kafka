@@ -21,8 +21,12 @@ This scenario uses `FileSystemStorage` as the "remote" storage.
 # Start the compose
 make run_local_fs
 
-# Create the topic
-make create_topic
+# Create the topic with any variation
+make create_topic_ts_by_size
+# or
+# make create_topic_ts_by_time
+# or with TS disabled
+# make create_topic_no_ts_*
 
 # Fill the topic
 make fill_topic
@@ -64,8 +68,12 @@ Then perform the following steps:
 # Start the compose
 make run_s3_aws
 
-# Create the topic
-make create_topic
+# Create the topic with any variation
+make create_topic_ts_by_size
+# or
+# make create_topic_ts_by_time
+# or with TS disabled
+# make create_topic_no_ts_*
 
 # Fill the topic
 make fill_topic
@@ -94,8 +102,12 @@ This scenario uses `S3Storage` with MinIO S3 as the remote storage.
 # Start the compose
 make run_s3_minio
 
-# Create the topic
-make create_topic
+# Create the topic with any variation
+make create_topic_ts_by_size
+# or
+# make create_topic_ts_by_time
+# or with TS disabled
+# make create_topic_no_ts_*
 
 # Fill the topic
 make fill_topic
