@@ -51,6 +51,7 @@ import io.aiven.kafka.tieredstorage.storage.BytesRange;
 import io.aiven.kafka.tieredstorage.storage.ObjectDeleter;
 import io.aiven.kafka.tieredstorage.storage.ObjectFetcher;
 import io.aiven.kafka.tieredstorage.storage.ObjectUploader;
+import io.aiven.kafka.tieredstorage.storage.StorageBackend;
 import io.aiven.kafka.tieredstorage.storage.StorageBackendException;
 import io.aiven.kafka.tieredstorage.transform.BaseTransformChunkEnumeration;
 import io.aiven.kafka.tieredstorage.transform.CompressionChunkEnumeration;
@@ -109,9 +110,7 @@ public class RemoteStorageManager implements org.apache.kafka.server.log.remote.
     public void configure(final Map<String, ?> configs) {
         Objects.requireNonNull(configs, "configs must not be null");
         final RemoteStorageManagerConfig config = new RemoteStorageManagerConfig(configs);
-        fetcher = config.storage();
-        uploader = config.storage();
-        deleter = config.storage();
+        setStorage(config.storage());
         objectKey = new ObjectKey(config.keyPrefix());
         encryptionEnabled = config.encryptionEnabled();
         if (encryptionEnabled) {
@@ -139,6 +138,13 @@ public class RemoteStorageManager implements org.apache.kafka.server.log.remote.
             fetcher,
             mapper,
             executor);
+    }
+
+    // for testing
+    void setStorage(final StorageBackend storage) {
+        fetcher = storage;
+        uploader = storage;
+        deleter = storage;
     }
 
     private ObjectMapper getObjectMapper() {
@@ -201,6 +207,7 @@ public class RemoteStorageManager implements org.apache.kafka.server.log.remote.
             final ByteBufferInputStream leaderEpoch = new ByteBufferInputStream(logSegmentData.leaderEpochIndex());
             uploadIndexFile(remoteLogSegmentMetadata, leaderEpoch, LEADER_EPOCH);
         } catch (final StorageBackendException | IOException e) {
+            metrics.recordSegmentCopyError();
             throw new RemoteStorageException(e);
         }
 
@@ -316,6 +323,7 @@ public class RemoteStorageManager implements org.apache.kafka.server.log.remote.
                 deleter.delete(key);
             }
         } catch (final StorageBackendException e) {
+            metrics.recordSegmentDeleteError();
             throw new RemoteStorageException(e);
         }
 

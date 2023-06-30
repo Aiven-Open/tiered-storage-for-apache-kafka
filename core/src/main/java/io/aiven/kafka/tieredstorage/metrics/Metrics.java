@@ -40,10 +40,12 @@ public class Metrics {
     private final Sensor segmentCopyRequests;
     private final Sensor segmentCopyBytes;
     private final Sensor segmentCopyTime;
+    private final Sensor segmentCopyErrors;
 
     private final Sensor segmentDeleteRequests;
     private final Sensor segmentDeleteBytes;
     private final Sensor segmentDeleteTime;
+    private final Sensor segmentDeleteErrors;
 
     private final Sensor segmentFetchRequests;
     private final Sensor segmentFetchRequestedBytes;
@@ -69,6 +71,10 @@ public class Metrics {
         segmentCopyTime.add(metrics.metricName("segment-copy-time-avg", metricGroup), new Avg());
         segmentCopyTime.add(metrics.metricName("segment-copy-time-max", metricGroup), new Max());
 
+        segmentCopyErrors = metrics.sensor("segment-copy-errors");
+        segmentCopyErrors.add(metrics.metricName("segment-copy-errors-rate", metricGroup), new Rate());
+        segmentCopyErrors.add(metrics.metricName("segment-copy-errors-total", metricGroup), new CumulativeSum());
+
         segmentDeleteRequests = metrics.sensor("segment-delete");
         segmentDeleteRequests.add(metrics.metricName("segment-delete-rate", metricGroup), new Rate());
         segmentDeleteRequests.add(metrics.metricName("segment-delete-total", metricGroup), new CumulativeCount());
@@ -80,6 +86,10 @@ public class Metrics {
         segmentDeleteTime = metrics.sensor("segment-delete-time");
         segmentDeleteTime.add(metrics.metricName("segment-delete-time-avg", metricGroup), new Avg());
         segmentDeleteTime.add(metrics.metricName("segment-delete-time-max", metricGroup), new Max());
+
+        segmentDeleteErrors = metrics.sensor("segment-delete-errors");
+        segmentDeleteErrors.add(metrics.metricName("segment-delete-errors-rate", metricGroup), new Rate());
+        segmentDeleteErrors.add(metrics.metricName("segment-delete-errors-total", metricGroup), new CumulativeSum());
 
         segmentFetchRequests = metrics.sensor("segment-fetch");
         segmentFetchRequests.add(metrics.metricName("segment-fetch-rate", metricGroup), new Rate());
@@ -103,6 +113,10 @@ public class Metrics {
         segmentCopyTime.record(endMs - startMs);
     }
 
+    public void recordSegmentCopyError() {
+        segmentCopyErrors.record();
+    }
+
     public void recordSegmentDelete(final int bytes) {
         segmentDeleteRequests.record();
         segmentDeleteBytes.record(bytes);
@@ -110,6 +124,10 @@ public class Metrics {
 
     public void recordSegmentDeleteTime(final long startMs, final long endMs) {
         segmentDeleteTime.record(endMs - startMs);
+    }
+
+    public void recordSegmentDeleteError() {
+        segmentDeleteErrors.record();
     }
 
     public void recordSegmentFetch(final int bytes) {
