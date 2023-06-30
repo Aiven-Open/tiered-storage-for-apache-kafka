@@ -40,6 +40,8 @@ import org.apache.kafka.server.log.remote.storage.RemoteLogSegmentId;
 import org.apache.kafka.server.log.remote.storage.RemoteLogSegmentMetadata;
 import org.apache.kafka.server.log.remote.storage.RemoteStorageException;
 
+import io.aiven.kafka.tieredstorage.chunkmanager.cache.InMemoryChunkCache;
+
 import org.junit.jupiter.api.BeforeAll;
 import org.junit.jupiter.api.Test;
 import org.junit.jupiter.api.extension.ExtendWith;
@@ -82,7 +84,10 @@ class RemoteStorageManagerMetricsTest {
             "chunk.size", "123",
             "storage.backend.class",
             "io.aiven.kafka.tieredstorage.storage.filesystem.FileSystemStorage",
-            "storage.root", target.toString()
+            "storage.root", target.toString(),
+            "chunk.cache.path", tmpDir.resolve("cache").toString(),
+            "chunk.cache.class", InMemoryChunkCache.class.getCanonicalName(),
+            "chunk.cache.size", 100 * 1024 * 1024
         ));
 
         final Path source = tmpDir.resolve("source");

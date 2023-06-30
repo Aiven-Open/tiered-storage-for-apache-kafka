@@ -51,6 +51,7 @@ import org.apache.kafka.server.log.remote.storage.RemoteLogSegmentId;
 import org.apache.kafka.server.log.remote.storage.RemoteLogSegmentMetadata;
 import org.apache.kafka.server.log.remote.storage.RemoteStorageException;
 
+import io.aiven.kafka.tieredstorage.chunkmanager.cache.InMemoryChunkCache;
 import io.aiven.kafka.tieredstorage.manifest.index.ChunkIndex;
 import io.aiven.kafka.tieredstorage.manifest.serde.DataKeyDeserializer;
 import io.aiven.kafka.tieredstorage.manifest.serde.DataKeySerializer;
@@ -180,7 +181,10 @@ class RemoteStorageManagerTest extends RsaKeyAwareTest {
             "key.prefix", "test/",
             "storage.root", targetDir.toString(),
             "compression.enabled", Boolean.toString(compression),
-            "encryption.enabled", Boolean.toString(encryption)
+            "encryption.enabled", Boolean.toString(encryption),
+            "chunk.cache.path", tmpDir.resolve("cache").toString(),
+            "chunk.cache.class", InMemoryChunkCache.class.getCanonicalName(),
+            "chunk.cache.size", Integer.toString(100 * 1024 * 1024)
         ));
         if (encryption) {
             config.put("encryption.public.key.file", publicKeyPem.toString());
@@ -401,15 +405,19 @@ class RemoteStorageManagerTest extends RsaKeyAwareTest {
 
         // Configure the RSM.
         final int chunkSize = 1024 * 1024;
-        final Map<String, ?> config = new HashMap<>(Map.of(
-            "chunk.size", Integer.toString(chunkSize),
-            "storage.backend.class",
-            "io.aiven.kafka.tieredstorage.storage.filesystem.FileSystemStorage",
-            "key.prefix", "test/",
-            "storage.root", targetDir.toString(),
-            "compression.enabled", "true",
-            "compression.heuristic.enabled", "true"
-        ));
+        final Map<String, ?> config = new HashMap<>() {{
+                put("chunk.size", Integer.toString(chunkSize));
+                put("storage.backend.class",
+                    "io.aiven.kafka.tieredstorage.storage.filesystem.FileSystemStorage");
+                put("key.prefix", "test/");
+                put("storage.root", targetDir.toString());
+                put("compression.enabled", "true");
+                put("compression.heuristic.enabled", "true");
+                put("chunk.cache.size", 10000);
+                put("chunk.cache.class", InMemoryChunkCache.class.getCanonicalName());
+                put("chunk.cache.retention.ms", 10000);
+            }};
+
         rsm.configure(config);
 
         // When

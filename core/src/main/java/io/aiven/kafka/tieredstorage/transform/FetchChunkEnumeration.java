@@ -27,7 +27,7 @@ import java.util.Objects;
 import org.apache.kafka.server.log.remote.storage.RemoteLogSegmentMetadata;
 
 import io.aiven.kafka.tieredstorage.Chunk;
-import io.aiven.kafka.tieredstorage.ChunkManager;
+import io.aiven.kafka.tieredstorage.chunkmanager.ChunkManager;
 import io.aiven.kafka.tieredstorage.manifest.SegmentManifest;
 import io.aiven.kafka.tieredstorage.manifest.index.ChunkIndex;
 import io.aiven.kafka.tieredstorage.storage.BytesRange;
@@ -140,7 +140,7 @@ public class FetchChunkEnumeration implements Enumeration<InputStream> {
     private InputStream getChunkContent(final int chunkId) {
         try {
             return chunkManager.getChunk(remoteLogSegmentMetadata, manifest, chunkId);
-        } catch (final StorageBackendException e) {
+        } catch (final StorageBackendException | IOException e) {
             throw new RuntimeException(e);
         }
     }

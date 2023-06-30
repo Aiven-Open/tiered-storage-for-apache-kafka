@@ -61,7 +61,7 @@ public class Chunk {
         return transformedSize == that.transformedSize;
     }
 
-    BytesRange range() {
+    public BytesRange range() {
         return BytesRange.ofFromPositionAndSize(transformedPosition, transformedSize);
     }
 
