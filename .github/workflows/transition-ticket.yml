@@ -1,0 +1,129 @@
+name: transition ticket
+
+on:
+  issues:
+    types: [labeled]
+
+jobs:
+  transition_ticket_in_progress:
+    runs-on: ubuntu-latest      
+    if: ${{ github.event.label.name == 'in progress'}}
+    steps:
+      - name: Wait for ticket to be created
+        continue-on-error: true
+        uses: lewagon/wait-on-check-action@v1.0.0
+        with:
+          ref: ${{ github.ref }}
+          check-name: 'Create ticket'
+          repo-token: ${{ github.token }}
+          wait-interval: 10
+      - name: checkout repo content
+        uses: actions/checkout@v2 # checkout the repository content to github runner.
+      - name: setup python
+        uses: actions/setup-python@v2
+        with:
+          python-version: 3.8 #install the python needed
+
+      - name: ticket_num
+        run: |
+          output=$(python .github/workflows/ticket_number.py "${{ github.event.issue.title }}")
+          echo "::set-output name=ticket::$output"
+        id: ticket_extraction
+
+      - name: Login
+        uses: atlassian/gajira-login@master
+        env:
+          JIRA_BASE_URL: ${{ secrets.JIRA_BASE_URL }}
+          JIRA_USER_EMAIL: ${{ secrets.JIRA_USER_EMAIL }}
+          JIRA_API_TOKEN: ${{ secrets.JIRA_API_TOKEN }}
+
+      - name: Transition issue
+        id: transition
+        uses: atlassian/gajira-transition@master
+        with:
+          issue: ${{ steps.ticket_extraction.outputs.ticket }}
+          transition: "In progress"    
+
+  transition_ticket_waiting_for_up_stream:
+    runs-on: ubuntu-latest
+    if: ${{ github.event.label.name == 'waiting for upstream'}}
+    steps:
+      - name: Wait for ticket to be created
+        continue-on-error: true
+        uses: lewagon/wait-on-check-action@v1.0.0
+        with:
+          ref: ${{ github.ref }}
+          check-name: 'Create ticket'
+          repo-token: ${{ github.token }}
+          wait-interval: 10
+
+      - name: checkout repo content
+        uses: actions/checkout@v2 # checkout the repository content to github runner.
+      - name: setup python
+        uses: actions/setup-python@v2
+        with:
+          python-version: 3.8 #install the python needed
+          
+      - name: ticket_num
+        run: |
+          output=$(python .github/workflows/ticket_number.py "${{ github.event.issue.title }}")
+          echo "::set-output name=ticket::$output"
+        id: ticket_extraction
+
+
+      - name: Login
+        uses: atlassian/gajira-login@master
+        env:
+          JIRA_BASE_URL: ${{ secrets.JIRA_BASE_URL }}
+          JIRA_USER_EMAIL: ${{ secrets.JIRA_USER_EMAIL }}
+          JIRA_API_TOKEN: ${{ secrets.JIRA_API_TOKEN }}
+
+      - name: Transition issue
+        id: transition
+        uses: atlassian/gajira-transition@master
+        with:
+          issue: ${{ steps.ticket_extraction.outputs.ticket }}
+          transition: "waiting for upstream release"      
+
+  transition_ticket_selected_for_dev:
+    runs-on: ubuntu-latest
+    if: ${{ github.event.label.name == 'selected for development'}}
+    steps:
+      - name: Wait for ticket to be created
+        continue-on-error: true
+        uses: lewagon/wait-on-check-action@v1.0.0
+        with:
+          ref: ${{ github.ref }}
+          check-name: 'Create ticket'
+          repo-token: ${{ github.token }}
+          wait-interval: 10
+
+
+      - name: checkout repo content
+        uses: actions/checkout@v2 # checkout the repository content to github runner.
+        
+      - name: setup python
+        uses: actions/setup-python@v2
+        with:
+          python-version: 3.8 #install the python needed
+
+      - name: ticket_num
+        run: |
+          output=$(python .github/workflows/ticket_number.py "${{ github.event.issue.title }}")
+          echo "::set-output name=ticket::$output"
+        id: ticket_extraction
+
+      - name: Login
+        uses: atlassian/gajira-login@master
+        env:
+          JIRA_BASE_URL: ${{ secrets.JIRA_BASE_URL }}
+          JIRA_USER_EMAIL: ${{ secrets.JIRA_USER_EMAIL }}
+          JIRA_API_TOKEN: ${{ secrets.JIRA_API_TOKEN }}
+
+      - name: Transition issue
+        id: transition
+        uses: atlassian/gajira-transition@master
+        with:
+          issue: ${{ steps.ticket_extraction.outputs.ticket }}
+          transition: "Selected for Development"       
+
