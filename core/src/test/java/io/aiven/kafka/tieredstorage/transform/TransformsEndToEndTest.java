@@ -42,14 +42,14 @@ public class TransformsEndToEndTest extends AesKeyAwareTest {
     }
 
     @ParameterizedTest
-    @ValueSource(ints = {1, 2, 3, 5, 13, 1024, 1024 * 2, 1024 * 5 + 3, ORIGINAL_SIZE - 1, ORIGINAL_SIZE * 2})
+    @ValueSource(ints = {0, 1, 2, 3, 5, 13, 1024, 1024 * 2, 1024 * 5 + 3, ORIGINAL_SIZE - 1, ORIGINAL_SIZE * 2})
     void plaintext(final int chunkSize) throws IOException {
         test(chunkSize, false, false);
     }
 
     @ParameterizedTest
     // Small chunks would make encryption and compression tests very slow, skipping them
-    @ValueSource(ints = {1024 - 1, 1024, 1024 * 2 + 2, 1024 * 5 + 3, ORIGINAL_SIZE - 1, ORIGINAL_SIZE * 2})
+    @ValueSource(ints = {0, 1024 - 1, 1024, 1024 * 2 + 2, 1024 * 5 + 3, ORIGINAL_SIZE - 1, ORIGINAL_SIZE * 2})
     void encryption(final int chunkSize) throws IOException {
         test(chunkSize, false, true);
     }
@@ -78,7 +78,9 @@ public class TransformsEndToEndTest extends AesKeyAwareTest {
         if (encryption) {
             transformEnum = new EncryptionChunkEnumeration(transformEnum, AesKeyAwareTest::encryptionCipherSupplier);
         }
-        final var transformFinisher = new TransformFinisher(transformEnum, ORIGINAL_SIZE);
+        final var transformFinisher = chunkSize == 0
+            ? new TransformFinisher(transformEnum)
+            : new TransformFinisher(transformEnum, ORIGINAL_SIZE);
         final byte[] uploadedData;
         final ChunkIndex chunkIndex;
         try (final var sis = transformFinisher.toInputStream()) {
@@ -87,8 +89,9 @@ public class TransformsEndToEndTest extends AesKeyAwareTest {
         }
 
         // Detransform.
-        DetransformChunkEnumeration detransformEnum = new BaseDetransformChunkEnumeration(
-            new ByteArrayInputStream(uploadedData), chunkIndex.chunks());
+        DetransformChunkEnumeration detransformEnum = chunkIndex == null
+            ? new BaseDetransformChunkEnumeration(new ByteArrayInputStream(uploadedData))
+            : new BaseDetransformChunkEnumeration(new ByteArrayInputStream(uploadedData), chunkIndex.chunks());
         if (encryption) {
             detransformEnum = new DecryptionChunkEnumeration(
                 detransformEnum, ivSize, AesKeyAwareTest::decryptionCipherSupplier);
