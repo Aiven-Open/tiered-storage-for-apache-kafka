@@ -23,7 +23,7 @@ ext {
 dependencies {
     implementation project(":storage:core")
 
-    implementation 'com.amazonaws:aws-java-sdk-s3:1.12.418'
+    implementation 'com.amazonaws:aws-java-sdk-s3:1.12.500'
 
     testImplementation(testFixtures(project(":storage:core")))
 
