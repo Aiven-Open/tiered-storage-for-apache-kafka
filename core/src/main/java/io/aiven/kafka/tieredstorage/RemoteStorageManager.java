@@ -26,6 +26,7 @@ import java.io.InputStream;
 import java.nio.file.Files;
 import java.util.Map;
 import java.util.Objects;
+import java.util.Optional;
 import java.util.concurrent.Executor;
 import java.util.concurrent.ForkJoinPool;
 import java.util.concurrent.TimeUnit;
@@ -40,6 +41,7 @@ import org.apache.kafka.server.log.remote.storage.RemoteStorageException;
 
 import io.aiven.kafka.tieredstorage.chunkmanager.ChunkManager;
 import io.aiven.kafka.tieredstorage.chunkmanager.ChunkManagerFactory;
+import io.aiven.kafka.tieredstorage.manifest.SegmentEncryptionMetadata;
 import io.aiven.kafka.tieredstorage.manifest.SegmentEncryptionMetadataV1;
 import io.aiven.kafka.tieredstorage.manifest.SegmentManifest;
 import io.aiven.kafka.tieredstorage.manifest.SegmentManifestV1;
@@ -56,8 +58,12 @@ import io.aiven.kafka.tieredstorage.storage.ObjectFetcher;
 import io.aiven.kafka.tieredstorage.storage.ObjectUploader;
 import io.aiven.kafka.tieredstorage.storage.StorageBackend;
 import io.aiven.kafka.tieredstorage.storage.StorageBackendException;
+import io.aiven.kafka.tieredstorage.transform.BaseDetransformChunkEnumeration;
 import io.aiven.kafka.tieredstorage.transform.BaseTransformChunkEnumeration;
 import io.aiven.kafka.tieredstorage.transform.CompressionChunkEnumeration;
+import io.aiven.kafka.tieredstorage.transform.DecryptionChunkEnumeration;
+import io.aiven.kafka.tieredstorage.transform.DetransformChunkEnumeration;
+import io.aiven.kafka.tieredstorage.transform.DetransformFinisher;
 import io.aiven.kafka.tieredstorage.transform.EncryptionChunkEnumeration;
 import io.aiven.kafka.tieredstorage.transform.FetchChunkEnumeration;
 import io.aiven.kafka.tieredstorage.transform.TransformChunkEnumeration;
@@ -206,17 +212,17 @@ public class RemoteStorageManager implements org.apache.kafka.server.log.remote.
             uploadManifest(remoteLogSegmentMetadata, segmentManifest);
 
             final InputStream offsetIndex = Files.newInputStream(logSegmentData.offsetIndex());
-            uploadIndexFile(remoteLogSegmentMetadata, offsetIndex, OFFSET);
+            uploadIndexFile(remoteLogSegmentMetadata, offsetIndex, OFFSET, encryptionMetadata);
             final InputStream timeIndex = Files.newInputStream(logSegmentData.timeIndex());
-            uploadIndexFile(remoteLogSegmentMetadata, timeIndex, TIMESTAMP);
+            uploadIndexFile(remoteLogSegmentMetadata, timeIndex, TIMESTAMP, encryptionMetadata);
             final InputStream producerSnapshotIndex = Files.newInputStream(logSegmentData.producerSnapshotIndex());
-            uploadIndexFile(remoteLogSegmentMetadata, producerSnapshotIndex, PRODUCER_SNAPSHOT);
+            uploadIndexFile(remoteLogSegmentMetadata, producerSnapshotIndex, PRODUCER_SNAPSHOT, encryptionMetadata);
             if (logSegmentData.transactionIndex().isPresent()) {
                 final InputStream transactionIndex = Files.newInputStream(logSegmentData.transactionIndex().get());
-                uploadIndexFile(remoteLogSegmentMetadata, transactionIndex, TRANSACTION);
+                uploadIndexFile(remoteLogSegmentMetadata, transactionIndex, TRANSACTION, encryptionMetadata);
             }
             final ByteBufferInputStream leaderEpoch = new ByteBufferInputStream(logSegmentData.leaderEpochIndex());
-            uploadIndexFile(remoteLogSegmentMetadata, leaderEpoch, LEADER_EPOCH);
+            uploadIndexFile(remoteLogSegmentMetadata, leaderEpoch, LEADER_EPOCH, encryptionMetadata);
         } catch (final StorageBackendException | IOException e) {
             metrics.recordSegmentCopyError(remoteLogSegmentMetadata.remoteLogSegmentId()
                 .topicIdPartition().topicPartition());
@@ -263,12 +269,23 @@ public class RemoteStorageManager implements org.apache.kafka.server.log.remote.
 
     private void uploadIndexFile(final RemoteLogSegmentMetadata remoteLogSegmentMetadata,
                                  final InputStream index,
-                                 final IndexType indexType)
+                                 final IndexType indexType,
+                                 final SegmentEncryptionMetadata encryptionMetadata)
         throws StorageBackendException, IOException {
+        TransformChunkEnumeration transformEnum = new BaseTransformChunkEnumeration(index);
+        if (encryptionEnabled) {
+            final var dataKeyAndAAD = new DataKeyAndAAD(encryptionMetadata.dataKey(), encryptionMetadata.aad());
+            transformEnum = new EncryptionChunkEnumeration(
+                transformEnum,
+                () -> aesEncryptionProvider.encryptionCipher(dataKeyAndAAD));
+        }
+        final TransformFinisher transformFinisher =
+            new TransformFinisher(transformEnum);
+
         final var suffix = ObjectKey.Suffix.fromIndexType(indexType);
         final String key = objectKey.key(remoteLogSegmentMetadata, suffix);
-        try (index) {
-            final var bytes = uploader.upload(index, key);
+        try (final var in = transformFinisher.toInputStream()) {
+            final var bytes = uploader.upload(in, key);
             metrics.recordObjectUpload(
                 remoteLogSegmentMetadata.remoteLogSegmentId().topicIdPartition().topicPartition(),
                 suffix,
@@ -329,9 +346,23 @@ public class RemoteStorageManager implements org.apache.kafka.server.log.remote.
     public InputStream fetchIndex(final RemoteLogSegmentMetadata remoteLogSegmentMetadata,
                                   final IndexType indexType) throws RemoteStorageException {
         try {
+            final SegmentManifest segmentManifest = segmentManifestProvider.get(remoteLogSegmentMetadata);
+
             final String key = objectKey.key(remoteLogSegmentMetadata, ObjectKey.Suffix.fromIndexType(indexType));
-            return fetcher.fetch(key);
-        } catch (final StorageBackendException e) {
+            final var in = fetcher.fetch(key);
+
+            DetransformChunkEnumeration detransformEnum = new BaseDetransformChunkEnumeration(in);
+            final Optional<SegmentEncryptionMetadata> encryptionMetadata = segmentManifest.encryption();
+            if (encryptionMetadata.isPresent()) {
+                detransformEnum = new DecryptionChunkEnumeration(
+                    detransformEnum,
+                    encryptionMetadata.get().ivSize(),
+                    encryptedChunk -> aesEncryptionProvider.decryptionCipher(encryptedChunk, encryptionMetadata.get())
+                );
+            }
+            final DetransformFinisher detransformFinisher = new DetransformFinisher(detransformEnum);
+            return detransformFinisher.toInputStream();
+        } catch (final StorageBackendException | IOException e) {
             // TODO: should be aligned with upstream implementation
             if (indexType == TRANSACTION) {
                 return null;
