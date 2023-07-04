@@ -47,21 +47,26 @@ public class DiskBasedChunkCacheConfig extends ChunkCacheConfig {
 
     public DiskBasedChunkCacheConfig(final Map<String, ?> props) {
         super(configDef(), props);
+        final var baseCachePath = baseCachePath();
+        if (!Files.isDirectory(baseCachePath) || !Files.isWritable(baseCachePath)) {
+            throw new ConfigException(CACHE_PATH_CONFIG, baseCachePath,
+                baseCachePath + " must exists and be a writable directory");
+        }
         // Cleaning the cache directory since there is no way so far
         // to reuse previously cached files after broker restart.
         resetCacheDirectory();
     }
 
     private void resetCacheDirectory() {
-        if (Files.exists(baseCachePath())) {
-            try {
-                FileUtils.deleteDirectory(baseCachePath().toFile());
-                Files.createDirectories(cachePath());
-                Files.createDirectories(tempCachePath());
-            } catch (final IOException e) {
-                throw new ConfigException(CACHE_PATH_CONFIG, baseCachePath(),
-                        "Failed to reset cache directory, please empty the directory, reason: " + e.getMessage());
-            }
+        final var baseCachePath = baseCachePath();
+        try {
+            FileUtils.cleanDirectory(baseCachePath.toFile());
+            Files.createDirectories(cachePath());
+            Files.createDirectories(tempCachePath());
+        } catch (final IOException e) {
+            // printing e.toString instead of e.getMessage as some message have no context without exception type
+            throw new ConfigException(CACHE_PATH_CONFIG, baseCachePath,
+                "Failed to reset cache directory, please empty the directory, reason: " + e);
         }
     }
 
