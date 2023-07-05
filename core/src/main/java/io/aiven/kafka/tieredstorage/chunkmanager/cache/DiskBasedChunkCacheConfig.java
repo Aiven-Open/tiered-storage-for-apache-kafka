@@ -28,7 +28,8 @@ import org.apache.commons.io.FileUtils;
 
 public class DiskBasedChunkCacheConfig extends ChunkCacheConfig {
     private static final String CACHE_PATH_CONFIG = "path";
-    private static final String CACHE_PATH_DOC = "Cache directory";
+    private static final String CACHE_PATH_DOC = "Cache base directory. "
+        + "It is required to exist and be writable prior to the execution of the plugin.";
 
     public static final String TEMP_CACHE_DIRECTORY = "temp";
     public static final String CACHE_DIRECTORY = "cache";
