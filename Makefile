@@ -26,6 +26,7 @@ build/distributions/tiered-storage-for-apache-kafka-$(VERSION).tgz:
 .PHONY: docker_image
 docker_image: build/distributions/tiered-storage-for-apache-kafka-$(VERSION).tgz
 	docker build . \
+		-f docker/Dockerfile \
 		--build-arg _VERSION=$(VERSION) \
 		-t $(IMAGE_TAG)
 

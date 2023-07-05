@@ -30,6 +30,7 @@ services:
       - minio
     ports:
       - "9092:9092"
+      - "7000:7000" #prometheus metrics
     environment:
       KAFKA_BROKER_ID: 0
       KAFKA_ZOOKEEPER_CONNECT: "zookeeper:2181"
