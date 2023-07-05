@@ -49,6 +49,7 @@ public class ChunkManagerFactoryConfig extends AbstractConfig {
         super(CONFIG, originals);
     }
 
+    @SuppressWarnings("unchecked")
     public Class<ChunkCache<?>> cacheClass() {
         return (Class<ChunkCache<?>>) getClass(CHUNK_CACHE_CONFIG);
     }

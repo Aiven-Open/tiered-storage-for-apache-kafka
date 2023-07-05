@@ -54,33 +54,30 @@ class DiskBasedChunkCacheConfigTest {
 
     @Test
     void validConfig() {
-        final String emptyCachePath = "/path/";
-        final DiskBasedChunkCacheConfig diskBasedCachingChunkManagerConfig
-                = new DiskBasedChunkCacheConfig(
-                Map.of(
-                        "size", "-1",
-                        "path", emptyCachePath
-                )
+        final var config = new DiskBasedChunkCacheConfig(
+            Map.of(
+                "size", "-1",
+                "path", path.toString()
+            )
         );
-        assertThat(diskBasedCachingChunkManagerConfig.baseCachePath()).isEqualTo(Path.of(emptyCachePath));
+        assertThat(config.baseCachePath()).isEqualTo(path);
     }
 
     @Test
-    void noneEmptyCachePath() throws IOException {
+    void nonEmptyCachePath() throws IOException {
         Files.createFile(tempCachePath.resolve("temp-file"));
         Files.createFile(cachePath.resolve("cached-file"));
 
-        final DiskBasedChunkCacheConfig diskBasedCachingChunkManagerConfig
-                = new DiskBasedChunkCacheConfig(
-                Map.of(
-                        "size", "-1",
-                        "path", path.toString()
-                )
+        final var config = new DiskBasedChunkCacheConfig(
+            Map.of(
+                "size", "-1",
+                "path", path.toString()
+            )
         );
-        assertThat(diskBasedCachingChunkManagerConfig.baseCachePath())
-                .isEqualTo(path)
-                .isDirectoryContaining(cp -> cp.equals(cachePath))
-                .isDirectoryContaining(tcp -> tcp.equals(tempCachePath));
+        assertThat(config.baseCachePath())
+            .isEqualTo(path)
+            .isDirectoryContaining(cp -> cp.equals(cachePath))
+            .isDirectoryContaining(tcp -> tcp.equals(tempCachePath));
         assertThat(cachePath).isEmptyDirectory();
         assertThat(tempCachePath).isEmptyDirectory();
     }
@@ -91,18 +88,30 @@ class DiskBasedChunkCacheConfigTest {
         final var file = Files.createFile(cachePath.resolve("cached-file"));
 
         try (final var filesMockedStatic = mockStatic(FileUtils.class, CALLS_REAL_METHODS)) {
-            filesMockedStatic.when(() -> FileUtils.deleteDirectory(eq(path.toFile())))
-                    .thenThrow(new IOException("Failed to delete file " + file));
+            filesMockedStatic.when(() -> FileUtils.cleanDirectory(eq(path.toFile())))
+                .thenThrow(new IOException("Failed to delete file " + file));
             assertThat(path).exists();
             assertThatThrownBy(() -> new DiskBasedChunkCacheConfig(
-                    Map.of(
-                            "size", "-1",
-                            "path", path.toString()
-                    )
+                Map.of(
+                    "size", "-1",
+                    "path", path.toString()
+                )
             )).isInstanceOf(ConfigException.class)
-                    .hasMessage("Invalid value " + path + " for configuration path: "
-                            + "Failed to reset cache directory, please empty the directory, reason: "
-                            + "Failed to delete file " + file);
+                .hasMessage("Invalid value " + path + " for configuration path: "
+                    + "Failed to reset cache directory, please empty the directory, reason: "
+                    + "java.io.IOException: Failed to delete file " + file);
         }
+    }
+
+    @Test
+    void failWhenNonExistingBaseDir() {
+        assertThatThrownBy(() -> new DiskBasedChunkCacheConfig(
+            Map.of(
+                "size", "-1",
+                "path", "non-existing"
+            )))
+            .isInstanceOf(ConfigException.class)
+            .hasMessage("Invalid value non-existing for configuration path: "
+                + "non-existing must exists and be a writable directory");
     }
 }
