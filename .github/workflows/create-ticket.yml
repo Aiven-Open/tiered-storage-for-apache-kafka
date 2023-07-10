@@ -1,0 +1,45 @@
+name: Create ticket
+on:
+  issues:
+    types: [opened]
+
+jobs:
+  build:
+    runs-on: ubuntu-latest
+    name: Create new ticket
+    steps:
+    - name: checkout repo content
+      uses: actions/checkout@v2 # checkout the repository content to github runner.
+    - name: setup python
+      uses: actions/setup-python@v2
+      with:
+        python-version: 3.8 #install the python needed
+
+
+    - name: Login
+      uses: atlassian/gajira-login@master
+      env:
+        JIRA_BASE_URL: ${{ secrets.JIRA_BASE_URL }}
+        JIRA_USER_EMAIL: ${{ secrets.JIRA_USER_EMAIL }}
+        JIRA_API_TOKEN: ${{ secrets.JIRA_API_TOKEN }}
+
+    - name: create
+      id: create
+      uses: atlassian/gajira-create@v2.0.1
+      with:
+        project: HH
+        issuetype: Task
+        summary: "[TS] ${{ github.event.issue.title }}"
+        description: ${{ github.event.issue.body }}
+
+    - name: Update issue
+      uses: actions-cool/issues-helper@v3
+      with:
+        actions: 'update-issue'
+        token: ${{ github.token }}
+        issue-number: ${{ github.event.issue.number }}
+        state: 'open'
+        title: "${{ steps.create.outputs.issue }}: ${{ github.event.issue.title }}"
+        update-mode: 'replace'
+
+            
