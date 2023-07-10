@@ -21,6 +21,7 @@ bootstrap_server_host=localhost:9092
 # Topic defaults
 topic=topic1
 partitions=1
+rf=1
 segment=1000000 # 1MB
 retention_bytes=20000000 # 20MB
 local_retention_bytes=5000000 # 5MB
@@ -38,6 +39,7 @@ create_topic_ts_by_size:
 		--config retention.bytes=$(retention_bytes) \
 		--config local.retention.bytes=$(local_retention_bytes) \
 		--partitions $(partitions) \
+		--replication-factor $(rf) \
 		--topic $(topic)
 
 .PHONY: create_topic_ts_by_time
@@ -106,15 +108,17 @@ clean:
 	docker compose -f compose-s3-aws.yml down
 	docker compose -f compose-s3-minio.yml down
 
+partition = 0
+
 .PHONY: show_local_data
 show_local_data:
 	docker exec $(kafka_container) \
-		ls -lah /var/lib/kafka/data/$(topic)-0/
+		ls -lah /var/lib/kafka/data/$(topic)-$(partition)/
 
 .PHONY: show_remote_data_fs
 show_remote_data_fs:
 	docker exec -e KAFKA_OPTS= $(kafka_container) \
-		/usr/bin/bash -c 'ls -lah /home/appuser/kafka-tiered-storage/tiered-storage-demo/$(topic)-*/0/'
+		/usr/bin/bash -c 'ls -lah /home/appuser/kafka-tiered-storage/tiered-storage-demo/$(topic)-*/$(partition)/'
 
 .PHONY: show_remote_data_s3_aws
 show_remote_data_s3_aws:
