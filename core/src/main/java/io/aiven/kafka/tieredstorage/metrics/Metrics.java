@@ -18,6 +18,7 @@ package io.aiven.kafka.tieredstorage.metrics;
 
 import java.util.List;
 
+import org.apache.kafka.common.TopicPartition;
 import org.apache.kafka.common.metrics.JmxReporter;
 import org.apache.kafka.common.metrics.KafkaMetricsContext;
 import org.apache.kafka.common.metrics.MetricConfig;
@@ -32,107 +33,259 @@ import org.apache.kafka.common.utils.Time;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
+import static io.aiven.kafka.tieredstorage.metrics.MetricsRegistry.SEGMENT_COPY;
+import static io.aiven.kafka.tieredstorage.metrics.MetricsRegistry.SEGMENT_COPY_BYTES;
+import static io.aiven.kafka.tieredstorage.metrics.MetricsRegistry.SEGMENT_COPY_ERRORS;
+import static io.aiven.kafka.tieredstorage.metrics.MetricsRegistry.SEGMENT_COPY_TIME;
+import static io.aiven.kafka.tieredstorage.metrics.MetricsRegistry.SEGMENT_DELETE;
+import static io.aiven.kafka.tieredstorage.metrics.MetricsRegistry.SEGMENT_DELETE_BYTES;
+import static io.aiven.kafka.tieredstorage.metrics.MetricsRegistry.SEGMENT_DELETE_ERRORS;
+import static io.aiven.kafka.tieredstorage.metrics.MetricsRegistry.SEGMENT_DELETE_TIME;
+import static io.aiven.kafka.tieredstorage.metrics.MetricsRegistry.SEGMENT_FETCH;
+import static io.aiven.kafka.tieredstorage.metrics.MetricsRegistry.SEGMENT_FETCH_REQUESTED_BYTES;
+import static io.aiven.kafka.tieredstorage.metrics.MetricsRegistry.sensorName;
+import static io.aiven.kafka.tieredstorage.metrics.MetricsRegistry.sensorNameByTopic;
+import static io.aiven.kafka.tieredstorage.metrics.MetricsRegistry.sensorNameByTopicPartition;
+import static io.aiven.kafka.tieredstorage.metrics.MetricsRegistry.topicPartitionTags;
+import static io.aiven.kafka.tieredstorage.metrics.MetricsRegistry.topicTags;
+
 public class Metrics {
     private static final Logger log = LoggerFactory.getLogger(Metrics.class);
 
     private final org.apache.kafka.common.metrics.Metrics metrics;
 
-    private final Sensor segmentCopyRequests;
-    private final Sensor segmentCopyBytes;
-    private final Sensor segmentCopyTime;
-    private final Sensor segmentCopyErrors;
+    private final MetricsRegistry metricsRegistry;
 
-    private final Sensor segmentDeleteRequests;
-    private final Sensor segmentDeleteBytes;
-    private final Sensor segmentDeleteTime;
-    private final Sensor segmentDeleteErrors;
-
-    private final Sensor segmentFetchRequests;
-    private final Sensor segmentFetchRequestedBytes;
-
-    public Metrics(final Time time) {
+    public Metrics(final Time time, final MetricConfig metricConfig) {
         final JmxReporter reporter = new JmxReporter();
 
         metrics = new org.apache.kafka.common.metrics.Metrics(
-            new MetricConfig(), List.of(reporter), time,
+            metricConfig, List.of(reporter), time,
             new KafkaMetricsContext("aiven.kafka.server.tieredstorage")
         );
-        final String metricGroup = "remote-storage-manager-metrics";
 
-        segmentCopyRequests = metrics.sensor("segment-copy");
-        segmentCopyRequests.add(metrics.metricName("segment-copy-rate", metricGroup), new Rate());
-        segmentCopyRequests.add(metrics.metricName("segment-copy-total", metricGroup), new CumulativeCount());
-
-        segmentCopyBytes = metrics.sensor("segment-copy-bytes");
-        segmentCopyBytes.add(metrics.metricName("segment-copy-bytes-rate", metricGroup), new Rate());
-        segmentCopyBytes.add(metrics.metricName("segment-copy-bytes-total", metricGroup), new CumulativeSum());
-
-        segmentCopyTime = metrics.sensor("segment-copy-time");
-        segmentCopyTime.add(metrics.metricName("segment-copy-time-avg", metricGroup), new Avg());
-        segmentCopyTime.add(metrics.metricName("segment-copy-time-max", metricGroup), new Max());
-
-        segmentCopyErrors = metrics.sensor("segment-copy-errors");
-        segmentCopyErrors.add(metrics.metricName("segment-copy-errors-rate", metricGroup), new Rate());
-        segmentCopyErrors.add(metrics.metricName("segment-copy-errors-total", metricGroup), new CumulativeSum());
-
-        segmentDeleteRequests = metrics.sensor("segment-delete");
-        segmentDeleteRequests.add(metrics.metricName("segment-delete-rate", metricGroup), new Rate());
-        segmentDeleteRequests.add(metrics.metricName("segment-delete-total", metricGroup), new CumulativeCount());
-
-        segmentDeleteBytes = metrics.sensor("segment-delete-bytes");
-        segmentDeleteBytes.add(metrics.metricName("segment-delete-bytes-rate", metricGroup), new Rate());
-        segmentDeleteBytes.add(metrics.metricName("segment-delete-bytes-total", metricGroup), new CumulativeSum());
-
-        segmentDeleteTime = metrics.sensor("segment-delete-time");
-        segmentDeleteTime.add(metrics.metricName("segment-delete-time-avg", metricGroup), new Avg());
-        segmentDeleteTime.add(metrics.metricName("segment-delete-time-max", metricGroup), new Max());
-
-        segmentDeleteErrors = metrics.sensor("segment-delete-errors");
-        segmentDeleteErrors.add(metrics.metricName("segment-delete-errors-rate", metricGroup), new Rate());
-        segmentDeleteErrors.add(metrics.metricName("segment-delete-errors-total", metricGroup), new CumulativeSum());
-
-        segmentFetchRequests = metrics.sensor("segment-fetch");
-        segmentFetchRequests.add(metrics.metricName("segment-fetch-rate", metricGroup), new Rate());
-        segmentFetchRequests.add(metrics.metricName("segment-fetch-total", metricGroup), new CumulativeCount());
-
-        segmentFetchRequestedBytes = metrics.sensor("segment-fetch-requested-bytes");
-        segmentFetchRequestedBytes.add(
-            metrics.metricName("segment-fetch-requested-bytes-rate", metricGroup),
-            new Rate());
-        segmentFetchRequestedBytes.add(
-            metrics.metricName("segment-fetch-requested-bytes-total", metricGroup),
-            new CumulativeSum());
+        metricsRegistry = new MetricsRegistry();
     }
 
-    public void recordSegmentCopy(final int bytes) {
-        segmentCopyRequests.record();
-        segmentCopyBytes.record(bytes);
+    public void recordSegmentCopy(final TopicPartition topicPartition, final long bytes) {
+        recordSegmentCopyRequests(topicPartition);
+        recordSegmentCopyBytes(topicPartition, bytes);
     }
 
-    public void recordSegmentCopyTime(final long startMs, final long endMs) {
-        segmentCopyTime.record(endMs - startMs);
+    private void recordSegmentCopyBytes(final TopicPartition topicPartition, final long bytes) {
+        new SensorProvider(metrics, sensorName(SEGMENT_COPY_BYTES))
+            .with(metricsRegistry.segmentCopyBytesRate, new Rate())
+            .with(metricsRegistry.segmentCopyBytesTotal, new CumulativeSum())
+            .get()
+            .record(bytes);
+        new SensorProvider(metrics, sensorNameByTopic(topicPartition, SEGMENT_COPY_BYTES),
+            () -> topicTags(topicPartition))
+            .with(metricsRegistry.segmentCopyBytesRateByTopic, new Rate())
+            .with(metricsRegistry.segmentCopyBytesTotalByTopic, new CumulativeSum())
+            .get()
+            .record(bytes);
+        new SensorProvider(metrics, sensorNameByTopicPartition(topicPartition, SEGMENT_COPY_BYTES),
+            () -> topicPartitionTags(topicPartition), Sensor.RecordingLevel.DEBUG)
+            .with(metricsRegistry.segmentCopyBytesRateByTopicPartition, new Rate())
+            .with(metricsRegistry.segmentCopyBytesTotalByTopicPartition, new CumulativeSum())
+            .get()
+            .record(bytes);
     }
 
-    public void recordSegmentCopyError() {
-        segmentCopyErrors.record();
+    private void recordSegmentCopyRequests(final TopicPartition topicPartition) {
+        new SensorProvider(metrics, sensorName(SEGMENT_COPY))
+            .with(metricsRegistry.segmentCopyRequestsRate, new Rate())
+            .with(metricsRegistry.segmentCopyRequestsTotal, new CumulativeCount())
+            .get()
+            .record();
+        new SensorProvider(metrics, sensorNameByTopic(topicPartition, SEGMENT_COPY),
+            () -> topicTags(topicPartition))
+            .with(metricsRegistry.segmentCopyRequestsRateByTopic, new Rate())
+            .with(metricsRegistry.segmentCopyRequestsTotalByTopic, new CumulativeCount())
+            .get()
+            .record();
+        new SensorProvider(metrics, sensorNameByTopicPartition(topicPartition, SEGMENT_COPY),
+            () -> topicPartitionTags(topicPartition), Sensor.RecordingLevel.DEBUG)
+            .with(metricsRegistry.segmentCopyRequestsRateByTopicPartition, new Rate())
+            .with(metricsRegistry.segmentCopyRequestsTotalByTopicPartition, new CumulativeCount())
+            .get()
+            .record();
     }
 
-    public void recordSegmentDelete(final int bytes) {
-        segmentDeleteRequests.record();
-        segmentDeleteBytes.record(bytes);
+    public void recordSegmentCopyTime(final TopicPartition topicPartition, final long startMs, final long endMs) {
+        final var time = endMs - startMs;
+        new SensorProvider(metrics, sensorName(SEGMENT_COPY_TIME))
+            .with(metricsRegistry.segmentCopyTimeAvg, new Avg())
+            .with(metricsRegistry.segmentCopyTimeMax, new Max())
+            .get()
+            .record(time);
+        new SensorProvider(metrics, sensorNameByTopic(topicPartition, SEGMENT_COPY_TIME),
+            () -> topicTags(topicPartition))
+            .with(metricsRegistry.segmentCopyTimeAvgByTopic, new Avg())
+            .with(metricsRegistry.segmentCopyTimeMaxByTopic, new Max())
+            .get()
+            .record(time);
+        new SensorProvider(metrics, sensorNameByTopicPartition(topicPartition, SEGMENT_COPY_TIME),
+            () -> topicPartitionTags(topicPartition), Sensor.RecordingLevel.DEBUG)
+            .with(metricsRegistry.segmentCopyTimeAvgByTopicPartition, new Avg())
+            .with(metricsRegistry.segmentCopyTimeMaxByTopicPartition, new Max())
+            .get()
+            .record(time);
     }
 
-    public void recordSegmentDeleteTime(final long startMs, final long endMs) {
-        segmentDeleteTime.record(endMs - startMs);
+    public void recordSegmentCopyError(final TopicPartition topicPartition) {
+        new SensorProvider(metrics, sensorName(SEGMENT_COPY_ERRORS))
+            .with(metricsRegistry.segmentCopyErrorsRate, new Rate())
+            .with(metricsRegistry.segmentCopyErrorsTotal, new CumulativeCount())
+            .get()
+            .record();
+        new SensorProvider(metrics, sensorNameByTopic(topicPartition, SEGMENT_COPY_ERRORS),
+            () -> topicTags(topicPartition))
+            .with(metricsRegistry.segmentCopyErrorsRateByTopic, new Rate())
+            .with(metricsRegistry.segmentCopyErrorsTotalByTopic, new CumulativeCount())
+            .get()
+            .record();
+        new SensorProvider(metrics, sensorNameByTopicPartition(topicPartition, SEGMENT_COPY_ERRORS),
+            () -> topicPartitionTags(topicPartition), Sensor.RecordingLevel.DEBUG)
+            .with(metricsRegistry.segmentCopyErrorsRateByTopicPartition, new Rate())
+            .with(metricsRegistry.segmentCopyErrorsTotalByTopicPartition, new CumulativeCount())
+            .get()
+            .record();
     }
 
-    public void recordSegmentDeleteError() {
-        segmentDeleteErrors.record();
+    public void recordSegmentDelete(final TopicPartition topicPartition, final long bytes) {
+        recordSegmentDeleteRequests(topicPartition);
+        recordSegmentDeleteBytes(topicPartition, bytes);
     }
 
-    public void recordSegmentFetch(final int bytes) {
-        segmentFetchRequests.record();
-        segmentFetchRequestedBytes.record(bytes);
+    private void recordSegmentDeleteBytes(final TopicPartition topicPartition, final long bytes) {
+        new SensorProvider(metrics, sensorName(SEGMENT_DELETE_BYTES))
+            .with(metricsRegistry.segmentDeleteBytesRate, new Rate())
+            .with(metricsRegistry.segmentDeleteBytesTotal, new CumulativeSum())
+            .get()
+            .record(bytes);
+        new SensorProvider(
+            metrics,
+            sensorNameByTopic(topicPartition, SEGMENT_DELETE_BYTES),
+            () -> MetricsRegistry.topicTags(topicPartition))
+            .with(metricsRegistry.segmentDeleteBytesRateByTopic, new Rate())
+            .with(metricsRegistry.segmentDeleteBytesTotalByTopic, new CumulativeSum())
+            .get()
+            .record(bytes);
+        new SensorProvider(
+            metrics,
+            sensorNameByTopicPartition(topicPartition, SEGMENT_DELETE_BYTES),
+            () -> topicPartitionTags(topicPartition), Sensor.RecordingLevel.DEBUG)
+            .with(metricsRegistry.segmentDeleteBytesRateByTopicPartition, new Rate())
+            .with(metricsRegistry.segmentDeleteBytesTotalByTopicPartition, new CumulativeSum())
+            .get()
+            .record(bytes);
+    }
+
+    private void recordSegmentDeleteRequests(final TopicPartition topicPartition) {
+        new SensorProvider(metrics, sensorName(SEGMENT_DELETE))
+            .with(metricsRegistry.segmentDeleteRequestsRate, new Rate())
+            .with(metricsRegistry.segmentDeleteRequestsTotal, new CumulativeCount())
+            .get()
+            .record();
+        new SensorProvider(metrics, sensorNameByTopic(topicPartition, SEGMENT_DELETE),
+            () -> MetricsRegistry.topicTags(topicPartition))
+            .with(metricsRegistry.segmentDeleteRequestsRateByTopic, new Rate())
+            .with(metricsRegistry.segmentDeleteRequestsTotalByTopic, new CumulativeCount())
+            .get()
+            .record();
+        new SensorProvider(metrics, sensorNameByTopicPartition(topicPartition, SEGMENT_DELETE),
+            () -> topicPartitionTags(topicPartition), Sensor.RecordingLevel.DEBUG)
+            .with(metricsRegistry.segmentDeleteRequestsRateByTopicPartition, new Rate())
+            .with(metricsRegistry.segmentDeleteRequestsTotalByTopicPartition, new CumulativeCount())
+            .get()
+            .record();
+    }
+
+    public void recordSegmentDeleteTime(final TopicPartition topicPartition, final long startMs, final long endMs) {
+        final var time = endMs - startMs;
+        new SensorProvider(metrics, sensorName(SEGMENT_DELETE_TIME))
+            .with(metricsRegistry.segmentDeleteTimeAvg, new Avg())
+            .with(metricsRegistry.segmentDeleteTimeMax, new Max())
+            .get()
+            .record(time);
+        new SensorProvider(metrics, sensorNameByTopic(topicPartition, SEGMENT_DELETE_TIME),
+            () -> topicTags(topicPartition))
+            .with(metricsRegistry.segmentDeleteTimeAvgByTopic, new Avg())
+            .with(metricsRegistry.segmentDeleteTimeMaxByTopic, new Max())
+            .get()
+            .record(time);
+        new SensorProvider(metrics, sensorNameByTopicPartition(topicPartition, SEGMENT_DELETE_TIME),
+            () -> topicPartitionTags(topicPartition), Sensor.RecordingLevel.DEBUG)
+            .with(metricsRegistry.segmentDeleteTimeAvgByTopicPartition, new Avg())
+            .with(metricsRegistry.segmentDeleteTimeMaxByTopicPartition, new Max())
+            .get()
+            .record(time);
+    }
+
+    public void recordSegmentDeleteError(final TopicPartition topicPartition) {
+        new SensorProvider(metrics, sensorName(SEGMENT_DELETE_ERRORS))
+            .with(metricsRegistry.segmentDeleteErrorsRate, new Rate())
+            .with(metricsRegistry.segmentDeleteErrorsTotal, new CumulativeCount())
+            .get()
+            .record();
+        new SensorProvider(metrics, sensorNameByTopic(topicPartition, SEGMENT_DELETE_ERRORS),
+            () -> topicTags(topicPartition))
+            .with(metricsRegistry.segmentDeleteErrorsRateByTopic, new Rate())
+            .with(metricsRegistry.segmentDeleteErrorsTotalByTopic, new CumulativeCount())
+            .get()
+            .record();
+        new SensorProvider(metrics, sensorNameByTopicPartition(topicPartition, SEGMENT_DELETE_ERRORS),
+            () -> topicPartitionTags(topicPartition), Sensor.RecordingLevel.DEBUG)
+            .with(metricsRegistry.segmentDeleteErrorsRateByTopicPartition, new Rate())
+            .with(metricsRegistry.segmentDeleteErrorsTotalByTopicPartition, new CumulativeCount())
+            .get()
+            .record();
+    }
+
+    public void recordSegmentFetch(final TopicPartition topicPartition, final long bytes) {
+        recordSegmentFetchRequests(topicPartition);
+        recordSegmentFetchRequestedBytes(topicPartition, bytes);
+    }
+
+    private void recordSegmentFetchRequestedBytes(final TopicPartition topicPartition, final long bytes) {
+        new SensorProvider(metrics, sensorName(SEGMENT_FETCH_REQUESTED_BYTES))
+            .with(metricsRegistry.segmentFetchRequestedBytesRate, new Rate())
+            .with(metricsRegistry.segmentFetchRequestedBytesTotal, new CumulativeSum())
+            .get()
+            .record(bytes);
+        new SensorProvider(metrics, sensorNameByTopic(topicPartition, SEGMENT_FETCH_REQUESTED_BYTES),
+            () -> topicTags(topicPartition))
+            .with(metricsRegistry.segmentFetchRequestedBytesRateByTopic, new Rate())
+            .with(metricsRegistry.segmentFetchRequestedBytesTotalByTopic, new CumulativeSum())
+            .get()
+            .record(bytes);
+        new SensorProvider(metrics, sensorNameByTopicPartition(topicPartition, SEGMENT_FETCH_REQUESTED_BYTES),
+            () -> topicPartitionTags(topicPartition), Sensor.RecordingLevel.DEBUG)
+            .with(metricsRegistry.segmentFetchRequestedBytesRateByTopicPartition, new Rate())
+            .with(metricsRegistry.segmentFetchRequestedBytesTotalByTopicPartition, new CumulativeSum())
+            .get()
+            .record(bytes);
+    }
+
+    private void recordSegmentFetchRequests(final TopicPartition topicPartition) {
+        new SensorProvider(metrics, sensorName(SEGMENT_FETCH))
+            .with(metricsRegistry.segmentFetchRequestsRate, new Rate())
+            .with(metricsRegistry.segmentFetchRequestsTotal, new CumulativeCount())
+            .get()
+            .record();
+        new SensorProvider(metrics, sensorNameByTopic(topicPartition, SEGMENT_FETCH),
+            () -> topicTags(topicPartition))
+            .with(metricsRegistry.segmentFetchRequestsRateByTopic, new Rate())
+            .with(metricsRegistry.segmentFetchRequestsTotalByTopic, new CumulativeCount())
+            .get()
+            .record();
+        new SensorProvider(metrics, sensorNameByTopicPartition(topicPartition, SEGMENT_FETCH),
+            () -> topicPartitionTags(topicPartition), Sensor.RecordingLevel.DEBUG)
+            .with(metricsRegistry.segmentFetchRequestsRateByTopicPartition, new Rate())
+            .with(metricsRegistry.segmentFetchRequestsTotalByTopicPartition, new CumulativeCount())
+            .get()
+            .record();
     }
 
     public void close() {

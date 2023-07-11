@@ -28,7 +28,10 @@ import java.util.Map;
 import java.util.Objects;
 import java.util.concurrent.Executor;
 import java.util.concurrent.ForkJoinPool;
+import java.util.concurrent.TimeUnit;
 
+import org.apache.kafka.common.metrics.MetricConfig;
+import org.apache.kafka.common.metrics.Sensor;
 import org.apache.kafka.common.utils.ByteBufferInputStream;
 import org.apache.kafka.common.utils.Time;
 import org.apache.kafka.server.log.remote.storage.LogSegmentData;
@@ -66,6 +69,9 @@ import com.fasterxml.jackson.datatype.jdk8.Jdk8Module;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
+import static io.aiven.kafka.tieredstorage.RemoteStorageManagerConfig.METRICS_NUM_SAMPLES_CONFIG;
+import static io.aiven.kafka.tieredstorage.RemoteStorageManagerConfig.METRICS_RECORDING_LEVEL_CONFIG;
+import static io.aiven.kafka.tieredstorage.RemoteStorageManagerConfig.METRICS_SAMPLE_WINDOW_MS_CONFIG;
 import static org.apache.kafka.server.log.remote.storage.RemoteStorageManager.IndexType.LEADER_EPOCH;
 import static org.apache.kafka.server.log.remote.storage.RemoteStorageManager.IndexType.OFFSET;
 import static org.apache.kafka.server.log.remote.storage.RemoteStorageManager.IndexType.PRODUCER_SNAPSHOT;
@@ -77,7 +83,7 @@ public class RemoteStorageManager implements org.apache.kafka.server.log.remote.
 
     private final Time time;
 
-    private final Metrics metrics;
+    private Metrics metrics;
 
     private final Executor executor = new ForkJoinPool();
 
@@ -103,13 +109,17 @@ public class RemoteStorageManager implements org.apache.kafka.server.log.remote.
     // for testing
     RemoteStorageManager(final Time time) {
         this.time = time;
-        metrics = new Metrics(time);
     }
 
     @Override
     public void configure(final Map<String, ?> configs) {
         Objects.requireNonNull(configs, "configs must not be null");
         final RemoteStorageManagerConfig config = new RemoteStorageManagerConfig(configs);
+        final MetricConfig metricConfig = new MetricConfig()
+            .samples(config.getInt(METRICS_NUM_SAMPLES_CONFIG))
+            .timeWindow(config.getLong(METRICS_SAMPLE_WINDOW_MS_CONFIG), TimeUnit.MILLISECONDS)
+            .recordLevel(Sensor.RecordingLevel.forName(config.getString(METRICS_RECORDING_LEVEL_CONFIG)));
+        metrics = new Metrics(time, metricConfig);
         setStorage(config.storage());
         objectKey = new ObjectKey(config.keyPrefix());
         encryptionEnabled = config.encryptionEnabled();
@@ -166,7 +176,8 @@ public class RemoteStorageManager implements org.apache.kafka.server.log.remote.
         Objects.requireNonNull(remoteLogSegmentMetadata, "remoteLogSegmentId must not be null");
         Objects.requireNonNull(logSegmentData, "logSegmentData must not be null");
 
-        metrics.recordSegmentCopy(remoteLogSegmentMetadata.segmentSizeInBytes());
+        metrics.recordSegmentCopy(remoteLogSegmentMetadata.remoteLogSegmentId().topicIdPartition().topicPartition(),
+            remoteLogSegmentMetadata.segmentSizeInBytes());
 
         final long startedMs = time.milliseconds();
 
@@ -207,11 +218,14 @@ public class RemoteStorageManager implements org.apache.kafka.server.log.remote.
             final ByteBufferInputStream leaderEpoch = new ByteBufferInputStream(logSegmentData.leaderEpochIndex());
             uploadIndexFile(remoteLogSegmentMetadata, leaderEpoch, LEADER_EPOCH);
         } catch (final StorageBackendException | IOException e) {
-            metrics.recordSegmentCopyError();
+            metrics.recordSegmentCopyError(remoteLogSegmentMetadata.remoteLogSegmentId()
+                .topicIdPartition().topicPartition());
             throw new RemoteStorageException(e);
         }
 
-        metrics.recordSegmentCopyTime(startedMs, time.milliseconds());
+        metrics.recordSegmentCopyTime(
+            remoteLogSegmentMetadata.remoteLogSegmentId().topicIdPartition().topicPartition(),
+            startedMs, time.milliseconds());
     }
 
     boolean requiresCompression(final LogSegmentData logSegmentData) {
@@ -282,7 +296,9 @@ public class RemoteStorageManager implements org.apache.kafka.server.log.remote.
                 startPosition,
                 Math.min(endPosition, remoteLogSegmentMetadata.segmentSizeInBytes() - 1)
             );
-            metrics.recordSegmentFetch(range.size());
+            metrics.recordSegmentFetch(
+                remoteLogSegmentMetadata.remoteLogSegmentId().topicIdPartition().topicPartition(),
+                range.size());
 
             final SegmentManifest segmentManifest = segmentManifestProvider.get(remoteLogSegmentMetadata);
 
@@ -313,7 +329,8 @@ public class RemoteStorageManager implements org.apache.kafka.server.log.remote.
     @Override
     public void deleteLogSegmentData(final RemoteLogSegmentMetadata remoteLogSegmentMetadata)
         throws RemoteStorageException {
-        metrics.recordSegmentDelete(remoteLogSegmentMetadata.segmentSizeInBytes());
+        metrics.recordSegmentDelete(remoteLogSegmentMetadata.remoteLogSegmentId().topicIdPartition().topicPartition(),
+            remoteLogSegmentMetadata.segmentSizeInBytes());
 
         final long startedMs = time.milliseconds();
 
@@ -323,11 +340,14 @@ public class RemoteStorageManager implements org.apache.kafka.server.log.remote.
                 deleter.delete(key);
             }
         } catch (final StorageBackendException e) {
-            metrics.recordSegmentDeleteError();
+            metrics.recordSegmentDeleteError(remoteLogSegmentMetadata.remoteLogSegmentId()
+                .topicIdPartition().topicPartition());
             throw new RemoteStorageException(e);
         }
 
-        metrics.recordSegmentDeleteTime(startedMs, time.milliseconds());
+        metrics.recordSegmentDeleteTime(
+            remoteLogSegmentMetadata.remoteLogSegmentId().topicIdPartition().topicPartition(),
+            startedMs, time.milliseconds());
     }
 
     @Override
