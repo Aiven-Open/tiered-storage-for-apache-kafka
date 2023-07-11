@@ -18,10 +18,10 @@ package io.aiven.kafka.tieredstorage.storage.filesystem;
 
 import java.io.IOException;
 import java.io.InputStream;
-import java.io.OutputStream;
 import java.nio.file.Files;
 import java.nio.file.NoSuchFileException;
 import java.nio.file.Path;
+import java.nio.file.StandardCopyOption;
 import java.util.Map;
 
 import io.aiven.kafka.tieredstorage.storage.BytesRange;
@@ -47,13 +47,12 @@ public class FileSystemStorage implements StorageBackend {
     }
 
     @Override
-    public void upload(final InputStream inputStream, final String key) throws StorageBackendException {
+    public long upload(final InputStream inputStream, final String key) throws StorageBackendException {
         try {
             final Path path = fsRoot.resolve(key);
             Files.createDirectories(path.getParent());
-            try (final OutputStream outputStream = Files.newOutputStream(path)) {
-                inputStream.transferTo(outputStream);
-            }
+            Files.copy(inputStream, path, StandardCopyOption.REPLACE_EXISTING);
+            return Files.size(path);
         } catch (final IOException e) {
             throw new StorageBackendException("Failed to upload " + key, e);
         }

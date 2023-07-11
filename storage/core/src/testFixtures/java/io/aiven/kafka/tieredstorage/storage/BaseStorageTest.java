@@ -35,7 +35,8 @@ public abstract class BaseStorageTest {
     void testUploadFetchDelete() throws IOException, StorageBackendException {
         final byte[] data = "some file".getBytes();
         final InputStream file = new ByteArrayInputStream(data);
-        storage().upload(file, TOPIC_PARTITION_SEGMENT_KEY);
+        final long size = storage().upload(file, TOPIC_PARTITION_SEGMENT_KEY);
+        assertThat(size).isEqualTo(data.length);
 
         try (final InputStream fetch = storage().fetch(TOPIC_PARTITION_SEGMENT_KEY)) {
             final String r = new String(fetch.readAllBytes());
@@ -59,7 +60,8 @@ public abstract class BaseStorageTest {
     void testUploadANewFile() throws StorageBackendException, IOException {
         final String content = "content";
         final ByteArrayInputStream in = new ByteArrayInputStream(content.getBytes());
-        storage().upload(in, TOPIC_PARTITION_SEGMENT_KEY);
+        final long size = storage().upload(in, TOPIC_PARTITION_SEGMENT_KEY);
+        assertThat(size).isEqualTo(content.length());
 
         assertThat(in).isEmpty();
         in.close();
