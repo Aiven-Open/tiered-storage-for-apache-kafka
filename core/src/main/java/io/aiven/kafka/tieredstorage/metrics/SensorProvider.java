@@ -44,6 +44,12 @@ public class SensorProvider {
 
     public SensorProvider(final Metrics metrics,
                           final String name,
+                          final Sensor.RecordingLevel recordingLevel) {
+        this(metrics, name, Collections::emptyMap, recordingLevel);
+    }
+
+    public SensorProvider(final Metrics metrics,
+                          final String name,
                           final Supplier<Map<String, String>> tagsSupplier) {
         this(metrics, name, tagsSupplier, Sensor.RecordingLevel.INFO);
     }

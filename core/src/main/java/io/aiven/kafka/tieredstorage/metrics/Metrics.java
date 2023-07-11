@@ -30,9 +30,13 @@ import org.apache.kafka.common.metrics.stats.Max;
 import org.apache.kafka.common.metrics.stats.Rate;
 import org.apache.kafka.common.utils.Time;
 
+import io.aiven.kafka.tieredstorage.ObjectKey;
+
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
+import static io.aiven.kafka.tieredstorage.metrics.MetricsRegistry.OBJECT_UPLOAD;
+import static io.aiven.kafka.tieredstorage.metrics.MetricsRegistry.OBJECT_UPLOAD_BYTES;
 import static io.aiven.kafka.tieredstorage.metrics.MetricsRegistry.SEGMENT_COPY;
 import static io.aiven.kafka.tieredstorage.metrics.MetricsRegistry.SEGMENT_COPY_BYTES;
 import static io.aiven.kafka.tieredstorage.metrics.MetricsRegistry.SEGMENT_COPY_ERRORS;
@@ -43,9 +47,15 @@ import static io.aiven.kafka.tieredstorage.metrics.MetricsRegistry.SEGMENT_DELET
 import static io.aiven.kafka.tieredstorage.metrics.MetricsRegistry.SEGMENT_DELETE_TIME;
 import static io.aiven.kafka.tieredstorage.metrics.MetricsRegistry.SEGMENT_FETCH;
 import static io.aiven.kafka.tieredstorage.metrics.MetricsRegistry.SEGMENT_FETCH_REQUESTED_BYTES;
+import static io.aiven.kafka.tieredstorage.metrics.MetricsRegistry.objectTypeTags;
 import static io.aiven.kafka.tieredstorage.metrics.MetricsRegistry.sensorName;
+import static io.aiven.kafka.tieredstorage.metrics.MetricsRegistry.sensorNameByObjectType;
 import static io.aiven.kafka.tieredstorage.metrics.MetricsRegistry.sensorNameByTopic;
+import static io.aiven.kafka.tieredstorage.metrics.MetricsRegistry.sensorNameByTopicAndObjectType;
 import static io.aiven.kafka.tieredstorage.metrics.MetricsRegistry.sensorNameByTopicPartition;
+import static io.aiven.kafka.tieredstorage.metrics.MetricsRegistry.sensorNameByTopicPartitionAndObjectType;
+import static io.aiven.kafka.tieredstorage.metrics.MetricsRegistry.topicAndObjectTypeTags;
+import static io.aiven.kafka.tieredstorage.metrics.MetricsRegistry.topicPartitionAndObjectTypeTags;
 import static io.aiven.kafka.tieredstorage.metrics.MetricsRegistry.topicPartitionTags;
 import static io.aiven.kafka.tieredstorage.metrics.MetricsRegistry.topicTags;
 
@@ -60,7 +70,9 @@ public class Metrics {
         final JmxReporter reporter = new JmxReporter();
 
         metrics = new org.apache.kafka.common.metrics.Metrics(
-            metricConfig, List.of(reporter), time,
+            metricConfig,
+            List.of(reporter),
+            time,
             new KafkaMetricsContext("aiven.kafka.server.tieredstorage")
         );
 
@@ -284,6 +296,93 @@ public class Metrics {
             () -> topicPartitionTags(topicPartition), Sensor.RecordingLevel.DEBUG)
             .with(metricsRegistry.segmentFetchRequestsRateByTopicPartition, new Rate())
             .with(metricsRegistry.segmentFetchRequestsTotalByTopicPartition, new CumulativeCount())
+            .get()
+            .record();
+    }
+
+    public void recordObjectUpload(final TopicPartition topicPartition, final ObjectKey.Suffix suffix,
+                                   final long bytes) {
+        recordObjectUploadRequests(topicPartition, suffix);
+        recordObjectUploadBytes(topicPartition, suffix, bytes);
+    }
+
+    private void recordObjectUploadBytes(final TopicPartition topicPartition,
+                                         final ObjectKey.Suffix suffix,
+                                         final long bytes) {
+        new SensorProvider(metrics, sensorName(OBJECT_UPLOAD_BYTES))
+            .with(metricsRegistry.objectUploadBytesRate, new Rate())
+            .with(metricsRegistry.objectUploadBytesTotal, new CumulativeSum())
+            .get()
+            .record(bytes);
+        new SensorProvider(metrics, sensorNameByTopic(topicPartition, OBJECT_UPLOAD_BYTES),
+            () -> topicTags(topicPartition))
+            .with(metricsRegistry.objectUploadBytesRateByTopic, new Rate())
+            .with(metricsRegistry.objectUploadBytesTotalByTopic, new CumulativeSum())
+            .get()
+            .record(bytes);
+        new SensorProvider(metrics, sensorNameByTopicPartition(topicPartition, OBJECT_UPLOAD_BYTES),
+            () -> topicPartitionTags(topicPartition), Sensor.RecordingLevel.DEBUG)
+            .with(metricsRegistry.objectUploadBytesRateByTopicPartition, new Rate())
+            .with(metricsRegistry.objectUploadBytesTotalByTopicPartition, new CumulativeSum())
+            .get()
+            .record(bytes);
+        // with suffix
+        new SensorProvider(metrics, sensorNameByObjectType(suffix, OBJECT_UPLOAD_BYTES),
+            () -> objectTypeTags(suffix), Sensor.RecordingLevel.DEBUG)
+            .with(metricsRegistry.objectUploadBytesRateByObjectType, new Rate())
+            .with(metricsRegistry.objectUploadBytesTotalByObjectType, new CumulativeSum())
+            .get()
+            .record(bytes);
+        new SensorProvider(metrics, sensorNameByTopicAndObjectType(topicPartition, suffix, OBJECT_UPLOAD_BYTES),
+            () -> topicAndObjectTypeTags(topicPartition, suffix), Sensor.RecordingLevel.DEBUG)
+            .with(metricsRegistry.objectUploadBytesRateByTopicAndObjectType, new Rate())
+            .with(metricsRegistry.objectUploadBytesTotalByTopicAndObjectType, new CumulativeSum())
+            .get()
+            .record(bytes);
+        new SensorProvider(metrics,
+            sensorNameByTopicPartitionAndObjectType(topicPartition, suffix, OBJECT_UPLOAD_BYTES),
+            () -> topicPartitionAndObjectTypeTags(topicPartition, suffix), Sensor.RecordingLevel.DEBUG)
+            .with(metricsRegistry.objectUploadBytesRateByTopicPartitionAndObjectType, new Rate())
+            .with(metricsRegistry.objectUploadBytesTotalByTopicPartitionAndObjectType, new CumulativeSum())
+            .get()
+            .record(bytes);
+    }
+
+    private void recordObjectUploadRequests(final TopicPartition topicPartition, final ObjectKey.Suffix suffix) {
+        new SensorProvider(metrics, sensorName(OBJECT_UPLOAD))
+            .with(metricsRegistry.objectUploadRequestsRate, new Rate())
+            .with(metricsRegistry.objectUploadRequestsTotal, new CumulativeCount())
+            .get()
+            .record();
+        new SensorProvider(metrics, sensorNameByTopic(topicPartition, OBJECT_UPLOAD),
+            () -> topicTags(topicPartition))
+            .with(metricsRegistry.objectUploadRequestsRateByTopic, new Rate())
+            .with(metricsRegistry.objectUploadRequestsTotalByTopic, new CumulativeCount())
+            .get()
+            .record();
+        new SensorProvider(metrics, sensorNameByTopicPartition(topicPartition, OBJECT_UPLOAD),
+            () -> topicPartitionTags(topicPartition), Sensor.RecordingLevel.DEBUG)
+            .with(metricsRegistry.objectUploadRequestsRateByTopicPartition, new Rate())
+            .with(metricsRegistry.objectUploadRequestsTotalByTopicPartition, new CumulativeCount())
+            .get()
+            .record();
+        // With suffix
+        new SensorProvider(metrics, sensorNameByObjectType(suffix, OBJECT_UPLOAD),
+            () -> objectTypeTags(suffix), Sensor.RecordingLevel.DEBUG)
+            .with(metricsRegistry.objectUploadRequestsRateByObjectType, new Rate())
+            .with(metricsRegistry.objectUploadRequestsTotalByObjectType, new CumulativeCount())
+            .get()
+            .record();
+        new SensorProvider(metrics, sensorNameByTopicAndObjectType(topicPartition, suffix, OBJECT_UPLOAD),
+            () -> topicAndObjectTypeTags(topicPartition, suffix), Sensor.RecordingLevel.DEBUG)
+            .with(metricsRegistry.objectUploadRequestsRateByTopicAndObjectType, new Rate())
+            .with(metricsRegistry.objectUploadRequestsTotalByTopicAndObjectType, new CumulativeCount())
+            .get()
+            .record();
+        new SensorProvider(metrics, sensorNameByTopicPartitionAndObjectType(topicPartition, suffix, OBJECT_UPLOAD),
+            () -> topicPartitionAndObjectTypeTags(topicPartition, suffix), Sensor.RecordingLevel.DEBUG)
+            .with(metricsRegistry.objectUploadRequestsRateByTopicPartitionAndObjectType, new Rate())
+            .with(metricsRegistry.objectUploadRequestsTotalByTopicPartitionAndObjectType, new CumulativeCount())
             .get()
             .record();
     }
