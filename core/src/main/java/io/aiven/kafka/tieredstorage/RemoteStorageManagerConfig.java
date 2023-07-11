@@ -21,12 +21,17 @@ import java.time.Duration;
 import java.util.Map;
 import java.util.Optional;
 
+import org.apache.kafka.clients.CommonClientConfigs;
 import org.apache.kafka.common.config.AbstractConfig;
 import org.apache.kafka.common.config.ConfigDef;
 import org.apache.kafka.common.config.ConfigException;
+import org.apache.kafka.common.metrics.Sensor;
 import org.apache.kafka.common.utils.Utils;
 
 import io.aiven.kafka.tieredstorage.storage.StorageBackend;
+
+import static org.apache.kafka.common.config.ConfigDef.Range.atLeast;
+import static org.apache.kafka.common.config.ConfigDef.ValidString.in;
 
 public class RemoteStorageManagerConfig extends AbstractConfig {
     private static final String STORAGE_PREFIX = "storage.";
@@ -68,6 +73,17 @@ public class RemoteStorageManagerConfig extends AbstractConfig {
     private static final String ENCRYPTION_PRIVATE_KEY_FILE_CONFIG = "encryption.private.key.file";
     private static final String ENCRYPTION_PRIVATE_KEY_FILE_DOC = "The path to the RSA private key file";
     // TODO add possibility to pass keys as strings
+
+
+    public static final String METRICS_NUM_SAMPLES_CONFIG = CommonClientConfigs.METRICS_NUM_SAMPLES_CONFIG;
+    private static final String METRICS_NUM_SAMPLES_DOC = CommonClientConfigs.METRICS_NUM_SAMPLES_DOC;
+
+    public static final String METRICS_SAMPLE_WINDOW_MS_CONFIG = CommonClientConfigs.METRICS_SAMPLE_WINDOW_MS_CONFIG;
+    private static final String METRICS_SAMPLE_WINDOW_MS_DOC = CommonClientConfigs.METRICS_SAMPLE_WINDOW_MS_DOC;
+
+    public static final String METRICS_RECORDING_LEVEL_CONFIG = CommonClientConfigs.METRICS_RECORDING_LEVEL_CONFIG;
+    private static final String METRICS_RECORDING_LEVEL_DOC = CommonClientConfigs.METRICS_RECORDING_LEVEL_DOC;
+
 
     private static final ConfigDef CONFIG;
 
@@ -156,6 +172,28 @@ public class RemoteStorageManagerConfig extends AbstractConfig {
             ConfigDef.Importance.HIGH,
             ENCRYPTION_PRIVATE_KEY_FILE_DOC
         );
+
+        CONFIG
+            .define(METRICS_SAMPLE_WINDOW_MS_CONFIG,
+                ConfigDef.Type.LONG,
+                30000,
+                atLeast(1),
+                ConfigDef.Importance.LOW,
+                METRICS_SAMPLE_WINDOW_MS_DOC);
+        CONFIG.define(METRICS_NUM_SAMPLES_CONFIG,
+                ConfigDef.Type.INT,
+                2,
+                atLeast(1),
+                ConfigDef.Importance.LOW,
+                METRICS_NUM_SAMPLES_DOC);
+        CONFIG.define(METRICS_RECORDING_LEVEL_CONFIG,
+                ConfigDef.Type.STRING,
+                Sensor.RecordingLevel.INFO.toString(),
+                in(Sensor.RecordingLevel.INFO.toString(),
+                    Sensor.RecordingLevel.DEBUG.toString(),
+                    Sensor.RecordingLevel.TRACE.toString()),
+                ConfigDef.Importance.LOW,
+                METRICS_RECORDING_LEVEL_DOC);
     }
 
 
