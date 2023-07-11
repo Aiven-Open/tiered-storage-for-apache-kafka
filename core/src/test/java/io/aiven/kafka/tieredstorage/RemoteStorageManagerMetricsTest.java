@@ -101,9 +101,10 @@ class RemoteStorageManagerMetricsTest {
         final Path sourceFile = source.resolve("file");
         Files.write(sourceFile, new byte[LOG_SEGMENT_BYTES]);
 
+        final var leaderEpoch = ByteBuffer.wrap(new byte[LOG_SEGMENT_BYTES]);
         logSegmentData = new LogSegmentData(
             sourceFile, sourceFile, sourceFile, Optional.empty(), sourceFile,
-            ByteBuffer.allocate(0)
+            leaderEpoch
         );
     }
 
@@ -111,13 +112,16 @@ class RemoteStorageManagerMetricsTest {
     @ValueSource(strings = {"", ",topic=topic", ",topic=topic,partition=0"})
     void metricsShouldBeReported(final String tags) throws RemoteStorageException, JMException {
         rsm.copyLogSegmentData(REMOTE_LOG_SEGMENT_METADATA, logSegmentData);
+        logSegmentData.leaderEpochIndex().flip(); // so leader epoch can be consumed again
         rsm.copyLogSegmentData(REMOTE_LOG_SEGMENT_METADATA, logSegmentData);
+        logSegmentData.leaderEpochIndex().flip();
         rsm.copyLogSegmentData(REMOTE_LOG_SEGMENT_METADATA, logSegmentData);
+        logSegmentData.leaderEpochIndex().flip();
 
         rsm.fetchLogSegment(REMOTE_LOG_SEGMENT_METADATA, 0);
 
-        final ObjectName metricName = ObjectName.getInstance(
-            "aiven.kafka.server.tieredstorage:type=remote-storage-manager-metrics" + tags);
+        final var objectName = "aiven.kafka.server.tieredstorage:type=remote-storage-manager-metrics" + tags;
+        final ObjectName metricName = ObjectName.getInstance(objectName);
         assertThat(MBEAN_SERVER.getAttribute(metricName, "segment-copy-total"))
             .isEqualTo(3.0);
         assertThat(MBEAN_SERVER.getAttribute(metricName, "segment-copy-rate"))
@@ -142,6 +146,44 @@ class RemoteStorageManagerMetricsTest {
             .isEqualTo(10.0 / METRIC_TIME_WINDOW_SEC);
         assertThat(MBEAN_SERVER.getAttribute(metricName, "segment-fetch-requested-bytes-total"))
             .isEqualTo(10.0);
+
+        assertThat(MBEAN_SERVER.getAttribute(metricName, "object-upload-total"))
+            .isEqualTo(18.0);
+        assertThat(MBEAN_SERVER.getAttribute(metricName, "object-upload-rate"))
+            .isEqualTo(18.0 / METRIC_TIME_WINDOW_SEC);
+
+        assertThat(MBEAN_SERVER.getAttribute(metricName, "object-upload-bytes-total"))
+            .isEqualTo(657.0);
+        assertThat(MBEAN_SERVER.getAttribute(metricName, "object-upload-bytes-rate"))
+            .isEqualTo(657.0 / METRIC_TIME_WINDOW_SEC);
+
+        for (final var suffix : ObjectKey.Suffix.values()) {
+            final ObjectName storageMetricsName = ObjectName.getInstance(objectName + ",object-type=" + suffix.value);
+            switch (suffix) {
+                case TXN_INDEX:
+                    break;
+                case MANIFEST:
+                    assertThat(MBEAN_SERVER.getAttribute(storageMetricsName, "object-upload-total"))
+                        .isEqualTo(3.0);
+                    assertThat(MBEAN_SERVER.getAttribute(storageMetricsName, "object-upload-total"))
+                        .isEqualTo(3.0);
+                    assertThat((double) MBEAN_SERVER.getAttribute(storageMetricsName, "object-upload-bytes-rate"))
+                        .isGreaterThan(0.0);
+                    assertThat((double) MBEAN_SERVER.getAttribute(storageMetricsName, "object-upload-bytes-total"))
+                        .isGreaterThan(0.0);
+                    break;
+                default:
+                    assertThat(MBEAN_SERVER.getAttribute(storageMetricsName, "object-upload-rate"))
+                        .isEqualTo(3.0 / METRIC_TIME_WINDOW_SEC);
+                    assertThat(MBEAN_SERVER.getAttribute(storageMetricsName, "object-upload-total"))
+                        .isEqualTo(3.0);
+                    assertThat(MBEAN_SERVER.getAttribute(storageMetricsName, "object-upload-bytes-rate"))
+                        .isEqualTo(30.0 / METRIC_TIME_WINDOW_SEC);
+                    assertThat(MBEAN_SERVER.getAttribute(storageMetricsName, "object-upload-bytes-total"))
+                        .isEqualTo(30.0);
+                    break;
+            }
+        }
 
         rsm.deleteLogSegmentData(REMOTE_LOG_SEGMENT_METADATA);
         rsm.deleteLogSegmentData(REMOTE_LOG_SEGMENT_METADATA);
@@ -182,7 +224,7 @@ class RemoteStorageManagerMetricsTest {
             }
 
             @Override
-            public void upload(final InputStream inputStream, final String key) throws StorageBackendException {
+            public long upload(final InputStream inputStream, final String key) throws StorageBackendException {
                 throw new StorageBackendException("something wrong");
             }
 

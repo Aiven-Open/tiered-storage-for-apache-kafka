@@ -46,9 +46,10 @@ public class S3Storage implements StorageBackend {
     }
 
     @Override
-    public void upload(final InputStream inputStream, final String key) throws StorageBackendException {
+    public long upload(final InputStream in, final String key) throws StorageBackendException {
         try (final var out = s3OutputStream(key)) {
-            inputStream.transferTo(out);
+            in.transferTo(out);
+            return out.processedBytes();
         } catch (final AmazonS3Exception | IOException e) {
             throw new StorageBackendException("Failed to upload " + key, e);
         }

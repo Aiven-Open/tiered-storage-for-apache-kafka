@@ -21,7 +21,8 @@ import java.io.InputStream;
 public interface ObjectUploader {
     /**
      * @param inputStream content to upload. Not closed as part of the upload.
-     * @param key path to an object within a storage backend.
+     * @param key         path to an object within a storage backend.
+     * @return number of bytes uploaded
      */
-    void upload(InputStream inputStream, String key) throws StorageBackendException;
+    long upload(InputStream inputStream, String key) throws StorageBackendException;
 }

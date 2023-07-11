@@ -252,7 +252,12 @@ public class RemoteStorageManager implements org.apache.kafka.server.log.remote.
         throws IOException, StorageBackendException {
         final String fileKey = objectKey.key(remoteLogSegmentMetadata, ObjectKey.Suffix.LOG);
         try (final var sis = transformFinisher.toInputStream()) {
-            uploader.upload(sis, fileKey);
+            final var bytes = uploader.upload(sis, fileKey);
+            metrics.recordObjectUpload(
+                remoteLogSegmentMetadata.remoteLogSegmentId().topicIdPartition().topicPartition(),
+                ObjectKey.Suffix.LOG,
+                bytes
+            );
         }
     }
 
@@ -260,9 +265,15 @@ public class RemoteStorageManager implements org.apache.kafka.server.log.remote.
                                  final InputStream index,
                                  final IndexType indexType)
         throws StorageBackendException, IOException {
-        final String key = objectKey.key(remoteLogSegmentMetadata, ObjectKey.Suffix.fromIndexType(indexType));
+        final var suffix = ObjectKey.Suffix.fromIndexType(indexType);
+        final String key = objectKey.key(remoteLogSegmentMetadata, suffix);
         try (index) {
-            uploader.upload(index, key);
+            final var bytes = uploader.upload(index, key);
+            metrics.recordObjectUpload(
+                remoteLogSegmentMetadata.remoteLogSegmentId().topicIdPartition().topicPartition(),
+                suffix,
+                bytes
+            );
         }
     }
 
@@ -273,7 +284,12 @@ public class RemoteStorageManager implements org.apache.kafka.server.log.remote.
         final String manifestFileKey = objectKey.key(remoteLogSegmentMetadata, ObjectKey.Suffix.MANIFEST);
 
         try (final ByteArrayInputStream manifestContent = new ByteArrayInputStream(manifest.getBytes())) {
-            uploader.upload(manifestContent, manifestFileKey);
+            final var bytes = uploader.upload(manifestContent, manifestFileKey);
+            metrics.recordObjectUpload(
+                remoteLogSegmentMetadata.remoteLogSegmentId().topicIdPartition().topicPartition(),
+                ObjectKey.Suffix.MANIFEST,
+                bytes
+            );
         }
     }
 

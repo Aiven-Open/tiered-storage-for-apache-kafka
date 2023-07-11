@@ -21,11 +21,20 @@ import java.util.Map;
 import org.apache.kafka.common.MetricNameTemplate;
 import org.apache.kafka.common.TopicPartition;
 
+import io.aiven.kafka.tieredstorage.ObjectKey;
+
 public class MetricsRegistry {
 
     static final String METRIC_GROUP = "remote-storage-manager-metrics";
-    static final String[] TOPIC_TAG_NAMES = {"topic"};
-    static final String[] TOPIC_PARTITION_TAG_NAMES = {"topic", "partition"};
+    static final String TAG_NAME_OBJECT_TYPE = "object-type";
+    static final String[] OBJECT_TYPE_TAG_NAMES = {TAG_NAME_OBJECT_TYPE};
+    static final String TAG_NAME_TOPIC = "topic";
+    static final String[] TOPIC_TAG_NAMES = {TAG_NAME_TOPIC};
+    static final String[] TOPIC_AND_OBJECT_TYPE_TAG_NAMES = {TAG_NAME_TOPIC, TAG_NAME_OBJECT_TYPE};
+    static final String TAG_NAME_PARTITION = "partition";
+    static final String[] TOPIC_PARTITION_TAG_NAMES = {TAG_NAME_TOPIC, TAG_NAME_PARTITION};
+    static final String[] TOPIC_PARTITION_AND_OBJECT_TYPE_TAG_NAMES =
+        {TAG_NAME_TOPIC, TAG_NAME_PARTITION, TAG_NAME_OBJECT_TYPE};
 
     // Segment copy metric names
     static final String SEGMENT_COPY = "segment-copy";
@@ -175,26 +184,123 @@ public class MetricsRegistry {
     final MetricNameTemplate segmentFetchRequestedBytesTotalByTopicPartition =
         new MetricNameTemplate(SEGMENT_FETCH_REQUESTED_BYTES_TOTAL, METRIC_GROUP, "", TOPIC_PARTITION_TAG_NAMES);
 
+    // Object upload metrics
+    static final String OBJECT_UPLOAD = "object-upload";
+    static final String OBJECT_UPLOAD_RATE = OBJECT_UPLOAD + "-rate";
+    final MetricNameTemplate objectUploadRequestsRate = new MetricNameTemplate(OBJECT_UPLOAD_RATE, METRIC_GROUP, "");
+    final MetricNameTemplate objectUploadRequestsRateByObjectType =
+        new MetricNameTemplate(OBJECT_UPLOAD_RATE, METRIC_GROUP, "", OBJECT_TYPE_TAG_NAMES);
+    final MetricNameTemplate objectUploadRequestsRateByTopic =
+        new MetricNameTemplate(OBJECT_UPLOAD_RATE, METRIC_GROUP, "", TOPIC_TAG_NAMES);
+    final MetricNameTemplate objectUploadRequestsRateByTopicAndObjectType =
+        new MetricNameTemplate(OBJECT_UPLOAD_RATE, METRIC_GROUP, "", TOPIC_AND_OBJECT_TYPE_TAG_NAMES);
+    final MetricNameTemplate objectUploadRequestsRateByTopicPartition =
+        new MetricNameTemplate(OBJECT_UPLOAD_RATE, METRIC_GROUP, "", TOPIC_PARTITION_TAG_NAMES);
+    final MetricNameTemplate objectUploadRequestsRateByTopicPartitionAndObjectType =
+        new MetricNameTemplate(OBJECT_UPLOAD_RATE, METRIC_GROUP, "", TOPIC_PARTITION_AND_OBJECT_TYPE_TAG_NAMES);
+    static final String OBJECT_UPLOAD_TOTAL = OBJECT_UPLOAD + "-total";
+    final MetricNameTemplate objectUploadRequestsTotal = new MetricNameTemplate(OBJECT_UPLOAD_TOTAL, METRIC_GROUP, "");
+    final MetricNameTemplate objectUploadRequestsTotalByObjectType =
+        new MetricNameTemplate(OBJECT_UPLOAD_TOTAL, METRIC_GROUP, "", OBJECT_TYPE_TAG_NAMES);
+    final MetricNameTemplate objectUploadRequestsTotalByTopic =
+        new MetricNameTemplate(OBJECT_UPLOAD_TOTAL, METRIC_GROUP, "", TOPIC_TAG_NAMES);
+    final MetricNameTemplate objectUploadRequestsTotalByTopicAndObjectType =
+        new MetricNameTemplate(OBJECT_UPLOAD_TOTAL, METRIC_GROUP, "", TOPIC_AND_OBJECT_TYPE_TAG_NAMES);
+    final MetricNameTemplate objectUploadRequestsTotalByTopicPartition =
+        new MetricNameTemplate(OBJECT_UPLOAD_TOTAL, METRIC_GROUP, "", TOPIC_PARTITION_TAG_NAMES);
+    final MetricNameTemplate objectUploadRequestsTotalByTopicPartitionAndObjectType =
+        new MetricNameTemplate(OBJECT_UPLOAD_TOTAL, METRIC_GROUP, "", TOPIC_PARTITION_AND_OBJECT_TYPE_TAG_NAMES);
+    static final String OBJECT_UPLOAD_BYTES = OBJECT_UPLOAD + "-bytes";
+    static final String OBJECT_UPLOAD_BYTES_RATE = OBJECT_UPLOAD_BYTES + "-rate";
+    final MetricNameTemplate objectUploadBytesRate = new MetricNameTemplate(OBJECT_UPLOAD_BYTES_RATE, METRIC_GROUP, "");
+    final MetricNameTemplate objectUploadBytesRateByObjectType =
+        new MetricNameTemplate(OBJECT_UPLOAD_BYTES_RATE, METRIC_GROUP, "", OBJECT_TYPE_TAG_NAMES);
+    final MetricNameTemplate objectUploadBytesRateByTopic =
+        new MetricNameTemplate(OBJECT_UPLOAD_BYTES_RATE, METRIC_GROUP, "", TOPIC_TAG_NAMES);
+    final MetricNameTemplate objectUploadBytesRateByTopicAndObjectType =
+        new MetricNameTemplate(OBJECT_UPLOAD_BYTES_RATE, METRIC_GROUP, "", TOPIC_AND_OBJECT_TYPE_TAG_NAMES);
+    final MetricNameTemplate objectUploadBytesRateByTopicPartition =
+        new MetricNameTemplate(OBJECT_UPLOAD_BYTES_RATE, METRIC_GROUP, "", TOPIC_PARTITION_TAG_NAMES);
+    final MetricNameTemplate objectUploadBytesRateByTopicPartitionAndObjectType =
+        new MetricNameTemplate(OBJECT_UPLOAD_BYTES_RATE, METRIC_GROUP, "", TOPIC_PARTITION_AND_OBJECT_TYPE_TAG_NAMES);
+    public static final String OBJECT_UPLOAD_BYTES_TOTAL = OBJECT_UPLOAD_BYTES + "-total";
+    final MetricNameTemplate objectUploadBytesTotal =
+        new MetricNameTemplate(OBJECT_UPLOAD_BYTES_TOTAL, METRIC_GROUP, "");
+    final MetricNameTemplate objectUploadBytesTotalByObjectType =
+        new MetricNameTemplate(OBJECT_UPLOAD_BYTES_TOTAL, METRIC_GROUP, "", OBJECT_TYPE_TAG_NAMES);
+    final MetricNameTemplate objectUploadBytesTotalByTopic =
+        new MetricNameTemplate(OBJECT_UPLOAD_BYTES_TOTAL, METRIC_GROUP, "", TOPIC_TAG_NAMES);
+    final MetricNameTemplate objectUploadBytesTotalByTopicAndObjectType =
+        new MetricNameTemplate(OBJECT_UPLOAD_BYTES_TOTAL, METRIC_GROUP, "", TOPIC_AND_OBJECT_TYPE_TAG_NAMES);
+    final MetricNameTemplate objectUploadBytesTotalByTopicPartition =
+        new MetricNameTemplate(OBJECT_UPLOAD_BYTES_TOTAL, METRIC_GROUP, "", TOPIC_PARTITION_TAG_NAMES);
+    final MetricNameTemplate objectUploadBytesTotalByTopicPartitionAndObjectType =
+        new MetricNameTemplate(OBJECT_UPLOAD_BYTES_TOTAL, METRIC_GROUP, "", TOPIC_PARTITION_AND_OBJECT_TYPE_TAG_NAMES);
+
     public static String sensorName(final String name) {
         return name;
     }
 
+    public static String sensorNameByObjectType(final ObjectKey.Suffix suffix, final String name) {
+        return TAG_NAME_OBJECT_TYPE + "." + suffix.value + "." + name;
+    }
+
     public static String sensorNameByTopic(final TopicPartition topicPartition, final String name) {
-        return "topic." + topicPartition.topic() + "." + name;
+        return TAG_NAME_TOPIC + "." + topicPartition.topic() + "." + name;
+    }
+
+    public static String sensorNameByTopicAndObjectType(final TopicPartition topicPartition,
+                                                        final ObjectKey.Suffix suffix,
+                                                        final String name) {
+        return TAG_NAME_TOPIC + "." + topicPartition.topic() + "."
+            + TAG_NAME_OBJECT_TYPE + "." + suffix.value
+            + "." + name;
     }
 
     public static String sensorNameByTopicPartition(final TopicPartition topicPartition, final String name) {
-        return "topic." + topicPartition.topic() + ".partition." + topicPartition.partition() + "." + name;
+        return TAG_NAME_TOPIC + "." + topicPartition.topic()
+            + "." + TAG_NAME_PARTITION + "." + topicPartition.partition()
+            + "." + name;
+    }
+
+    public static String sensorNameByTopicPartitionAndObjectType(final TopicPartition topicPartition,
+                                                                 final ObjectKey.Suffix suffix,
+                                                                 final String name) {
+        return TAG_NAME_TOPIC + "." + topicPartition.topic()
+            + "." + TAG_NAME_PARTITION + "." + topicPartition.partition()
+            + "." + TAG_NAME_OBJECT_TYPE + "." + suffix.value
+            + "." + name;
     }
 
     static Map<String, String> topicTags(final TopicPartition topicPartition) {
-        return Map.of("topic", topicPartition.topic());
+        return Map.of(TAG_NAME_TOPIC, topicPartition.topic());
+    }
+
+    static Map<String, String> topicAndObjectTypeTags(final TopicPartition topicPartition,
+                                                      final ObjectKey.Suffix suffix) {
+        return Map.of(
+            TAG_NAME_TOPIC, topicPartition.topic(),
+            TAG_NAME_OBJECT_TYPE, suffix.value
+        );
     }
 
     static Map<String, String> topicPartitionTags(final TopicPartition topicPartition) {
         return Map.of(
-            "topic", topicPartition.topic(),
-            "partition", String.valueOf(topicPartition.partition())
+            TAG_NAME_TOPIC, topicPartition.topic(),
+            TAG_NAME_PARTITION, String.valueOf(topicPartition.partition())
         );
+    }
+
+    static Map<String, String> topicPartitionAndObjectTypeTags(final TopicPartition topicPartition,
+                                                               final ObjectKey.Suffix suffix) {
+        return Map.of(
+            TAG_NAME_TOPIC, topicPartition.topic(),
+            TAG_NAME_PARTITION, String.valueOf(topicPartition.partition()),
+            TAG_NAME_OBJECT_TYPE, suffix.value
+        );
+    }
+
+    static Map<String, String> objectTypeTags(final ObjectKey.Suffix suffix) {
+        return Map.of(TAG_NAME_OBJECT_TYPE, suffix.value);
     }
 }

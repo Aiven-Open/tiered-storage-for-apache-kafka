@@ -57,6 +57,7 @@ public class S3MultiPartOutputStream extends OutputStream {
     private final List<PartETag> partETags = new ArrayList<>();
 
     private boolean closed;
+    private long processedBytes = 0L;
 
     public S3MultiPartOutputStream(final String bucketName,
                                    final String key,
@@ -93,6 +94,7 @@ public class S3MultiPartOutputStream extends OutputStream {
                 final int offset = source.arrayOffset() + source.position();
                 // TODO: get rid of this array copying
                 partBuffer.put(source.array(), offset, transferred);
+                processedBytes += transferred;
                 source.position(source.position() + transferred);
                 if (!partBuffer.hasRemaining()) {
                     flushBuffer(0, partSize);
@@ -167,5 +169,9 @@ public class S3MultiPartOutputStream extends OutputStream {
                 .withInputStream(in);
         final UploadPartResult uploadResult = client.uploadPart(uploadPartRequest);
         partETags.add(uploadResult.getPartETag());
+    }
+
+    public long processedBytes() {
+        return processedBytes;
     }
 }

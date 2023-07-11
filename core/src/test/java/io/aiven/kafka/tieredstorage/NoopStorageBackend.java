@@ -37,7 +37,8 @@ public class NoopStorageBackend implements StorageBackend {
     }
 
     @Override
-    public void upload(final InputStream inputStream, final String key) throws StorageBackendException {
+    public long upload(final InputStream inputStream, final String key) throws StorageBackendException {
+        return 0;
     }
 
     @Override
