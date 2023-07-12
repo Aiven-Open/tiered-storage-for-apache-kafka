@@ -31,6 +31,7 @@ jobs:
         issuetype: Task
         summary: "[TS] ${{ github.event.issue.title }}"
         description: ${{ github.event.issue.body }}
+        Components: "Service - Kafka"
 
     - name: Update issue
       uses: actions-cool/issues-helper@v3
