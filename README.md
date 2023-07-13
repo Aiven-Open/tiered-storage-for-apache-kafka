@@ -104,7 +104,8 @@ TBD
 
 ### Local cache
 
-TBD
+Even in case of sequential reads, chunks may be required multiple times in a short period of time. Fetching them each time from the remote storage would negatively affect the latency. To mitigate this, the chunk caching is supported. There are two built-in implementations: the in-memory chunk cache and disk-based chunk cache. In the most cases, the former cannot be used in production.
+
 
 ## License
 
