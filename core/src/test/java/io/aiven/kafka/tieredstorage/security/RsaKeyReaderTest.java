@@ -31,12 +31,12 @@ import org.junit.jupiter.api.io.TempDir;
 
 import static org.assertj.core.api.Assertions.assertThatThrownBy;
 
-class RsaKeysReaderTest extends RsaKeyAwareTest {
+class RsaKeyReaderTest extends RsaKeyAwareTest {
 
     @Test
     public void failsForUnknownPaths() {
         assertThatThrownBy(
-            () -> RsaEncryptionProvider.RsaKeysReader.readRsaKeyPair(Paths.get("./some"), Paths.get("./path")))
+            () -> RsaKeyReader.read(Paths.get("./some"), Paths.get("./path")))
             .isInstanceOf(IllegalArgumentException.class)
             .hasMessage("Couldn't read RSA key pair paths");
     }
@@ -51,7 +51,7 @@ class RsaKeysReaderTest extends RsaKeyAwareTest {
         writePemFile(dsaPrivateKeyPem, new PKCS8EncodedKeySpec(dsaKeyPair.getPrivate().getEncoded()));
 
         assertThatThrownBy(
-            () -> RsaEncryptionProvider.RsaKeysReader.readRsaKeyPair(dsaPublicKeyPem, dsaPrivateKeyPem))
+            () -> RsaKeyReader.read(dsaPublicKeyPem, dsaPrivateKeyPem))
             .isInstanceOf(IllegalArgumentException.class)
             .hasMessage("Couldn't read RSA key pair");
     }
@@ -62,7 +62,7 @@ class RsaKeysReaderTest extends RsaKeyAwareTest {
             Files.createFile(tmpDir.resolve("empty_public_key.pem"));
 
         assertThatThrownBy(
-            () -> RsaEncryptionProvider.RsaKeysReader.readRsaKeyPair(emptyPublicKeyPemFile, privateKeyPem))
+            () -> RsaKeyReader.read(emptyPublicKeyPemFile, privateKeyPem))
             .isInstanceOf(IllegalArgumentException.class)
             .hasMessage("Couldn't read PEM file");
     }
@@ -73,7 +73,7 @@ class RsaKeysReaderTest extends RsaKeyAwareTest {
             Files.createFile(tmpDir.resolve("empty_private_key.pem"));
 
         assertThatThrownBy(
-            () -> RsaEncryptionProvider.RsaKeysReader.readRsaKeyPair(publicKeyPem, emptyPrivateKeyPemFile))
+            () -> RsaKeyReader.read(publicKeyPem, emptyPrivateKeyPemFile))
             .isInstanceOf(IllegalArgumentException.class)
             .hasMessage("Couldn't read PEM file");
     }

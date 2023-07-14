@@ -17,13 +17,13 @@
 package io.aiven.kafka.tieredstorage;
 
 import javax.crypto.SecretKey;
-import javax.crypto.spec.SecretKeySpec;
 
 import java.io.ByteArrayInputStream;
 import java.io.File;
 import java.io.IOException;
 import java.io.InputStream;
 import java.nio.file.Files;
+import java.security.KeyPair;
 import java.util.Map;
 import java.util.Objects;
 import java.util.concurrent.Executor;
@@ -50,6 +50,7 @@ import io.aiven.kafka.tieredstorage.metrics.Metrics;
 import io.aiven.kafka.tieredstorage.security.AesEncryptionProvider;
 import io.aiven.kafka.tieredstorage.security.DataKeyAndAAD;
 import io.aiven.kafka.tieredstorage.security.RsaEncryptionProvider;
+import io.aiven.kafka.tieredstorage.security.RsaKeyReader;
 import io.aiven.kafka.tieredstorage.storage.BytesRange;
 import io.aiven.kafka.tieredstorage.storage.ObjectDeleter;
 import io.aiven.kafka.tieredstorage.storage.ObjectFetcher;
@@ -102,6 +103,8 @@ public class RemoteStorageManager implements org.apache.kafka.server.log.remote.
 
     private SegmentManifestProvider segmentManifestProvider;
 
+    private static final String KEY_ENCRYPTION_KEY_ID = "static-key-id";
+
     public RemoteStorageManager() {
         this(Time.SYSTEM);
     }
@@ -124,10 +127,11 @@ public class RemoteStorageManager implements org.apache.kafka.server.log.remote.
         objectKey = new ObjectKey(config.keyPrefix());
         encryptionEnabled = config.encryptionEnabled();
         if (encryptionEnabled) {
-            rsaEncryptionProvider = RsaEncryptionProvider.of(
-                config.encryptionPublicKeyFile(),
-                config.encryptionPrivateKeyFile()
-            );
+            final KeyPair keyPair =
+                RsaKeyReader.read(config.encryptionPublicKeyFile(), config.encryptionPrivateKeyFile());
+            rsaEncryptionProvider = new RsaEncryptionProvider(
+                KEY_ENCRYPTION_KEY_ID,
+                Map.of(KEY_ENCRYPTION_KEY_ID, keyPair));
             aesEncryptionProvider = new AesEncryptionProvider();
         }
         final ChunkManagerFactory chunkManagerFactory = new ChunkManagerFactory();
@@ -162,9 +166,10 @@ public class RemoteStorageManager implements org.apache.kafka.server.log.remote.
         objectMapper.registerModule(new Jdk8Module());
         if (encryptionEnabled) {
             final SimpleModule simpleModule = new SimpleModule();
-            simpleModule.addSerializer(SecretKey.class, new DataKeySerializer(rsaEncryptionProvider::encryptDataKey));
-            simpleModule.addDeserializer(SecretKey.class, new DataKeyDeserializer(
-                b -> new SecretKeySpec(rsaEncryptionProvider.decryptDataKey(b), "AES")));
+            simpleModule.addSerializer(SecretKey.class,
+                new DataKeySerializer(rsaEncryptionProvider::encryptDataKey));
+            simpleModule.addDeserializer(SecretKey.class,
+                new DataKeyDeserializer(rsaEncryptionProvider::decryptDataKey));
             objectMapper.registerModule(simpleModule);
         }
         return objectMapper;
