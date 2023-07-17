@@ -29,4 +29,5 @@
     <suppress checks="ClassDataAbstractionCoupling" files="Metrics.java"/>
     <suppress checks="CyclomaticComplexity" files="MetricCollector.java"/>
     <suppress checks="JavaNCSSCheck" files="MetricsRegistry.java"/>
+    <suppress checks="JavaNCSSCheck" files="RemoteStorageManagerMetricsTest.java"/>
 </suppressions>

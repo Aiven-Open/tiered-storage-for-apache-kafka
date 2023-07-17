@@ -28,6 +28,7 @@ import java.util.concurrent.TimeoutException;
 import org.apache.kafka.server.log.remote.storage.RemoteLogSegmentMetadata;
 
 import io.aiven.kafka.tieredstorage.ObjectKey;
+import io.aiven.kafka.tieredstorage.metrics.CaffeineStatsCounter;
 import io.aiven.kafka.tieredstorage.storage.ObjectFetcher;
 import io.aiven.kafka.tieredstorage.storage.StorageBackendException;
 
@@ -36,6 +37,7 @@ import com.github.benmanes.caffeine.cache.AsyncLoadingCache;
 import com.github.benmanes.caffeine.cache.Caffeine;
 
 public class SegmentManifestProvider {
+    private static final String SEGMENT_MANIFEST_METRIC_GROUP_NAME = "segment-manifest-cache";
     private static final long GET_TIMEOUT_SEC = 10;
 
     private final ObjectKey objectKey;
@@ -53,6 +55,7 @@ public class SegmentManifestProvider {
                                    final Executor executor) {
         this.objectKey = objectKey;
         final var cacheBuilder = Caffeine.newBuilder()
+            .recordStats(() -> new CaffeineStatsCounter(SEGMENT_MANIFEST_METRIC_GROUP_NAME))
             .executor(executor);
         maxCacheSize.ifPresent(cacheBuilder::maximumSize);
         cacheRetention.ifPresent(cacheBuilder::expireAfterWrite);
@@ -70,7 +73,6 @@ public class SegmentManifestProvider {
             return cache.get(key).get(GET_TIMEOUT_SEC, TimeUnit.SECONDS);
         } catch (final ExecutionException e) {
             // Unwrap previously wrapped exceptions if possible.
-
             final Throwable cause = e.getCause();
 
             // We don't really expect this case, but handle it nevertheless.
