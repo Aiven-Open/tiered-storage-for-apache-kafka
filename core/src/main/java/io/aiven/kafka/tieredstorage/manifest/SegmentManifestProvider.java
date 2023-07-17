@@ -14,7 +14,7 @@
  * limitations under the License.
  */
 
-package io.aiven.kafka.tieredstorage;
+package io.aiven.kafka.tieredstorage.manifest;
 
 import java.io.IOException;
 import java.io.InputStream;
@@ -27,7 +27,7 @@ import java.util.concurrent.TimeoutException;
 
 import org.apache.kafka.server.log.remote.storage.RemoteLogSegmentMetadata;
 
-import io.aiven.kafka.tieredstorage.manifest.SegmentManifest;
+import io.aiven.kafka.tieredstorage.ObjectKey;
 import io.aiven.kafka.tieredstorage.storage.ObjectFetcher;
 import io.aiven.kafka.tieredstorage.storage.StorageBackendException;
 
@@ -35,7 +35,7 @@ import com.fasterxml.jackson.databind.ObjectMapper;
 import com.github.benmanes.caffeine.cache.AsyncLoadingCache;
 import com.github.benmanes.caffeine.cache.Caffeine;
 
-class SegmentManifestProvider {
+public class SegmentManifestProvider {
     private static final long GET_TIMEOUT_SEC = 10;
 
     private final ObjectKey objectKey;
@@ -45,12 +45,12 @@ class SegmentManifestProvider {
      * @param maxCacheSize the max cache size (in items) or empty if the cache is unbounded.
      * @param cacheRetention the retention time of items in the cache or empty if infinite retention.
      */
-    SegmentManifestProvider(final ObjectKey objectKey,
-                            final Optional<Long> maxCacheSize,
-                            final Optional<Duration> cacheRetention,
-                            final ObjectFetcher fileFetcher,
-                            final ObjectMapper mapper,
-                            final Executor executor) {
+    public SegmentManifestProvider(final ObjectKey objectKey,
+                                   final Optional<Long> maxCacheSize,
+                                   final Optional<Duration> cacheRetention,
+                                   final ObjectFetcher fileFetcher,
+                                   final ObjectMapper mapper,
+                                   final Executor executor) {
         this.objectKey = objectKey;
         final var cacheBuilder = Caffeine.newBuilder()
             .executor(executor);
@@ -63,7 +63,7 @@ class SegmentManifestProvider {
         });
     }
 
-    SegmentManifest get(final RemoteLogSegmentMetadata remoteLogSegmentMetadata)
+    public SegmentManifest get(final RemoteLogSegmentMetadata remoteLogSegmentMetadata)
         throws StorageBackendException, IOException {
         final String key = objectKey.key(remoteLogSegmentMetadata, ObjectKey.Suffix.MANIFEST);
         try {
