@@ -39,10 +39,16 @@ import io.aiven.kafka.tieredstorage.manifest.index.VariableSizeChunkIndexBuilder
 public class TransformFinisher implements Enumeration<InputStream> {
     private final TransformChunkEnumeration inner;
     private final AbstractChunkIndexBuilder chunkIndexBuilder;
+    private final int originalFileSize;
     private ChunkIndex chunkIndex = null;
+
+    public TransformFinisher(final TransformChunkEnumeration inner) {
+        this(inner, 0);
+    }
 
     public TransformFinisher(final TransformChunkEnumeration inner, final int originalFileSize) {
         this.inner = Objects.requireNonNull(inner, "inner cannot be null");
+        this.originalFileSize = originalFileSize;
 
         if (originalFileSize < 0) {
             throw new IllegalArgumentException(
@@ -50,7 +56,9 @@ public class TransformFinisher implements Enumeration<InputStream> {
         }
 
         final Integer transformedChunkSize = inner.transformedChunkSize();
-        if (transformedChunkSize == null) {
+        if (originalFileSize == 0) {
+            this.chunkIndexBuilder = null;
+        } else if (transformedChunkSize == null) {
             this.chunkIndexBuilder = new VariableSizeChunkIndexBuilder(inner.originalChunkSize(), originalFileSize);
         } else {
             this.chunkIndexBuilder = new FixedSizeChunkIndexBuilder(
@@ -66,17 +74,19 @@ public class TransformFinisher implements Enumeration<InputStream> {
     @Override
     public InputStream nextElement() {
         final var chunk = inner.nextElement();
-        if (hasMoreElements()) {
-            this.chunkIndexBuilder.addChunk(chunk.length);
-        } else {
-            this.chunkIndex = this.chunkIndexBuilder.finish(chunk.length);
+        if (chunkIndexBuilder != null) {
+            if (hasMoreElements()) {
+                this.chunkIndexBuilder.addChunk(chunk.length);
+            } else {
+                this.chunkIndex = this.chunkIndexBuilder.finish(chunk.length);
+            }
         }
 
         return new ByteArrayInputStream(chunk);
     }
 
     public ChunkIndex chunkIndex() {
-        if (chunkIndex == null) {
+        if (chunkIndex == null && originalFileSize > 0) {
             throw new IllegalStateException("Chunk index was not built, was finisher used?");
         }
         return this.chunkIndex;

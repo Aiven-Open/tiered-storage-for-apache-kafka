@@ -23,12 +23,20 @@ import java.util.Objects;
 
 /**
  * The base chunk transformation that does the initial chunking of the input stream of bytes.
+ *
+ * <p>If size is zero, then no chunking is applied.
  */
 public class BaseTransformChunkEnumeration implements TransformChunkEnumeration {
     private final InputStream inputStream;
     private final int originalChunkSize;
 
     private byte[] chunk = null;
+
+    public BaseTransformChunkEnumeration(final InputStream inputStream) {
+        this.inputStream = Objects.requireNonNull(inputStream, "inputStream cannot be null");
+
+        this.originalChunkSize = 0;
+    }
 
     public BaseTransformChunkEnumeration(final InputStream inputStream,
                                          final int originalChunkSize) {
@@ -76,7 +84,11 @@ public class BaseTransformChunkEnumeration implements TransformChunkEnumeration 
         }
 
         try {
-            chunk = inputStream.readNBytes(originalChunkSize);
+            if (originalChunkSize != 0) {
+                chunk = inputStream.readNBytes(originalChunkSize);
+            } else {
+                chunk = inputStream.readAllBytes();
+            }
         } catch (final IOException e) {
             throw new RuntimeException(e);
         }

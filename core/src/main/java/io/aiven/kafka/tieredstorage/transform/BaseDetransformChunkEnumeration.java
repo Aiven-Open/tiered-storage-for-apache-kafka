@@ -18,6 +18,7 @@ package io.aiven.kafka.tieredstorage.transform;
 
 import java.io.IOException;
 import java.io.InputStream;
+import java.util.Collections;
 import java.util.Iterator;
 import java.util.List;
 import java.util.NoSuchElementException;
@@ -31,18 +32,28 @@ import io.aiven.kafka.tieredstorage.Chunk;
  * <p>An important quality of this class is that when we use it we know already the chunk positions and sizes,
  * both transformed and not. We rely on this information for determining the transformed chunks borders
  * in the input stream. We also can tell if the input stream has too few bytes.
+ *
+ * <p>An empty list of chunks means no chunking has been applied to the incoming stream.
  */
 public class BaseDetransformChunkEnumeration implements DetransformChunkEnumeration {
     private final InputStream inputStream;
     private boolean inputStreamClosed = false;
     private final Iterator<Chunk> chunksIter;
+    private final boolean isEmpty;
 
     private byte[] chunk = null;
+
+    public BaseDetransformChunkEnumeration(final InputStream inputStream) {
+        this.inputStream = Objects.requireNonNull(inputStream, "inputStream cannot be null");
+        this.isEmpty = true;
+        this.chunksIter = Collections.emptyIterator();
+    }
 
     public BaseDetransformChunkEnumeration(final InputStream inputStream,
                                            final List<Chunk> chunks) {
         this.inputStream = Objects.requireNonNull(inputStream, "inputStream cannot be null");
         this.chunksIter = Objects.requireNonNull(chunks, "chunks cannot be null").iterator();
+        this.isEmpty = chunks.isEmpty();
     }
 
     @Override
@@ -68,7 +79,7 @@ public class BaseDetransformChunkEnumeration implements DetransformChunkEnumerat
             return;
         }
 
-        if (!chunksIter.hasNext()) {
+        if (!chunksIter.hasNext() && !isEmpty) {
             chunk = new byte[0];
 
             if (!inputStreamClosed) {
@@ -88,10 +99,14 @@ public class BaseDetransformChunkEnumeration implements DetransformChunkEnumerat
         }
 
         try {
-            final int expectedTransformedSize = chunksIter.next().transformedSize;
-            chunk = inputStream.readNBytes(expectedTransformedSize);
-            if (chunk.length < expectedTransformedSize) {
-                throw new RuntimeException("Stream has fewer bytes than expected");
+            if (!isEmpty) {
+                final int expectedTransformedSize = chunksIter.next().transformedSize;
+                chunk = inputStream.readNBytes(expectedTransformedSize);
+                if (chunk.length < expectedTransformedSize) {
+                    throw new RuntimeException("Stream has fewer bytes than expected");
+                }
+            } else {
+                chunk = inputStream.readAllBytes();
             }
         } catch (final IOException e) {
             throw new RuntimeException(e);
