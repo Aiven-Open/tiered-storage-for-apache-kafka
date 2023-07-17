@@ -118,10 +118,10 @@ class RemoteStorageManagerMetricsTest {
         rsm.copyLogSegmentData(REMOTE_LOG_SEGMENT_METADATA, logSegmentData);
         logSegmentData.leaderEpochIndex().flip();
 
-        rsm.fetchLogSegment(REMOTE_LOG_SEGMENT_METADATA, 0);
-
         final var objectName = "aiven.kafka.server.tieredstorage:type=remote-storage-manager-metrics" + tags;
         final ObjectName metricName = ObjectName.getInstance(objectName);
+
+        // upload related metrics
         assertThat(MBEAN_SERVER.getAttribute(metricName, "segment-copy-total"))
             .isEqualTo(3.0);
         assertThat(MBEAN_SERVER.getAttribute(metricName, "segment-copy-rate"))
@@ -136,16 +136,6 @@ class RemoteStorageManagerMetricsTest {
             .isEqualTo(0.0);
         assertThat(MBEAN_SERVER.getAttribute(metricName, "segment-copy-time-max"))
             .isEqualTo(0.0);
-
-        assertThat(MBEAN_SERVER.getAttribute(metricName, "segment-fetch-rate"))
-            .isEqualTo(1.0 / METRIC_TIME_WINDOW_SEC);
-        assertThat(MBEAN_SERVER.getAttribute(metricName, "segment-fetch-total"))
-            .isEqualTo(1.0);
-
-        assertThat(MBEAN_SERVER.getAttribute(metricName, "segment-fetch-requested-bytes-rate"))
-            .isEqualTo(10.0 / METRIC_TIME_WINDOW_SEC);
-        assertThat(MBEAN_SERVER.getAttribute(metricName, "segment-fetch-requested-bytes-total"))
-            .isEqualTo(10.0);
 
         assertThat(MBEAN_SERVER.getAttribute(metricName, "object-upload-total"))
             .isEqualTo(18.0);
@@ -185,9 +175,23 @@ class RemoteStorageManagerMetricsTest {
             }
         }
 
+        rsm.fetchLogSegment(REMOTE_LOG_SEGMENT_METADATA, 0);
+
+        // fetch related metrics
+        assertThat(MBEAN_SERVER.getAttribute(metricName, "segment-fetch-rate"))
+            .isEqualTo(1.0 / METRIC_TIME_WINDOW_SEC);
+        assertThat(MBEAN_SERVER.getAttribute(metricName, "segment-fetch-total"))
+            .isEqualTo(1.0);
+
+        assertThat(MBEAN_SERVER.getAttribute(metricName, "segment-fetch-requested-bytes-rate"))
+            .isEqualTo(10.0 / METRIC_TIME_WINDOW_SEC);
+        assertThat(MBEAN_SERVER.getAttribute(metricName, "segment-fetch-requested-bytes-total"))
+            .isEqualTo(10.0);
+
         rsm.deleteLogSegmentData(REMOTE_LOG_SEGMENT_METADATA);
         rsm.deleteLogSegmentData(REMOTE_LOG_SEGMENT_METADATA);
 
+        // delete related metrics
         assertThat(MBEAN_SERVER.getAttribute(metricName, "segment-delete-rate"))
             .isEqualTo(2.0 / METRIC_TIME_WINDOW_SEC);
         assertThat(MBEAN_SERVER.getAttribute(metricName, "segment-delete-total"))
