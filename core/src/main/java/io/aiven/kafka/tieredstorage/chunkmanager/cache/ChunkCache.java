@@ -122,8 +122,9 @@ public abstract class ChunkCache<T> implements ChunkManager, Configurable {
         config.cacheSize().ifPresent(maximumWeight -> cacheBuilder.maximumWeight(maximumWeight).weigher(weigher()));
         config.cacheRetention().ifPresent(cacheBuilder::expireAfterAccess);
         return cacheBuilder.evictionListener(removalListener())
-                .scheduler(Scheduler.systemScheduler())
-                .executor(executor)
-                .buildAsync();
+            .scheduler(Scheduler.systemScheduler())
+            .executor(executor)
+            .recordStats(() -> new CaffeineStatsCounter("chunk-cache"))
+            .buildAsync();
     }
 }
