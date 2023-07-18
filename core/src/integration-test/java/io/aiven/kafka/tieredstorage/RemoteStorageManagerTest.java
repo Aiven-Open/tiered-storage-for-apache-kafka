@@ -32,6 +32,7 @@ import java.security.GeneralSecurityException;
 import java.security.SecureRandom;
 import java.util.ArrayList;
 import java.util.Arrays;
+import java.util.Base64;
 import java.util.HashMap;
 import java.util.List;
 import java.util.Map;
@@ -57,7 +58,9 @@ import io.aiven.kafka.tieredstorage.manifest.serde.DataKeyDeserializer;
 import io.aiven.kafka.tieredstorage.manifest.serde.DataKeySerializer;
 import io.aiven.kafka.tieredstorage.security.AesEncryptionProvider;
 import io.aiven.kafka.tieredstorage.security.DataKeyAndAAD;
+import io.aiven.kafka.tieredstorage.security.EncryptedDataKey;
 import io.aiven.kafka.tieredstorage.security.RsaEncryptionProvider;
+import io.aiven.kafka.tieredstorage.security.RsaKeyReader;
 
 import com.fasterxml.jackson.databind.JsonNode;
 import com.fasterxml.jackson.databind.ObjectMapper;
@@ -105,6 +108,8 @@ class RemoteStorageManagerTest extends RsaKeyAwareTest {
     static final String TARGET_MANIFEST_FILE =
         "test/topic-AAAAAAAAAAAAAAAAAAAAAQ/7/00000000000000000023-AAAAAAAAAAAAAAAAAAAAAA.rsm-manifest";
 
+    static final String KEY_ENCRYPTION_KEY_ID = "static-key-id";
+
     private static List<Arguments> provideEndToEnd() {
         final List<Arguments> result = new ArrayList<>();
         for (final int chunkSize : List.of(1024 * 1024 - 1, 1024 * 1024 * 1024 - 1, Integer.MAX_VALUE / 2)) {
@@ -123,7 +128,9 @@ class RemoteStorageManagerTest extends RsaKeyAwareTest {
     void init() throws IOException {
         rsm = new RemoteStorageManager();
 
-        rsaEncryptionProvider = RsaEncryptionProvider.of(publicKeyPem, privateKeyPem);
+        rsaEncryptionProvider = new RsaEncryptionProvider(
+            KEY_ENCRYPTION_KEY_ID,
+            Map.of(KEY_ENCRYPTION_KEY_ID, RsaKeyReader.read(publicKeyPem, privateKeyPem)));
         aesEncryptionProvider = new AesEncryptionProvider();
 
         sourceDir = Path.of(tmpDir.toString(), "source");
@@ -296,14 +303,20 @@ class RemoteStorageManagerTest extends RsaKeyAwareTest {
         final ObjectMapper objectMapper = new ObjectMapper();
         final JsonNode manifest = objectMapper.readTree(new File(targetDir.toString(), TARGET_MANIFEST_FILE));
 
-        final byte[] encryptedDataKey = manifest.get("encryption").get("dataKey").binaryValue();
-        final byte[] dataKey = rsaEncryptionProvider.decryptDataKey(encryptedDataKey);
+        final String dataKeyText = manifest.get("encryption").get("dataKey").asText();
+        final String[] dataKeyTextParts = dataKeyText.split(":");
+        assertThat(dataKeyTextParts).hasSize(2);
+        assertThat(dataKeyTextParts[0]).isEqualTo(KEY_ENCRYPTION_KEY_ID);
+        final byte[] encryptedDataKey = Base64.getDecoder().decode(dataKeyTextParts[1]);
+        final byte[] dataKey = rsaEncryptionProvider.decryptDataKey(
+            new EncryptedDataKey(KEY_ENCRYPTION_KEY_ID, encryptedDataKey));
         final byte[] aad = manifest.get("encryption").get("aad").binaryValue();
 
         final SimpleModule simpleModule = new SimpleModule();
-        simpleModule.addSerializer(SecretKey.class, new DataKeySerializer(rsaEncryptionProvider::encryptDataKey));
-        simpleModule.addDeserializer(SecretKey.class, new DataKeyDeserializer(
-            b -> new SecretKeySpec(rsaEncryptionProvider.decryptDataKey(b), "AES")));
+        simpleModule.addSerializer(SecretKey.class,
+            new DataKeySerializer(rsaEncryptionProvider::encryptDataKey));
+        simpleModule.addDeserializer(SecretKey.class,
+            new DataKeyDeserializer(rsaEncryptionProvider::decryptDataKey));
         objectMapper.registerModule(simpleModule);
         final ChunkIndex chunkIndex = objectMapper.treeToValue(manifest.get("chunkIndex"), ChunkIndex.class);
 

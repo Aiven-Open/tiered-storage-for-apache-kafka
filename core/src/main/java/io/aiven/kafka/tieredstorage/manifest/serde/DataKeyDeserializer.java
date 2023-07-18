@@ -17,24 +17,36 @@
 package io.aiven.kafka.tieredstorage.manifest.serde;
 
 import javax.crypto.SecretKey;
+import javax.crypto.spec.SecretKeySpec;
 
 import java.io.IOException;
+import java.util.Objects;
 import java.util.function.Function;
 
+import io.aiven.kafka.tieredstorage.security.EncryptedDataKey;
+
+import com.fasterxml.jackson.core.JsonParseException;
 import com.fasterxml.jackson.core.JsonParser;
 import com.fasterxml.jackson.databind.DeserializationContext;
 import com.fasterxml.jackson.databind.deser.std.StdDeserializer;
 
 public class DataKeyDeserializer extends StdDeserializer<SecretKey> {
-    private final Function<byte[], SecretKey> keyDecryptor;
+    private final Function<EncryptedDataKey, byte[]> keyDecryptor;
 
-    public DataKeyDeserializer(final Function<byte[], SecretKey> keyDecryptor) {
+    public DataKeyDeserializer(final Function<EncryptedDataKey, byte[]> keyDecryptor) {
         super(SecretKey.class);
-        this.keyDecryptor = keyDecryptor;
+        this.keyDecryptor = Objects.requireNonNull(keyDecryptor, "keyDecryptor cannot be null");
     }
 
     @Override
     public SecretKey deserialize(final JsonParser p, final DeserializationContext ctxt) throws IOException {
-        return keyDecryptor.apply(p.getBinaryValue());
+        final EncryptedDataKey encryptedDataKey;
+        try {
+            encryptedDataKey = EncryptedDataKey.parse(p.getText());
+        } catch (final IllegalArgumentException e) {
+            throw new JsonParseException(p, "Error parsing encrypted data key string", e);
+        }
+        final var decryptedKey = keyDecryptor.apply(encryptedDataKey);
+        return new SecretKeySpec(decryptedKey, "AES");
     }
 }

@@ -19,24 +19,28 @@ package io.aiven.kafka.tieredstorage.manifest.serde;
 import javax.crypto.SecretKey;
 
 import java.io.IOException;
+import java.util.Objects;
 import java.util.function.Function;
+
+import io.aiven.kafka.tieredstorage.security.EncryptedDataKey;
 
 import com.fasterxml.jackson.core.JsonGenerator;
 import com.fasterxml.jackson.databind.SerializerProvider;
 import com.fasterxml.jackson.databind.ser.std.StdSerializer;
 
 public class DataKeySerializer extends StdSerializer<SecretKey> {
-    private final Function<SecretKey, byte[]> keyEncryptor;
+    private final Function<byte[], EncryptedDataKey> dataKeyEncryptor;
 
-    public DataKeySerializer(final Function<SecretKey, byte[]> keyEncryptor) {
+    public DataKeySerializer(final Function<byte[], EncryptedDataKey> dataKeyEncryptor) {
         super(SecretKey.class);
-        this.keyEncryptor = keyEncryptor;
+        this.dataKeyEncryptor = Objects.requireNonNull(dataKeyEncryptor, "dataKeyEncryptor cannot be null");
     }
 
     @Override
     public void serialize(final SecretKey value,
                           final JsonGenerator gen,
                           final SerializerProvider provider) throws IOException {
-        gen.writeBinary(keyEncryptor.apply(value));
+        final EncryptedDataKey encryptionResult = dataKeyEncryptor.apply(value.getEncoded());
+        gen.writeString(encryptionResult.serialize());
     }
 }
