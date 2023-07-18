@@ -46,6 +46,7 @@ import io.aiven.kafka.tieredstorage.storage.BytesRange;
 import io.aiven.kafka.tieredstorage.storage.StorageBackend;
 import io.aiven.kafka.tieredstorage.storage.StorageBackendException;
 
+import org.assertj.core.data.Percentage;
 import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.extension.ExtendWith;
 import org.junit.jupiter.api.io.TempDir;
@@ -118,10 +119,10 @@ class RemoteStorageManagerMetricsTest {
         rsm.copyLogSegmentData(REMOTE_LOG_SEGMENT_METADATA, logSegmentData);
         logSegmentData.leaderEpochIndex().flip();
 
-        rsm.fetchLogSegment(REMOTE_LOG_SEGMENT_METADATA, 0);
-
         final var objectName = "aiven.kafka.server.tieredstorage:type=remote-storage-manager-metrics" + tags;
         final ObjectName metricName = ObjectName.getInstance(objectName);
+
+        // upload related metrics
         assertThat(MBEAN_SERVER.getAttribute(metricName, "segment-copy-total"))
             .isEqualTo(3.0);
         assertThat(MBEAN_SERVER.getAttribute(metricName, "segment-copy-rate"))
@@ -136,16 +137,6 @@ class RemoteStorageManagerMetricsTest {
             .isEqualTo(0.0);
         assertThat(MBEAN_SERVER.getAttribute(metricName, "segment-copy-time-max"))
             .isEqualTo(0.0);
-
-        assertThat(MBEAN_SERVER.getAttribute(metricName, "segment-fetch-rate"))
-            .isEqualTo(1.0 / METRIC_TIME_WINDOW_SEC);
-        assertThat(MBEAN_SERVER.getAttribute(metricName, "segment-fetch-total"))
-            .isEqualTo(1.0);
-
-        assertThat(MBEAN_SERVER.getAttribute(metricName, "segment-fetch-requested-bytes-rate"))
-            .isEqualTo(10.0 / METRIC_TIME_WINDOW_SEC);
-        assertThat(MBEAN_SERVER.getAttribute(metricName, "segment-fetch-requested-bytes-total"))
-            .isEqualTo(10.0);
 
         assertThat(MBEAN_SERVER.getAttribute(metricName, "object-upload-total"))
             .isEqualTo(18.0);
@@ -185,9 +176,58 @@ class RemoteStorageManagerMetricsTest {
             }
         }
 
+        rsm.fetchLogSegment(REMOTE_LOG_SEGMENT_METADATA, 0);
+        rsm.fetchLogSegment(REMOTE_LOG_SEGMENT_METADATA, 0);
+
+        // fetch related metrics
+        assertThat(MBEAN_SERVER.getAttribute(metricName, "segment-fetch-rate"))
+            .isEqualTo(2.0 / METRIC_TIME_WINDOW_SEC);
+        assertThat(MBEAN_SERVER.getAttribute(metricName, "segment-fetch-total"))
+            .isEqualTo(2.0);
+
+        assertThat(MBEAN_SERVER.getAttribute(metricName, "segment-fetch-requested-bytes-rate"))
+            .isEqualTo(20.0 / METRIC_TIME_WINDOW_SEC);
+        assertThat(MBEAN_SERVER.getAttribute(metricName, "segment-fetch-requested-bytes-total"))
+            .isEqualTo(20.0);
+
+        final var segmentManifestCacheObjectName =
+            new ObjectName("aiven.kafka.server.tieredstorage.cache:type=segment-manifest-cache");
+        assertThat(MBEAN_SERVER.getAttribute(segmentManifestCacheObjectName, "cache-hits-total"))
+            .isEqualTo(1.0);
+        assertThat((double) MBEAN_SERVER.getAttribute(segmentManifestCacheObjectName, "cache-hits-rate"))
+            .isCloseTo(1.0 / METRIC_TIME_WINDOW_SEC, Percentage.withPercentage(99));
+        assertThat(MBEAN_SERVER.getAttribute(segmentManifestCacheObjectName, "cache-misses-total"))
+            .isEqualTo(1.0);
+        assertThat((double) MBEAN_SERVER.getAttribute(segmentManifestCacheObjectName, "cache-misses-rate"))
+            .isCloseTo(1.0 / METRIC_TIME_WINDOW_SEC, Percentage.withPercentage(99));
+        assertThat((double) MBEAN_SERVER.getAttribute(segmentManifestCacheObjectName, "cache-load-success-time-total"))
+            .isGreaterThan(0);
+
+        assertThat(MBEAN_SERVER.getAttribute(segmentManifestCacheObjectName, "cache-load-success-total"))
+            .isEqualTo(1.0);
+        assertThat((double) MBEAN_SERVER.getAttribute(segmentManifestCacheObjectName, "cache-load-success-rate"))
+            .isCloseTo(1.0 / METRIC_TIME_WINDOW_SEC, Percentage.withPercentage(99));
+        assertThat((double) MBEAN_SERVER.getAttribute(segmentManifestCacheObjectName, "cache-load-failure-time-total"))
+            .isEqualTo(0);
+
+        assertThat(MBEAN_SERVER.getAttribute(segmentManifestCacheObjectName, "cache-load-failure-total"))
+            .isEqualTo(0.0);
+        assertThat(MBEAN_SERVER.getAttribute(segmentManifestCacheObjectName, "cache-load-failure-rate"))
+            .isEqualTo(0.0);
+
+        assertThat(MBEAN_SERVER.getAttribute(segmentManifestCacheObjectName, "cache-eviction-total"))
+            .isEqualTo(0.0);
+        assertThat(MBEAN_SERVER.getAttribute(segmentManifestCacheObjectName, "cache-eviction-rate"))
+            .isEqualTo(0.0);
+        assertThat(MBEAN_SERVER.getAttribute(segmentManifestCacheObjectName, "cache-eviction-weight-total"))
+            .isEqualTo(0.0);
+        assertThat(MBEAN_SERVER.getAttribute(segmentManifestCacheObjectName, "cache-eviction-weight-rate"))
+            .isEqualTo(0.0);
+
         rsm.deleteLogSegmentData(REMOTE_LOG_SEGMENT_METADATA);
         rsm.deleteLogSegmentData(REMOTE_LOG_SEGMENT_METADATA);
 
+        // delete related metrics
         assertThat(MBEAN_SERVER.getAttribute(metricName, "segment-delete-rate"))
             .isEqualTo(2.0 / METRIC_TIME_WINDOW_SEC);
         assertThat(MBEAN_SERVER.getAttribute(metricName, "segment-delete-total"))

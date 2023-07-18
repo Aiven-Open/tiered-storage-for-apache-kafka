@@ -44,6 +44,7 @@ import io.aiven.kafka.tieredstorage.chunkmanager.ChunkManagerFactory;
 import io.aiven.kafka.tieredstorage.manifest.SegmentEncryptionMetadata;
 import io.aiven.kafka.tieredstorage.manifest.SegmentEncryptionMetadataV1;
 import io.aiven.kafka.tieredstorage.manifest.SegmentManifest;
+import io.aiven.kafka.tieredstorage.manifest.SegmentManifestProvider;
 import io.aiven.kafka.tieredstorage.manifest.SegmentManifestV1;
 import io.aiven.kafka.tieredstorage.manifest.index.ChunkIndex;
 import io.aiven.kafka.tieredstorage.manifest.serde.DataKeyDeserializer;

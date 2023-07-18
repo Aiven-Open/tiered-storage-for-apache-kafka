@@ -14,7 +14,7 @@
  * limitations under the License.
  */
 
-package io.aiven.kafka.tieredstorage;
+package io.aiven.kafka.tieredstorage.manifest;
 
 import java.io.ByteArrayInputStream;
 import java.io.IOException;
@@ -30,7 +30,7 @@ import org.apache.kafka.common.Uuid;
 import org.apache.kafka.server.log.remote.storage.RemoteLogSegmentId;
 import org.apache.kafka.server.log.remote.storage.RemoteLogSegmentMetadata;
 
-import io.aiven.kafka.tieredstorage.manifest.SegmentManifestV1;
+import io.aiven.kafka.tieredstorage.ObjectKey;
 import io.aiven.kafka.tieredstorage.manifest.index.FixedSizeChunkIndex;
 import io.aiven.kafka.tieredstorage.storage.StorageBackend;
 import io.aiven.kafka.tieredstorage.storage.StorageBackendException;
