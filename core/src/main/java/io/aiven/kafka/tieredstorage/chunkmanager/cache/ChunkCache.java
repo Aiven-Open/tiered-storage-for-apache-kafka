@@ -34,6 +34,7 @@ import org.apache.kafka.server.log.remote.storage.RemoteLogSegmentMetadata;
 import io.aiven.kafka.tieredstorage.chunkmanager.ChunkKey;
 import io.aiven.kafka.tieredstorage.chunkmanager.ChunkManager;
 import io.aiven.kafka.tieredstorage.manifest.SegmentManifest;
+import io.aiven.kafka.tieredstorage.metrics.CaffeineStatsCounter;
 import io.aiven.kafka.tieredstorage.storage.StorageBackendException;
 
 import com.github.benmanes.caffeine.cache.AsyncCache;
@@ -60,38 +61,35 @@ public abstract class ChunkCache<T> implements ChunkManager, Configurable {
      * opened right when fetching from cache happens even if the actual value is removed from the cache,
      * the InputStream will still contain the data.
      */
-    public InputStream getChunk(final RemoteLogSegmentMetadata remoteLogSegmentMetadata,
+    public InputStream getChunk(final RemoteLogSegmentMetadata segmentMetadata,
                                 final SegmentManifest manifest,
                                 final int chunkId) throws StorageBackendException, IOException {
-        final Uuid id = remoteLogSegmentMetadata.remoteLogSegmentId().id();
+        final Uuid id = segmentMetadata.remoteLogSegmentId().id();
         final ChunkKey chunkKey = new ChunkKey(id, chunkId);
         final AtomicReference<InputStream> result = new AtomicReference<>();
         try {
-            return cache.asMap().compute(chunkKey, (key, val) -> CompletableFuture.supplyAsync(() -> {
-                if (val == null) {
+            final var cacheMap = cache.asMap();
+            cacheMap
+                .computeIfAbsent(chunkKey, key -> CompletableFuture.supplyAsync(() -> {
                     try {
-                        final InputStream chunk = chunkManager.getChunk(remoteLogSegmentMetadata, manifest, chunkId);
+                        final InputStream chunk = chunkManager.getChunk(segmentMetadata, manifest, chunkId);
                         final T t = this.cacheChunk(chunkKey, chunk);
                         result.getAndSet(cachedChunkToInputStream(t));
                         return t;
                     } catch (final StorageBackendException | IOException e) {
                         throw new CompletionException(e);
                     }
-                } else {
-                    try {
-                        final T cachedChunk = val.get();
-                        result.getAndSet(cachedChunkToInputStream(cachedChunk));
-                        return cachedChunk;
-                    } catch (final InterruptedException | ExecutionException e) {
-                        throw new CompletionException(e);
-                    }
-                }
-            }, executor))
-                    .thenApplyAsync(t -> result.get())
+                }, executor))
+                .get(GET_TIMEOUT_SEC, TimeUnit.SECONDS);
+            if (result.get() == null) {
+                return cacheMap.get(chunkKey)
+                    .thenApplyAsync(this::cachedChunkToInputStream)
                     .get(GET_TIMEOUT_SEC, TimeUnit.SECONDS);
+            } else {
+                return result.get();
+            }
         } catch (final ExecutionException e) {
             // Unwrap previously wrapped exceptions if possible.
-
             final Throwable cause = e.getCause();
 
             // We don't really expect this case, but handle it nevertheless.
