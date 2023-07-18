@@ -52,6 +52,7 @@ import org.apache.kafka.server.log.remote.storage.RemoteLogSegmentId;
 import org.apache.kafka.server.log.remote.storage.RemoteLogSegmentMetadata;
 import org.apache.kafka.server.log.remote.storage.RemoteStorageException;
 
+import io.aiven.kafka.tieredstorage.chunkmanager.cache.DiskBasedChunkCache;
 import io.aiven.kafka.tieredstorage.chunkmanager.cache.InMemoryChunkCache;
 import io.aiven.kafka.tieredstorage.manifest.index.ChunkIndex;
 import io.aiven.kafka.tieredstorage.manifest.serde.DataKeyDeserializer;
@@ -112,11 +113,15 @@ class RemoteStorageManagerTest extends RsaKeyAwareTest {
 
     private static List<Arguments> provideEndToEnd() {
         final List<Arguments> result = new ArrayList<>();
-        for (final int chunkSize : List.of(1024 * 1024 - 1, 1024 * 1024 * 1024 - 1, Integer.MAX_VALUE / 2)) {
-            for (final boolean compression : List.of(true, false)) {
-                for (final boolean encryption : List.of(true, false)) {
-                    for (final boolean hasTxnIndex : List.of(true, false)) {
-                        result.add(Arguments.of(chunkSize, compression, encryption, hasTxnIndex));
+        final var cacheNames =
+            List.of(InMemoryChunkCache.class.getCanonicalName(), DiskBasedChunkCache.class.getCanonicalName());
+        for (final String cacheClass : cacheNames) {
+            for (final int chunkSize : List.of(1024 * 1024 - 1, 1024 * 1024 * 1024 - 1, Integer.MAX_VALUE / 2)) {
+                for (final boolean compression : List.of(true, false)) {
+                    for (final boolean encryption : List.of(true, false)) {
+                        for (final boolean hasTxnIndex : List.of(true, false)) {
+                            result.add(Arguments.of(cacheClass, chunkSize, compression, encryption, hasTxnIndex));
+                        }
                     }
                 }
             }
@@ -176,21 +181,24 @@ class RemoteStorageManagerTest extends RsaKeyAwareTest {
 
     @ParameterizedTest(name = "{argumentsWithNames}")
     @MethodSource("provideEndToEnd")
-    void endToEnd(final int chunkSize,
-                  final boolean compression,
-                  final boolean encryption,
-                  final boolean hasTxnIndex) throws RemoteStorageException, IOException {
+    void endToEnd(
+        final String cacheClass,
+        final int chunkSize,
+        final boolean compression,
+        final boolean encryption,
+        final boolean hasTxnIndex) throws RemoteStorageException, IOException {
         // Configure the RSM.
+        final var cacheDir = tmpDir.resolve("cache");
+        Files.createDirectories(cacheDir);
         final Map<String, String> config = new HashMap<>(Map.of(
             "chunk.size", Integer.toString(chunkSize),
-            "storage.backend.class",
-            "io.aiven.kafka.tieredstorage.storage.filesystem.FileSystemStorage",
+            "storage.backend.class", "io.aiven.kafka.tieredstorage.storage.filesystem.FileSystemStorage",
             "key.prefix", "test/",
             "storage.root", targetDir.toString(),
             "compression.enabled", Boolean.toString(compression),
             "encryption.enabled", Boolean.toString(encryption),
-            "chunk.cache.path", tmpDir.resolve("cache").toString(),
-            "chunk.cache.class", InMemoryChunkCache.class.getCanonicalName(),
+            "chunk.cache.class", cacheClass,
+            "chunk.cache.path", cacheDir.toString(),
             "chunk.cache.size", Integer.toString(100 * 1024 * 1024)
         ));
         if (encryption) {
