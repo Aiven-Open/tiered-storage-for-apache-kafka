@@ -60,7 +60,6 @@ import io.aiven.kafka.tieredstorage.security.AesEncryptionProvider;
 import io.aiven.kafka.tieredstorage.security.DataKeyAndAAD;
 import io.aiven.kafka.tieredstorage.security.EncryptedDataKey;
 import io.aiven.kafka.tieredstorage.security.RsaEncryptionProvider;
-import io.aiven.kafka.tieredstorage.security.RsaKeyReader;
 
 import com.fasterxml.jackson.databind.JsonNode;
 import com.fasterxml.jackson.databind.ObjectMapper;
@@ -108,8 +107,6 @@ class RemoteStorageManagerTest extends RsaKeyAwareTest {
     static final String TARGET_MANIFEST_FILE =
         "test/topic-AAAAAAAAAAAAAAAAAAAAAQ/7/00000000000000000023-AAAAAAAAAAAAAAAAAAAAAA.rsm-manifest";
 
-    static final String KEY_ENCRYPTION_KEY_ID = "static-key-id";
-
     private static List<Arguments> provideEndToEnd() {
         final List<Arguments> result = new ArrayList<>();
         for (final int chunkSize : List.of(1024 * 1024 - 1, 1024 * 1024 * 1024 - 1, Integer.MAX_VALUE / 2)) {
@@ -128,9 +125,7 @@ class RemoteStorageManagerTest extends RsaKeyAwareTest {
     void init() throws IOException {
         rsm = new RemoteStorageManager();
 
-        rsaEncryptionProvider = new RsaEncryptionProvider(
-            KEY_ENCRYPTION_KEY_ID,
-            Map.of(KEY_ENCRYPTION_KEY_ID, RsaKeyReader.read(publicKeyPem, privateKeyPem)));
+        rsaEncryptionProvider = new RsaEncryptionProvider(KEY_ENCRYPTION_KEY_ID, keyRing);
         aesEncryptionProvider = new AesEncryptionProvider();
 
         sourceDir = Path.of(tmpDir.toString(), "source");
@@ -194,8 +189,10 @@ class RemoteStorageManagerTest extends RsaKeyAwareTest {
             "chunk.cache.size", Integer.toString(100 * 1024 * 1024)
         ));
         if (encryption) {
-            config.put("encryption.public.key.file", publicKeyPem.toString());
-            config.put("encryption.private.key.file", privateKeyPem.toString());
+            config.put("encryption.key.pair.id", KEY_ENCRYPTION_KEY_ID);
+            config.put("encryption.key.pairs", KEY_ENCRYPTION_KEY_ID);
+            config.put("encryption.key.pairs." + KEY_ENCRYPTION_KEY_ID + ".public.key.file", publicKeyPem.toString());
+            config.put("encryption.key.pairs." + KEY_ENCRYPTION_KEY_ID + ".private.key.file", privateKeyPem.toString());
         }
         rsm.configure(config);
 

@@ -18,8 +18,6 @@ package io.aiven.kafka.tieredstorage.security;
 
 import javax.crypto.spec.SecretKeySpec;
 
-import java.util.Map;
-
 import io.aiven.kafka.tieredstorage.RsaKeyAwareTest;
 
 import org.junit.jupiter.api.Test;
@@ -27,8 +25,6 @@ import org.junit.jupiter.api.Test;
 import static org.assertj.core.api.Assertions.assertThat;
 
 public class AesEncryptionProviderTest extends RsaKeyAwareTest {
-    private static final String KEY_ENCRYPTION_KEY_ID = "static-key-id";
-
     @Test
     void keyAndAadMustBePresent() {
         final AesEncryptionProvider aesProvider = new AesEncryptionProvider();
@@ -54,9 +50,7 @@ public class AesEncryptionProviderTest extends RsaKeyAwareTest {
 
     @Test
     void decryptGeneratedKey() {
-        final var rsaEncryptionProvider = new RsaEncryptionProvider(
-            KEY_ENCRYPTION_KEY_ID,
-            Map.of(KEY_ENCRYPTION_KEY_ID, RsaKeyReader.read(publicKeyPem, privateKeyPem)));
+        final var rsaEncryptionProvider = new RsaEncryptionProvider(KEY_ENCRYPTION_KEY_ID, keyRing);
         final AesEncryptionProvider aesProvider = new AesEncryptionProvider();
         final var dataKey = aesProvider.createDataKeyAndAAD().dataKey;
         final var encryptedKey = rsaEncryptionProvider.encryptDataKey(dataKey.getEncoded());

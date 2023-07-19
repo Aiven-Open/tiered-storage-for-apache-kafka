@@ -29,6 +29,9 @@ import java.security.Security;
 import java.security.spec.EncodedKeySpec;
 import java.security.spec.PKCS8EncodedKeySpec;
 import java.security.spec.X509EncodedKeySpec;
+import java.util.Map;
+
+import io.aiven.kafka.tieredstorage.security.RsaKeyReader;
 
 import org.bouncycastle.jce.provider.BouncyCastleProvider;
 import org.bouncycastle.util.io.pem.PemObject;
@@ -40,9 +43,13 @@ public abstract class RsaKeyAwareTest {
 
     public static KeyPair rsaKeyPair;
 
+    public static final String KEY_ENCRYPTION_KEY_ID = "static-key-id";
+
     public static Path publicKeyPem;
 
     public static Path privateKeyPem;
+
+    public static Map<String, KeyPair> keyRing;
 
     static {
         Security.addProvider(new BouncyCastleProvider());
@@ -60,6 +67,8 @@ public abstract class RsaKeyAwareTest {
 
         writePemFile(publicKeyPem, new X509EncodedKeySpec(rsaKeyPair.getPublic().getEncoded()));
         writePemFile(privateKeyPem, new PKCS8EncodedKeySpec(rsaKeyPair.getPrivate().getEncoded()));
+
+        keyRing = Map.of(KEY_ENCRYPTION_KEY_ID, RsaKeyReader.read(publicKeyPem, privateKeyPem));
     }
 
     protected static void writePemFile(final Path path, final EncodedKeySpec encodedKeySpec) throws IOException {

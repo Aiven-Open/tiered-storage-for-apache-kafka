@@ -18,6 +18,8 @@ package io.aiven.kafka.tieredstorage;
 
 import java.nio.file.Path;
 import java.time.Duration;
+import java.util.HashMap;
+import java.util.List;
 import java.util.Map;
 import java.util.Optional;
 
@@ -68,10 +70,6 @@ public class RemoteStorageManagerConfig extends AbstractConfig {
 
     private static final String ENCRYPTION_CONFIG = "encryption.enabled";
     private static final String ENCRYPTION_DOC = "Whether to enable encryption";
-    private static final String ENCRYPTION_PUBLIC_KEY_FILE_CONFIG = "encryption.public.key.file";
-    private static final String ENCRYPTION_PUBLIC_KEY_FILE_DOC = "The path to the RSA public key file";
-    private static final String ENCRYPTION_PRIVATE_KEY_FILE_CONFIG = "encryption.private.key.file";
-    private static final String ENCRYPTION_PRIVATE_KEY_FILE_DOC = "The path to the RSA private key file";
     // TODO add possibility to pass keys as strings
 
 
@@ -158,20 +156,6 @@ public class RemoteStorageManagerConfig extends AbstractConfig {
             ConfigDef.Importance.HIGH,
             ENCRYPTION_DOC
         );
-        CONFIG.define(
-            ENCRYPTION_PUBLIC_KEY_FILE_CONFIG,
-            ConfigDef.Type.STRING,
-            null,
-            ConfigDef.Importance.HIGH,
-            ENCRYPTION_PUBLIC_KEY_FILE_DOC
-        );
-        CONFIG.define(
-            ENCRYPTION_PRIVATE_KEY_FILE_CONFIG,
-            ConfigDef.Type.STRING,
-            null,
-            ConfigDef.Importance.HIGH,
-            ENCRYPTION_PRIVATE_KEY_FILE_DOC
-        );
 
         CONFIG
             .define(METRICS_SAMPLE_WINDOW_MS_CONFIG,
@@ -196,14 +180,107 @@ public class RemoteStorageManagerConfig extends AbstractConfig {
                 METRICS_RECORDING_LEVEL_DOC);
     }
 
+    /**
+     * Internal config for encryption.
+     *
+     * <p>It's needed for more convenient dynamic config definition.
+     */
+    private static class EncryptionConfig extends AbstractConfig {
+        private static final String ENCRYPTION_KEY_PAIR_ID_CONFIG = "encryption.key.pair.id";
+        private static final String ENCRYPTION_KEY_PAIR_ID_DOC =
+            "The ID of the key pair to be used for encryption";
+
+        private static final String ENCRYPTION_KEY_PAIRS_CONFIG = "encryption.key.pairs";
+        private static final String ENCRYPTION_KEY_PAIRS_DOC = "The list of encryption key pair IDs";
+
+        private static final String ENCRYPTION_PUBLIC_KEY_FILE_DOC = "The path to the RSA public key file";
+        private static final String ENCRYPTION_PRIVATE_KEY_FILE_DOC = "The path to the RSA private key file";
+
+        private EncryptionConfig(final ConfigDef configDef, final Map<String, ?> props) {
+            super(configDef, props);
+        }
+
+        Path encryptionPublicKeyFile(final String keyPairId) {
+            return Path.of(getString(publicKeyFileConfig(keyPairId)));
+        }
+
+        Path encryptionPrivateKeyFile(final String keyPairId) {
+            return Path.of(getString(privateKeyFileConfig(keyPairId)));
+        }
+
+        public static EncryptionConfig create(final Map<String, ?> props) {
+            final ConfigDef configDef = new ConfigDef();
+            // First, define the active key ID and key ID list fields, they are required always.
+            configDef.define(
+                ENCRYPTION_KEY_PAIR_ID_CONFIG,
+                ConfigDef.Type.STRING,
+                ConfigDef.NO_DEFAULT_VALUE,
+                ConfigDef.Importance.HIGH,
+                ENCRYPTION_KEY_PAIR_ID_DOC
+            );
+            configDef.define(
+                ENCRYPTION_KEY_PAIRS_CONFIG,
+                ConfigDef.Type.LIST,
+                ConfigDef.NO_DEFAULT_VALUE,
+                ConfigDef.Importance.HIGH,
+                ENCRYPTION_KEY_PAIRS_DOC
+            );
+            final EncryptionConfig interimEncryptionConfig = new EncryptionConfig(configDef, props);
+
+            // Check that the active ID is present in the list.
+            if (!interimEncryptionConfig.keyPairIds().contains(interimEncryptionConfig.activeKeyPairId())) {
+                throw new ConfigException(
+                    "Encryption key '" + interimEncryptionConfig.activeKeyPairId() + "' must be provided");
+            }
+
+            // Then, define key fields dynamically based on the key pair IDs provided above.
+            // See e.g. the ConnectorConfig.enrich in the Kafka code.
+            for (final String keyPairId : interimEncryptionConfig.keyPairIds()) {
+                configDef.define(
+                    publicKeyFileConfig(keyPairId),
+                    ConfigDef.Type.STRING,
+                    ConfigDef.NO_DEFAULT_VALUE,
+                    ConfigDef.Importance.HIGH,
+                    ENCRYPTION_PUBLIC_KEY_FILE_DOC
+                );
+                configDef.define(
+                    privateKeyFileConfig(keyPairId),
+                    ConfigDef.Type.STRING,
+                    ConfigDef.NO_DEFAULT_VALUE,
+                    ConfigDef.Importance.HIGH,
+                    ENCRYPTION_PRIVATE_KEY_FILE_DOC
+                );
+            }
+
+            return new EncryptionConfig(configDef, props);
+        }
+
+        String activeKeyPairId() {
+            return getString(ENCRYPTION_KEY_PAIR_ID_CONFIG);
+        }
+
+        List<String> keyPairIds() {
+            return getList(ENCRYPTION_KEY_PAIRS_CONFIG);
+        }
+
+        private static String publicKeyFileConfig(final String keyPairId) {
+            return "encryption.key.pairs." + keyPairId + ".public.key.file";
+        }
+
+        private static String privateKeyFileConfig(final String keyPairId) {
+            return "encryption.key.pairs." + keyPairId + ".private.key.file";
+        }
+    }
+
+    private final EncryptionConfig encryptionConfig;
 
     RemoteStorageManagerConfig(final Map<String, ?> props) {
         super(CONFIG, props);
+        encryptionConfig = encryptionEnabled() ? EncryptionConfig.create(props) : null;
         validate();
     }
 
     private void validate() {
-        validateEncryption();
         validateCompression();
     }
 
@@ -211,17 +288,6 @@ public class RemoteStorageManagerConfig extends AbstractConfig {
         if (getBoolean(COMPRESSION_HEURISTIC_ENABLED_CONFIG) && !getBoolean(COMPRESSION_ENABLED_CONFIG)) {
             throw new ConfigException(
                 COMPRESSION_ENABLED_CONFIG + " must be enabled if " + COMPRESSION_HEURISTIC_ENABLED_CONFIG + " is");
-        }
-    }
-
-    private void validateEncryption() {
-        if (getBoolean(ENCRYPTION_CONFIG) && getString(ENCRYPTION_PUBLIC_KEY_FILE_CONFIG) == null) {
-            throw new ConfigException(
-                ENCRYPTION_PUBLIC_KEY_FILE_CONFIG + " must be provided if encryption is enabled");
-        }
-        if (getBoolean(ENCRYPTION_CONFIG) && getString(ENCRYPTION_PRIVATE_KEY_FILE_CONFIG) == null) {
-            throw new ConfigException(
-                ENCRYPTION_PRIVATE_KEY_FILE_CONFIG + " must be provided if encryption is enabled");
         }
     }
 
@@ -268,19 +334,25 @@ public class RemoteStorageManagerConfig extends AbstractConfig {
         return getBoolean(ENCRYPTION_CONFIG);
     }
 
-    Path encryptionPublicKeyFile() {
-        final String value = getString(ENCRYPTION_PUBLIC_KEY_FILE_CONFIG);
-        if (value == null) {
+    String encryptionKeyPairId() {
+        if (!encryptionEnabled()) {
             return null;
         }
-        return Path.of(value);
+        return encryptionConfig.activeKeyPairId();
     }
 
-    Path encryptionPrivateKeyFile() {
-        final String value = getString(ENCRYPTION_PRIVATE_KEY_FILE_CONFIG);
-        if (value == null) {
+    Map<String, KeyPairPaths> encryptionKeyRing() {
+        if (!encryptionEnabled()) {
             return null;
         }
-        return Path.of(value);
+
+        final Map<String, KeyPairPaths> result = new HashMap<>();
+        for (final String keyPairId : encryptionConfig.keyPairIds()) {
+            final KeyPairPaths keyPair = new KeyPairPaths(
+                encryptionConfig.encryptionPublicKeyFile(keyPairId),
+                encryptionConfig.encryptionPrivateKeyFile(keyPairId));
+            result.put(keyPairId, keyPair);
+        }
+        return result;
     }
 }
