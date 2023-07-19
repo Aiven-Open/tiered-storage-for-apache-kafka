@@ -24,6 +24,7 @@ import java.util.Map;
 
 import io.aiven.kafka.tieredstorage.chunkmanager.ChunkKey;
 import io.aiven.kafka.tieredstorage.chunkmanager.ChunkManager;
+import io.aiven.kafka.tieredstorage.metrics.CacheDiskBasedMetrics;
 
 import com.github.benmanes.caffeine.cache.RemovalListener;
 import com.github.benmanes.caffeine.cache.Weigher;
@@ -37,6 +38,7 @@ public class DiskBasedChunkCache extends ChunkCache<Path> {
     private static final Logger log = LoggerFactory.getLogger(DiskBasedChunkCache.class);
 
     private DiskBasedChunkCacheConfig config;
+    private CacheDiskBasedMetrics metrics;
 
     public DiskBasedChunkCache(final ChunkManager chunkManager) {
         super(chunkManager);
@@ -68,6 +70,7 @@ public class DiskBasedChunkCache extends ChunkCache<Path> {
         try {
             final Path newPath = Files.move(tempCached, cachedChunkPath, ATOMIC_MOVE);
             log.debug("Chunk file has been moved to cache directory {}", newPath);
+            metrics.recordPathWritten(cachedChunkPath);
             return newPath;
         } finally {
             // In case of exception during the move, the chunk file should be cleaned from temporary cache directory.
@@ -88,9 +91,14 @@ public class DiskBasedChunkCache extends ChunkCache<Path> {
     public RemovalListener<ChunkKey, Path> removalListener() {
         return (key, path, cause) -> {
             try {
-                Files.delete(path);
-                log.debug("Deleted cached file for key {} with path {} from cache directory."
+                if (path != null) {
+                    metrics.recordPathDeleted(path);
+                    Files.delete(path);
+                    log.debug("Deleted cached file for key {} with path {} from cache directory."
                         + " The reason of the deletion is {}", key, path, cause);
+                } else {
+                    log.debug("Delete listener called with a null path for key {}, cause: {}", key, cause);
+                }
             } catch (final IOException e) {
                 log.error("Failed to delete cached file for key {} with path {} from cache directory."
                               + " The reason of the deletion is {}", key, path, cause, e);
@@ -122,5 +130,6 @@ public class DiskBasedChunkCache extends ChunkCache<Path> {
     public void configure(final Map<String, ?> configs) {
         this.config = new DiskBasedChunkCacheConfig(configs);
         this.cache = buildCache(config);
+        this.metrics = new CacheDiskBasedMetrics("chunk-cache-disk", config.cachePath());
     }
 }

@@ -81,15 +81,15 @@ class DiskBasedChunkCacheMetricsTest {
         diskBasedChunkCache = new DiskBasedChunkCache(chunkManager);
         diskBasedChunkCache.configure(Map.of(
             "retention.ms", "-1",
-            "size", "-1",
+            "size", "15",
             "path", baseCachePath.toString()
         ));
     }
 
     @Test
-    void cacheChunks() throws Exception {
+    void recordMetrics() throws Exception {
         when(chunkManager.getChunk(any(), eq(segmentManifest), eq(0)))
-            .thenReturn(new ByteArrayInputStream("test".getBytes()));
+            .thenReturn(new ByteArrayInputStream("0123456789".getBytes()));
 
         diskBasedChunkCache.getChunk(REMOTE_LOG_SEGMENT_METADATA, segmentManifest, 0);
         diskBasedChunkCache.getChunk(REMOTE_LOG_SEGMENT_METADATA, segmentManifest, 0);
@@ -141,5 +141,40 @@ class DiskBasedChunkCacheMetricsTest {
         AssertionsForClassTypes.assertThat(
                 MBEAN_SERVER.getAttribute(segmentManifestCacheObjectName, "cache-eviction-weight-rate"))
             .isEqualTo(0.0);
+
+        final var cacheDiskObjectName =
+            new ObjectName("aiven.kafka.server.tieredstorage.cache.disk:type=chunk-cache-disk");
+
+        AssertionsForClassTypes.assertThat(
+                MBEAN_SERVER.getAttribute(cacheDiskObjectName, "path-size"))
+            .isEqualTo(10.0);
+
+        // eviction
+        when(chunkManager.getChunk(any(), eq(segmentManifest), eq(1)))
+            .thenReturn(new ByteArrayInputStream("0123456789".getBytes()));
+        diskBasedChunkCache.getChunk(REMOTE_LOG_SEGMENT_METADATA, segmentManifest, 1);
+
+        AssertionsForClassTypes.assertThat(
+                MBEAN_SERVER.getAttribute(cacheDiskObjectName, "path-size"))
+            .isEqualTo(20.0);
+
+        Thread.sleep(5000);
+
+        AssertionsForClassTypes.assertThat(
+                MBEAN_SERVER.getAttribute(cacheDiskObjectName, "path-size"))
+            .isEqualTo(10.0);
+
+        AssertionsForClassTypes.assertThat(
+                MBEAN_SERVER.getAttribute(segmentManifestCacheObjectName, "cache-eviction-total"))
+            .isEqualTo(1.0);
+        AssertionsForClassTypes.assertThat(
+                (double) MBEAN_SERVER.getAttribute(segmentManifestCacheObjectName, "cache-eviction-rate"))
+            .isCloseTo(1.0 / METRIC_TIME_WINDOW_SEC, Percentage.withPercentage(99));
+        AssertionsForClassTypes.assertThat(
+                MBEAN_SERVER.getAttribute(segmentManifestCacheObjectName, "cache-eviction-weight-total"))
+            .isEqualTo(10.0);
+        AssertionsForClassTypes.assertThat(
+                (double) MBEAN_SERVER.getAttribute(segmentManifestCacheObjectName, "cache-eviction-weight-rate"))
+            .isCloseTo(10.0 / METRIC_TIME_WINDOW_SEC, Percentage.withPercentage(99));
     }
 }
