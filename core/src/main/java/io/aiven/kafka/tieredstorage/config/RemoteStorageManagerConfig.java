@@ -14,7 +14,7 @@
  * limitations under the License.
  */
 
-package io.aiven.kafka.tieredstorage;
+package io.aiven.kafka.tieredstorage.config;
 
 import java.nio.file.Path;
 import java.time.Duration;
@@ -274,7 +274,7 @@ public class RemoteStorageManagerConfig extends AbstractConfig {
 
     private final EncryptionConfig encryptionConfig;
 
-    RemoteStorageManagerConfig(final Map<String, ?> props) {
+    public RemoteStorageManagerConfig(final Map<String, ?> props) {
         super(CONFIG, props);
         encryptionConfig = encryptionEnabled() ? EncryptionConfig.create(props) : null;
         validate();
@@ -291,14 +291,14 @@ public class RemoteStorageManagerConfig extends AbstractConfig {
         }
     }
 
-    StorageBackend storage() {
+    public StorageBackend storage() {
         final Class<?> storageClass = getClass(STORAGE_BACKEND_CLASS_CONFIG);
         final StorageBackend storage = Utils.newInstance(storageClass, StorageBackend.class);
         storage.configure(this.originalsWithPrefix(STORAGE_PREFIX));
         return storage;
     }
 
-    Optional<Long> segmentManifestCacheSize() {
+    public Optional<Long> segmentManifestCacheSize() {
         final long rawValue = getLong(SEGMENT_MANIFEST_CACHE_SIZE_CONFIG);
         if (rawValue == -1) {
             return Optional.empty();
@@ -306,7 +306,7 @@ public class RemoteStorageManagerConfig extends AbstractConfig {
         return Optional.of(rawValue);
     }
 
-    Optional<Duration> segmentManifestCacheRetention() {
+    public Optional<Duration> segmentManifestCacheRetention() {
         final long rawValue = getLong(SEGMENT_MANIFEST_CACHE_RETENTION_MS_CONFIG);
         if (rawValue == -1) {
             return Optional.empty();
@@ -314,34 +314,34 @@ public class RemoteStorageManagerConfig extends AbstractConfig {
         return Optional.of(Duration.ofMillis(rawValue));
     }
 
-    String keyPrefix() {
+    public String keyPrefix() {
         return getString(OBJECT_KEY_PREFIX_CONFIG);
     }
 
-    int chunkSize() {
+    public int chunkSize() {
         return getInt(CHUNK_SIZE_CONFIG);
     }
 
-    boolean compressionEnabled() {
+    public boolean compressionEnabled() {
         return getBoolean(COMPRESSION_ENABLED_CONFIG);
     }
 
-    boolean compressionHeuristicEnabled() {
+    public boolean compressionHeuristicEnabled() {
         return getBoolean(COMPRESSION_HEURISTIC_ENABLED_CONFIG);
     }
 
-    boolean encryptionEnabled() {
+    public boolean encryptionEnabled() {
         return getBoolean(ENCRYPTION_CONFIG);
     }
 
-    String encryptionKeyPairId() {
+    public String encryptionKeyPairId() {
         if (!encryptionEnabled()) {
             return null;
         }
         return encryptionConfig.activeKeyPairId();
     }
 
-    Map<String, KeyPairPaths> encryptionKeyRing() {
+    public Map<String, KeyPairPaths> encryptionKeyRing() {
         if (!encryptionEnabled()) {
             return null;
         }

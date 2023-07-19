@@ -42,6 +42,7 @@ import org.apache.kafka.server.log.remote.storage.RemoteStorageException;
 
 import io.aiven.kafka.tieredstorage.chunkmanager.ChunkManager;
 import io.aiven.kafka.tieredstorage.chunkmanager.ChunkManagerFactory;
+import io.aiven.kafka.tieredstorage.config.RemoteStorageManagerConfig;
 import io.aiven.kafka.tieredstorage.manifest.SegmentEncryptionMetadata;
 import io.aiven.kafka.tieredstorage.manifest.SegmentEncryptionMetadataV1;
 import io.aiven.kafka.tieredstorage.manifest.SegmentManifest;
@@ -78,9 +79,9 @@ import com.fasterxml.jackson.datatype.jdk8.Jdk8Module;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
-import static io.aiven.kafka.tieredstorage.RemoteStorageManagerConfig.METRICS_NUM_SAMPLES_CONFIG;
-import static io.aiven.kafka.tieredstorage.RemoteStorageManagerConfig.METRICS_RECORDING_LEVEL_CONFIG;
-import static io.aiven.kafka.tieredstorage.RemoteStorageManagerConfig.METRICS_SAMPLE_WINDOW_MS_CONFIG;
+import static io.aiven.kafka.tieredstorage.config.RemoteStorageManagerConfig.METRICS_NUM_SAMPLES_CONFIG;
+import static io.aiven.kafka.tieredstorage.config.RemoteStorageManagerConfig.METRICS_RECORDING_LEVEL_CONFIG;
+import static io.aiven.kafka.tieredstorage.config.RemoteStorageManagerConfig.METRICS_SAMPLE_WINDOW_MS_CONFIG;
 import static org.apache.kafka.server.log.remote.storage.RemoteStorageManager.IndexType.LEADER_EPOCH;
 import static org.apache.kafka.server.log.remote.storage.RemoteStorageManager.IndexType.OFFSET;
 import static org.apache.kafka.server.log.remote.storage.RemoteStorageManager.IndexType.PRODUCER_SNAPSHOT;
