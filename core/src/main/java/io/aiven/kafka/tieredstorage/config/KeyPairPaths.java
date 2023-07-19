@@ -14,7 +14,7 @@
  * limitations under the License.
  */
 
-package io.aiven.kafka.tieredstorage;
+package io.aiven.kafka.tieredstorage.config;
 
 import java.nio.file.Path;
 import java.util.Objects;
@@ -23,7 +23,7 @@ public class KeyPairPaths {
     public final Path publicKey;
     public final Path privateKey;
 
-    public KeyPairPaths(final Path publicKey, final Path privateKey) {
+    KeyPairPaths(final Path publicKey, final Path privateKey) {
         this.publicKey = Objects.requireNonNull(publicKey, "publicKey cannot be null");
         this.privateKey = Objects.requireNonNull(privateKey, "privateKey cannot be null");
     }
