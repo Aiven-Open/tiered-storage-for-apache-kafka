@@ -29,6 +29,7 @@ import org.junit.jupiter.api.Test;
 
 import static org.assertj.core.api.Assertions.assertThat;
 import static org.assertj.core.api.Assertions.assertThatThrownBy;
+import static org.assertj.core.api.Assertions.entry;
 
 class RemoteStorageManagerConfigTest {
     @Test
@@ -46,8 +47,8 @@ class RemoteStorageManagerConfigTest {
         assertThat(config.compressionEnabled()).isFalse();
         assertThat(config.compressionHeuristicEnabled()).isFalse();
         assertThat(config.encryptionEnabled()).isFalse();
-        assertThat(config.encryptionPrivateKeyFile()).isNull();
-        assertThat(config.encryptionPublicKeyFile()).isNull();
+        assertThat(config.encryptionKeyPairId()).isNull();
+        assertThat(config.encryptionKeyRing()).isNull();
         assertThat(config.keyPrefix()).isEmpty();
     }
 
@@ -120,35 +121,91 @@ class RemoteStorageManagerConfigTest {
                 "storage.backend.class", NoopStorageBackend.class.getCanonicalName(),
                 "chunk.size", "123",
                 "encryption.enabled", "true",
-                "encryption.public.key.file", "public.key",
-                "encryption.private.key.file", "private.key"
+                "encryption.key.pair.id", "k2",
+                "encryption.key.pairs", "k1,k2",
+                "encryption.key.pairs.k1.public.key.file", "k1_public.key",
+                "encryption.key.pairs.k1.private.key.file", "k1_private.key",
+                "encryption.key.pairs.k2.public.key.file", "k2_public.key",
+                "encryption.key.pairs.k2.private.key.file", "k2_private.key"
             )
         );
         assertThat(config.encryptionEnabled()).isTrue();
-        assertThat(config.encryptionPrivateKeyFile()).isEqualTo(Path.of("private.key"));
-        assertThat(config.encryptionPublicKeyFile()).isEqualTo(Path.of("public.key"));
+        assertThat(config.encryptionKeyPairId()).isEqualTo("k2");
+        assertThat(config.encryptionKeyRing()).containsExactly(
+            entry("k1", new KeyPairPaths(Path.of("k1_public.key"), Path.of("k1_private.key"))),
+            entry("k2", new KeyPairPaths(Path.of("k2_public.key"), Path.of("k2_private.key")))
+        );
     }
 
     @Test
-    void rsaKeysMustBeProvided() {
-        final var config1 = Map.of(
+    void encryptionEnabledKeyPairIdIsNotProvided() {
+        final var config = Map.of(
             "storage.backend.class", NoopStorageBackend.class.getCanonicalName(),
             "chunk.size", "123",
             "encryption.enabled", "true"
         );
-        assertThatThrownBy(() -> new RemoteStorageManagerConfig(config1))
+        assertThatThrownBy(() -> new RemoteStorageManagerConfig(config))
             .isInstanceOf(ConfigException.class)
-            .hasMessage("encryption.public.key.file must be provided if encryption is enabled");
+            .hasMessage("Missing required configuration \"encryption.key.pair.id\" which has no default value.");
+    }
 
-        final var config2 = Map.of(
+    @Test
+    void encryptionEnabledKeyPairsAreNotProvided() {
+        final var config = Map.of(
             "storage.backend.class", NoopStorageBackend.class.getCanonicalName(),
             "chunk.size", "123",
             "encryption.enabled", "true",
-            "encryption.public.key.file", "public.key"
+            "encryption.key.pair.id", "k1"
         );
-        assertThatThrownBy(() -> new RemoteStorageManagerConfig(config2))
+        assertThatThrownBy(() -> new RemoteStorageManagerConfig(config))
             .isInstanceOf(ConfigException.class)
-            .hasMessage("encryption.private.key.file must be provided if encryption is enabled");
+            .hasMessage("Missing required configuration \"encryption.key.pairs\" which has no default value.");
+    }
+
+    @Test
+    void encryptionEnabledActiveKeyNotDefined() {
+        // The key defined in `encryption.key.pair.id` is not present in `encryption.key.pairs`.
+        final var config = Map.of(
+            "storage.backend.class", NoopStorageBackend.class.getCanonicalName(),
+            "chunk.size", "123",
+            "encryption.enabled", "true",
+            "encryption.key.pair.id", "k1",
+            "encryption.key.pairs", ""
+        );
+        assertThatThrownBy(() -> new RemoteStorageManagerConfig(config))
+            .isInstanceOf(ConfigException.class)
+            .hasMessage("Encryption key 'k1' must be provided");
+    }
+
+    @Test
+    void encryptionEnabledMissingPublicKey() {
+        final var config = Map.of(
+            "storage.backend.class", NoopStorageBackend.class.getCanonicalName(),
+            "chunk.size", "123",
+            "encryption.enabled", "true",
+            "encryption.key.pair.id", "k1",
+            "encryption.key.pairs", "k1"
+        );
+        assertThatThrownBy(() -> new RemoteStorageManagerConfig(config))
+            .isInstanceOf(ConfigException.class)
+            .hasMessage("Missing required configuration "
+                + "\"encryption.key.pairs.k1.public.key.file\" which has no default value.");
+    }
+
+    @Test
+    void encryptionEnabledMissingPrivateKey() {
+        final var config = Map.of(
+            "storage.backend.class", NoopStorageBackend.class.getCanonicalName(),
+            "chunk.size", "123",
+            "encryption.enabled", "true",
+            "encryption.key.pair.id", "k1",
+            "encryption.key.pairs", "k1",
+            "encryption.key.pairs.k1.public.key.file", "k1_public.key"
+        );
+        assertThatThrownBy(() -> new RemoteStorageManagerConfig(config))
+            .isInstanceOf(ConfigException.class)
+            .hasMessage("Missing required configuration "
+                + "\"encryption.key.pairs.k1.private.key.file\" which has no default value.");
     }
 
     @Test

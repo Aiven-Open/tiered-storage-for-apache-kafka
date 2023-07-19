@@ -20,7 +20,6 @@ import javax.crypto.SecretKey;
 import javax.crypto.spec.SecretKeySpec;
 
 import java.util.Base64;
-import java.util.Map;
 
 import io.aiven.kafka.tieredstorage.RsaKeyAwareTest;
 import io.aiven.kafka.tieredstorage.manifest.index.FixedSizeChunkIndex;
@@ -28,7 +27,6 @@ import io.aiven.kafka.tieredstorage.manifest.serde.DataKeyDeserializer;
 import io.aiven.kafka.tieredstorage.manifest.serde.DataKeySerializer;
 import io.aiven.kafka.tieredstorage.security.EncryptedDataKey;
 import io.aiven.kafka.tieredstorage.security.RsaEncryptionProvider;
-import io.aiven.kafka.tieredstorage.security.RsaKeyReader;
 
 import com.fasterxml.jackson.core.JsonProcessingException;
 import com.fasterxml.jackson.databind.ObjectMapper;
@@ -43,7 +41,6 @@ import static org.assertj.core.api.Assertions.assertThat;
 class SegmentManifestV1SerdeTest extends RsaKeyAwareTest {
     static final FixedSizeChunkIndex INDEX =
         new FixedSizeChunkIndex(100, 1000, 110, 110);
-    static final String KEY_ENCRYPTION_KEY_ID = "static-key-id";
     static final SecretKey DATA_KEY = new SecretKeySpec(new byte[]{0, 1, 2, 3, 4, 5, 6, 7, 8, 9}, "AES");
     static final byte[] AAD = {10, 11, 12, 13};
 
@@ -66,9 +63,7 @@ class SegmentManifestV1SerdeTest extends RsaKeyAwareTest {
         mapper = new ObjectMapper();
         mapper.registerModule(new Jdk8Module());
 
-        rsaEncryptionProvider = new RsaEncryptionProvider(
-            KEY_ENCRYPTION_KEY_ID,
-            Map.of(KEY_ENCRYPTION_KEY_ID, RsaKeyReader.read(publicKeyPem, privateKeyPem)));
+        rsaEncryptionProvider = new RsaEncryptionProvider(KEY_ENCRYPTION_KEY_ID, keyRing);
 
         final SimpleModule simpleModule = new SimpleModule();
         simpleModule.addSerializer(SecretKey.class,

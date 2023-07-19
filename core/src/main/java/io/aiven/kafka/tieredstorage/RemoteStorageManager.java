@@ -24,6 +24,7 @@ import java.io.IOException;
 import java.io.InputStream;
 import java.nio.file.Files;
 import java.security.KeyPair;
+import java.util.HashMap;
 import java.util.Map;
 import java.util.Objects;
 import java.util.Optional;
@@ -110,8 +111,6 @@ public class RemoteStorageManager implements org.apache.kafka.server.log.remote.
 
     private SegmentManifestProvider segmentManifestProvider;
 
-    private static final String KEY_ENCRYPTION_KEY_ID = "static-key-id";
-
     public RemoteStorageManager() {
         this(Time.SYSTEM);
     }
@@ -134,11 +133,11 @@ public class RemoteStorageManager implements org.apache.kafka.server.log.remote.
         objectKey = new ObjectKey(config.keyPrefix());
         encryptionEnabled = config.encryptionEnabled();
         if (encryptionEnabled) {
-            final KeyPair keyPair =
-                RsaKeyReader.read(config.encryptionPublicKeyFile(), config.encryptionPrivateKeyFile());
-            rsaEncryptionProvider = new RsaEncryptionProvider(
-                KEY_ENCRYPTION_KEY_ID,
-                Map.of(KEY_ENCRYPTION_KEY_ID, keyPair));
+            final Map<String, KeyPair> keyRing = new HashMap<>();
+            config.encryptionKeyRing().forEach((keyId, keyPaths) ->
+                keyRing.put(keyId, RsaKeyReader.read(keyPaths.publicKey, keyPaths.privateKey)
+            ));
+            rsaEncryptionProvider = new RsaEncryptionProvider(config.encryptionKeyPairId(), keyRing);
             aesEncryptionProvider = new AesEncryptionProvider();
         }
         final ChunkManagerFactory chunkManagerFactory = new ChunkManagerFactory();
