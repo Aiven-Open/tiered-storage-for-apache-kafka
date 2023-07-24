@@ -16,24 +16,32 @@
 
 package io.aiven.kafka.tieredstorage.chunkmanager.cache;
 
+import java.io.File;
 import java.io.IOException;
 import java.nio.file.Files;
 import java.nio.file.Path;
+import java.nio.file.attribute.PosixFilePermissions;
 import java.util.Map;
+import java.util.stream.Stream;
 
 import org.apache.kafka.common.config.ConfigException;
 
 import org.apache.commons.io.FileUtils;
 import org.junit.jupiter.api.BeforeEach;
+import org.junit.jupiter.api.Named;
 import org.junit.jupiter.api.Test;
 import org.junit.jupiter.api.extension.ExtendWith;
 import org.junit.jupiter.api.io.TempDir;
+import org.junit.jupiter.params.ParameterizedTest;
+import org.junit.jupiter.params.provider.Arguments;
+import org.junit.jupiter.params.provider.MethodSource;
 import org.mockito.junit.jupiter.MockitoExtension;
 
 import static io.aiven.kafka.tieredstorage.chunkmanager.cache.DiskBasedChunkCacheConfig.CACHE_DIRECTORY;
 import static io.aiven.kafka.tieredstorage.chunkmanager.cache.DiskBasedChunkCacheConfig.TEMP_CACHE_DIRECTORY;
 import static org.assertj.core.api.Assertions.assertThat;
 import static org.assertj.core.api.Assertions.assertThatThrownBy;
+import static org.junit.jupiter.params.provider.Arguments.arguments;
 import static org.mockito.ArgumentMatchers.eq;
 import static org.mockito.Mockito.CALLS_REAL_METHODS;
 import static org.mockito.Mockito.mockStatic;
@@ -103,15 +111,29 @@ class DiskBasedChunkCacheConfigTest {
         }
     }
 
-    @Test
-    void failWhenNonExistingBaseDir() {
+    @ParameterizedTest
+    @MethodSource("invalidBaseDirs")
+    void invalidBaseDir(final File baseDir) {
         assertThatThrownBy(() -> new DiskBasedChunkCacheConfig(
             Map.of(
                 "size", "-1",
-                "path", "non-existing"
+                "path", baseDir.toString()
             )))
             .isInstanceOf(ConfigException.class)
-            .hasMessage("Invalid value non-existing for configuration path: "
-                + "non-existing must exists and be a writable directory");
+            .hasMessage("Invalid value " + baseDir + " for configuration path: "
+                + baseDir + " must exists and be a writable directory");
+    }
+
+    public static Stream<Arguments> invalidBaseDirs() throws IOException {
+        return Stream.of(
+            arguments(Named.of("non-existing directory", new File("non-existing"))),
+            arguments(Named.of(
+                "read-only directory",
+                Files.createTempDirectory(
+                    "path",
+                    PosixFilePermissions.asFileAttribute(PosixFilePermissions.fromString("---------"))).toFile())
+            ),
+            arguments(Named.of("not directory", Files.createTempFile("test", "").toFile()))
+        );
     }
 }
