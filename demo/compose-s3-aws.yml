@@ -57,7 +57,7 @@ services:
       KAFKA_REMOTE_LOG_STORAGE_MANAGER_CLASS_PATH: "/tiered-storage-for-apache-kafka/*"
       KAFKA_REMOTE_LOG_STORAGE_MANAGER_CLASS_NAME: "io.aiven.kafka.tieredstorage.RemoteStorageManager"
       KAFKA_RSM_CONFIG_CHUNK_SIZE: 1048576
-      KAFKA_RSM_CONFIG_CHUNK_CACHE_CLASS: "io.aiven.kafka.tieredstorage.cache.UnboundInMemoryChunkCache"
+      KAFKA_RSM_CONFIG_CHUNK_CACHE_CLASS: "io.aiven.kafka.tieredstorage.chunkmanager.cache.InMemoryChunkCache"
       # Storage backend
       KAFKA_RSM_CONFIG_KEY_PREFIX: "tiered-storage-demo/"
       KAFKA_RSM_CONFIG_STORAGE_BACKEND_CLASS: "io.aiven.kafka.tieredstorage.storage.s3.S3Storage"
