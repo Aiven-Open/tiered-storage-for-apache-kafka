@@ -48,7 +48,7 @@ make consume
 
 This scenario uses `S3Storage` with the real AWS S3 as the remote storage.
 
-Please note that the in-memory cache `io.aiven.kafka.tieredstorage.cache.UnboundInMemoryChunkCache` is used in this scenario. This is necessary to mitigate a now-present bug in Kafka with slow and excessive read from S3.
+Please note that the in-memory cache `io.aiven.kafka.tieredstorage.chunkmanager.cache.InMemoryChunkCache` is used in this scenario. This is necessary to mitigate a now-present bug in Kafka with slow and excessive read from S3.
 
 For this scenario you need to have:
 1. Valid AWS S3 credentials (e.g. `AWS_ACCESS_KEY_ID` and `AWS_SECRET_KEY`).
