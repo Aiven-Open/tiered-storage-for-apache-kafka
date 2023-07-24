@@ -155,7 +155,8 @@ public class RemoteStorageManager implements org.apache.kafka.server.log.remote.
             config.segmentManifestCacheRetention(),
             fetcher,
             mapper,
-            executor);
+            executor,
+            config.enableJmxOperations());
     }
 
     // for testing

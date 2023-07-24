@@ -50,6 +50,7 @@ class RemoteStorageManagerConfigTest {
         assertThat(config.encryptionKeyPairId()).isNull();
         assertThat(config.encryptionKeyRing()).isNull();
         assertThat(config.keyPrefix()).isEmpty();
+        assertThat(config.enableJmxOperations()).isFalse();
     }
 
     @Test
@@ -294,7 +295,6 @@ class RemoteStorageManagerConfigTest {
             .hasMessage("Invalid value 2147483648 for configuration chunk.size: Not a number of type INT");
     }
 
-
     @Test
     void invalidCompressionConfig() {
         assertThatThrownBy(() -> new RemoteStorageManagerConfig(
@@ -307,4 +307,15 @@ class RemoteStorageManagerConfigTest {
             .isInstanceOf(ConfigException.class)
             .hasMessage("compression.enabled must be enabled if compression.heuristic.enabled is");
     }
+
+    @Test
+    void enableJmx() {
+        final HashMap<String, Object> props = new HashMap<>();
+        props.put("storage.backend.class", NoopStorageBackend.class);
+        props.put("chunk.size", "123");
+        props.put("enable.jmx", true);
+        final RemoteStorageManagerConfig config = new RemoteStorageManagerConfig(props);
+        assertThat(config.enableJmxOperations()).isTrue();
+    }
+
 }
