@@ -92,7 +92,7 @@ subprojects {
 
 
     ext {
-        junitVersion = "5.9.3"
+        junitVersion = "5.10.0"
         mockitoVersion = "5.4.0"
 
         // Don't bump this version without need, as this is the min supported version for the plugin.
