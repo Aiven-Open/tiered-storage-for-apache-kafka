@@ -20,6 +20,8 @@ plugins {
 archivesBaseName = "core"
 
 ext {
+    // Keep empty lines between versions to avoid conflicts on mass update (e.g. Dependabot).
+
     bouncyCastleVersion = "1.75"
 
     caffeineVersion = "3.1.7"
@@ -27,6 +29,8 @@ ext {
     zstdVersion = "1.5.5-5"
 
     jacksonVersion = "2.15.2"
+
+    awaitilityVersion = "4.2.0"
 }
 
 dependencies {
@@ -49,6 +53,6 @@ dependencies {
     testImplementation(project(":storage:filesystem"))
 
     testImplementation "com.github.luben:zstd-jni:$zstdVersion"
-    testImplementation "org.awaitility:awaitility:4.2.0"
+    testImplementation "org.awaitility:awaitility:$awaitilityVersion"
     integrationTestImplementation sourceSets.test.output
 }
