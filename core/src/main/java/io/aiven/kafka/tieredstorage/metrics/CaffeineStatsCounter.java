@@ -204,14 +204,14 @@ public class CaffeineStatsCounter implements StatsCounter {
     @Override
     public CacheStats snapshot() {
         return CacheStats.of(
-            (long) metrics.metric(metrics.metricInstance(metricCacheHitsTotal)).metricValue(),
-            (long) metrics.metric(metrics.metricInstance(metricCacheMissesTotal)).metricValue(),
-            (long) metrics.metric(metrics.metricInstance(metricCacheLoadSuccessTotal)).metricValue(),
-            (long) metrics.metric(metrics.metricInstance(metricCacheLoadFailureTotal)).metricValue(),
-            (long) metrics.metric(metrics.metricInstance(metricCacheLoadSuccessTimeTotal)).metricValue()
-                + (long) metrics.metric(metrics.metricInstance(metricCacheLoadFailureTimeTotal)).metricValue(),
-            (long) metrics.metric(metrics.metricInstance(metricCacheEvictionTotal)).metricValue(),
-            (long) metrics.metric(metrics.metricInstance(metricCacheEvictionWeightTotal)).metricValue()
+            ((Double) metrics.metric(metrics.metricInstance(metricCacheHitsTotal)).metricValue()).longValue(),
+            ((Double) metrics.metric(metrics.metricInstance(metricCacheMissesTotal)).metricValue()).longValue(),
+            ((Double) metrics.metric(metrics.metricInstance(metricCacheLoadSuccessTotal)).metricValue()).longValue(),
+            ((Double) metrics.metric(metrics.metricInstance(metricCacheLoadFailureTotal)).metricValue()).longValue(),
+            ((Double) metrics.metric(metrics.metricInstance(metricCacheLoadSuccessTimeTotal)).metricValue()).longValue()
+                + ((Double) metrics.metric(metrics.metricInstance(metricCacheLoadFailureTimeTotal)).metricValue()).longValue(),
+            ((Double) metrics.metric(metrics.metricInstance(metricCacheEvictionTotal)).metricValue()).longValue(),
+            ((Double) metrics.metric(metrics.metricInstance(metricCacheEvictionWeightTotal)).metricValue()).longValue()
         );
     }
 
