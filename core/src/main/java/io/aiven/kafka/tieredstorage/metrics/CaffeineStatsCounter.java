@@ -33,7 +33,6 @@ import org.apache.kafka.common.utils.Time;
 import com.github.benmanes.caffeine.cache.RemovalCause;
 import com.github.benmanes.caffeine.cache.stats.CacheStats;
 import com.github.benmanes.caffeine.cache.stats.StatsCounter;
-import org.checkerframework.checker.index.qual.NonNegative;
 
 public class CaffeineStatsCounter implements StatsCounter {
 
@@ -156,29 +155,29 @@ public class CaffeineStatsCounter implements StatsCounter {
     }
 
     @Override
-    public void recordHits(@NonNegative final int count) {
+    public void recordHits(final int count) {
         cacheHitsSensor.record(count);
     }
 
     @Override
-    public void recordMisses(@NonNegative final int count) {
+    public void recordMisses(final int count) {
         cacheMissesSensor.record(count);
     }
 
     @Override
-    public void recordLoadSuccess(@NonNegative final long loadTime) {
+    public void recordLoadSuccess(final long loadTime) {
         cacheLoadSuccessSensor.record();
         cacheLoadSuccessTimeSensor.record(loadTime);
     }
 
     @Override
-    public void recordLoadFailure(@NonNegative final long loadTime) {
+    public void recordLoadFailure(final long loadTime) {
         cacheLoadFailureSensor.record();
         cacheLoadFailureTimeSensor.record(loadTime);
     }
 
     @Override
-    public void recordEviction(@NonNegative final int weight, final RemovalCause cause) {
+    public void recordEviction(final int weight, final RemovalCause cause) {
         cacheEvictionSensor.record();
         evictionSensorByCause(cause).record();
         cacheEvictionWeightSensor.record(weight);
@@ -209,7 +208,8 @@ public class CaffeineStatsCounter implements StatsCounter {
             ((Double) metrics.metric(metrics.metricInstance(metricCacheLoadSuccessTotal)).metricValue()).longValue(),
             ((Double) metrics.metric(metrics.metricInstance(metricCacheLoadFailureTotal)).metricValue()).longValue(),
             ((Double) metrics.metric(metrics.metricInstance(metricCacheLoadSuccessTimeTotal)).metricValue()).longValue()
-                + ((Double) metrics.metric(metrics.metricInstance(metricCacheLoadFailureTimeTotal)).metricValue()).longValue(),
+                + ((Double) metrics.metric(metrics.metricInstance(metricCacheLoadFailureTimeTotal)).metricValue())
+                .longValue(),
             ((Double) metrics.metric(metrics.metricInstance(metricCacheEvictionTotal)).metricValue()).longValue(),
             ((Double) metrics.metric(metrics.metricInstance(metricCacheEvictionWeightTotal)).metricValue()).longValue()
         );
