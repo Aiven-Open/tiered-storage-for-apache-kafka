@@ -83,11 +83,20 @@ It's possible to further reduce the size of compressed chunks if, instead of com
 
 ### Encryption
 
-TBD
+Optional client-side encryption is supported. Encryption is implemented with the envelope scheme with the key ring.
 
-#### Key rotation
+```
++----------------+                 +----------------+                 +-----------+
+|    🔑 key      |                 |    🔑 data     |                 |  segment  |
+| encryption key | ---encrypts---> | encryption key | ---encrypts---> |   data    |
++----------------+                 +----------------+                 +-----------+ 
+```
 
-TBD
+Each segment has its unique AES-256 data encryption key (DEK). The segment data and indices are encrypted with this key. The DEK itself is encrypted with the public RSA key encryption key (KEK). The KEK ID is stored together with the encrypted DEK so that the corresponding KEK (the private one) can be found on the key ring for decryption.
+
+The key ring may contain several KEKs. One of them is active (used for encrypting DEKs during upload).
+
+With this approach, it's possible to start using a new KEK for new data: keep the old KEKs on the key ring (for decrypting old data) and add the new KEK for new data. It's also possible to rotate the old KEKs. For this, the new KEK needs to be added to the key ring and then old DEKs must be re-encrypted with the new KEK and segment manifests updated. This can be done gradually and transparently.
 
 ### Uploads
 
