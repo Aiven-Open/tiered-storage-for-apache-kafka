@@ -21,8 +21,11 @@ archivesBaseName = "core"
 
 ext {
     bouncyCastleVersion = "1.75"
+
     caffeineVersion = "3.1.7"
+
     zstdVersion = "1.5.5-5"
+
     jacksonVersion = "2.15.2"
 }
 
