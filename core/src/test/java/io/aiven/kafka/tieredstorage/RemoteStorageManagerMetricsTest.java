@@ -21,7 +21,6 @@ import javax.management.MBeanServer;
 import javax.management.ObjectName;
 
 import java.io.IOException;
-import java.io.InputStream;
 import java.lang.management.ManagementFactory;
 import java.nio.ByteBuffer;
 import java.nio.file.Files;
@@ -42,9 +41,8 @@ import org.apache.kafka.server.log.remote.storage.RemoteLogSegmentMetadata;
 import org.apache.kafka.server.log.remote.storage.RemoteStorageException;
 
 import io.aiven.kafka.tieredstorage.chunkmanager.cache.InMemoryChunkCache;
-import io.aiven.kafka.tieredstorage.storage.BytesRange;
-import io.aiven.kafka.tieredstorage.storage.StorageBackend;
 import io.aiven.kafka.tieredstorage.storage.StorageBackendException;
+import io.aiven.kafka.tieredstorage.storage.filesystem.FileSystemStorage;
 
 import org.assertj.core.data.Percentage;
 import org.junit.jupiter.api.BeforeEach;
@@ -55,7 +53,11 @@ import org.junit.jupiter.params.provider.ValueSource;
 import org.mockito.Mock;
 import org.mockito.junit.jupiter.MockitoExtension;
 
-import static org.assertj.core.api.AssertionsForClassTypes.assertThat;
+import static org.assertj.core.api.Assertions.assertThat;
+import static org.assertj.core.api.Assertions.assertThatThrownBy;
+import static org.mockito.Mockito.any;
+import static org.mockito.Mockito.doThrow;
+import static org.mockito.Mockito.mockConstruction;
 import static org.mockito.Mockito.when;
 
 @ExtendWith(MockitoExtension.class)
@@ -64,9 +66,6 @@ class RemoteStorageManagerMetricsTest {
 
     static final long METRIC_TIME_WINDOW_SEC =
         TimeUnit.SECONDS.convert(new MetricConfig().timeWindowMs(), TimeUnit.MILLISECONDS);
-
-    RemoteStorageManager rsm;
-
     static final int LOG_SEGMENT_BYTES = 10;
     static final RemoteLogSegmentMetadata REMOTE_LOG_SEGMENT_METADATA =
         new RemoteLogSegmentMetadata(
@@ -75,7 +74,11 @@ class RemoteStorageManagerMetricsTest {
                 Uuid.randomUuid()),
             1, -1, -1, -1, 1L,
             LOG_SEGMENT_BYTES, Collections.singletonMap(1, 100L));
-    static LogSegmentData logSegmentData;
+
+    RemoteStorageManager rsm;
+    LogSegmentData logSegmentData;
+
+    private Map<String, Object> configs;
 
     @BeforeEach
     void setup(@TempDir final Path tmpDir,
@@ -86,7 +89,7 @@ class RemoteStorageManagerMetricsTest {
         final Path target = tmpDir.resolve("target");
         Files.createDirectories(target);
 
-        rsm.configure(Map.of(
+        configs = Map.of(
             "chunk.size", "123",
             "storage.backend.class",
             "io.aiven.kafka.tieredstorage.storage.filesystem.FileSystemStorage",
@@ -95,7 +98,7 @@ class RemoteStorageManagerMetricsTest {
             "chunk.cache.class", InMemoryChunkCache.class.getCanonicalName(),
             "chunk.cache.size", 100 * 1024 * 1024,
             "metrics.recording.level", "DEBUG"
-        ));
+        );
 
         final Path source = tmpDir.resolve("source");
         Files.createDirectories(source);
@@ -112,6 +115,8 @@ class RemoteStorageManagerMetricsTest {
     @ParameterizedTest
     @ValueSource(strings = {"", ",topic=topic", ",topic=topic,partition=0"})
     void metricsShouldBeReported(final String tags) throws RemoteStorageException, JMException {
+        rsm.configure(configs);
+
         rsm.copyLogSegmentData(REMOTE_LOG_SEGMENT_METADATA, logSegmentData);
         logSegmentData.leaderEpochIndex().flip(); // so leader epoch can be consumed again
         rsm.copyLogSegmentData(REMOTE_LOG_SEGMENT_METADATA, logSegmentData);
@@ -154,8 +159,8 @@ class RemoteStorageManagerMetricsTest {
                 case TXN_INDEX:
                     break;
                 case MANIFEST:
-                    assertThat(MBEAN_SERVER.getAttribute(storageMetricsName, "object-upload-total"))
-                        .isEqualTo(3.0);
+                    assertThat(MBEAN_SERVER.getAttribute(storageMetricsName, "object-upload-rate"))
+                        .isEqualTo(3.0 / METRIC_TIME_WINDOW_SEC);
                     assertThat(MBEAN_SERVER.getAttribute(storageMetricsName, "object-upload-total"))
                         .isEqualTo(3.0);
                     assertThat((double) MBEAN_SERVER.getAttribute(storageMetricsName, "object-upload-bytes-rate"))
@@ -207,8 +212,8 @@ class RemoteStorageManagerMetricsTest {
             .isEqualTo(1.0);
         assertThat((double) MBEAN_SERVER.getAttribute(segmentManifestCacheObjectName, "cache-load-success-rate"))
             .isCloseTo(1.0 / METRIC_TIME_WINDOW_SEC, Percentage.withPercentage(99));
-        assertThat((double) MBEAN_SERVER.getAttribute(segmentManifestCacheObjectName, "cache-load-failure-time-total"))
-            .isEqualTo(0);
+        assertThat(MBEAN_SERVER.getAttribute(segmentManifestCacheObjectName, "cache-load-failure-time-total"))
+            .isEqualTo(0.0);
 
         assertThat(MBEAN_SERVER.getAttribute(segmentManifestCacheObjectName, "cache-load-failure-total"))
             .isEqualTo(0.0);
@@ -247,91 +252,66 @@ class RemoteStorageManagerMetricsTest {
     @ParameterizedTest
     @ValueSource(strings = {"", ",topic=topic", ",topic=topic,partition=0"})
     void metricsErrorsShouldBeReported(final String tags) throws JMException {
-        final var failingStorage = new StorageBackend() {
-            @Override
-            public void delete(final String key) throws StorageBackendException {
-                throw new StorageBackendException("something wrong");
-            }
+        final var testException = new StorageBackendException("something wrong");
+        try (final var storage = mockConstruction(FileSystemStorage.class, (mock, context) -> {
+            doThrow(testException).when(mock).upload(any(), any());
+            doThrow(testException).when(mock).delete(any());
+        })) {
+            rsm.configure(configs);
 
-            @Override
-            public InputStream fetch(final String key) {
-                return null;
-            }
+            final ObjectName rsmMetricsName = ObjectName.getInstance(
+                "aiven.kafka.server.tieredstorage:type=remote-storage-manager-metrics" + tags);
 
-            @Override
-            public InputStream fetch(final String key, final BytesRange range) {
-                return null;
-            }
+            // checking that upload fails with expected exceptions
+            assertThatThrownBy(() -> rsm.copyLogSegmentData(REMOTE_LOG_SEGMENT_METADATA, logSegmentData))
+                .isInstanceOf(RemoteStorageException.class)
+                .hasRootCause(testException);
+            assertThatThrownBy(() -> rsm.copyLogSegmentData(REMOTE_LOG_SEGMENT_METADATA, logSegmentData))
+                .isInstanceOf(RemoteStorageException.class)
+                .hasRootCause(testException);
+            assertThatThrownBy(() -> rsm.copyLogSegmentData(REMOTE_LOG_SEGMENT_METADATA, logSegmentData))
+                .isInstanceOf(RemoteStorageException.class)
+                .hasRootCause(testException);
 
-            @Override
-            public long upload(final InputStream inputStream, final String key) throws StorageBackendException {
-                throw new StorageBackendException("something wrong");
-            }
+            // verifying uploading failure metrics
+            assertThat(MBEAN_SERVER.getAttribute(rsmMetricsName, "segment-copy-rate"))
+                .isEqualTo(3.0 / METRIC_TIME_WINDOW_SEC);
+            assertThat(MBEAN_SERVER.getAttribute(rsmMetricsName, "segment-copy-total"))
+                .isEqualTo(3.0);
 
-            @Override
-            public void configure(final Map<String, ?> configs) {
-            }
-        };
+            assertThat(MBEAN_SERVER.getAttribute(rsmMetricsName, "segment-copy-bytes-rate"))
+                .isEqualTo(1.0);
+            assertThat(MBEAN_SERVER.getAttribute(rsmMetricsName, "segment-copy-bytes-total"))
+                .isEqualTo(30.0);
 
-        rsm.setStorage(failingStorage);
+            assertThat(MBEAN_SERVER.getAttribute(rsmMetricsName, "segment-copy-errors-rate"))
+                .isEqualTo(3.0 / METRIC_TIME_WINDOW_SEC);
+            assertThat(MBEAN_SERVER.getAttribute(rsmMetricsName, "segment-copy-errors-total"))
+                .isEqualTo(3.0);
 
-        try {
-            rsm.copyLogSegmentData(REMOTE_LOG_SEGMENT_METADATA, logSegmentData);
-        } catch (final Exception e) {
-            // let it fail
+            // checking that deletion fails with expected exceptions
+            assertThatThrownBy(() -> rsm.deleteLogSegmentData(REMOTE_LOG_SEGMENT_METADATA))
+                .isInstanceOf(RemoteStorageException.class)
+                .hasRootCause(testException);
+            assertThatThrownBy(() -> rsm.deleteLogSegmentData(REMOTE_LOG_SEGMENT_METADATA))
+                .isInstanceOf(RemoteStorageException.class)
+                .hasRootCause(testException);
+
+            // verifying deletion failure metrics
+            assertThat(MBEAN_SERVER.getAttribute(rsmMetricsName, "segment-delete-rate"))
+                .isEqualTo(2.0 / METRIC_TIME_WINDOW_SEC);
+            assertThat(MBEAN_SERVER.getAttribute(rsmMetricsName, "segment-delete-total"))
+                .isEqualTo(2.0);
+
+            assertThat(MBEAN_SERVER.getAttribute(rsmMetricsName, "segment-delete-bytes-rate"))
+                .isEqualTo(20.0 / METRIC_TIME_WINDOW_SEC);
+            assertThat(MBEAN_SERVER.getAttribute(rsmMetricsName, "segment-delete-bytes-total"))
+                .isEqualTo(20.0);
+
+            assertThat(MBEAN_SERVER.getAttribute(rsmMetricsName, "segment-delete-errors-rate"))
+                .isEqualTo(2.0 / METRIC_TIME_WINDOW_SEC);
+            assertThat(MBEAN_SERVER.getAttribute(rsmMetricsName, "segment-delete-errors-total"))
+                .isEqualTo(2.0);
         }
-        try {
-            rsm.copyLogSegmentData(REMOTE_LOG_SEGMENT_METADATA, logSegmentData);
-        } catch (final Exception e) {
-            // let it fail
-        }
-        try {
-            rsm.copyLogSegmentData(REMOTE_LOG_SEGMENT_METADATA, logSegmentData);
-        } catch (final Exception e) {
-            // let it fail
-        }
-
-        final ObjectName rsmMetricsName = ObjectName.getInstance(
-            "aiven.kafka.server.tieredstorage:type=remote-storage-manager-metrics" + tags);
-        assertThat(MBEAN_SERVER.getAttribute(rsmMetricsName, "segment-copy-rate"))
-            .isEqualTo(3.0 / METRIC_TIME_WINDOW_SEC);
-        assertThat(MBEAN_SERVER.getAttribute(rsmMetricsName, "segment-copy-total"))
-            .isEqualTo(3.0);
-
-        assertThat(MBEAN_SERVER.getAttribute(rsmMetricsName, "segment-copy-bytes-rate"))
-            .isEqualTo(30.0 / METRIC_TIME_WINDOW_SEC);
-        assertThat(MBEAN_SERVER.getAttribute(rsmMetricsName, "segment-copy-bytes-total"))
-            .isEqualTo(30.0);
-
-        assertThat(MBEAN_SERVER.getAttribute(rsmMetricsName, "segment-copy-errors-rate"))
-            .isEqualTo(3.0 / METRIC_TIME_WINDOW_SEC);
-        assertThat(MBEAN_SERVER.getAttribute(rsmMetricsName, "segment-copy-errors-total"))
-            .isEqualTo(3.0);
-
-        try {
-            rsm.deleteLogSegmentData(REMOTE_LOG_SEGMENT_METADATA);
-        } catch (final Exception e) {
-            // let it fail
-        }
-        try {
-            rsm.deleteLogSegmentData(REMOTE_LOG_SEGMENT_METADATA);
-        } catch (final Exception e) {
-            // let it fail
-        }
-
-        assertThat(MBEAN_SERVER.getAttribute(rsmMetricsName, "segment-delete-rate"))
-            .isEqualTo(2.0 / METRIC_TIME_WINDOW_SEC);
-        assertThat(MBEAN_SERVER.getAttribute(rsmMetricsName, "segment-delete-total"))
-            .isEqualTo(2.0);
-
-        assertThat(MBEAN_SERVER.getAttribute(rsmMetricsName, "segment-delete-bytes-rate"))
-            .isEqualTo(20.0 / METRIC_TIME_WINDOW_SEC);
-        assertThat(MBEAN_SERVER.getAttribute(rsmMetricsName, "segment-delete-bytes-total"))
-            .isEqualTo(20.0);
-
-        assertThat(MBEAN_SERVER.getAttribute(rsmMetricsName, "segment-delete-errors-rate"))
-            .isEqualTo(2.0 / METRIC_TIME_WINDOW_SEC);
-        assertThat(MBEAN_SERVER.getAttribute(rsmMetricsName, "segment-delete-errors-total"))
-            .isEqualTo(2.0);
     }
 }
