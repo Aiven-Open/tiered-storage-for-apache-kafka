@@ -55,6 +55,7 @@ import org.mockito.junit.jupiter.MockitoExtension;
 
 import static org.assertj.core.api.Assertions.assertThat;
 import static org.assertj.core.api.Assertions.assertThatThrownBy;
+import static org.assertj.core.api.InstanceOfAssertFactories.DOUBLE;
 import static org.mockito.Mockito.any;
 import static org.mockito.Mockito.doThrow;
 import static org.mockito.Mockito.mockConstruction;
@@ -163,9 +164,11 @@ class RemoteStorageManagerMetricsTest {
                         .isEqualTo(3.0 / METRIC_TIME_WINDOW_SEC);
                     assertThat(MBEAN_SERVER.getAttribute(storageMetricsName, "object-upload-total"))
                         .isEqualTo(3.0);
-                    assertThat((double) MBEAN_SERVER.getAttribute(storageMetricsName, "object-upload-bytes-rate"))
+                    assertThat(MBEAN_SERVER.getAttribute(storageMetricsName, "object-upload-bytes-rate"))
+                        .asInstanceOf(DOUBLE)
                         .isGreaterThan(0.0);
-                    assertThat((double) MBEAN_SERVER.getAttribute(storageMetricsName, "object-upload-bytes-total"))
+                    assertThat(MBEAN_SERVER.getAttribute(storageMetricsName, "object-upload-bytes-total"))
+                        .asInstanceOf(DOUBLE)
                         .isGreaterThan(0.0);
                     break;
                 default:
@@ -199,18 +202,22 @@ class RemoteStorageManagerMetricsTest {
             new ObjectName("aiven.kafka.server.tieredstorage.cache:type=segment-manifest-cache");
         assertThat(MBEAN_SERVER.getAttribute(segmentManifestCacheObjectName, "cache-hits-total"))
             .isEqualTo(1.0);
-        assertThat((double) MBEAN_SERVER.getAttribute(segmentManifestCacheObjectName, "cache-hits-rate"))
+        assertThat(MBEAN_SERVER.getAttribute(segmentManifestCacheObjectName, "cache-hits-rate"))
+            .asInstanceOf(DOUBLE)
             .isCloseTo(1.0 / METRIC_TIME_WINDOW_SEC, Percentage.withPercentage(99));
         assertThat(MBEAN_SERVER.getAttribute(segmentManifestCacheObjectName, "cache-misses-total"))
             .isEqualTo(1.0);
-        assertThat((double) MBEAN_SERVER.getAttribute(segmentManifestCacheObjectName, "cache-misses-rate"))
+        assertThat(MBEAN_SERVER.getAttribute(segmentManifestCacheObjectName, "cache-misses-rate"))
+            .asInstanceOf(DOUBLE)
             .isCloseTo(1.0 / METRIC_TIME_WINDOW_SEC, Percentage.withPercentage(99));
-        assertThat((double) MBEAN_SERVER.getAttribute(segmentManifestCacheObjectName, "cache-load-success-time-total"))
+        assertThat(MBEAN_SERVER.getAttribute(segmentManifestCacheObjectName, "cache-load-success-time-total"))
+            .asInstanceOf(DOUBLE)
             .isGreaterThan(0);
 
         assertThat(MBEAN_SERVER.getAttribute(segmentManifestCacheObjectName, "cache-load-success-total"))
             .isEqualTo(1.0);
-        assertThat((double) MBEAN_SERVER.getAttribute(segmentManifestCacheObjectName, "cache-load-success-rate"))
+        assertThat(MBEAN_SERVER.getAttribute(segmentManifestCacheObjectName, "cache-load-success-rate"))
+            .asInstanceOf(DOUBLE)
             .isCloseTo(1.0 / METRIC_TIME_WINDOW_SEC, Percentage.withPercentage(99));
         assertThat(MBEAN_SERVER.getAttribute(segmentManifestCacheObjectName, "cache-load-failure-time-total"))
             .isEqualTo(0.0);
@@ -253,10 +260,14 @@ class RemoteStorageManagerMetricsTest {
     @ValueSource(strings = {"", ",topic=topic", ",topic=topic,partition=0"})
     void metricsErrorsShouldBeReported(final String tags) throws JMException {
         final var testException = new StorageBackendException("something wrong");
-        try (final var storage = mockConstruction(FileSystemStorage.class, (mock, context) -> {
-            doThrow(testException).when(mock).upload(any(), any());
-            doThrow(testException).when(mock).delete(any());
-        })) {
+        try (@SuppressWarnings("unused") final var storage = mockConstruction(
+            FileSystemStorage.class,
+            (mock, context) -> {
+                doThrow(testException).when(mock).upload(any(), any());
+                doThrow(testException).when(mock).delete(any());
+            }
+        )) {
+
             rsm.configure(configs);
 
             final ObjectName rsmMetricsName = ObjectName.getInstance(
