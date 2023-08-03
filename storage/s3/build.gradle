@@ -19,7 +19,7 @@ archivesBaseName = "storage-s3"
 ext {
     // Keep empty lines between versions to avoid conflicts on mass update (e.g. Dependabot).
 
-    awsSdkVersion = "1.12.514"
+    awsSdkVersion = "1.12.520"
 
     testcontainersVersion = "1.18.3"
 }
