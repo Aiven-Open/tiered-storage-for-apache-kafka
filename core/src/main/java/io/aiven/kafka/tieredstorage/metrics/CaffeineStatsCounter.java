@@ -16,83 +16,79 @@
 
 package io.aiven.kafka.tieredstorage.metrics;
 
+import java.util.Arrays;
+import java.util.Collections;
 import java.util.List;
 import java.util.Map;
+import java.util.concurrent.ConcurrentHashMap;
+import java.util.concurrent.atomic.LongAdder;
+import java.util.function.Supplier;
 
 import org.apache.kafka.common.MetricNameTemplate;
 import org.apache.kafka.common.metrics.JmxReporter;
 import org.apache.kafka.common.metrics.KafkaMetricsContext;
 import org.apache.kafka.common.metrics.MetricConfig;
 import org.apache.kafka.common.metrics.Sensor;
-import org.apache.kafka.common.metrics.stats.Avg;
-import org.apache.kafka.common.metrics.stats.CumulativeSum;
-import org.apache.kafka.common.metrics.stats.Max;
-import org.apache.kafka.common.metrics.stats.Rate;
+import org.apache.kafka.common.metrics.stats.Value;
 import org.apache.kafka.common.utils.Time;
 
 import com.github.benmanes.caffeine.cache.RemovalCause;
 import com.github.benmanes.caffeine.cache.stats.CacheStats;
 import com.github.benmanes.caffeine.cache.stats.StatsCounter;
-import org.checkerframework.checker.index.qual.NonNegative;
 
 public class CaffeineStatsCounter implements StatsCounter {
 
     static final String CACHE_HITS = "cache-hits";
     static final String CACHE_HITS_TOTAL = CACHE_HITS + "-total";
-    static final String CACHE_HITS_RATE = CACHE_HITS + "-rate";
     static final String CACHE_MISSES = "cache-misses";
-    static final String CACHE_MISSES_RATE = CACHE_MISSES + "-rate";
     static final String CACHE_MISSES_TOTAL = CACHE_MISSES + "-total";
     static final String CACHE_LOAD = "cache-load";
     static final String CACHE_LOAD_SUCCESS = CACHE_LOAD + "-success";
-    static final String CACHE_LOAD_SUCCESS_RATE = CACHE_LOAD_SUCCESS + "-rate";
     static final String CACHE_LOAD_SUCCESS_TOTAL = CACHE_LOAD_SUCCESS + "-total";
     static final String CACHE_LOAD_SUCCESS_TIME = CACHE_LOAD_SUCCESS + "-time";
-    static final String CACHE_LOAD_SUCCESS_TIME_AVG = CACHE_LOAD_SUCCESS_TIME + "-avg";
-    static final String CACHE_LOAD_SUCCESS_TIME_MAX = CACHE_LOAD_SUCCESS_TIME + "-max";
     static final String CACHE_LOAD_SUCCESS_TIME_TOTAL = CACHE_LOAD_SUCCESS_TIME + "-total";
     static final String CACHE_LOAD_FAILURE = CACHE_LOAD + "-failure";
-    static final String CACHE_LOAD_FAILURE_RATE = CACHE_LOAD_FAILURE + "-rate";
     static final String CACHE_LOAD_FAILURE_TOTAL = CACHE_LOAD_FAILURE + "-total";
     static final String CACHE_LOAD_FAILURE_TIME = CACHE_LOAD_FAILURE + "-time";
-    static final String CACHE_LOAD_FAILURE_TIME_AVG = CACHE_LOAD_FAILURE_TIME + "-avg";
-    static final String CACHE_LOAD_FAILURE_TIME_MAX = CACHE_LOAD_FAILURE_TIME + "-max";
     static final String CACHE_LOAD_FAILURE_TIME_TOTAL = CACHE_LOAD_FAILURE_TIME + "-total";
 
     static final String CACHE_EVICTION = "cache-eviction";
     static final String CACHE_EVICTION_TOTAL = CACHE_EVICTION + "-total";
-    static final String CACHE_EVICTION_RATE = CACHE_EVICTION + "-rate";
     static final String CACHE_EVICTION_WEIGHT = CACHE_EVICTION + "-weight";
     static final String CACHE_EVICTION_WEIGHT_TOTAL = CACHE_EVICTION_WEIGHT + "-total";
-    static final String CACHE_EVICTION_WEIGHT_RATE = CACHE_EVICTION_WEIGHT + "-rate";
-
-    final MetricNameTemplate metricCacheHitsTotal;
-    final MetricNameTemplate metricCacheMissesTotal;
-    final MetricNameTemplate metricCacheLoadSuccessTotal;
-    final MetricNameTemplate metricCacheLoadSuccessTimeTotal;
-    final MetricNameTemplate metricCacheLoadFailureTotal;
-    final MetricNameTemplate metricCacheLoadFailureTimeTotal;
-    final MetricNameTemplate metricCacheEvictionRate;
-    final MetricNameTemplate metricCacheEvictionRateByCause;
-    final MetricNameTemplate metricCacheEvictionTotal;
-    final MetricNameTemplate metricCacheEvictionTotalByCause;
-    final MetricNameTemplate metricCacheEvictionWeight;
-    final MetricNameTemplate metricCacheEvictionWeightByCause;
-    final MetricNameTemplate metricCacheEvictionWeightTotal;
-    final MetricNameTemplate metricCacheEvictionWeightTotalByCause;
 
     private final org.apache.kafka.common.metrics.Metrics metrics;
 
-    private final Sensor cacheHitsSensor;
-    private final Sensor cacheMissesSensor;
-    private final Sensor cacheLoadSuccessSensor;
-    private final Sensor cacheLoadSuccessTimeSensor;
-    private final Sensor cacheLoadFailureSensor;
-    private final Sensor cacheLoadFailureTimeSensor;
-    private final Sensor cacheEvictionSensor;
-    private final Sensor cacheEvictionWeightSensor;
+    private final LongAdder cacheHitCount;
+    private final LongAdder cacheMissCount;
+    private final LongAdder cacheLoadSuccessCount;
+    private final LongAdder cacheLoadSuccessTimeTotal;
+    private final LongAdder cacheLoadFailureCount;
+    private final LongAdder cacheLoadFailureTimeTotal;
+    private final LongAdder cacheEvictionCountTotal;
+    private final LongAdder cacheEvictionWeightTotal;
+    private final ConcurrentHashMap<RemovalCause, LongAdder> cacheEvictionCountByCause;
+    private final ConcurrentHashMap<RemovalCause, LongAdder> cacheEvictionWeightByCause;
+    private final String groupName;
 
     public CaffeineStatsCounter(final String groupName) {
+        cacheHitCount = new LongAdder();
+        cacheMissCount = new LongAdder();
+        cacheLoadSuccessCount = new LongAdder();
+        cacheLoadSuccessTimeTotal = new LongAdder();
+        cacheLoadFailureCount = new LongAdder();
+        cacheLoadFailureTimeTotal = new LongAdder();
+        cacheEvictionCountTotal = new LongAdder();
+        cacheEvictionWeightTotal = new LongAdder();
+
+        this.groupName = groupName;
+
+        cacheEvictionCountByCause = new ConcurrentHashMap<>();
+        Arrays.stream(RemovalCause.values()).forEach(cause -> cacheEvictionCountByCause.put(cause, new LongAdder()));
+
+        cacheEvictionWeightByCause = new ConcurrentHashMap<>();
+        Arrays.stream(RemovalCause.values()).forEach(cause -> cacheEvictionWeightByCause.put(cause, new LongAdder()));
+
         final JmxReporter reporter = new JmxReporter();
 
         metrics = new org.apache.kafka.common.metrics.Metrics(
@@ -100,123 +96,113 @@ public class CaffeineStatsCounter implements StatsCounter {
             new KafkaMetricsContext("aiven.kafka.server.tieredstorage.cache")
         );
 
-        metricCacheHitsTotal = new MetricNameTemplate(CACHE_HITS_TOTAL, groupName, "");
-        cacheHitsSensor = new SensorProvider(metrics, CACHE_HITS)
-            .with(new MetricNameTemplate(CACHE_HITS_RATE, groupName, ""), new Rate())
-            .with(metricCacheHitsTotal, new CumulativeSum())
-            .get();
-        metricCacheMissesTotal = new MetricNameTemplate(CACHE_MISSES_TOTAL, groupName, "");
-        cacheMissesSensor = new SensorProvider(metrics, CACHE_MISSES)
-            .with(new MetricNameTemplate(CACHE_MISSES_RATE, groupName, ""), new Rate())
-            .with(metricCacheMissesTotal, new CumulativeSum())
+        initSensor(CACHE_HITS, CACHE_HITS_TOTAL, cacheHitCount);
+        initSensor(CACHE_MISSES, CACHE_MISSES_TOTAL, cacheMissCount);
+        initSensor(CACHE_LOAD_SUCCESS, CACHE_LOAD_SUCCESS_TOTAL, cacheLoadSuccessCount);
+        initSensor(CACHE_LOAD_SUCCESS_TIME, CACHE_LOAD_SUCCESS_TIME_TOTAL, cacheLoadSuccessTimeTotal);
+        initSensor(CACHE_LOAD_FAILURE, CACHE_LOAD_FAILURE_TOTAL, cacheLoadFailureCount);
+        initSensor(CACHE_LOAD_FAILURE_TIME, CACHE_LOAD_FAILURE_TIME_TOTAL, cacheLoadFailureTimeTotal);
+        initSensor(CACHE_EVICTION, CACHE_EVICTION_TOTAL, cacheEvictionCountTotal);
+        Arrays.stream(RemovalCause.values()).forEach(cause ->
+            initSensor("cause." + cause.name() + "." + CACHE_EVICTION, CACHE_EVICTION_TOTAL,
+                cacheEvictionCountByCause.get(cause), () -> Map.of("cause", cause.name()), "cause")
+        );
+
+        initSensor(CACHE_EVICTION_WEIGHT, CACHE_EVICTION_WEIGHT_TOTAL, cacheEvictionWeightTotal);
+
+        Arrays.stream(RemovalCause.values()).forEach(cause ->
+            initSensor("cause." + cause.name() + "." + CACHE_EVICTION, CACHE_EVICTION_WEIGHT_TOTAL,
+                cacheEvictionWeightByCause.get(cause), () -> Map.of("cause", cause.name()), "cause")
+        );
+    }
+
+    private void initSensor(final String sensorName,
+                                    final String metricName,
+                                    final LongAdder value,
+                                    final Supplier<Map<String, String>> tagsSupplier,
+                                    final String... tagNames) {
+        final var name = new MetricNameTemplate(metricName, groupName, "", tagNames);
+        new SensorProvider(metrics, sensorName, tagsSupplier)
+            .with(name, new MeasurableValue(value))
             .get();
 
-        metricCacheLoadSuccessTotal = new MetricNameTemplate(CACHE_LOAD_SUCCESS_TOTAL, groupName, "");
-        cacheLoadSuccessSensor = new SensorProvider(metrics, CACHE_LOAD_SUCCESS)
-            .with(new MetricNameTemplate(CACHE_LOAD_SUCCESS_RATE, groupName, ""), new Rate())
-            .with(metricCacheLoadSuccessTotal, new CumulativeSum())
-            .get();
-        metricCacheLoadSuccessTimeTotal =
-            new MetricNameTemplate(CACHE_LOAD_SUCCESS_TIME_TOTAL, groupName, "");
-        cacheLoadSuccessTimeSensor = new SensorProvider(metrics, CACHE_LOAD_SUCCESS_TIME)
-            .with(new MetricNameTemplate(CACHE_LOAD_SUCCESS_TIME_AVG, groupName, ""), new Avg())
-            .with(new MetricNameTemplate(CACHE_LOAD_SUCCESS_TIME_MAX, groupName, ""), new Max())
-            .with(metricCacheLoadSuccessTimeTotal, new CumulativeSum())
-            .get();
-        metricCacheLoadFailureTotal = new MetricNameTemplate(CACHE_LOAD_FAILURE_TOTAL, groupName, "");
-        cacheLoadFailureSensor = new SensorProvider(metrics, CACHE_LOAD_FAILURE)
-            .with(new MetricNameTemplate(CACHE_LOAD_FAILURE_RATE, groupName, ""), new Rate())
-            .with(metricCacheLoadFailureTotal, new CumulativeSum())
-            .get();
-        metricCacheLoadFailureTimeTotal =
-            new MetricNameTemplate(CACHE_LOAD_FAILURE_TIME_TOTAL, groupName, "");
-        cacheLoadFailureTimeSensor = new SensorProvider(metrics, CACHE_LOAD_FAILURE_TIME)
-            .with(new MetricNameTemplate(CACHE_LOAD_FAILURE_TIME_AVG, groupName, ""), new Avg())
-            .with(new MetricNameTemplate(CACHE_LOAD_FAILURE_TIME_MAX, groupName, ""), new Max())
-            .with(metricCacheLoadFailureTimeTotal, new CumulativeSum())
-            .get();
+    }
 
-        metricCacheEvictionRate = new MetricNameTemplate(CACHE_EVICTION_RATE, groupName, "");
-        metricCacheEvictionRateByCause = new MetricNameTemplate(CACHE_EVICTION_RATE, groupName, "", "cause");
-        metricCacheEvictionTotal = new MetricNameTemplate(CACHE_EVICTION_TOTAL, groupName, "");
-        metricCacheEvictionTotalByCause = new MetricNameTemplate(CACHE_EVICTION_TOTAL, groupName, "", "cause");
-        cacheEvictionSensor = new SensorProvider(metrics, CACHE_EVICTION)
-            .with(new MetricNameTemplate(CACHE_EVICTION_RATE, groupName, ""), new Rate())
-            .with(metricCacheEvictionTotal, new CumulativeSum())
-            .get();
-        metricCacheEvictionWeight = new MetricNameTemplate(CACHE_EVICTION_WEIGHT_RATE, groupName, "");
-        metricCacheEvictionWeightByCause = new MetricNameTemplate(CACHE_EVICTION_WEIGHT_RATE, groupName, "", "cause");
-        metricCacheEvictionWeightTotal = new MetricNameTemplate(CACHE_EVICTION_WEIGHT_TOTAL, groupName, "");
-        metricCacheEvictionWeightTotalByCause =
-            new MetricNameTemplate(CACHE_EVICTION_WEIGHT_TOTAL, groupName, "", "cause");
-        cacheEvictionWeightSensor = new SensorProvider(metrics, CACHE_EVICTION_WEIGHT)
-            .with(new MetricNameTemplate(CACHE_EVICTION_WEIGHT_RATE, groupName, ""), new Rate())
-            .with(metricCacheEvictionWeightTotal, new CumulativeSum())
-            .get();
+    private void initSensor(final String sensorName, final String metricName, final LongAdder value) {
+        initSensor(sensorName, metricName, value, Collections::emptyMap);
     }
 
     @Override
-    public void recordHits(@NonNegative final int count) {
-        cacheHitsSensor.record(count);
+    public void recordHits(final int count) {
+        cacheHitCount.add(count);
     }
 
     @Override
-    public void recordMisses(@NonNegative final int count) {
-        cacheMissesSensor.record(count);
+    public void recordMisses(final int count) {
+        cacheMissCount.add(count);
     }
 
     @Override
-    public void recordLoadSuccess(@NonNegative final long loadTime) {
-        cacheLoadSuccessSensor.record();
-        cacheLoadSuccessTimeSensor.record(loadTime);
+    public void recordLoadSuccess(final long loadTime) {
+        cacheLoadSuccessCount.increment();
+        cacheLoadSuccessTimeTotal.add(loadTime);
     }
 
     @Override
-    public void recordLoadFailure(@NonNegative final long loadTime) {
-        cacheLoadFailureSensor.record();
-        cacheLoadFailureTimeSensor.record(loadTime);
+    public void recordLoadFailure(final long loadTime) {
+        cacheLoadFailureCount.increment();
+        cacheLoadFailureTimeTotal.add(loadTime);
     }
 
     @Override
-    public void recordEviction(@NonNegative final int weight, final RemovalCause cause) {
-        cacheEvictionSensor.record();
-        evictionSensorByCause(cause).record();
-        cacheEvictionWeightSensor.record(weight);
-        evictionWeightSensorByCause(cause).record(weight);
-    }
-
-    Sensor evictionSensorByCause(final RemovalCause cause) {
-        return new SensorProvider(metrics, "cause." + cause.name() + "." + CACHE_EVICTION,
-            () -> Map.of("cause", cause.name()))
-            .with(metricCacheEvictionRateByCause, new Rate())
-            .with(metricCacheEvictionTotalByCause, new CumulativeSum())
-            .get();
-    }
-
-    Sensor evictionWeightSensorByCause(final RemovalCause cause) {
-        return new SensorProvider(metrics, "cause." + cause.name() + "." + CACHE_EVICTION_WEIGHT,
-            () -> Map.of("cause", cause.name()))
-            .with(metricCacheEvictionWeightByCause, new Rate())
-            .with(metricCacheEvictionWeightTotalByCause, new CumulativeSum())
-            .get();
+    public void recordEviction(final int weight, final RemovalCause cause) {
+        cacheEvictionCountTotal.increment();
+        cacheEvictionCountByCause.get(cause).increment();
+        cacheEvictionWeightTotal.add(weight);
+        cacheEvictionWeightByCause.get(cause).add(weight);
     }
 
     @Override
     public CacheStats snapshot() {
         return CacheStats.of(
-            (long) metrics.metric(metrics.metricInstance(metricCacheHitsTotal)).metricValue(),
-            (long) metrics.metric(metrics.metricInstance(metricCacheMissesTotal)).metricValue(),
-            (long) metrics.metric(metrics.metricInstance(metricCacheLoadSuccessTotal)).metricValue(),
-            (long) metrics.metric(metrics.metricInstance(metricCacheLoadFailureTotal)).metricValue(),
-            (long) metrics.metric(metrics.metricInstance(metricCacheLoadSuccessTimeTotal)).metricValue()
-                + (long) metrics.metric(metrics.metricInstance(metricCacheLoadFailureTimeTotal)).metricValue(),
-            (long) metrics.metric(metrics.metricInstance(metricCacheEvictionTotal)).metricValue(),
-            (long) metrics.metric(metrics.metricInstance(metricCacheEvictionWeightTotal)).metricValue()
+            negativeToMaxValue(cacheHitCount.sum()),
+            negativeToMaxValue(cacheMissCount.sum()),
+            negativeToMaxValue(cacheLoadSuccessCount.sum()),
+            negativeToMaxValue(cacheLoadFailureCount.sum()),
+            negativeToMaxValue(cacheLoadSuccessTimeTotal.sum() + cacheLoadFailureTimeTotal.sum()),
+            negativeToMaxValue(cacheEvictionCountTotal.sum()),
+            negativeToMaxValue(cacheEvictionWeightTotal.sum())
         );
     }
 
     @Override
     public String toString() {
         return snapshot().toString();
+    }
+
+    /**
+     * Prevents passing negative values to {@link  CacheStats} in case of long overflow.
+     * Returns {@code value}, if non-negative. Otherwise, returns {@link Long#MAX_VALUE}.
+     * */
+    private static long negativeToMaxValue(final long value) {
+        return (value >= 0) ? value : Long.MAX_VALUE;
+    }
+
+    /**
+     * Implementation of {@link Value} that allows fetching a value from provided instance of {@link LongAdder}
+     * to avoid unnecessary calls to {@link Sensor#record()} that under the hood has a synchronized block and affects
+     * performance because of that.
+     */
+    private static class MeasurableValue extends Value {
+        private final LongAdder value;
+
+        MeasurableValue(final LongAdder value) {
+            this.value = value;
+        }
+
+        @Override
+        public double measure(final MetricConfig config, final long now) {
+            return value.sum();
+        }
     }
 }

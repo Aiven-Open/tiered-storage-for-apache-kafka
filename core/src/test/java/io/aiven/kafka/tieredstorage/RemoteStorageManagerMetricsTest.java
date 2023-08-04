@@ -44,7 +44,6 @@ import io.aiven.kafka.tieredstorage.chunkmanager.cache.InMemoryChunkCache;
 import io.aiven.kafka.tieredstorage.storage.StorageBackendException;
 import io.aiven.kafka.tieredstorage.storage.filesystem.FileSystemStorage;
 
-import org.assertj.core.data.Percentage;
 import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.extension.ExtendWith;
 import org.junit.jupiter.api.io.TempDir;
@@ -202,38 +201,23 @@ class RemoteStorageManagerMetricsTest {
             new ObjectName("aiven.kafka.server.tieredstorage.cache:type=segment-manifest-cache");
         assertThat(MBEAN_SERVER.getAttribute(segmentManifestCacheObjectName, "cache-hits-total"))
             .isEqualTo(1.0);
-        assertThat(MBEAN_SERVER.getAttribute(segmentManifestCacheObjectName, "cache-hits-rate"))
-            .asInstanceOf(DOUBLE)
-            .isCloseTo(1.0 / METRIC_TIME_WINDOW_SEC, Percentage.withPercentage(99));
         assertThat(MBEAN_SERVER.getAttribute(segmentManifestCacheObjectName, "cache-misses-total"))
             .isEqualTo(1.0);
-        assertThat(MBEAN_SERVER.getAttribute(segmentManifestCacheObjectName, "cache-misses-rate"))
-            .asInstanceOf(DOUBLE)
-            .isCloseTo(1.0 / METRIC_TIME_WINDOW_SEC, Percentage.withPercentage(99));
         assertThat(MBEAN_SERVER.getAttribute(segmentManifestCacheObjectName, "cache-load-success-time-total"))
             .asInstanceOf(DOUBLE)
             .isGreaterThan(0);
 
         assertThat(MBEAN_SERVER.getAttribute(segmentManifestCacheObjectName, "cache-load-success-total"))
             .isEqualTo(1.0);
-        assertThat(MBEAN_SERVER.getAttribute(segmentManifestCacheObjectName, "cache-load-success-rate"))
-            .asInstanceOf(DOUBLE)
-            .isCloseTo(1.0 / METRIC_TIME_WINDOW_SEC, Percentage.withPercentage(99));
         assertThat(MBEAN_SERVER.getAttribute(segmentManifestCacheObjectName, "cache-load-failure-time-total"))
             .isEqualTo(0.0);
 
         assertThat(MBEAN_SERVER.getAttribute(segmentManifestCacheObjectName, "cache-load-failure-total"))
             .isEqualTo(0.0);
-        assertThat(MBEAN_SERVER.getAttribute(segmentManifestCacheObjectName, "cache-load-failure-rate"))
-            .isEqualTo(0.0);
 
         assertThat(MBEAN_SERVER.getAttribute(segmentManifestCacheObjectName, "cache-eviction-total"))
             .isEqualTo(0.0);
-        assertThat(MBEAN_SERVER.getAttribute(segmentManifestCacheObjectName, "cache-eviction-rate"))
-            .isEqualTo(0.0);
         assertThat(MBEAN_SERVER.getAttribute(segmentManifestCacheObjectName, "cache-eviction-weight-total"))
-            .isEqualTo(0.0);
-        assertThat(MBEAN_SERVER.getAttribute(segmentManifestCacheObjectName, "cache-eviction-weight-rate"))
             .isEqualTo(0.0);
 
         rsm.deleteLogSegmentData(REMOTE_LOG_SEGMENT_METADATA);
