@@ -162,6 +162,20 @@ public class CaffeineStatsCounter implements StatsCounter {
         cacheEvictionWeightByCause.get(cause).add(weight);
     }
 
+    /**
+     * Not called by Caffeine directory. Used to record custom cache miss.
+     */
+    public void recordMiss() {
+        cacheMissCount.increment();
+    }
+
+    /**
+     * Not called by Caffeine directory. Used to record custom cache hit.
+     */
+    public void recordHit() {
+        cacheHitCount.increment();
+    }
+
     @Override
     public CacheStats snapshot() {
         return CacheStats.of(

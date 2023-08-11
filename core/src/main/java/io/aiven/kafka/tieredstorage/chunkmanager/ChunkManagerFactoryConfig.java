@@ -27,7 +27,7 @@ import io.aiven.kafka.tieredstorage.chunkmanager.cache.ChunkCache;
 public class ChunkManagerFactoryConfig extends AbstractConfig {
 
     protected static final String CHUNK_CACHE_PREFIX = "chunk.cache.";
-    private static final String CHUNK_CACHE_CONFIG = CHUNK_CACHE_PREFIX + "class";
+    public static final String CHUNK_CACHE_CONFIG = CHUNK_CACHE_PREFIX + "class";
     private static final String CHUNK_CACHE_DOC = "The chunk cache implementation";
 
     private static final ConfigDef CONFIG;

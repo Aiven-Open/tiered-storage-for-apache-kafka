@@ -151,7 +151,7 @@ class DiskBasedChunkCacheTest {
     }
 
     @Test
-    void weighingTOoBigFiles() throws IOException {
+    void weighingTooBigFiles() throws IOException {
         final ByteArrayInputStream chunkStream = new ByteArrayInputStream(CHUNK_0);
         final ChunkKey chunkKey = new ChunkKey(SEGMENT_ID, 0);
 
