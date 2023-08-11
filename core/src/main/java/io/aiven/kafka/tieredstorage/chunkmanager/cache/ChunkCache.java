@@ -34,6 +34,7 @@ import org.apache.kafka.server.log.remote.storage.RemoteLogSegmentMetadata;
 import io.aiven.kafka.tieredstorage.chunkmanager.ChunkKey;
 import io.aiven.kafka.tieredstorage.chunkmanager.ChunkManager;
 import io.aiven.kafka.tieredstorage.manifest.SegmentManifest;
+import io.aiven.kafka.tieredstorage.metrics.CaffeineStatsCounter;
 import io.aiven.kafka.tieredstorage.storage.StorageBackendException;
 
 import com.github.benmanes.caffeine.cache.AsyncCache;
@@ -44,12 +45,18 @@ import com.github.benmanes.caffeine.cache.Weigher;
 
 public abstract class ChunkCache<T> implements ChunkManager, Configurable {
     private static final long GET_TIMEOUT_SEC = 10;
+    private static final String METRIC_GROUP = "chunk-cache";
+
     private final ChunkManager chunkManager;
     private final Executor executor = new ForkJoinPool();
+
+    final CaffeineStatsCounter statsCounter;
+
     protected AsyncCache<ChunkKey, T> cache;
 
     protected ChunkCache(final ChunkManager chunkManager) {
         this.chunkManager = chunkManager;
+        this.statsCounter = new CaffeineStatsCounter(METRIC_GROUP);
     }
 
     /**
@@ -67,31 +74,34 @@ public abstract class ChunkCache<T> implements ChunkManager, Configurable {
         final ChunkKey chunkKey = new ChunkKey(id, chunkId);
         final AtomicReference<InputStream> result = new AtomicReference<>();
         try {
-            return cache.asMap().compute(chunkKey, (key, val) -> CompletableFuture.supplyAsync(() -> {
-                if (val == null) {
-                    try {
-                        final InputStream chunk = chunkManager.getChunk(remoteLogSegmentMetadata, manifest, chunkId);
-                        final T t = this.cacheChunk(chunkKey, chunk);
-                        result.getAndSet(cachedChunkToInputStream(t));
-                        return t;
-                    } catch (final StorageBackendException | IOException e) {
-                        throw new CompletionException(e);
+            return cache.asMap()
+                .compute(chunkKey, (key, val) -> CompletableFuture.supplyAsync(() -> {
+                    if (val == null) {
+                        statsCounter.recordMiss();
+                        try {
+                            final InputStream chunk =
+                                chunkManager.getChunk(remoteLogSegmentMetadata, manifest, chunkId);
+                            final T t = this.cacheChunk(chunkKey, chunk);
+                            result.getAndSet(cachedChunkToInputStream(t));
+                            return t;
+                        } catch (final StorageBackendException | IOException e) {
+                            throw new CompletionException(e);
+                        }
+                    } else {
+                        statsCounter.recordHit();
+                        try {
+                            final T cachedChunk = val.get();
+                            result.getAndSet(cachedChunkToInputStream(cachedChunk));
+                            return cachedChunk;
+                        } catch (final InterruptedException | ExecutionException e) {
+                            throw new CompletionException(e);
+                        }
                     }
-                } else {
-                    try {
-                        final T cachedChunk = val.get();
-                        result.getAndSet(cachedChunkToInputStream(cachedChunk));
-                        return cachedChunk;
-                    } catch (final InterruptedException | ExecutionException e) {
-                        throw new CompletionException(e);
-                    }
-                }
-            }, executor))
-                    .thenApplyAsync(t -> result.get())
-                    .get(GET_TIMEOUT_SEC, TimeUnit.SECONDS);
+                }, executor))
+                .thenApplyAsync(t -> result.get())
+                .get(GET_TIMEOUT_SEC, TimeUnit.SECONDS);
         } catch (final ExecutionException e) {
             // Unwrap previously wrapped exceptions if possible.
-
             final Throwable cause = e.getCause();
 
             // We don't really expect this case, but handle it nevertheless.
@@ -124,8 +134,9 @@ public abstract class ChunkCache<T> implements ChunkManager, Configurable {
         config.cacheSize().ifPresent(maximumWeight -> cacheBuilder.maximumWeight(maximumWeight).weigher(weigher()));
         config.cacheRetention().ifPresent(cacheBuilder::expireAfterAccess);
         return cacheBuilder.evictionListener(removalListener())
-                .scheduler(Scheduler.systemScheduler())
-                .executor(executor)
-                .buildAsync();
+            .scheduler(Scheduler.systemScheduler())
+            .executor(executor)
+            .recordStats(() -> statsCounter)
+            .buildAsync();
     }
 }
