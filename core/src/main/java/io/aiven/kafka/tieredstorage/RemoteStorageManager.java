@@ -38,6 +38,7 @@ import org.apache.kafka.common.utils.ByteBufferInputStream;
 import org.apache.kafka.common.utils.Time;
 import org.apache.kafka.server.log.remote.storage.LogSegmentData;
 import org.apache.kafka.server.log.remote.storage.RemoteLogSegmentMetadata;
+import org.apache.kafka.server.log.remote.storage.RemoteLogSegmentMetadata.CustomMetadata;
 import org.apache.kafka.server.log.remote.storage.RemoteStorageException;
 
 import io.aiven.kafka.tieredstorage.chunkmanager.ChunkManager;
@@ -180,8 +181,9 @@ public class RemoteStorageManager implements org.apache.kafka.server.log.remote.
     }
 
     @Override
-    public void copyLogSegmentData(final RemoteLogSegmentMetadata remoteLogSegmentMetadata,
-                                   final LogSegmentData logSegmentData) throws RemoteStorageException {
+    public Optional<CustomMetadata> copyLogSegmentData(final RemoteLogSegmentMetadata remoteLogSegmentMetadata,
+                                                       final LogSegmentData logSegmentData)
+        throws RemoteStorageException {
         Objects.requireNonNull(remoteLogSegmentMetadata, "remoteLogSegmentId must not be null");
         Objects.requireNonNull(logSegmentData, "logSegmentData must not be null");
 
@@ -239,6 +241,8 @@ public class RemoteStorageManager implements org.apache.kafka.server.log.remote.
             startedMs, time.milliseconds());
 
         log.info("Copying log segment data completed successfully, metadata: {}", remoteLogSegmentMetadata);
+
+        return Optional.empty();
     }
 
     boolean requiresCompression(final LogSegmentData logSegmentData) {

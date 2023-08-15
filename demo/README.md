@@ -1,5 +1,7 @@
 # Demo
 
+> Temporarily broken until a Kafka image based on 3.6 is used.
+
 The plugin demos.
 
 Docker images built from Aiven Kafka fork (e.g. https://github.com/aiven/kafka/tree/3.3-2022-10-06-tiered-storage) is used.

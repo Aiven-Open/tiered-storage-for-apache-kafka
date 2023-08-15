@@ -13,7 +13,7 @@
 # See the License for the specific language governing permissions and
 # limitations under the License.
 ##
-FROM aivenoy/kafka:3.3-2022-10-06-tiered-storage-1
+FROM aivenoy/kafka:kips_KIP-405_3.6-2023-08-29
 
 ARG _VERSION
 
