@@ -22,15 +22,8 @@ import javax.management.ObjectName;
 import java.io.ByteArrayInputStream;
 import java.lang.management.ManagementFactory;
 import java.nio.file.Path;
-import java.util.Collections;
 import java.util.Map;
 import java.util.stream.Stream;
-
-import org.apache.kafka.common.TopicIdPartition;
-import org.apache.kafka.common.TopicPartition;
-import org.apache.kafka.common.Uuid;
-import org.apache.kafka.server.log.remote.storage.RemoteLogSegmentId;
-import org.apache.kafka.server.log.remote.storage.RemoteLogSegmentMetadata;
 
 import io.aiven.kafka.tieredstorage.chunkmanager.ChunkManager;
 import io.aiven.kafka.tieredstorage.manifest.SegmentManifest;
@@ -56,16 +49,7 @@ import static org.mockito.Mockito.when;
 class ChunkCacheMetricsTest {
     static final MBeanServer MBEAN_SERVER = ManagementFactory.getPlatformMBeanServer();
 
-    public static final Uuid SEGMENT_ID = Uuid.randomUuid();
-
-    static final int LOG_SEGMENT_BYTES = 10;
-    static final RemoteLogSegmentMetadata REMOTE_LOG_SEGMENT_METADATA =
-        new RemoteLogSegmentMetadata(
-            new RemoteLogSegmentId(
-                new TopicIdPartition(Uuid.randomUuid(), new TopicPartition("topic", 0)),
-                SEGMENT_ID),
-            1, -1, -1, -1, 1L,
-            LOG_SEGMENT_BYTES, Collections.singletonMap(1, 100L));
+    public static final String OBJECT_KEY_PATH = "topic/segment";
 
     @TempDir
     static Path baseCachePath;
@@ -106,8 +90,8 @@ class ChunkCacheMetricsTest {
         chunkCache.configure(config);
 
         // When getting a existing chunk from cache
-        chunkCache.getChunk(REMOTE_LOG_SEGMENT_METADATA, segmentManifest, 0);
-        chunkCache.getChunk(REMOTE_LOG_SEGMENT_METADATA, segmentManifest, 0);
+        chunkCache.getChunk(OBJECT_KEY_PATH, segmentManifest, 0);
+        chunkCache.getChunk(OBJECT_KEY_PATH, segmentManifest, 0);
 
         // Then the following metrics should be available
         final var objectName = new ObjectName("aiven.kafka.server.tieredstorage.cache:type=chunk-cache");

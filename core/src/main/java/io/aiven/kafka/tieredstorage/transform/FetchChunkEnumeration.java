@@ -24,8 +24,6 @@ import java.util.List;
 import java.util.NoSuchElementException;
 import java.util.Objects;
 
-import org.apache.kafka.server.log.remote.storage.RemoteLogSegmentMetadata;
-
 import io.aiven.kafka.tieredstorage.Chunk;
 import io.aiven.kafka.tieredstorage.chunkmanager.ChunkManager;
 import io.aiven.kafka.tieredstorage.manifest.SegmentManifest;
@@ -37,7 +35,7 @@ import org.apache.commons.io.input.BoundedInputStream;
 
 public class FetchChunkEnumeration implements Enumeration<InputStream> {
     private final ChunkManager chunkManager;
-    private final RemoteLogSegmentMetadata remoteLogSegmentMetadata;
+    private final String objectKeyPath;
     private final SegmentManifest manifest;
     private final BytesRange range;
     final int startChunkId;
@@ -49,17 +47,16 @@ public class FetchChunkEnumeration implements Enumeration<InputStream> {
     /**
      *
      * @param chunkManager provides chunk input to fetch from
-     * @param remoteLogSegmentMetadata required by chunkManager
+     * @param objectKeyPath required by chunkManager
      * @param manifest provides to index to build response from
      * @param range original offset range start/end position
      */
     public FetchChunkEnumeration(final ChunkManager chunkManager,
-                                 final RemoteLogSegmentMetadata remoteLogSegmentMetadata,
+                                 final String objectKeyPath,
                                  final SegmentManifest manifest,
                                  final BytesRange range) {
         this.chunkManager = Objects.requireNonNull(chunkManager, "chunkManager cannot be null");
-        this.remoteLogSegmentMetadata =
-            Objects.requireNonNull(remoteLogSegmentMetadata, "remoteLogSegmentMetadata cannot be null");
+        this.objectKeyPath = Objects.requireNonNull(objectKeyPath, "objectKeyPath cannot be null");
         this.manifest = Objects.requireNonNull(manifest, "manifest cannot be null");
         this.range = Objects.requireNonNull(range, "range cannot be null");
 
@@ -75,8 +72,8 @@ public class FetchChunkEnumeration implements Enumeration<InputStream> {
     private Chunk getFirstChunk(final int fromPosition) {
         final Chunk firstChunk = chunkIndex.findChunkForOriginalOffset(fromPosition);
         if (firstChunk == null) {
-            throw new IllegalArgumentException("Invalid start position "
-                + fromPosition + " in segment " + remoteLogSegmentMetadata);
+            throw new IllegalArgumentException("Invalid start position " + fromPosition
+                + " in segment path " + objectKeyPath);
         }
         return firstChunk;
     }
@@ -139,7 +136,7 @@ public class FetchChunkEnumeration implements Enumeration<InputStream> {
 
     private InputStream getChunkContent(final int chunkId) {
         try {
-            return chunkManager.getChunk(remoteLogSegmentMetadata, manifest, chunkId);
+            return chunkManager.getChunk(objectKeyPath, manifest, chunkId);
         } catch (final StorageBackendException | IOException e) {
             throw new RuntimeException(e);
         }

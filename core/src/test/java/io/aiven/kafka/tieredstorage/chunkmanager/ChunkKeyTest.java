@@ -23,8 +23,8 @@ import org.junit.jupiter.api.Test;
 import static org.assertj.core.api.Assertions.assertThat;
 
 class ChunkKeyTest {
-    static final Uuid UUID_1 = Uuid.randomUuid();
-    static final Uuid UUID_2 = Uuid.randomUuid();
+    static final String UUID_1 = "topic/" + Uuid.randomUuid();
+    static final String UUID_2 = "topic/" + Uuid.randomUuid();
 
     @Test
     void identical() {
@@ -51,5 +51,15 @@ class ChunkKeyTest {
         assertThat(ck1).isNotEqualTo(ck2);
         assertThat(ck2).isNotEqualTo(ck1);
         assertThat(ck1).doesNotHaveSameHashCodeAs(ck2);
+    }
+
+    @Test
+    void singlePath() {
+        assertThat(new ChunkKey("test", 0).path()).isEqualTo("test-0");
+    }
+
+    @Test
+    void pathWitDir() {
+        assertThat(new ChunkKey("parent/test", 0).path()).isEqualTo("test-0");
     }
 }

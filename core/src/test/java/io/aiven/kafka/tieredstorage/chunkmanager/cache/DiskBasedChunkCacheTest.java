@@ -22,8 +22,6 @@ import java.nio.file.Files;
 import java.nio.file.Path;
 import java.util.Map;
 
-import org.apache.kafka.common.Uuid;
-
 import io.aiven.kafka.tieredstorage.chunkmanager.ChunkKey;
 import io.aiven.kafka.tieredstorage.chunkmanager.ChunkManager;
 
@@ -52,7 +50,7 @@ import static org.mockito.Mockito.verify;
 
 @ExtendWith(MockitoExtension.class)
 class DiskBasedChunkCacheTest {
-    public static final Uuid SEGMENT_ID = Uuid.randomUuid();
+    public static final String SEGMENT_ID = "topic/segment";
     private static final byte[] CHUNK_0 = "0123456789".getBytes();
     private static final byte[] CHUNK_1 = "1011121314".getBytes();
     private static final String TEST_EXCEPTION_MESSAGE = "test_message";

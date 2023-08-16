@@ -16,20 +16,17 @@
 
 package io.aiven.kafka.tieredstorage.chunkmanager;
 
+import java.nio.file.Path;
 import java.util.Objects;
 
-import org.apache.kafka.common.Uuid;
-import org.apache.kafka.server.log.remote.storage.RemoteLogSegmentId;
-
 public class ChunkKey {
-    public final Uuid uuid;
+    public final String segmentFileName;
     public final int chunkId;
 
-    /**
-     * @param uuid segment UUID, see {@link RemoteLogSegmentId#id()}.
-     */
-    public ChunkKey(final Uuid uuid, final int chunkId) {
-        this.uuid = Objects.requireNonNull(uuid, "uuid cannot be null");
+    public ChunkKey(final String objectKeyPath, final int chunkId) {
+        Objects.requireNonNull(objectKeyPath, "objectKeyPath cannot be null");
+        // get last part of segment path + chunk id, as it's used for creating file names
+        this.segmentFileName = Path.of(objectKeyPath).getFileName().toString();
         this.chunkId = chunkId;
     }
 
@@ -47,12 +44,12 @@ public class ChunkKey {
         if (chunkId != chunkKey.chunkId) {
             return false;
         }
-        return Objects.equals(uuid, chunkKey.uuid);
+        return Objects.equals(segmentFileName, chunkKey.segmentFileName);
     }
 
     @Override
     public int hashCode() {
-        int result = uuid != null ? uuid.hashCode() : 0;
+        int result = segmentFileName.hashCode();
         result = 31 * result + chunkId;
         return result;
     }
@@ -60,8 +57,12 @@ public class ChunkKey {
     @Override
     public String toString() {
         return "ChunkKey("
-            + "uuid=" + uuid
+            + "segmentFileName=" + segmentFileName
             + ", chunkId=" + chunkId
             + ")";
+    }
+
+    public String path() {
+        return segmentFileName + "-" + chunkId;
     }
 }
