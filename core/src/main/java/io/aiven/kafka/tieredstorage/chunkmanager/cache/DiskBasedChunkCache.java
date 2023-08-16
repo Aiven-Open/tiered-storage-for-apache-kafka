@@ -87,9 +87,14 @@ public class DiskBasedChunkCache extends ChunkCache<Path> {
     public RemovalListener<ChunkKey, Path> removalListener() {
         return (key, path, cause) -> {
             try {
-                Files.delete(path);
-                log.debug("Deleted cached file for key {} with path {} from cache directory."
+                if (path != null) {
+                    Files.delete(path);
+                    log.debug("Deleted cached file for key {} with path {} from cache directory."
                         + " The reason of the deletion is {}", key, path, cause);
+                } else {
+                    log.warn("Path not present when trying to delete cached file for key {} from cache directory."
+                        + " The reason of the deletion is {}", key, cause);
+                }
             } catch (final IOException e) {
                 log.error("Failed to delete cached file for key {} with path {} from cache directory."
                               + " The reason of the deletion is {}", key, path, cause, e);

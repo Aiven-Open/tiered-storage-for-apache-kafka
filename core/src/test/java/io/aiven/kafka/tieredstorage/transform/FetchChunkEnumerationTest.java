@@ -59,7 +59,7 @@ class FetchChunkEnumerationTest {
         // Then
         assertThatThrownBy(
             () -> new FetchChunkEnumeration(chunkManager, SEGMENT_KEY_PATH, manifest, BytesRange.of(from, to)))
-            .hasMessage("Invalid start position " + from + " in segment topic/segment");
+            .hasMessage("Invalid start position " + from + " in segment path topic/segment");
     }
 
     //   - End position within index
