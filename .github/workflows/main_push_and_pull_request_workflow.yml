@@ -1,8 +1,10 @@
 # The workflow to check main after push.
-name: Main checks after push
+name: Main checks after push and during pull requests
 on:
   push:
-    branches: [ '**' ]
+    branches: [ 'main' ]
+  pull_request:
+    branches: [ 'main' ]
 jobs:
   build:
     strategy:
