@@ -87,7 +87,7 @@ Optional client-side encryption is supported. Encryption is implemented with the
 
 ```
 +----------------+                 +----------------+                 +-----------+
-|    🔑 key      |                 |    🔑 data     |                 |  segment  |
+|      key       |                 |      data      |                 |  segment  |
 | encryption key | ---encrypts---> | encryption key | ---encrypts---> |   data    |
 +----------------+                 +----------------+                 +-----------+ 
 ```
