@@ -188,6 +188,8 @@ public class RemoteStorageManager implements org.apache.kafka.server.log.remote.
         Objects.requireNonNull(remoteLogSegmentMetadata, "remoteLogSegmentId must not be null");
         Objects.requireNonNull(logSegmentData, "logSegmentData must not be null");
 
+        log.info("Copying log segment data, metadata: {}", remoteLogSegmentMetadata);
+
         metrics.recordSegmentCopy(remoteLogSegmentMetadata.remoteLogSegmentId().topicIdPartition().topicPartition(),
             remoteLogSegmentMetadata.segmentSizeInBytes());
 
@@ -238,6 +240,8 @@ public class RemoteStorageManager implements org.apache.kafka.server.log.remote.
         metrics.recordSegmentCopyTime(
             remoteLogSegmentMetadata.remoteLogSegmentId().topicIdPartition().topicPartition(),
             startedMs, time.milliseconds());
+
+        log.info("Copying log segment data completed successfully, metadata: {}", remoteLogSegmentMetadata);
     }
 
     boolean requiresCompression(final LogSegmentData logSegmentData) {
@@ -270,6 +274,8 @@ public class RemoteStorageManager implements org.apache.kafka.server.log.remote.
                 ObjectKey.Suffix.LOG,
                 bytes
             );
+
+            log.trace("Uploaded segment log for {}, size: {}", remoteLogSegmentMetadata, bytes);
         }
     }
 
@@ -297,6 +303,8 @@ public class RemoteStorageManager implements org.apache.kafka.server.log.remote.
                 suffix,
                 bytes
             );
+
+            log.trace("Uploaded index file {} for {}, size: {}", indexType, remoteLogSegmentMetadata, bytes);
         }
     }
 
@@ -313,6 +321,8 @@ public class RemoteStorageManager implements org.apache.kafka.server.log.remote.
                 ObjectKey.Suffix.MANIFEST,
                 bytes
             );
+
+            log.trace("Uploaded segment manifest for {}, size: {}", remoteLogSegmentMetadata, bytes);
         }
     }
 
@@ -335,6 +345,9 @@ public class RemoteStorageManager implements org.apache.kafka.server.log.remote.
                 startPosition,
                 Math.min(endPosition, remoteLogSegmentMetadata.segmentSizeInBytes() - 1)
             );
+
+            log.debug("Fetching log segment {} with range: {}", remoteLogSegmentMetadata, range);
+
             metrics.recordSegmentFetch(
                 remoteLogSegmentMetadata.remoteLogSegmentId().topicIdPartition().topicPartition(),
                 range.size());
@@ -352,6 +365,8 @@ public class RemoteStorageManager implements org.apache.kafka.server.log.remote.
     public InputStream fetchIndex(final RemoteLogSegmentMetadata remoteLogSegmentMetadata,
                                   final IndexType indexType) throws RemoteStorageException {
         try {
+            log.debug("Fetching index {} for {}", indexType, remoteLogSegmentMetadata);
+
             final SegmentManifest segmentManifest = segmentManifestProvider.get(remoteLogSegmentMetadata);
 
             final String key = objectKey.key(remoteLogSegmentMetadata, ObjectKey.Suffix.fromIndexType(indexType));
@@ -382,6 +397,9 @@ public class RemoteStorageManager implements org.apache.kafka.server.log.remote.
     @Override
     public void deleteLogSegmentData(final RemoteLogSegmentMetadata remoteLogSegmentMetadata)
         throws RemoteStorageException {
+
+        log.info("Deleting log segment data for {}", remoteLogSegmentMetadata);
+
         metrics.recordSegmentDelete(remoteLogSegmentMetadata.remoteLogSegmentId().topicIdPartition().topicPartition(),
             remoteLogSegmentMetadata.segmentSizeInBytes());
 
@@ -401,6 +419,8 @@ public class RemoteStorageManager implements org.apache.kafka.server.log.remote.
         metrics.recordSegmentDeleteTime(
             remoteLogSegmentMetadata.remoteLogSegmentId().topicIdPartition().topicPartition(),
             startedMs, time.milliseconds());
+
+        log.info("Deleting log segment data for completed successfully {}", remoteLogSegmentMetadata);
     }
 
     @Override
