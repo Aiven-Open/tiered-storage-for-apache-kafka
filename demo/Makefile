@@ -35,6 +35,7 @@ create_topic_ts_by_size:
 		--bootstrap-server $(bootstrap_server) \
 		--create \
 		--config remote.storage.enable=true \
+		--config retention.ms=-1 \
 		--config segment.bytes=$(segment) \
 		--config retention.bytes=$(retention_bytes) \
 		--config local.retention.bytes=$(local_retention_bytes) \
@@ -62,6 +63,7 @@ create_topic_no_ts_by_size:
 		kafka-topics \
 		--bootstrap-server $(bootstrap_server) \
 		--create \
+		--config retention.ms=-1 \
 		--config segment.bytes=$(segment) \
 		--config retention.bytes=$(retention_bytes) \
 		--partitions $(partitions) \
