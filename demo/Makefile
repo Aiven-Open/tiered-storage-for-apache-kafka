@@ -21,6 +21,7 @@ bootstrap_server_host=localhost:9092
 # Topic defaults
 topic=topic1
 partitions=1
+replication_factor=1
 segment=1000000 # 1MB
 retention_bytes=20000000 # 20MB
 local_retention_bytes=5000000 # 5MB
@@ -38,6 +39,7 @@ create_topic_ts_by_size:
 		--config retention.bytes=$(retention_bytes) \
 		--config local.retention.bytes=$(local_retention_bytes) \
 		--partitions $(partitions) \
+		--replication-factor $(replication_factor) \
 		--topic $(topic)
 
 .PHONY: create_topic_ts_by_time
@@ -51,6 +53,7 @@ create_topic_ts_by_time:
 		--config retention.ms=$(retention_ms) \
 		--config local.retention.ms=$(local_retention_ms) \
 		--partitions $(partitions) \
+		--replication-factor $(replication_factor) \
 		--topic $(topic)
 
 .PHONY: create_topic_no_ts_by_size
@@ -62,6 +65,7 @@ create_topic_no_ts_by_size:
 		--config segment.bytes=$(segment) \
 		--config retention.bytes=$(retention_bytes) \
 		--partitions $(partitions) \
+		--replication-factor $(replication_factor) \
 		--topic $(topic)
 
 .PHONY: create_topic_no_ts_by_time
@@ -73,6 +77,7 @@ create_topic_no_ts_by_time:
 		--config segment.bytes=$(segment) \
 		--config retention.ms=$(retention_ms) \
 		--partitions $(partitions) \
+		--replication-factor $(replication_factor) \
 		--topic $(topic)
 
 num_records = 60000
