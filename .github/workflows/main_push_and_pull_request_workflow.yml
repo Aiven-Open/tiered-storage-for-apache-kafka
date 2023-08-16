@@ -23,5 +23,10 @@ jobs:
         with:
           java-version: ${{ matrix.java-version }}
           distribution: temurin
+
       - name: Build with Gradle
         run: ./gradlew build distTar
+        run: ./gradlew build distTar -x integrationTest
+
+      - name: Run integration tests
+        run: ./gradlew integrationTest

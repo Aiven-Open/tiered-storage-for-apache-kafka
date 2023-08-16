@@ -21,7 +21,10 @@ clean:
 	./gradlew clean
 
 build/distributions/tiered-storage-for-apache-kafka-$(VERSION).tgz:
-	./gradlew build distTar
+	./gradlew build distTar -x integrationTest
+
+integration_test: build/distributions/tiered-storage-for-apache-kafka-$(VERSION).tgz
+	./gradlew integrationTest
 
 .PHONY: docker_image
 docker_image: build/distributions/tiered-storage-for-apache-kafka-$(VERSION).tgz
