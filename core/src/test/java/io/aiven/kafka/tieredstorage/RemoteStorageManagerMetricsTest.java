@@ -183,10 +183,18 @@ class RemoteStorageManagerMetricsTest {
             }
         }
 
-        rsm.fetchLogSegment(REMOTE_LOG_SEGMENT_METADATA, 0);
+        // fetch related metrics
+        final var segmentManifestCacheObjectName =
+            new ObjectName("aiven.kafka.server.tieredstorage.cache:type=segment-manifest-cache");
+
         rsm.fetchLogSegment(REMOTE_LOG_SEGMENT_METADATA, 0);
 
-        // fetch related metrics
+        // check cache size increases after first miss
+        assertThat(MBEAN_SERVER.getAttribute(segmentManifestCacheObjectName, "cache-size-total"))
+            .isEqualTo(1.0);
+
+        rsm.fetchLogSegment(REMOTE_LOG_SEGMENT_METADATA, 0);
+
         assertThat(MBEAN_SERVER.getAttribute(metricName, "segment-fetch-rate"))
             .isEqualTo(2.0 / METRIC_TIME_WINDOW_SEC);
         assertThat(MBEAN_SERVER.getAttribute(metricName, "segment-fetch-total"))
@@ -197,8 +205,8 @@ class RemoteStorageManagerMetricsTest {
         assertThat(MBEAN_SERVER.getAttribute(metricName, "segment-fetch-requested-bytes-total"))
             .isEqualTo(20.0);
 
-        final var segmentManifestCacheObjectName =
-            new ObjectName("aiven.kafka.server.tieredstorage.cache:type=segment-manifest-cache");
+        assertThat(MBEAN_SERVER.getAttribute(segmentManifestCacheObjectName, "cache-size-total"))
+            .isEqualTo(1.0);
         assertThat(MBEAN_SERVER.getAttribute(segmentManifestCacheObjectName, "cache-hits-total"))
             .isEqualTo(1.0);
         assertThat(MBEAN_SERVER.getAttribute(segmentManifestCacheObjectName, "cache-misses-total"))

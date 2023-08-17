@@ -36,6 +36,14 @@ import com.github.benmanes.caffeine.cache.RemovalCause;
 import com.github.benmanes.caffeine.cache.stats.CacheStats;
 import com.github.benmanes.caffeine.cache.stats.StatsCounter;
 
+/**
+ * Records cache metrics managed by Caffeine {@code Cache#stats}.
+ *
+ * <p>Note that this doesn't instrument the cache's size by default. Use
+ * {@link #registerSizeMetric(Supplier)} to do so after the cache has been built.
+ * Similar approach used by
+ * <a href="https://github.com/micrometer-metrics/micrometer/blob/main/micrometer-core/src/main/java/io/micrometer/core/instrument/binder/cache/CaffeineStatsCounter.java">Micrometer</a>
+ */
 public class CaffeineStatsCounter implements StatsCounter {
 
     static final String CACHE_HITS = "cache-hits";
@@ -56,6 +64,9 @@ public class CaffeineStatsCounter implements StatsCounter {
     static final String CACHE_EVICTION_TOTAL = CACHE_EVICTION + "-total";
     static final String CACHE_EVICTION_WEIGHT = CACHE_EVICTION + "-weight";
     static final String CACHE_EVICTION_WEIGHT_TOTAL = CACHE_EVICTION_WEIGHT + "-total";
+
+    static final String CACHE_SIZE = "cache-size";
+    static final String CACHE_SIZE_TOTAL = CACHE_SIZE + "-total";
 
     private final org.apache.kafka.common.metrics.Metrics metrics;
 
@@ -123,9 +134,8 @@ public class CaffeineStatsCounter implements StatsCounter {
                                     final String... tagNames) {
         final var name = new MetricNameTemplate(metricName, groupName, "", tagNames);
         new SensorProvider(metrics, sensorName, tagsSupplier)
-            .with(name, new MeasurableValue(value))
+            .with(name, new MeasurableValue(value::sum))
             .get();
-
     }
 
     private void initSensor(final String sensorName, final String metricName, final LongAdder value) {
@@ -176,6 +186,21 @@ public class CaffeineStatsCounter implements StatsCounter {
         cacheHitCount.increment();
     }
 
+    /**
+     * Includes a cache size to the reported metrics.
+     *
+     * <p>Needs additional registration as operation to provide this value is not part of
+     * the {@code CaffeineStatsCounter} interface.
+     *
+     * @param sizeSupplier operation from cache to provide cache size value
+     */
+    public void registerSizeMetric(final Supplier<Long> sizeSupplier) {
+        final var name = new MetricNameTemplate(CACHE_SIZE_TOTAL, groupName, "");
+        new SensorProvider(metrics, CACHE_SIZE)
+            .with(name, new MeasurableValue(sizeSupplier))
+            .get();
+    }
+
     @Override
     public CacheStats snapshot() {
         return CacheStats.of(
@@ -203,20 +228,20 @@ public class CaffeineStatsCounter implements StatsCounter {
     }
 
     /**
-     * Implementation of {@link Value} that allows fetching a value from provided instance of {@link LongAdder}
+     * Implementation of {@link Value} that allows fetching a value from provided {@code Long} {@link Supplier}
      * to avoid unnecessary calls to {@link Sensor#record()} that under the hood has a synchronized block and affects
      * performance because of that.
      */
     private static class MeasurableValue extends Value {
-        private final LongAdder value;
+        private final Supplier<Long> value;
 
-        MeasurableValue(final LongAdder value) {
+        MeasurableValue(final Supplier<Long> value) {
             this.value = value;
         }
 
         @Override
         public double measure(final MetricConfig config, final long now) {
-            return value.sum();
+            return value.get();
         }
     }
 }

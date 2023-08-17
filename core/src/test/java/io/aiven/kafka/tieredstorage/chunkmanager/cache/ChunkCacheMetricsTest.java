@@ -89,12 +89,18 @@ class ChunkCacheMetricsTest {
         final var chunkCache = chunkCacheClass.getDeclaredConstructor(ChunkManager.class).newInstance(chunkManager);
         chunkCache.configure(config);
 
+        final var objectName = new ObjectName("aiven.kafka.server.tieredstorage.cache:type=chunk-cache");
+
         // When getting a existing chunk from cache
         chunkCache.getChunk(OBJECT_KEY_PATH, segmentManifest, 0);
+
+        // check cache size increases after first miss
+        assertThat(MBEAN_SERVER.getAttribute(objectName, "cache-size-total"))
+            .isEqualTo(1.0);
+
         chunkCache.getChunk(OBJECT_KEY_PATH, segmentManifest, 0);
 
         // Then the following metrics should be available
-        final var objectName = new ObjectName("aiven.kafka.server.tieredstorage.cache:type=chunk-cache");
         assertThat(MBEAN_SERVER.getAttribute(objectName, "cache-hits-total"))
             .isEqualTo(1.0);
         assertThat(MBEAN_SERVER.getAttribute(objectName, "cache-misses-total"))
