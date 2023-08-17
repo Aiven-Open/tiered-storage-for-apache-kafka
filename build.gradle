@@ -110,6 +110,8 @@ subprojects {
         apacheCommonsIOVersion = "2.13.0"
 
         jacksonVersion = "2.15.2"
+
+        testcontainersVersion = "1.18.3"
     }
 
     dependencies {

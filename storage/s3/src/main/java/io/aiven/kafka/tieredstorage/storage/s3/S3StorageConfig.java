@@ -19,10 +19,11 @@ package io.aiven.kafka.tieredstorage.storage.s3;
 import java.util.Map;
 import java.util.Objects;
 
-import io.aiven.kafka.tieredstorage.storage.config.NonEmptyPassword;
 import org.apache.kafka.common.config.AbstractConfig;
 import org.apache.kafka.common.config.ConfigDef;
 import org.apache.kafka.common.config.ConfigException;
+
+import io.aiven.kafka.tieredstorage.storage.config.NonEmptyPassword;
 
 import com.amazonaws.auth.AWSCredentials;
 import com.amazonaws.auth.AWSCredentialsProvider;

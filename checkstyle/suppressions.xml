@@ -30,4 +30,5 @@
     <suppress checks="CyclomaticComplexity" files="MetricCollector.java"/>
     <suppress checks="JavaNCSSCheck" files="MetricsRegistry.java"/>
     <suppress checks="JavaNCSSCheck" files="RemoteStorageManagerMetricsTest.java"/>
+    <suppress checks="NPathComplexity" files="CredentialsBuilder.java"/>
 </suppressions>

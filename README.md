@@ -2,7 +2,7 @@
 
 This project is an implementation of `RemoteStorageManager` for Apache Kafka tiered storage.
 
-The implementation will have multiple configurable storage backends. Currently, AWS S3 is supported. We intend to support Google Cloud Storage and Azure Blob Storage in the near future.
+The implementation will have multiple configurable storage backends. Currently, AWS S3 and Google Cloud Storage are supported. We intend to support Azure Blob Storage in the near future.
 
 The project follows the API specifications according to the latest version of [KIP-405: Kafka Tiered Storage](https://cwiki.apache.org/confluence/x/KJDQBQ).
 
