@@ -20,10 +20,7 @@ import java.io.InputStream;
 import java.util.List;
 import java.util.Optional;
 
-import org.apache.kafka.server.log.remote.storage.RemoteLogSegmentMetadata;
-
 import io.aiven.kafka.tieredstorage.Chunk;
-import io.aiven.kafka.tieredstorage.ObjectKey;
 import io.aiven.kafka.tieredstorage.manifest.SegmentEncryptionMetadata;
 import io.aiven.kafka.tieredstorage.manifest.SegmentManifest;
 import io.aiven.kafka.tieredstorage.security.AesEncryptionProvider;
@@ -37,14 +34,10 @@ import io.aiven.kafka.tieredstorage.transform.DetransformFinisher;
 
 public class DefaultChunkManager implements ChunkManager {
     private final ObjectFetcher fetcher;
-    private final ObjectKey objectKey;
     private final AesEncryptionProvider aesEncryptionProvider;
 
-    public DefaultChunkManager(final ObjectFetcher fetcher,
-                        final ObjectKey objectKey,
-                        final AesEncryptionProvider aesEncryptionProvider) {
+    public DefaultChunkManager(final ObjectFetcher fetcher, final AesEncryptionProvider aesEncryptionProvider) {
         this.fetcher = fetcher;
-        this.objectKey = objectKey;
         this.aesEncryptionProvider = aesEncryptionProvider;
     }
 
@@ -53,12 +46,11 @@ public class DefaultChunkManager implements ChunkManager {
      *
      * @return an {@link InputStream} of the chunk, plain text (i.e., decrypted and decompressed).
      */
-    public InputStream getChunk(final RemoteLogSegmentMetadata remoteLogSegmentMetadata, final SegmentManifest manifest,
+    public InputStream getChunk(final String objectKeyPath, final SegmentManifest manifest,
                                 final int chunkId) throws StorageBackendException {
         final Chunk chunk = manifest.chunkIndex().chunks().get(chunkId);
-        final String segmentKey = objectKey.key(remoteLogSegmentMetadata, ObjectKey.Suffix.LOG);
 
-        final InputStream chunkContent = fetcher.fetch(segmentKey, chunk.range());
+        final InputStream chunkContent = fetcher.fetch(objectKeyPath, chunk.range());
 
         DetransformChunkEnumeration detransformEnum = new BaseDetransformChunkEnumeration(chunkContent, List.of(chunk));
         final Optional<SegmentEncryptionMetadata> encryptionMetadata = manifest.encryption();

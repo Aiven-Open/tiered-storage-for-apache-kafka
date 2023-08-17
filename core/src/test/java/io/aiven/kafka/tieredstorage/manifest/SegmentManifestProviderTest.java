@@ -20,17 +20,9 @@ import java.io.ByteArrayInputStream;
 import java.io.IOException;
 import java.io.InputStream;
 import java.time.Duration;
-import java.util.Map;
 import java.util.Optional;
 import java.util.concurrent.ForkJoinPool;
 
-import org.apache.kafka.common.TopicIdPartition;
-import org.apache.kafka.common.TopicPartition;
-import org.apache.kafka.common.Uuid;
-import org.apache.kafka.server.log.remote.storage.RemoteLogSegmentId;
-import org.apache.kafka.server.log.remote.storage.RemoteLogSegmentMetadata;
-
-import io.aiven.kafka.tieredstorage.ObjectKey;
 import io.aiven.kafka.tieredstorage.manifest.index.FixedSizeChunkIndex;
 import io.aiven.kafka.tieredstorage.storage.StorageBackend;
 import io.aiven.kafka.tieredstorage.storage.StorageBackendException;
@@ -54,9 +46,8 @@ import static org.mockito.Mockito.when;
 
 @ExtendWith(MockitoExtension.class)
 class SegmentManifestProviderTest {
-    static final ObjectKey OBJECT_KEY = new ObjectKey("");
-
     static final ObjectMapper MAPPER = new ObjectMapper();
+    public static final String MANIFEST_KEY = "topic/manifest";
 
     static {
         MAPPER.registerModule(new Jdk8Module());
@@ -68,15 +59,6 @@ class SegmentManifestProviderTest {
             + "\"originalFileSize\":1000,\"transformedChunkSize\":110,\"finalTransformedChunkSize\":110},"
             + "\"compression\":false}";
 
-    static final Uuid TOPIC_ID = Uuid.METADATA_TOPIC_ID;  // string representation: AAAAAAAAAAAAAAAAAAAAAQ
-    static final Uuid SEGMENT_ID = Uuid.ZERO_UUID;  // string representation: AAAAAAAAAAAAAAAAAAAAAA
-    static final RemoteLogSegmentMetadata REMOTE_LOG_METADATA = new RemoteLogSegmentMetadata(
-        new RemoteLogSegmentId(
-            new TopicIdPartition(TOPIC_ID, new TopicPartition("topic", 7)),
-            SEGMENT_ID
-        ),
-        23L, 2000L, 0, 0, 0, 1, Map.of(0, 0L));
-
     @Mock
     StorageBackend storage;
 
@@ -85,7 +67,7 @@ class SegmentManifestProviderTest {
     @BeforeEach
     void setup() {
         provider = new SegmentManifestProvider(
-            OBJECT_KEY, Optional.of(1000L), Optional.empty(), storage, MAPPER,
+            Optional.of(1000L), Optional.empty(), storage, MAPPER,
             ForkJoinPool.commonPool());
     }
 
@@ -93,7 +75,7 @@ class SegmentManifestProviderTest {
     void unboundedShouldBeCreated() {
         assertThatNoException()
             .isThrownBy(() -> new SegmentManifestProvider(
-                OBJECT_KEY, Optional.empty(), Optional.of(Duration.ofMillis(1)), storage, MAPPER,
+                Optional.empty(), Optional.of(Duration.ofMillis(1)), storage, MAPPER,
                 ForkJoinPool.commonPool()));
     }
 
@@ -101,7 +83,7 @@ class SegmentManifestProviderTest {
     void withoutRetentionLimitsShouldBeCreated() {
         assertThatNoException()
             .isThrownBy(() -> new SegmentManifestProvider(
-                OBJECT_KEY, Optional.of(1L), Optional.empty(), storage, MAPPER,
+                Optional.of(1L), Optional.empty(), storage, MAPPER,
                 ForkJoinPool.commonPool()));
     }
 
@@ -114,9 +96,9 @@ class SegmentManifestProviderTest {
             new FixedSizeChunkIndex(100, 1000, 110, 110),
             false, null
         );
-        assertThat(provider.get(REMOTE_LOG_METADATA)).isEqualTo(expectedManifest);
+        assertThat(provider.get(key)).isEqualTo(expectedManifest);
         verify(storage).fetch(key);
-        assertThat(provider.get(REMOTE_LOG_METADATA)).isEqualTo(expectedManifest);
+        assertThat(provider.get(key)).isEqualTo(expectedManifest);
         verifyNoMoreInteractions(storage);
     }
 
@@ -124,7 +106,7 @@ class SegmentManifestProviderTest {
     void shouldPropagateStorageBackendException() throws StorageBackendException {
         when(storage.fetch(anyString()))
             .thenThrow(new StorageBackendException("test"));
-        assertThatThrownBy(() -> provider.get(REMOTE_LOG_METADATA))
+        assertThatThrownBy(() -> provider.get(MANIFEST_KEY))
             .isInstanceOf(StorageBackendException.class)
             .hasMessage("test");
     }
@@ -136,7 +118,7 @@ class SegmentManifestProviderTest {
         }).when(isMock).close();
         when(storage.fetch(anyString()))
             .thenReturn(isMock);
-        assertThatThrownBy(() -> provider.get(REMOTE_LOG_METADATA))
+        assertThatThrownBy(() -> provider.get(MANIFEST_KEY))
             .isInstanceOf(IOException.class)
             .hasMessage("test");
     }

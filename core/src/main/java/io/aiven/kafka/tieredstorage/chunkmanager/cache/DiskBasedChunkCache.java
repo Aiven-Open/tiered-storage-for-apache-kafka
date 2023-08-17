@@ -59,12 +59,11 @@ public class DiskBasedChunkCache extends ChunkCache<Path> {
      */
     @Override
     public Path cacheChunk(final ChunkKey chunkKey, final InputStream chunk) throws IOException {
-        final Path tempChunkPath = config.tempCachePath()
-                .resolve(chunkKey.uuid + "-" + chunkKey.chunkId);
+        final var chunkKeyPath = chunkKey.path();
+        final Path tempChunkPath = config.tempCachePath().resolve(chunkKeyPath);
         final Path tempCached = writeToDisk(chunk, tempChunkPath);
         log.debug("Chunk file has been stored to temporary caching directory {}", tempCached);
-        final Path cachedChunkPath = config.cachePath()
-                .resolve(chunkKey.uuid + "-" + chunkKey.chunkId);
+        final Path cachedChunkPath = config.cachePath().resolve(chunkKeyPath);
         try {
             final Path newPath = Files.move(tempCached, cachedChunkPath, ATOMIC_MOVE);
             log.debug("Chunk file has been moved to cache directory {}", newPath);
@@ -88,9 +87,14 @@ public class DiskBasedChunkCache extends ChunkCache<Path> {
     public RemovalListener<ChunkKey, Path> removalListener() {
         return (key, path, cause) -> {
             try {
-                Files.delete(path);
-                log.debug("Deleted cached file for key {} with path {} from cache directory."
+                if (path != null) {
+                    Files.delete(path);
+                    log.debug("Deleted cached file for key {} with path {} from cache directory."
                         + " The reason of the deletion is {}", key, path, cause);
+                } else {
+                    log.warn("Path not present when trying to delete cached file for key {} from cache directory."
+                        + " The reason of the deletion is {}", key, cause);
+                }
             } catch (final IOException e) {
                 log.error("Failed to delete cached file for key {} with path {} from cache directory."
                               + " The reason of the deletion is {}", key, path, cause, e);

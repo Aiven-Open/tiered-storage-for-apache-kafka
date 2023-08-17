@@ -25,9 +25,6 @@ import java.util.concurrent.Executor;
 import java.util.concurrent.TimeUnit;
 import java.util.concurrent.TimeoutException;
 
-import org.apache.kafka.server.log.remote.storage.RemoteLogSegmentMetadata;
-
-import io.aiven.kafka.tieredstorage.ObjectKey;
 import io.aiven.kafka.tieredstorage.metrics.CaffeineStatsCounter;
 import io.aiven.kafka.tieredstorage.storage.ObjectFetcher;
 import io.aiven.kafka.tieredstorage.storage.StorageBackendException;
@@ -40,20 +37,17 @@ public class SegmentManifestProvider {
     private static final String SEGMENT_MANIFEST_METRIC_GROUP_NAME = "segment-manifest-cache";
     private static final long GET_TIMEOUT_SEC = 10;
 
-    private final ObjectKey objectKey;
     private final AsyncLoadingCache<String, SegmentManifest> cache;
 
     /**
      * @param maxCacheSize the max cache size (in items) or empty if the cache is unbounded.
      * @param cacheRetention the retention time of items in the cache or empty if infinite retention.
      */
-    public SegmentManifestProvider(final ObjectKey objectKey,
-                                   final Optional<Long> maxCacheSize,
+    public SegmentManifestProvider(final Optional<Long> maxCacheSize,
                                    final Optional<Duration> cacheRetention,
                                    final ObjectFetcher fileFetcher,
                                    final ObjectMapper mapper,
                                    final Executor executor) {
-        this.objectKey = objectKey;
         final var cacheBuilder = Caffeine.newBuilder()
             .recordStats(() -> new CaffeineStatsCounter(SEGMENT_MANIFEST_METRIC_GROUP_NAME))
             .executor(executor);
@@ -66,11 +60,10 @@ public class SegmentManifestProvider {
         });
     }
 
-    public SegmentManifest get(final RemoteLogSegmentMetadata remoteLogSegmentMetadata)
+    public SegmentManifest get(final String manifestKey)
         throws StorageBackendException, IOException {
-        final String key = objectKey.key(remoteLogSegmentMetadata, ObjectKey.Suffix.MANIFEST);
         try {
-            return cache.get(key).get(GET_TIMEOUT_SEC, TimeUnit.SECONDS);
+            return cache.get(manifestKey).get(GET_TIMEOUT_SEC, TimeUnit.SECONDS);
         } catch (final ExecutionException e) {
             // Unwrap previously wrapped exceptions if possible.
             final Throwable cause = e.getCause();

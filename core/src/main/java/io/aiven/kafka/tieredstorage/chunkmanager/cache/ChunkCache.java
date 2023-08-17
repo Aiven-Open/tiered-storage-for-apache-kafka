@@ -28,8 +28,6 @@ import java.util.concurrent.TimeoutException;
 import java.util.concurrent.atomic.AtomicReference;
 
 import org.apache.kafka.common.Configurable;
-import org.apache.kafka.common.Uuid;
-import org.apache.kafka.server.log.remote.storage.RemoteLogSegmentMetadata;
 
 import io.aiven.kafka.tieredstorage.chunkmanager.ChunkKey;
 import io.aiven.kafka.tieredstorage.chunkmanager.ChunkManager;
@@ -67,11 +65,10 @@ public abstract class ChunkCache<T> implements ChunkManager, Configurable {
      * opened right when fetching from cache happens even if the actual value is removed from the cache,
      * the InputStream will still contain the data.
      */
-    public InputStream getChunk(final RemoteLogSegmentMetadata remoteLogSegmentMetadata,
+    public InputStream getChunk(final String objectKeyPath,
                                 final SegmentManifest manifest,
                                 final int chunkId) throws StorageBackendException, IOException {
-        final Uuid id = remoteLogSegmentMetadata.remoteLogSegmentId().id();
-        final ChunkKey chunkKey = new ChunkKey(id, chunkId);
+        final ChunkKey chunkKey = new ChunkKey(objectKeyPath, chunkId);
         final AtomicReference<InputStream> result = new AtomicReference<>();
         try {
             return cache.asMap()
@@ -80,7 +77,7 @@ public abstract class ChunkCache<T> implements ChunkManager, Configurable {
                         statsCounter.recordMiss();
                         try {
                             final InputStream chunk =
-                                chunkManager.getChunk(remoteLogSegmentMetadata, manifest, chunkId);
+                                chunkManager.getChunk(objectKeyPath, manifest, chunkId);
                             final T t = this.cacheChunk(chunkKey, chunk);
                             result.getAndSet(cachedChunkToInputStream(t));
                             return t;

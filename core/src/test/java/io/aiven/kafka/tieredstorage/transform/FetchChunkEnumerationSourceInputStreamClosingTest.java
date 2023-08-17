@@ -24,13 +24,6 @@ import java.util.ArrayList;
 import java.util.List;
 import java.util.Map;
 
-import org.apache.kafka.common.TopicIdPartition;
-import org.apache.kafka.common.TopicPartition;
-import org.apache.kafka.common.Uuid;
-import org.apache.kafka.server.log.remote.storage.RemoteLogSegmentId;
-import org.apache.kafka.server.log.remote.storage.RemoteLogSegmentMetadata;
-
-import io.aiven.kafka.tieredstorage.ObjectKey;
 import io.aiven.kafka.tieredstorage.chunkmanager.ChunkManager;
 import io.aiven.kafka.tieredstorage.chunkmanager.ChunkManagerFactory;
 import io.aiven.kafka.tieredstorage.chunkmanager.cache.DiskBasedChunkCache;
@@ -48,27 +41,15 @@ import org.junit.jupiter.api.extension.ExtendWith;
 import org.junit.jupiter.params.ParameterizedTest;
 import org.junit.jupiter.params.provider.Arguments;
 import org.junit.jupiter.params.provider.MethodSource;
-import org.mockito.Mock;
 import org.mockito.junit.jupiter.MockitoExtension;
 
 import static org.assertj.core.api.Assertions.assertThat;
-import static org.mockito.ArgumentMatchers.any;
-import static org.mockito.ArgumentMatchers.eq;
 import static org.mockito.Mockito.spy;
 import static org.mockito.Mockito.verify;
-import static org.mockito.Mockito.when;
 
 @ExtendWith(MockitoExtension.class)
 class FetchChunkEnumerationSourceInputStreamClosingTest {
-    static final RemoteLogSegmentId REMOTE_LOG_SEGMENT_ID = new RemoteLogSegmentId(
-        new TopicIdPartition(Uuid.METADATA_TOPIC_ID, new TopicPartition("topic", 7)),
-        Uuid.ZERO_UUID);
-    static final RemoteLogSegmentMetadata REMOTE_LOG_SEGMENT_METADATA = new RemoteLogSegmentMetadata(
-        REMOTE_LOG_SEGMENT_ID, 1234L, 2000L,
-        0, 0, 0, 0, Map.of(0, 0L));
-
-    static final String KEY = "key";
-
+    static final String OBJECT_KEY_PATH = "topic/segment";
     static final int CHUNK_SIZE = 10;
 
     static final BytesRange RANGE1 = BytesRange.ofFromPositionAndSize(0, CHUNK_SIZE);
@@ -83,14 +64,10 @@ class FetchChunkEnumerationSourceInputStreamClosingTest {
     static final SegmentManifest SEGMENT_MANIFEST = new SegmentManifestV1(
         CHUNK_INDEX, false, null);
 
-    @Mock
-    ObjectKey objectKey;
-
     TestObjectFetcher fetcher;
 
     @BeforeEach
     void setup() {
-        when(objectKey.key(eq(REMOTE_LOG_SEGMENT_METADATA), any(ObjectKey.Suffix.class))).thenReturn(KEY);
         fetcher = new TestObjectFetcher();
     }
 
@@ -101,12 +78,8 @@ class FetchChunkEnumerationSourceInputStreamClosingTest {
               final BytesRange range) throws StorageBackendException, IOException {
         final ChunkManagerFactory chunkManagerFactory = new ChunkManagerFactory();
         chunkManagerFactory.configure(config);
-        final ChunkManager chunkManager = chunkManagerFactory.initChunkManager(
-                fetcher,
-                objectKey,
-                null
-        );
-        final var is = new FetchChunkEnumeration(chunkManager, REMOTE_LOG_SEGMENT_METADATA, SEGMENT_MANIFEST, range)
+        final ChunkManager chunkManager = chunkManagerFactory.initChunkManager(fetcher, null);
+        final var is = new FetchChunkEnumeration(chunkManager, OBJECT_KEY_PATH, SEGMENT_MANIFEST, range)
             .toInputStream();
         if (readFully) {
             is.readAllBytes();
@@ -125,33 +98,30 @@ class FetchChunkEnumerationSourceInputStreamClosingTest {
         for (final var readFully : List.of(Named.of("read fully", true), Named.of("read partially", false))) {
             for (final BytesRange range : List.of(smallRange, bigRange)) {
                 result.add(Arguments.of(
-                        Named.of(
-                                "without cache",
-                                Map.of()
-                        ),
-                        readFully,
-                        range)
+                    Named.of("without cache", Map.of()),
+                    readFully,
+                    range)
                 );
                 result.add(Arguments.of(
-                        Named.of("with in-memory cache",
-                                Map.of(
-                                        "chunk.cache.class", InMemoryChunkCache.class.getCanonicalName(),
-                                        "chunk.cache.size", "-1"
-                                )
-                        ),
-                        readFully,
-                        range)
+                    Named.of("with in-memory cache",
+                        Map.of(
+                            "chunk.cache.class", InMemoryChunkCache.class.getCanonicalName(),
+                            "chunk.cache.size", "-1"
+                        )
+                    ),
+                    readFully,
+                    range)
                 );
                 result.add(Arguments.of(
-                        Named.of("with disk-based cache",
-                                Map.of(
-                                        "chunk.cache.class", DiskBasedChunkCache.class.getCanonicalName(),
-                                        "chunk.cache.path", Files.createTempDirectory("cache").toString(),
-                                        "chunk.cache.size", "-1"
-                                )
-                        ),
-                        readFully,
-                        range)
+                    Named.of("with disk-based cache",
+                        Map.of(
+                            "chunk.cache.class", DiskBasedChunkCache.class.getCanonicalName(),
+                            "chunk.cache.path", Files.createTempDirectory("cache").toString(),
+                            "chunk.cache.size", "-1"
+                        )
+                    ),
+                    readFully,
+                    range)
                 );
             }
         }
@@ -168,7 +138,7 @@ class FetchChunkEnumerationSourceInputStreamClosingTest {
 
         @Override
         public InputStream fetch(final String key, final BytesRange range) {
-            if (!key.equals(KEY)) {
+            if (!key.equals(OBJECT_KEY_PATH)) {
                 throw new IllegalArgumentException("Invalid key: " + key);
             }
 
