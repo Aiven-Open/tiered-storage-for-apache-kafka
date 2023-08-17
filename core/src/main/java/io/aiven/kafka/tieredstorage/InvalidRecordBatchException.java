@@ -18,6 +18,7 @@ package io.aiven.kafka.tieredstorage;
 
 public class InvalidRecordBatchException extends Exception {
     public InvalidRecordBatchException(final String message) {
+        // Ignore this, this is just to test if CodeQL is triggered on PRs or not
         super(message);
     }
 
