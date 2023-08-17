@@ -48,8 +48,9 @@ public class SegmentManifestProvider {
                                    final ObjectFetcher fileFetcher,
                                    final ObjectMapper mapper,
                                    final Executor executor) {
+        final var statsCounter = new CaffeineStatsCounter(SEGMENT_MANIFEST_METRIC_GROUP_NAME);
         final var cacheBuilder = Caffeine.newBuilder()
-            .recordStats(() -> new CaffeineStatsCounter(SEGMENT_MANIFEST_METRIC_GROUP_NAME))
+            .recordStats(() -> statsCounter)
             .executor(executor);
         maxCacheSize.ifPresent(cacheBuilder::maximumSize);
         cacheRetention.ifPresent(cacheBuilder::expireAfterWrite);
@@ -58,6 +59,7 @@ public class SegmentManifestProvider {
                 return mapper.readValue(is, SegmentManifest.class);
             }
         });
+        statsCounter.registerSizeMetric(cache.synchronous()::estimatedSize);
     }
 
     public SegmentManifest get(final String manifestKey)
