@@ -1,8 +1,10 @@
 # The workflow to check main after push.
-name: Main checks after push
+name: Main checks after push and during pull requests
 on:
   push:
-    branches: [ '**' ]
+    branches: [ 'main' ]
+  pull_request:
+    branches: [ 'main' ]
 jobs:
   build:
     strategy:
@@ -21,5 +23,14 @@ jobs:
         with:
           java-version: ${{ matrix.java-version }}
           distribution: temurin
+
       - name: Build with Gradle
-        run: ./gradlew build distTar
+        run: ./gradlew build distTar -x integrationTest
+
+      - name: Run integration tests
+        run: ./gradlew integrationTest
+
+      - name: Build Docker image
+        run: make docker_image
+
+      # TODO: publish docker image
