@@ -23,6 +23,7 @@ import java.io.InputStream;
 import org.junit.jupiter.api.Test;
 
 import static org.assertj.core.api.Assertions.assertThat;
+import static org.assertj.core.api.Assertions.assertThatNoException;
 import static org.assertj.core.api.Assertions.assertThatThrownBy;
 
 public abstract class BaseStorageTest {
@@ -157,6 +158,9 @@ public abstract class BaseStorageTest {
     protected void testDelete() throws StorageBackendException {
         storage().upload(new ByteArrayInputStream("test".getBytes()), TOPIC_PARTITION_SEGMENT_KEY);
         storage().delete(TOPIC_PARTITION_SEGMENT_KEY);
+
+        // Test deletion idempotence.
+        assertThatNoException().isThrownBy(() -> storage().delete(TOPIC_PARTITION_SEGMENT_KEY));
 
         assertThatThrownBy(() -> storage().fetch(TOPIC_PARTITION_SEGMENT_KEY))
             .isInstanceOf(KeyNotFoundException.class)
