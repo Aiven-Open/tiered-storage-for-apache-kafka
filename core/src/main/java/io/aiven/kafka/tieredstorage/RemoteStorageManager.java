@@ -228,7 +228,7 @@ public class RemoteStorageManager implements org.apache.kafka.server.log.remote.
             }
             final ByteBufferInputStream leaderEpoch = new ByteBufferInputStream(logSegmentData.leaderEpochIndex());
             uploadIndexFile(remoteLogSegmentMetadata, leaderEpoch, LEADER_EPOCH, encryptionMetadata);
-        } catch (final StorageBackendException | IOException e) {
+        } catch (final Exception e) {
             metrics.recordSegmentCopyError(remoteLogSegmentMetadata.remoteLogSegmentId()
                 .topicIdPartition().topicPartition());
             throw new RemoteStorageException(e);
@@ -355,7 +355,7 @@ public class RemoteStorageManager implements org.apache.kafka.server.log.remote.
 
             return new FetchChunkEnumeration(chunkManager, segmentKey, segmentManifest, range)
                 .toInputStream();
-        } catch (final StorageBackendException | IOException e) {
+        } catch (final Exception e) {
             throw new RemoteStorageException(e);
         }
     }
@@ -388,7 +388,7 @@ public class RemoteStorageManager implements org.apache.kafka.server.log.remote.
             }
             final DetransformFinisher detransformFinisher = new DetransformFinisher(detransformEnum);
             return detransformFinisher.toInputStream();
-        } catch (final StorageBackendException | IOException e) {
+        } catch (final Exception e) {
             // TODO: should be aligned with upstream implementation
             if (indexType == TRANSACTION) {
                 return null;
@@ -415,7 +415,7 @@ public class RemoteStorageManager implements org.apache.kafka.server.log.remote.
                 final String key = objectKey.key(remoteLogSegmentMetadata, suffix);
                 deleter.delete(key);
             }
-        } catch (final StorageBackendException e) {
+        } catch (final Exception e) {
             metrics.recordSegmentDeleteError(remoteLogSegmentMetadata.remoteLogSegmentId()
                 .topicIdPartition().topicPartition());
             throw new RemoteStorageException(e);
