@@ -28,22 +28,20 @@ ext {
 
     zstdVersion = "1.5.5-5"
 
-    jacksonVersion = "2.15.2"
-
     awaitilityVersion = "4.2.0"
 }
 
 dependencies {
     implementation project(":storage:core")
 
+    // These dependencies are load via specific classloader, only check collisions with inner dependencies (e.g. storage)
+
     implementation "org.bouncycastle:bcprov-jdk18on:$bouncyCastleVersion"
 
-    // Should be provided at the run time.
-    compileOnly "com.fasterxml.jackson.core:jackson-databind:$jacksonVersion"
+    implementation "com.fasterxml.jackson.core:jackson-databind:$jacksonVersion"
     implementation "com.fasterxml.jackson.datatype:jackson-datatype-jdk8:$jacksonVersion"
 
-    // Should be provided at the run time.
-    compileOnly "com.github.luben:zstd-jni:$zstdVersion"
+    implementation "com.github.luben:zstd-jni:$zstdVersion"
 
     implementation "com.github.ben-manes.caffeine:caffeine:$caffeineVersion"
 
