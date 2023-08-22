@@ -272,7 +272,7 @@ public class RemoteStorageManager implements org.apache.kafka.server.log.remote.
                 bytes
             );
 
-            log.trace("Uploaded segment log for {}, size: {}", remoteLogSegmentMetadata, bytes);
+            log.debug("Uploaded segment log for {}, size: {}", remoteLogSegmentMetadata, bytes);
         }
     }
 
@@ -301,7 +301,7 @@ public class RemoteStorageManager implements org.apache.kafka.server.log.remote.
                 bytes
             );
 
-            log.trace("Uploaded index file {} for {}, size: {}", indexType, remoteLogSegmentMetadata, bytes);
+            log.debug("Uploaded index file {} for {}, size: {}", indexType, remoteLogSegmentMetadata, bytes);
         }
     }
 
@@ -319,7 +319,7 @@ public class RemoteStorageManager implements org.apache.kafka.server.log.remote.
                 bytes
             );
 
-            log.trace("Uploaded segment manifest for {}, size: {}", remoteLogSegmentMetadata, bytes);
+            log.debug("Uploaded segment manifest for {}, size: {}", remoteLogSegmentMetadata, bytes);
         }
     }
 
@@ -343,7 +343,7 @@ public class RemoteStorageManager implements org.apache.kafka.server.log.remote.
                 Math.min(endPosition, remoteLogSegmentMetadata.segmentSizeInBytes() - 1)
             );
 
-            log.debug("Fetching log segment {} with range: {}", remoteLogSegmentMetadata, range);
+            log.trace("Fetching log segment {} with range: {}", remoteLogSegmentMetadata, range);
 
             metrics.recordSegmentFetch(
                 remoteLogSegmentMetadata.remoteLogSegmentId().topicIdPartition().topicPartition(),
@@ -370,7 +370,7 @@ public class RemoteStorageManager implements org.apache.kafka.server.log.remote.
     public InputStream fetchIndex(final RemoteLogSegmentMetadata remoteLogSegmentMetadata,
                                   final IndexType indexType) throws RemoteStorageException {
         try {
-            log.debug("Fetching index {} for {}", indexType, remoteLogSegmentMetadata);
+            log.trace("Fetching index {} for {}", indexType, remoteLogSegmentMetadata);
 
             final var segmentManifest = fetchSegmentManifest(remoteLogSegmentMetadata);
 
