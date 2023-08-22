@@ -13,18 +13,27 @@
 # See the License for the specific language governing permissions and
 # limitations under the License.
 ##
-VERSION=0.0.1-SNAPSHOT
+VERSION := $(shell grep -oP 'version=\K[^[:space:]]+' gradle.properties)
 IMAGE_TAG=aivenoy/kafka:3.3-2022-10-06-tiered-storage-1-ts-2
 
-.PHONY: clean
+.PHONY: clean checkstyle build integration_test e2e_test docker_image docker_push
+
 clean:
 	./gradlew clean
 
+checkstyle:
+	./gradlew checkstyleMain checkstyleTest checkstyleIntegrationTest
+
+build: build/distributions/tiered-storage-for-apache-kafka-$(VERSION).tgz
+
 build/distributions/tiered-storage-for-apache-kafka-$(VERSION).tgz:
-	./gradlew build distTar -x integrationTest
+	./gradlew build distTar -x integrationTest -x e2e:test
 
 integration_test: build/distributions/tiered-storage-for-apache-kafka-$(VERSION).tgz
 	./gradlew integrationTest
+
+e2e_test:  build/distributions/tiered-storage-for-apache-kafka-$(VERSION).tgz
+	./gradlew e2e:test
 
 .PHONY: docker_image
 docker_image: build/distributions/tiered-storage-for-apache-kafka-$(VERSION).tgz

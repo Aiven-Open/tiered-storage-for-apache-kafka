@@ -74,8 +74,15 @@ jobs:
           java-version: 11
           distribution: temurin
 
+      - name: Read version from properties file
+        id: read-version
+        run: |
+          version=$(grep -oP 'version=\K[^[:space:]]+' gradle.properties)
+          echo "Version found: $version"
+          echo "VERSION=$version" >> $GITHUB_ENV
+
       - name: Build with Gradle
-        run: ./gradlew build
+        run: make build/distributions/tiered-storage-for-apache-kafka-${{ env.VERSION }}.tgz
 
       - name: Perform CodeQL Analysis
         uses: github/codeql-action/analyze@v2
