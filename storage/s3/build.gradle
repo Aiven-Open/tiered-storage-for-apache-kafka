@@ -27,7 +27,14 @@ ext {
 dependencies {
     implementation project(":storage:core")
 
-    implementation "com.amazonaws:aws-java-sdk-s3:$awsSdkVersion"
+    // Take out jackson libraries out to avoid collision with core jackson dependencies
+    implementation ("com.amazonaws:aws-java-sdk-s3:$awsSdkVersion") {
+        exclude group: "com.fasterxml.jackson.core"
+        exclude group: "com.fasterxml.jackson.dataformat"
+    }
+    // replacing with version used by core
+    implementation "com.fasterxml.jackson.core:jackson-databind:$jacksonVersion"
+    implementation "com.fasterxml.jackson.dataformat:jackson-dataformat-cbor:$jacksonVersion"
 
     testImplementation(testFixtures(project(":storage:core")))
 

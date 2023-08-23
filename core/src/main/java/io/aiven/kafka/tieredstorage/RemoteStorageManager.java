@@ -228,7 +228,7 @@ public class RemoteStorageManager implements org.apache.kafka.server.log.remote.
             }
             final ByteBufferInputStream leaderEpoch = new ByteBufferInputStream(logSegmentData.leaderEpochIndex());
             uploadIndexFile(remoteLogSegmentMetadata, leaderEpoch, LEADER_EPOCH, encryptionMetadata);
-        } catch (final StorageBackendException | IOException e) {
+        } catch (final Exception e) {
             metrics.recordSegmentCopyError(remoteLogSegmentMetadata.remoteLogSegmentId()
                 .topicIdPartition().topicPartition());
             throw new RemoteStorageException(e);
@@ -272,7 +272,7 @@ public class RemoteStorageManager implements org.apache.kafka.server.log.remote.
                 bytes
             );
 
-            log.trace("Uploaded segment log for {}, size: {}", remoteLogSegmentMetadata, bytes);
+            log.debug("Uploaded segment log for {}, size: {}", remoteLogSegmentMetadata, bytes);
         }
     }
 
@@ -301,7 +301,7 @@ public class RemoteStorageManager implements org.apache.kafka.server.log.remote.
                 bytes
             );
 
-            log.trace("Uploaded index file {} for {}, size: {}", indexType, remoteLogSegmentMetadata, bytes);
+            log.debug("Uploaded index file {} for {}, size: {}", indexType, remoteLogSegmentMetadata, bytes);
         }
     }
 
@@ -319,7 +319,7 @@ public class RemoteStorageManager implements org.apache.kafka.server.log.remote.
                 bytes
             );
 
-            log.trace("Uploaded segment manifest for {}, size: {}", remoteLogSegmentMetadata, bytes);
+            log.debug("Uploaded segment manifest for {}, size: {}", remoteLogSegmentMetadata, bytes);
         }
     }
 
@@ -343,7 +343,7 @@ public class RemoteStorageManager implements org.apache.kafka.server.log.remote.
                 Math.min(endPosition, remoteLogSegmentMetadata.segmentSizeInBytes() - 1)
             );
 
-            log.debug("Fetching log segment {} with range: {}", remoteLogSegmentMetadata, range);
+            log.trace("Fetching log segment {} with range: {}", remoteLogSegmentMetadata, range);
 
             metrics.recordSegmentFetch(
                 remoteLogSegmentMetadata.remoteLogSegmentId().topicIdPartition().topicPartition(),
@@ -355,7 +355,7 @@ public class RemoteStorageManager implements org.apache.kafka.server.log.remote.
 
             return new FetchChunkEnumeration(chunkManager, segmentKey, segmentManifest, range)
                 .toInputStream();
-        } catch (final StorageBackendException | IOException e) {
+        } catch (final Exception e) {
             throw new RemoteStorageException(e);
         }
     }
@@ -370,7 +370,7 @@ public class RemoteStorageManager implements org.apache.kafka.server.log.remote.
     public InputStream fetchIndex(final RemoteLogSegmentMetadata remoteLogSegmentMetadata,
                                   final IndexType indexType) throws RemoteStorageException {
         try {
-            log.debug("Fetching index {} for {}", indexType, remoteLogSegmentMetadata);
+            log.trace("Fetching index {} for {}", indexType, remoteLogSegmentMetadata);
 
             final var segmentManifest = fetchSegmentManifest(remoteLogSegmentMetadata);
 
@@ -388,7 +388,7 @@ public class RemoteStorageManager implements org.apache.kafka.server.log.remote.
             }
             final DetransformFinisher detransformFinisher = new DetransformFinisher(detransformEnum);
             return detransformFinisher.toInputStream();
-        } catch (final StorageBackendException | IOException e) {
+        } catch (final Exception e) {
             // TODO: should be aligned with upstream implementation
             if (indexType == TRANSACTION) {
                 return null;
@@ -415,7 +415,7 @@ public class RemoteStorageManager implements org.apache.kafka.server.log.remote.
                 final String key = objectKey.key(remoteLogSegmentMetadata, suffix);
                 deleter.delete(key);
             }
-        } catch (final StorageBackendException e) {
+        } catch (final Exception e) {
             metrics.recordSegmentDeleteError(remoteLogSegmentMetadata.remoteLogSegmentId()
                 .topicIdPartition().topicPartition());
             throw new RemoteStorageException(e);
