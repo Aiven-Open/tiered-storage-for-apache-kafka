@@ -134,7 +134,7 @@ abstract class SingleBrokerTest {
             throw new RuntimeException(e);
         }
 
-        kafka = new KafkaContainer(DockerImageName.parse("aivenoy/kafka:3.3-2022-10-06-tiered-storage-1-ts-1")
+        kafka = new KafkaContainer(DockerImageName.parse("aivenoy/kafka-with-ts-plugin")
             .asCompatibleSubstituteFor("confluentinc/cp-kafka")
         )
             .withEnv("KAFKA_AUTO_CREATE_TOPICS_ENABLE", "false")

@@ -14,7 +14,9 @@
 # limitations under the License.
 ##
 VERSION := $(shell grep -oP 'version=\K[^[:space:]]+' gradle.properties)
-IMAGE_TAG=aivenoy/kafka:3.3-2022-10-06-tiered-storage-1-ts-2
+IMAGE_NAME := aivenoy/kafka-with-ts-plugin
+IMAGE_VERSION := latest
+IMAGE_TAG := $(IMAGE_NAME):$(IMAGE_VERSION)
 
 .PHONY: clean checkstyle build integration_test e2e_test docker_image docker_push
 
