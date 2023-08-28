@@ -16,9 +16,12 @@
 
 package io.aiven.kafka.tieredstorage.manifest;
 
+import javax.management.ObjectName;
+
 import java.io.ByteArrayInputStream;
 import java.io.IOException;
 import java.io.InputStream;
+import java.lang.management.ManagementFactory;
 import java.time.Duration;
 import java.util.Optional;
 import java.util.concurrent.ForkJoinPool;
@@ -40,6 +43,7 @@ import static org.assertj.core.api.Assertions.assertThatNoException;
 import static org.assertj.core.api.Assertions.assertThatThrownBy;
 import static org.mockito.ArgumentMatchers.anyString;
 import static org.mockito.Mockito.doAnswer;
+import static org.mockito.Mockito.times;
 import static org.mockito.Mockito.verify;
 import static org.mockito.Mockito.verifyNoMoreInteractions;
 import static org.mockito.Mockito.when;
@@ -68,7 +72,7 @@ class SegmentManifestProviderTest {
     void setup() {
         provider = new SegmentManifestProvider(
             Optional.of(1000L), Optional.empty(), storage, MAPPER,
-            ForkJoinPool.commonPool());
+            ForkJoinPool.commonPool(), false);
     }
 
     @Test
@@ -76,7 +80,7 @@ class SegmentManifestProviderTest {
         assertThatNoException()
             .isThrownBy(() -> new SegmentManifestProvider(
                 Optional.empty(), Optional.of(Duration.ofMillis(1)), storage, MAPPER,
-                ForkJoinPool.commonPool()));
+                ForkJoinPool.commonPool(), false));
     }
 
     @Test
@@ -84,7 +88,7 @@ class SegmentManifestProviderTest {
         assertThatNoException()
             .isThrownBy(() -> new SegmentManifestProvider(
                 Optional.of(1L), Optional.empty(), storage, MAPPER,
-                ForkJoinPool.commonPool()));
+                ForkJoinPool.commonPool(), false));
     }
 
     @Test
@@ -100,6 +104,40 @@ class SegmentManifestProviderTest {
         verify(storage).fetch(key);
         assertThat(provider.get(key)).isEqualTo(expectedManifest);
         verifyNoMoreInteractions(storage);
+    }
+
+    @Test
+    void invalidateCache_jmx() throws Exception {
+        provider = new SegmentManifestProvider(
+            Optional.of(1000L), Optional.empty(), storage, MAPPER,
+            ForkJoinPool.commonPool(), true);
+
+        final String key = "topic-AAAAAAAAAAAAAAAAAAAAAQ/7/00000000000000000023-AAAAAAAAAAAAAAAAAAAAAA.rsm-manifest";
+        final SegmentManifestV1 expectedManifest = new SegmentManifestV1(
+            new FixedSizeChunkIndex(100, 1000, 110, 110),
+            false, null
+        );
+        when(storage.fetch(key))
+            .thenReturn(new ByteArrayInputStream(MANIFEST.getBytes()));
+        assertThat(provider.get(key)).isEqualTo(expectedManifest);
+        verify(storage).fetch(key);
+
+        final var mbeanName = new ObjectName(SegmentManifestCacheManager.MBEAN_NAME);
+        final var mbeanServer = ManagementFactory.getPlatformMBeanServer();
+        assertThat(mbeanServer.isRegistered(mbeanName)).isTrue();
+
+        final var sizeBefore = provider.cache().estimatedSize();
+        assertThat(sizeBefore).isEqualTo(1L);
+
+        mbeanServer.invoke(mbeanName, "clean", new Object[]{}, new String[]{});
+
+        final var sizeAfter = provider.cache().estimatedSize();
+        assertThat(sizeAfter).isEqualTo(0L);
+
+        when(storage.fetch(key))
+            .thenReturn(new ByteArrayInputStream(MANIFEST.getBytes()));
+        assertThat(provider.get(key)).isEqualTo(expectedManifest);
+        verify(storage, times(2)).fetch(key);
     }
 
     @Test

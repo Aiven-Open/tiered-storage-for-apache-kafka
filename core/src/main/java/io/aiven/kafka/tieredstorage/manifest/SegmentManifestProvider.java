@@ -16,8 +16,16 @@
 
 package io.aiven.kafka.tieredstorage.manifest;
 
+import javax.management.InstanceAlreadyExistsException;
+import javax.management.MBeanRegistrationException;
+import javax.management.MalformedObjectNameException;
+import javax.management.NotCompliantMBeanException;
+import javax.management.ObjectName;
+import javax.management.StandardMBean;
+
 import java.io.IOException;
 import java.io.InputStream;
+import java.lang.management.ManagementFactory;
 import java.time.Duration;
 import java.util.Optional;
 import java.util.concurrent.ExecutionException;
@@ -31,9 +39,13 @@ import io.aiven.kafka.tieredstorage.storage.StorageBackendException;
 
 import com.fasterxml.jackson.databind.ObjectMapper;
 import com.github.benmanes.caffeine.cache.AsyncLoadingCache;
+import com.github.benmanes.caffeine.cache.Cache;
 import com.github.benmanes.caffeine.cache.Caffeine;
+import org.slf4j.Logger;
+import org.slf4j.LoggerFactory;
 
 public class SegmentManifestProvider {
+    private static final Logger LOG = LoggerFactory.getLogger(SegmentManifestProvider.class);
     private static final String SEGMENT_MANIFEST_METRIC_GROUP_NAME = "segment-manifest-cache";
     private static final long GET_TIMEOUT_SEC = 10;
 
@@ -47,7 +59,8 @@ public class SegmentManifestProvider {
                                    final Optional<Duration> cacheRetention,
                                    final ObjectFetcher fileFetcher,
                                    final ObjectMapper mapper,
-                                   final Executor executor) {
+                                   final Executor executor,
+                                   final boolean enableJmxOperations) {
         final var statsCounter = new CaffeineStatsCounter(SEGMENT_MANIFEST_METRIC_GROUP_NAME);
         final var cacheBuilder = Caffeine.newBuilder()
             .recordStats(() -> statsCounter)
@@ -60,6 +73,29 @@ public class SegmentManifestProvider {
             }
         });
         statsCounter.registerSizeMetric(cache.synchronous()::estimatedSize);
+        if (enableJmxOperations) {
+            enableJmxMBean();
+        }
+    }
+
+    private void enableJmxMBean() {
+        final var mbeanName = SegmentManifestCacheManager.MBEAN_NAME;
+        try {
+            final var name = new ObjectName(mbeanName);
+            final var mbean = new StandardMBean(
+                new SegmentManifestCacheManagerMBean(this),
+                SegmentManifestCacheManager.class);
+            ManagementFactory.getPlatformMBeanServer().registerMBean(mbean, name);
+        } catch (NotCompliantMBeanException
+                 | MalformedObjectNameException
+                 | InstanceAlreadyExistsException
+                 | MBeanRegistrationException e) {
+            LOG.warn("Error creating MBean {}", mbeanName, e);
+        }
+    }
+
+    Cache<String, SegmentManifest> cache() {
+        return cache.synchronous();
     }
 
     public SegmentManifest get(final String manifestKey)

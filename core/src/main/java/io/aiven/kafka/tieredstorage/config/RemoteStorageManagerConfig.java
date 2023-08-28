@@ -44,8 +44,11 @@ public class RemoteStorageManagerConfig extends AbstractConfig {
     private static final String OBJECT_KEY_PREFIX_CONFIG = "key.prefix";
     private static final String OBJECT_KEY_PREFIX_DOC = "The object storage path prefix";
 
+    private static final String ENABLE_JMX_OPERATIONS_CONFIG = "enable.jmx";
+    private static final String ENABLE_JMX_OPERATIONS_DOC = "Enable JMX MBeans operations to manage caches";
+
     private static final String SEGMENT_MANIFEST_CACHE_PREFIX = "segment.manifest.cache.";
-    private static final String SEGMENT_MANIFEST_CACHE_SIZE_CONFIG = SEGMENT_MANIFEST_CACHE_PREFIX + "size";
+    public static final String SEGMENT_MANIFEST_CACHE_SIZE_CONFIG = SEGMENT_MANIFEST_CACHE_PREFIX + "size";
     private static final Long SEGMENT_MANIFEST_CACHE_SIZE_DEFAULT = 1000L;  // TODO consider a better default
     private static final String SEGMENT_MANIFEST_CACHE_SIZE_DOC =
         "The size in items of the segment manifest cache. "
@@ -105,6 +108,14 @@ public class RemoteStorageManagerConfig extends AbstractConfig {
             new ConfigDef.NonNullValidator(),
             ConfigDef.Importance.HIGH,
             OBJECT_KEY_PREFIX_DOC
+        );
+
+        CONFIG.define(
+            ENABLE_JMX_OPERATIONS_CONFIG,
+            ConfigDef.Type.BOOLEAN,
+            false,
+            ConfigDef.Importance.LOW,
+            ENABLE_JMX_OPERATIONS_DOC
         );
 
         CONFIG.define(
@@ -312,6 +323,10 @@ public class RemoteStorageManagerConfig extends AbstractConfig {
             return Optional.empty();
         }
         return Optional.of(Duration.ofMillis(rawValue));
+    }
+
+    public boolean enableJmxOperations() {
+        return getBoolean(ENABLE_JMX_OPERATIONS_CONFIG);
     }
 
     public String keyPrefix() {
