@@ -28,8 +28,8 @@ local_retention_bytes=5000000 # 5MB
 retention_ms=360000000 # 100 hours
 local_retention_ms=1000 # 1 second
 
-.PHONY: create_topic_ts_by_size
-create_topic_ts_by_size:
+.PHONY: create_topic_by_size_ts
+create_topic_by_size_ts:
 	docker exec -e KAFKA_OPTS= $(kafka_container) \
 		kafka-topics \
 		--bootstrap-server $(bootstrap_server) \
@@ -43,8 +43,8 @@ create_topic_ts_by_size:
 		--replication-factor $(replication_factor) \
 		--topic $(topic)
 
-.PHONY: create_topic_ts_by_time
-create_topic_ts_by_time:
+.PHONY: create_topic_by_time_ts
+create_topic_by_time_ts:
 	docker exec -e KAFKA_OPTS= $(kafka_container) \
 		kafka-topics \
 		--bootstrap-server $(bootstrap_server) \
@@ -57,8 +57,8 @@ create_topic_ts_by_time:
 		--replication-factor $(replication_factor) \
 		--topic $(topic)
 
-.PHONY: create_topic_no_ts_by_size
-create_topic_no_ts_by_size:
+.PHONY: create_topic_by_size_no_ts
+create_topic_by_size_no_ts:
 	docker exec -e KAFKA_OPTS= $(kafka_container) \
 		kafka-topics \
 		--bootstrap-server $(bootstrap_server) \
@@ -70,8 +70,8 @@ create_topic_no_ts_by_size:
 		--replication-factor $(replication_factor) \
 		--topic $(topic)
 
-.PHONY: create_topic_no_ts_by_time
-create_topic_no_ts_by_time:
+.PHONY: create_topic_by_time_no_ts
+create_topic_by_time_no_ts:
 	docker exec -e KAFKA_OPTS= $(kafka_container) \
 		kafka-topics \
 		--bootstrap-server $(bootstrap_server) \

@@ -22,11 +22,11 @@ This scenario uses `FileSystemStorage` as the "remote" storage.
 make run_local_fs
 
 # Create the topic with any variation
-make create_topic_ts_by_size
+make create_topic_by_size_ts
 # or
-# make create_topic_ts_by_time
+# make create_topic_by_time_ts
 # or with TS disabled
-# make create_topic_no_ts_*
+# make create_topic_*_no_ts
 
 # Fill the topic
 make fill_topic
@@ -69,11 +69,11 @@ Then perform the following steps:
 make run_s3_aws
 
 # Create the topic with any variation
-make create_topic_ts_by_size
+make create_topic_by_size_ts
 # or
-# make create_topic_ts_by_time
+# make create_topic_by_time_ts
 # or with TS disabled
-# make create_topic_no_ts_*
+# make create_topic_*_no_ts
 
 # Fill the topic
 make fill_topic
@@ -103,11 +103,11 @@ This scenario uses `S3Storage` with MinIO S3 as the remote storage.
 make run_s3_minio
 
 # Create the topic with any variation
-make create_topic_ts_by_size
+make create_topic_by_size_ts
 # or
-# make create_topic_ts_by_time
+# make create_topic_by_time_ts
 # or with TS disabled
-# make create_topic_no_ts_*
+# make create_topic_*_no_ts
 
 # Fill the topic
 make fill_topic
