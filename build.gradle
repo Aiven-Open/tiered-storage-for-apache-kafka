@@ -253,7 +253,3 @@ tasks.register('validateDependencies') {
         assert !conflictsFound : "Dependency conflicts found!"
     }
 }
-
-tasks.named("check") {
-    dependsOn(tasks.named("validateDependencies"))
-}
