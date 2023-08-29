@@ -27,7 +27,9 @@
     <suppress checks="ClassDataAbstractionCoupling" files="S3StorageConfig.java"/>
     <suppress checks="ClassDataAbstractionCoupling" files="RemoteStorageManager.java"/>
     <suppress checks="ClassDataAbstractionCoupling" files="Metrics.java"/>
+    <suppress checks="ClassDataAbstractionCoupling" files="MetricCollector.java"/>
     <suppress checks="CyclomaticComplexity" files="MetricCollector.java"/>
     <suppress checks="JavaNCSSCheck" files="MetricsRegistry.java"/>
     <suppress checks="JavaNCSSCheck" files="RemoteStorageManagerMetricsTest.java"/>
+    <suppress checks="NPathComplexity" files="CredentialsBuilder.java"/>
 </suppressions>

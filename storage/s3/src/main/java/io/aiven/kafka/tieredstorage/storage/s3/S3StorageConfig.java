@@ -22,7 +22,8 @@ import java.util.Objects;
 import org.apache.kafka.common.config.AbstractConfig;
 import org.apache.kafka.common.config.ConfigDef;
 import org.apache.kafka.common.config.ConfigException;
-import org.apache.kafka.common.config.types.Password;
+
+import io.aiven.kafka.tieredstorage.storage.config.NonEmptyPassword;
 
 import com.amazonaws.auth.AWSCredentials;
 import com.amazonaws.auth.AWSCredentialsProvider;
@@ -230,19 +231,6 @@ public class S3StorageConfig extends AbstractConfig {
             final Class<?> providerClass = (Class<?>) value;
             if (!AWSCredentialsProvider.class.isAssignableFrom(providerClass)) {
                 throw new ConfigException(name, value, "Class must extend " + AWSCredentialsProvider.class);
-            }
-        }
-    }
-
-    private static class NonEmptyPassword implements ConfigDef.Validator {
-        @Override
-        public void ensureValid(final String name, final Object value) {
-            if (Objects.isNull(value)) {
-                return;
-            }
-            final var pwd = (Password) value;
-            if (pwd.value() == null || pwd.value().isBlank()) {
-                throw new ConfigException(name + " value must not be empty");
             }
         }
     }

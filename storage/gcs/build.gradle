@@ -14,28 +14,20 @@
  * limitations under the License.
  */
 
-archivesBaseName = "storage-s3"
+archivesBaseName = "storage-gcs"
 
 ext {
     // Keep empty lines between versions to avoid conflicts on mass update (e.g. Dependabot).
 
-    awsSdkVersion = "1.12.520"
+    gcpSdkVersion = "2.26.1"
 }
 
 dependencies {
     implementation project(":storage:core")
 
-    // Take out jackson libraries out to avoid collision with core jackson dependencies
-    implementation ("com.amazonaws:aws-java-sdk-s3:$awsSdkVersion") {
-        exclude group: "com.fasterxml.jackson.core"
-        exclude group: "com.fasterxml.jackson.dataformat"
-    }
-    // replacing with version used by core
-    implementation "com.fasterxml.jackson.core:jackson-databind:$jacksonVersion"
-    implementation "com.fasterxml.jackson.dataformat:jackson-dataformat-cbor:$jacksonVersion"
+    implementation "com.google.cloud:google-cloud-storage:$gcpSdkVersion"
 
     testImplementation(testFixtures(project(":storage:core")))
 
     testImplementation "org.testcontainers:junit-jupiter:$testcontainersVersion"
-    testImplementation "org.testcontainers:localstack:$testcontainersVersion"
 }
