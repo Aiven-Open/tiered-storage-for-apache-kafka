@@ -20,7 +20,9 @@ dependencies {
     testImplementation "org.apache.kafka:kafka-storage-api:$kafkaVersion"
 
     testImplementation "commons-io:commons-io:$apacheCommonsIOVersion"
-    testImplementation "com.amazonaws:aws-java-sdk-s3:$awsSdkVersion"
+    testImplementation("software.amazon.awssdk:s3:$awsSdkVersion") {
+        exclude group: "org.slf4j"
+    }
 
     testImplementation "org.testcontainers:junit-jupiter:$testcontainersVersion"
     testImplementation "org.testcontainers:kafka:$testcontainersVersion"

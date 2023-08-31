@@ -16,153 +16,133 @@
 
 package io.aiven.kafka.tieredstorage.storage.s3;
 
-import java.net.URL;
+import java.net.URI;
 import java.util.Map;
 
 import org.apache.kafka.common.config.ConfigException;
 
-import com.amazonaws.auth.AWSCredentialsProvider;
-import com.amazonaws.auth.AWSStaticCredentialsProvider;
-import com.amazonaws.auth.EnvironmentVariableCredentialsProvider;
-import com.amazonaws.regions.Regions;
-import com.amazonaws.services.s3.AmazonS3;
 import org.junit.jupiter.api.Test;
+import software.amazon.awssdk.auth.credentials.AwsCredentialsProvider;
+import software.amazon.awssdk.auth.credentials.EnvironmentVariableCredentialsProvider;
+import software.amazon.awssdk.auth.credentials.StaticCredentialsProvider;
+import software.amazon.awssdk.regions.Region;
+import software.amazon.awssdk.services.s3.S3Client;
 
 import static io.aiven.kafka.tieredstorage.storage.s3.S3StorageConfig.S3_MULTIPART_UPLOAD_PART_SIZE_DEFAULT;
-import static io.aiven.kafka.tieredstorage.storage.s3.S3StorageConfig.S3_REGION_DEFAULT;
 import static org.assertj.core.api.Assertions.assertThat;
 import static org.assertj.core.api.Assertions.assertThatThrownBy;
 
 class S3StorageConfigTest {
+    private static final String BUCKET_NAME = "b1";
+    private static final Region TEST_REGION = Region.US_EAST_2;
+    private static final String MINIO_URL = "http://minio";
 
     // Test scenarios
-    // - Minimal/Full configs
+    // - Minimal config
     @Test
     void minimalConfig() {
-        final String bucketName = "b1";
-        final Map<String, Object> configs = Map.of("s3.bucket.name", bucketName);
-        final S3StorageConfig config = new S3StorageConfig(configs);
-        assertThat(config.bucketName()).isEqualTo(bucketName);
+        final var configs = Map.of(
+            "s3.bucket.name", BUCKET_NAME,
+            "s3.region", TEST_REGION.id()
+        );
+        final var config = new S3StorageConfig(configs);
 
-        final AWSCredentialsProvider credentialsProvider = config.credentialsProvider();
-        assertThat(credentialsProvider).isNull();
-        final AmazonS3 s3 = config.s3Client();
-        assertThat(s3.getRegionName()).isEqualTo(S3_REGION_DEFAULT);
-        final String expectedHost = "s3." + S3_REGION_DEFAULT + ".amazonaws.com";
-        assertThat(s3.getUrl(bucketName, "test")).hasHost(expectedHost);
+        assertThat(config.bucketName()).isEqualTo(BUCKET_NAME);
+        assertThat(config.credentialsProvider()).isNull();
         assertThat(config.pathStyleAccessEnabled()).isNull();
         assertThat(config.uploadPartSize()).isEqualTo(S3_MULTIPART_UPLOAD_PART_SIZE_DEFAULT);
+
+        verifyClientConfiguration(config.s3Client(), null);
     }
 
     // - Credential provider scenarios
     //   - Without provider
     @Test
-    void configWithoutProvider() {
-        final String bucketName = "b1";
-        final String region = Regions.US_EAST_2.getName();
-        final String minioUrl = "http://minio";
+    void configWithoutCredentialsProvider() {
         final Map<String, Object> configs = Map.of(
-            "s3.bucket.name", bucketName,
-            "s3.region", region,
-            "s3.endpoint.url", minioUrl,
+            "s3.bucket.name", BUCKET_NAME,
+            "s3.region", TEST_REGION.id(),
+            "s3.endpoint.url", MINIO_URL,
             "s3.path.style.access.enabled", true
         );
-        final S3StorageConfig config = new S3StorageConfig(configs);
-        assertThat(config.bucketName()).isEqualTo(bucketName);
-        assertThat(config.getString("s3.region")).isEqualTo(region);
-        assertThat(config.getString("s3.endpoint.url")).isEqualTo(minioUrl);
-
-        final AWSCredentialsProvider credentialsProvider = config.credentialsProvider();
-        assertThat(credentialsProvider).isNull();
-        final AmazonS3 s3 = config.s3Client();
-        assertThat(s3.getRegionName()).isEqualTo(region);
-        final URL test = s3.getUrl(bucketName, "test");
-        assertThat(test).hasHost("minio");
+        final var config = new S3StorageConfig(configs);
+        assertThat(config.bucketName()).isEqualTo(BUCKET_NAME);
+        assertThat(config.credentialsProvider()).isNull();
+        assertThat(config.getBoolean(S3StorageConfig.S3_PATH_STYLE_ENABLED_CONFIG)).isTrue();
         assertThat(config.pathStyleAccessEnabled()).isTrue();
+
+        verifyClientConfiguration(config.s3Client(), "minio");
     }
 
     //   - With provider
     @Test
     void configWithProvider() {
-        final String bucketName = "b1";
-        final String region = Regions.US_EAST_2.getName();
-        final String minioUrl = "http://minio";
-        final String customConfigProvider = EnvironmentVariableCredentialsProvider.class.getName();
+        final var customCredentialsProvider = EnvironmentVariableCredentialsProvider.class;
         final int partSize = 10 * 1024 * 1024;
         final Map<String, Object> configs = Map.of(
-            "s3.bucket.name", bucketName,
-            "s3.region", region,
-            "s3.endpoint.url", minioUrl,
+            "s3.bucket.name", BUCKET_NAME,
+            "s3.region", TEST_REGION.id(),
+            "s3.endpoint.url", MINIO_URL,
             "s3.path.style.access.enabled", false,
             "s3.multipart.upload.part.size", partSize,
-            "aws.credentials.provider.class", customConfigProvider);
-        final S3StorageConfig config = new S3StorageConfig(configs);
-        assertThat(config.bucketName()).isEqualTo(bucketName);
-        assertThat(config.getString("s3.region")).isEqualTo(region);
-        assertThat(config.getString("s3.endpoint.url")).isEqualTo(minioUrl);
-        assertThat(config.getClass("aws.credentials.provider.class").getName())
-            .isEqualTo(customConfigProvider);
+            "aws.credentials.provider.class", customCredentialsProvider.getName());
 
-        final AWSCredentialsProvider credentialsProvider = config.credentialsProvider();
-        assertThat(credentialsProvider).isInstanceOf(EnvironmentVariableCredentialsProvider.class);
-        final AmazonS3 s3 = config.s3Client();
-        assertThat(s3.getRegionName()).isEqualTo(region);
-        assertThat(s3.getUrl(bucketName, "test")).hasHost("minio");
+        final var config = new S3StorageConfig(configs);
+
+        assertThat(config.bucketName()).isEqualTo(BUCKET_NAME);
         assertThat(config.pathStyleAccessEnabled()).isFalse();
         assertThat(config.uploadPartSize()).isEqualTo(partSize);
+        assertThat(config.credentialsProvider()).isInstanceOf(customCredentialsProvider);
+
+        verifyClientConfiguration(config.s3Client(), "minio");
     }
 
     //   - With static credentials
     @Test
     void configWithStaticCredentials() {
-        final String bucketName = "b1";
-        final String region = Regions.US_EAST_2.getName();
-        final String minioUrl = "http://minio";
+        final Region region = Region.US_EAST_2;
         final String username = "username";
         final String password = "password";
         final Map<String, Object> configs = Map.of(
-            "s3.bucket.name", bucketName,
-            "s3.region", region,
-            "s3.endpoint.url", minioUrl,
+            "s3.bucket.name", BUCKET_NAME,
+            "s3.region", region.id(),
+            "s3.endpoint.url", MINIO_URL,
             "aws.access.key.id", username,
             "aws.secret.access.key", password);
-        final S3StorageConfig config = new S3StorageConfig(configs);
-        assertThat(config.bucketName()).isEqualTo(bucketName);
-        assertThat(config.getString("s3.region")).isEqualTo(region);
-        assertThat(config.getString("s3.endpoint.url")).isEqualTo(minioUrl);
+
+        final var config = new S3StorageConfig(configs);
+
+        assertThat(config.bucketName()).isEqualTo(BUCKET_NAME);
+        assertThat(config.getString("s3.region")).isEqualTo(region.id());
+        assertThat(config.getString("s3.endpoint.url")).isEqualTo(MINIO_URL);
         assertThat(config.getPassword("aws.access.key.id").value()).isEqualTo(username);
         assertThat(config.getPassword("aws.secret.access.key").value()).isEqualTo(password);
 
-        final AWSCredentialsProvider credentialsProvider = config.credentialsProvider();
-        assertThat(credentialsProvider).isInstanceOf(AWSStaticCredentialsProvider.class);
-        final AWSStaticCredentialsProvider staticCredentialsProvider =
-            (AWSStaticCredentialsProvider) credentialsProvider;
-        assertThat(staticCredentialsProvider.getCredentials().getAWSAccessKeyId()).isEqualTo(username);
-        assertThat(staticCredentialsProvider.getCredentials().getAWSSecretKey()).isEqualTo(password);
-        final AmazonS3 s3 = config.s3Client();
-        assertThat(s3.getRegionName()).isEqualTo(region);
-        assertThat(s3.getUrl(bucketName, "test")).hasHost("minio");
+        final AwsCredentialsProvider credentialsProvider = config.credentialsProvider();
+        assertThat(credentialsProvider).isInstanceOf(StaticCredentialsProvider.class);
+        final var awsCredentials = credentialsProvider.resolveCredentials();
+        assertThat(awsCredentials.accessKeyId()).isEqualTo(username);
+        assertThat(awsCredentials.secretAccessKey()).isEqualTo(password);
+
+        verifyClientConfiguration(config.s3Client(), "minio");
     }
 
     //   - With missing static credentials
     @Test
     void configWithMissingStaticConfig() {
-        final String bucketName = "b1";
-        final String region = Regions.US_EAST_2.getName();
-        final String minioUrl = "http://minio";
         final String username = "username";
         final String password = "password";
         assertThatThrownBy(() -> new S3StorageConfig(Map.of(
-            "s3.bucket.name", bucketName,
-            "s3.region", region,
-            "s3.endpoint.url", minioUrl,
+            "s3.bucket.name", BUCKET_NAME,
+            "s3.region", TEST_REGION.id(),
+            "s3.endpoint.url", MINIO_URL,
             "aws.access.key.id", username)))
             .isInstanceOf(ConfigException.class)
             .hasMessage("aws.access.key.id and aws.secret.access.key must be defined together");
         assertThatThrownBy(() -> new S3StorageConfig(Map.of(
-            "s3.bucket.name", bucketName,
-            "s3.region", region,
-            "s3.endpoint.url", minioUrl,
+            "s3.bucket.name", BUCKET_NAME,
+            "s3.region", TEST_REGION.id(),
+            "s3.endpoint.url", MINIO_URL,
             "aws.secret.access.key", password)))
             .isInstanceOf(ConfigException.class)
             .hasMessage("aws.access.key.id and aws.secret.access.key must be defined together");
@@ -171,14 +151,15 @@ class S3StorageConfigTest {
     //   - With empty static credentials
     @Test
     void configWithEmptyStaticConfig() {
-        final String bucketName = "b1";
         assertThatThrownBy(() -> new S3StorageConfig(Map.of(
-            "s3.bucket.name", bucketName,
+            "s3.bucket.name", BUCKET_NAME,
+            "s3.region", TEST_REGION.id(),
             "aws.access.key.id", "")))
             .isInstanceOf(ConfigException.class)
             .hasMessage("aws.access.key.id value must not be empty");
         assertThatThrownBy(() -> new S3StorageConfig(Map.of(
-            "s3.bucket.name", bucketName,
+            "s3.bucket.name", BUCKET_NAME,
+            "s3.region", TEST_REGION.id(),
             "aws.secret.access.key", "")))
             .isInstanceOf(ConfigException.class)
             .hasMessage("aws.secret.access.key value must not be empty");
@@ -187,17 +168,13 @@ class S3StorageConfigTest {
     //   - With conflict between static and custom
     @Test
     void configWithConflictBetweenCustomProviderAndStaticCredentials() {
-        final String bucketName = "b1";
-        final String region = Regions.US_EAST_2.getName();
-        final String minioUrl = "http://minio";
-        final String customConfigProvider = EnvironmentVariableCredentialsProvider.class.getName();
         final String username = "username";
         final String password = "password";
         final Map<String, Object> configs = Map.of(
-            "s3.bucket.name", bucketName,
-            "s3.region", region,
-            "s3.endpoint.url", minioUrl,
-            "aws.credentials.provider.class", customConfigProvider,
+            "s3.bucket.name", BUCKET_NAME,
+            "s3.region", TEST_REGION.id(),
+            "s3.endpoint.url", MINIO_URL,
+            "aws.credentials.provider.class", EnvironmentVariableCredentialsProvider.class.getName(),
             "aws.access.key.id", username,
             "aws.secret.access.key", password);
         assertThatThrownBy(() -> new S3StorageConfig(configs))
@@ -219,7 +196,8 @@ class S3StorageConfigTest {
     @Test
     void shouldRequirePartSizeLargerThan5MiB() {
         assertThatThrownBy(() -> new S3StorageConfig(Map.of(
-            "s3.bucket.name", "test",
+            "s3.bucket.name", BUCKET_NAME,
+            "s3.region", TEST_REGION.id(),
             "s3.multipart.upload.part.size", 1024
         )))
             .isInstanceOf(ConfigException.class)
@@ -227,15 +205,11 @@ class S3StorageConfigTest {
                 + "Value must be at least 5242880");
     }
 
-    // - S3 client creation
-    @Test
-    void shouldCreateClientWithMinimalConfig() {
-        final String bucketName = "b1";
-        final Map<String, Object> configs = Map.of("s3.bucket.name", bucketName);
-        final S3StorageConfig config = new S3StorageConfig(configs);
-        assertThat(config.bucketName()).isEqualTo(bucketName);
-
-        final AmazonS3 s3 = config.s3Client();
-        assertThat(s3).isNotNull();
+    private static void verifyClientConfiguration(final S3Client s3Client, final String hostnameOverride) {
+        final var clientConfiguration = s3Client.serviceClientConfiguration();
+        assertThat(clientConfiguration.region()).isEqualTo(TEST_REGION);
+        assertThat(clientConfiguration.endpointOverride().map(URI::getHost).orElse(null)).isEqualTo(hostnameOverride);
+        assertThat(clientConfiguration.overrideConfiguration().metricPublishers())
+            .allSatisfy(metricPublisher -> assertThat(metricPublisher).isInstanceOf(MetricCollector.class));
     }
 }

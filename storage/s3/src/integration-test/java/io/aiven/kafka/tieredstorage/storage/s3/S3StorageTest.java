@@ -22,11 +22,6 @@ import java.util.Map;
 import io.aiven.kafka.tieredstorage.storage.BaseStorageTest;
 import io.aiven.kafka.tieredstorage.storage.StorageBackend;
 
-import com.amazonaws.auth.AWSStaticCredentialsProvider;
-import com.amazonaws.auth.BasicAWSCredentials;
-import com.amazonaws.client.builder.AwsClientBuilder;
-import com.amazonaws.services.s3.AmazonS3;
-import com.amazonaws.services.s3.AmazonS3ClientBuilder;
 import org.junit.jupiter.api.BeforeAll;
 import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.Test;
@@ -34,43 +29,47 @@ import org.junit.jupiter.api.TestInfo;
 import org.testcontainers.containers.localstack.LocalStackContainer;
 import org.testcontainers.junit.jupiter.Container;
 import org.testcontainers.junit.jupiter.Testcontainers;
+import software.amazon.awssdk.auth.credentials.AwsBasicCredentials;
+import software.amazon.awssdk.auth.credentials.StaticCredentialsProvider;
+import software.amazon.awssdk.regions.Region;
+import software.amazon.awssdk.services.s3.S3Client;
+import software.amazon.awssdk.services.s3.model.CreateBucketRequest;
 
 import static org.assertj.core.api.Assertions.assertThat;
 
 @Testcontainers
 public class S3StorageTest extends BaseStorageTest {
     @Container
-    public static final LocalStackContainer LOCALSTACK = S3TestContainer.container();
-    public static final int PART_SIZE = 8 * 1024 * 1024; // 8MiB
+    private static final LocalStackContainer LOCALSTACK = S3TestContainer.container();
+    private static final int PART_SIZE = 8 * 1024 * 1024; // 8MiB
 
-    static AmazonS3 s3Client;
+    private static S3Client s3Client;
     private String bucketName;
 
     @BeforeAll
-    public static void setUpClass() {
-        s3Client = AmazonS3ClientBuilder
-            .standard()
-            .withEndpointConfiguration(
-                new AwsClientBuilder.EndpointConfiguration(
-                    LOCALSTACK.getEndpointOverride(LocalStackContainer.Service.S3).toString(),
-                    LOCALSTACK.getRegion()
-                )
-            )
-            .withCredentials(
-                new AWSStaticCredentialsProvider(
-                    new BasicAWSCredentials(LOCALSTACK.getAccessKey(), LOCALSTACK.getSecretKey())
+    static void setUpClass() {
+        final var clientBuilder = S3Client.builder();
+        clientBuilder.region(Region.of(LOCALSTACK.getRegion()))
+            .endpointOverride(LOCALSTACK.getEndpointOverride(LocalStackContainer.Service.S3))
+            .credentialsProvider(
+                StaticCredentialsProvider.create(
+                    AwsBasicCredentials.create(
+                        LOCALSTACK.getAccessKey(),
+                        LOCALSTACK.getSecretKey()
+                    )
                 )
             )
             .build();
+        s3Client = clientBuilder.build();
     }
 
     @BeforeEach
-    public void setUp(final TestInfo testInfo) {
+    void setUp(final TestInfo testInfo) {
         bucketName = testInfo.getDisplayName()
             .toLowerCase()
             .replace("(", "")
             .replace(")", "");
-        s3Client.createBucket(bucketName);
+        s3Client.createBucket(CreateBucketRequest.builder().bucket(bucketName).build());
     }
 
     @Override
@@ -80,6 +79,8 @@ public class S3StorageTest extends BaseStorageTest {
             "s3.bucket.name", bucketName,
             "s3.region", LOCALSTACK.getRegion(),
             "s3.endpoint.url", LOCALSTACK.getEndpointOverride(LocalStackContainer.Service.S3).toString(),
+            "aws.access.key.id", LOCALSTACK.getAccessKey(),
+            "aws.secret.access.key", LOCALSTACK.getSecretKey(),
             "s3.path.style.access.enabled", true,
             "s3.multipart.upload.part.size", PART_SIZE
         );

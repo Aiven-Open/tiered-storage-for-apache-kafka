@@ -26,14 +26,14 @@ import io.aiven.kafka.tieredstorage.storage.KeyNotFoundException;
 import io.aiven.kafka.tieredstorage.storage.StorageBackend;
 import io.aiven.kafka.tieredstorage.storage.StorageBackendException;
 
-import com.amazonaws.services.s3.AmazonS3;
-import com.amazonaws.services.s3.model.AmazonS3Exception;
-import com.amazonaws.services.s3.model.GetObjectRequest;
-import com.amazonaws.services.s3.model.S3Object;
+import software.amazon.awssdk.awscore.exception.AwsServiceException;
+import software.amazon.awssdk.services.s3.S3Client;
+import software.amazon.awssdk.services.s3.model.DeleteObjectRequest;
+import software.amazon.awssdk.services.s3.model.GetObjectRequest;
 
 public class S3Storage implements StorageBackend {
 
-    private AmazonS3 s3Client;
+    private S3Client s3Client;
     private String bucketName;
     private int partSize;
 
@@ -46,11 +46,11 @@ public class S3Storage implements StorageBackend {
     }
 
     @Override
-    public long upload(final InputStream in, final String key) throws StorageBackendException {
+    public long upload(final InputStream inputStream, final String key) throws StorageBackendException {
         try (final var out = s3OutputStream(key)) {
-            in.transferTo(out);
+            inputStream.transferTo(out);
             return out.processedBytes();
-        } catch (final AmazonS3Exception | IOException e) {
+        } catch (final IOException e) {
             throw new StorageBackendException("Failed to upload " + key, e);
         }
     }
@@ -62,20 +62,20 @@ public class S3Storage implements StorageBackend {
     @Override
     public void delete(final String key) throws StorageBackendException {
         try {
-            s3Client.deleteObject(bucketName, key);
-        } catch (final AmazonS3Exception e) {
+            final var deleteRequest = DeleteObjectRequest.builder().bucket(bucketName).key(key).build();
+            s3Client.deleteObject(deleteRequest);
+        } catch (final AwsServiceException e) {
             throw new StorageBackendException("Failed to delete " + key, e);
         }
     }
 
     @Override
     public InputStream fetch(final String key) throws StorageBackendException {
+        final GetObjectRequest getRequest = GetObjectRequest.builder().bucket(bucketName).key(key).build();
         try {
-            final GetObjectRequest getRequest = new GetObjectRequest(bucketName, key);
-            final S3Object object = s3Client.getObject(getRequest);
-            return object.getObjectContent();
-        } catch (final AmazonS3Exception e) {
-            if (e.getStatusCode() == 404) {
+            return s3Client.getObject(getRequest);
+        } catch (final AwsServiceException e) {
+            if (e.statusCode() == 404) {
                 throw new KeyNotFoundException(this, key, e);
             } else {
                 throw new StorageBackendException("Failed to fetch " + key, e);
@@ -86,15 +86,17 @@ public class S3Storage implements StorageBackend {
     @Override
     public InputStream fetch(final String key, final BytesRange range) throws StorageBackendException {
         try {
-            final GetObjectRequest getRequest = new GetObjectRequest(bucketName, key);
-            getRequest.setRange(range.from, range.to);
-            final S3Object object = s3Client.getObject(getRequest);
-            return object.getObjectContent();
-        } catch (final AmazonS3Exception e) {
-            if (e.getStatusCode() == 404) {
+            final GetObjectRequest getRequest = GetObjectRequest.builder()
+                .bucket(bucketName)
+                .key(key)
+                .range(range.toString())
+                .build();
+            return s3Client.getObject(getRequest);
+        } catch (final AwsServiceException e) {
+            if (e.statusCode() == 404) {
                 throw new KeyNotFoundException(this, key, e);
             }
-            if (e.getStatusCode() == 416) {
+            if (e.statusCode() == 416) {
                 throw new InvalidRangeException("Invalid range " + range, e);
             }
 

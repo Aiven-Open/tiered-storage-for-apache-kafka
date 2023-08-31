@@ -26,19 +26,11 @@ import org.apache.kafka.common.metrics.stats.CumulativeCount;
 import org.apache.kafka.common.metrics.stats.Rate;
 import org.apache.kafka.common.utils.Time;
 
-import com.amazonaws.Request;
-import com.amazonaws.Response;
-import com.amazonaws.metrics.RequestMetricCollector;
-import com.amazonaws.services.s3.model.AbortMultipartUploadRequest;
-import com.amazonaws.services.s3.model.CompleteMultipartUploadRequest;
-import com.amazonaws.services.s3.model.DeleteObjectRequest;
-import com.amazonaws.services.s3.model.GetObjectRequest;
-import com.amazonaws.services.s3.model.InitiateMultipartUploadRequest;
-import com.amazonaws.services.s3.model.PutObjectRequest;
-import com.amazonaws.services.s3.model.UploadPartRequest;
-import com.amazonaws.util.AWSRequestMetrics;
+import software.amazon.awssdk.core.metrics.CoreMetric;
+import software.amazon.awssdk.metrics.MetricCollection;
+import software.amazon.awssdk.metrics.MetricPublisher;
 
-class MetricCollector extends RequestMetricCollector {
+class MetricCollector implements MetricPublisher {
     private final org.apache.kafka.common.metrics.Metrics metrics;
 
     private static final String METRIC_GROUP = "s3-metrics";
@@ -76,35 +68,36 @@ class MetricCollector extends RequestMetricCollector {
     }
 
     @Override
-    public void collectMetrics(final Request<?> request, final Response<?> response) {
-        final AWSRequestMetrics awsRequestMetrics = request.getAWSRequestMetrics();
-        if (awsRequestMetrics == null) {
-            return;
+    public void publish(final MetricCollection metricCollection) {
+        final List<String> metricValues = metricCollection.metricValues(CoreMetric.OPERATION_NAME);
+        for (final String metricValue : metricValues) {
+            // Try to arrange them by likelihood, at least GetObjectRequest should be first.
+            if ("GetObject".equals(metricValue)) {
+                this.getObjectRequests.record();
+            }
+            if ("UploadPart".equals(metricValue)) {
+                this.uploadPartRequests.record();
+            }
+            if ("CreateMultipartUpload".equals(metricValue)) {
+                this.createMultipartUploadRequests.record();
+            }
+            if ("CompleteMultipartUpload".equals(metricValue)) {
+                this.completeMultipartUploadRequests.record();
+            }
+            if ("PutObject".equals(metricValue)) {
+                this.putObjectRequests.record();
+            }
+            if ("DeleteObject".equals(metricValue)) {
+                this.deleteObjectRequests.record();
+            }
+            if ("AbortMultipartUpload".equals(metricValue)) {
+                this.abortMultipartUploadRequests.record();
+            }
         }
-        final List<Object> requestTypes = awsRequestMetrics.getProperty(AWSRequestMetrics.Field.RequestType);
-        if (requestTypes == null || requestTypes.isEmpty()) {
-            return;
-        }
-        final Object requestType = requestTypes.get(0);
-        if (requestType == null) {
-            return;
-        }
+    }
 
-        // Try to arrange them by likelihood, at least GetObjectRequest should be first.
-        if (GetObjectRequest.class.getSimpleName().equals(requestType)) {
-            this.getObjectRequests.record();
-        } else if (UploadPartRequest.class.getSimpleName().equals(requestType)) {
-            this.uploadPartRequests.record();
-        } else if (InitiateMultipartUploadRequest.class.getSimpleName().equals(requestType)) {
-            this.createMultipartUploadRequests.record();
-        } else if (CompleteMultipartUploadRequest.class.getSimpleName().equals(requestType)) {
-            this.completeMultipartUploadRequests.record();
-        } else if (PutObjectRequest.class.getSimpleName().equals(requestType)) {
-            this.putObjectRequests.record();
-        } else if (DeleteObjectRequest.class.getSimpleName().equals(requestType)) {
-            this.deleteObjectRequests.record();
-        } else if (AbortMultipartUploadRequest.class.getSimpleName().equals(requestType)) {
-            this.abortMultipartUploadRequests.record();
-        }
+    @Override
+    public void close() {
+        metrics.close();
     }
 }

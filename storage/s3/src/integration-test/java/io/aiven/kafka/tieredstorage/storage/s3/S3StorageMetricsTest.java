@@ -16,7 +16,6 @@
 
 package io.aiven.kafka.tieredstorage.storage.s3;
 
-import javax.management.JMException;
 import javax.management.MBeanServer;
 import javax.management.ObjectName;
 
@@ -27,13 +26,7 @@ import java.lang.management.ManagementFactory;
 import java.util.Map;
 
 import io.aiven.kafka.tieredstorage.storage.BytesRange;
-import io.aiven.kafka.tieredstorage.storage.StorageBackendException;
 
-import com.amazonaws.auth.AWSStaticCredentialsProvider;
-import com.amazonaws.auth.BasicAWSCredentials;
-import com.amazonaws.client.builder.AwsClientBuilder;
-import com.amazonaws.services.s3.AmazonS3;
-import com.amazonaws.services.s3.AmazonS3ClientBuilder;
 import org.junit.jupiter.api.BeforeAll;
 import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.Test;
@@ -42,9 +35,15 @@ import org.mockito.junit.jupiter.MockitoExtension;
 import org.testcontainers.containers.localstack.LocalStackContainer;
 import org.testcontainers.junit.jupiter.Container;
 import org.testcontainers.junit.jupiter.Testcontainers;
+import software.amazon.awssdk.auth.credentials.AwsBasicCredentials;
+import software.amazon.awssdk.auth.credentials.StaticCredentialsProvider;
+import software.amazon.awssdk.regions.Region;
+import software.amazon.awssdk.services.s3.S3Client;
+import software.amazon.awssdk.services.s3.model.CreateBucketRequest;
 
-import static org.assertj.core.api.AssertionsForClassTypes.assertThat;
-import static org.assertj.core.api.AssertionsForClassTypes.assertThatThrownBy;
+import static org.assertj.core.api.Assertions.assertThat;
+import static org.assertj.core.api.Assertions.assertThatThrownBy;
+import static org.assertj.core.api.InstanceOfAssertFactories.DOUBLE;
 import static org.mockito.ArgumentMatchers.any;
 import static org.mockito.Mockito.mock;
 import static org.mockito.Mockito.when;
@@ -53,43 +52,43 @@ import static org.mockito.Mockito.when;
 @Testcontainers
 class S3StorageMetricsTest {
     @Container
-    public static final LocalStackContainer LOCALSTACK = S3TestContainer.container();
+    private static final LocalStackContainer LOCALSTACK = S3TestContainer.container();
 
-    static final MBeanServer MBEAN_SERVER = ManagementFactory.getPlatformMBeanServer();
+    private static final MBeanServer MBEAN_SERVER = ManagementFactory.getPlatformMBeanServer();
 
-    public static final int PART_SIZE = 5 * 1024 * 1024;
+    private static final int PART_SIZE = 5 * 1024 * 1024;
 
-    static AmazonS3 s3Client;
-    static String bucketName = "test-bucket";
+    private static final String BUCKET_NAME = "test-bucket";
 
-    S3Storage storage;
+    private S3Storage storage;
 
     @BeforeAll
     static void setupS3() {
-        s3Client = AmazonS3ClientBuilder
-            .standard()
-            .withEndpointConfiguration(
-                new AwsClientBuilder.EndpointConfiguration(
-                    LOCALSTACK.getEndpointOverride(LocalStackContainer.Service.S3).toString(),
-                    LOCALSTACK.getRegion()
-                )
-            )
-            .withCredentials(
-                new AWSStaticCredentialsProvider(
-                    new BasicAWSCredentials(LOCALSTACK.getAccessKey(), LOCALSTACK.getSecretKey())
+        final var clientBuilder = S3Client.builder();
+        clientBuilder.region(Region.of(LOCALSTACK.getRegion()))
+            .endpointOverride(LOCALSTACK.getEndpointOverride(LocalStackContainer.Service.S3))
+            .credentialsProvider(
+                StaticCredentialsProvider.create(
+                    AwsBasicCredentials.create(
+                        LOCALSTACK.getAccessKey(),
+                        LOCALSTACK.getSecretKey()
+                    )
                 )
             )
             .build();
-        s3Client.createBucket(bucketName);
+        final S3Client s3Client = clientBuilder.build();
+        s3Client.createBucket(CreateBucketRequest.builder().bucket(BUCKET_NAME).build());
     }
 
     @BeforeEach
     void setupStorage() {
         storage = new S3Storage();
         final Map<String, Object> configs = Map.of(
-            "s3.bucket.name", bucketName,
+            "s3.bucket.name", BUCKET_NAME,
             "s3.region", LOCALSTACK.getRegion(),
             "s3.endpoint.url", LOCALSTACK.getEndpointOverride(LocalStackContainer.Service.S3).toString(),
+            "aws.access.key.id", LOCALSTACK.getAccessKey(),
+            "aws.secret.access.key", LOCALSTACK.getSecretKey(),
             "s3.path.style.access.enabled", true,
             "s3.multipart.upload.part.size", PART_SIZE
         );
@@ -97,7 +96,7 @@ class S3StorageMetricsTest {
     }
 
     @Test
-    void metricsShouldBeReported() throws StorageBackendException, IOException, JMException {
+    void metricsShouldBeReported() throws Exception {
         final byte[] data = new byte[PART_SIZE + 1];
 
         final String key = "x";
@@ -119,53 +118,45 @@ class S3StorageMetricsTest {
 
         final ObjectName segmentCopyPerSecName = ObjectName.getInstance(
             "aiven.kafka.server.tieredstorage.s3:type=s3-metrics");
-        assertThat((double) MBEAN_SERVER.getAttribute(
-            segmentCopyPerSecName, "get-object-requests-rate"))
+        assertThat(MBEAN_SERVER.getAttribute(segmentCopyPerSecName, "get-object-requests-rate"))
+            .asInstanceOf(DOUBLE)
             .isGreaterThan(0.0);
-        assertThat((double) MBEAN_SERVER.getAttribute(
-            segmentCopyPerSecName, "get-object-requests-total"))
+        assertThat(MBEAN_SERVER.getAttribute(segmentCopyPerSecName, "get-object-requests-total"))
             .isEqualTo(2.0);
 
-        assertThat((double) MBEAN_SERVER.getAttribute(
-            segmentCopyPerSecName, "put-object-requests-rate"))
+        assertThat(MBEAN_SERVER.getAttribute(segmentCopyPerSecName, "put-object-requests-rate"))
             .isEqualTo(0.0);
-        assertThat((double) MBEAN_SERVER.getAttribute(
-            segmentCopyPerSecName, "put-object-requests-total"))
+        assertThat(MBEAN_SERVER.getAttribute(segmentCopyPerSecName, "put-object-requests-total"))
             .isEqualTo(0.0);
 
-        assertThat((double) MBEAN_SERVER.getAttribute(
-            segmentCopyPerSecName, "delete-object-requests-rate"))
+        assertThat(MBEAN_SERVER.getAttribute(segmentCopyPerSecName, "delete-object-requests-rate"))
+            .asInstanceOf(DOUBLE)
             .isGreaterThan(0.0);
-        assertThat((double) MBEAN_SERVER.getAttribute(
-            segmentCopyPerSecName, "delete-object-requests-total"))
+        assertThat(MBEAN_SERVER.getAttribute(segmentCopyPerSecName, "delete-object-requests-total"))
             .isEqualTo(1.0);
 
-        assertThat((double) MBEAN_SERVER.getAttribute(
-            segmentCopyPerSecName, "create-multipart-upload-requests-rate"))
+        assertThat(MBEAN_SERVER.getAttribute(segmentCopyPerSecName, "create-multipart-upload-requests-rate"))
+            .asInstanceOf(DOUBLE)
             .isGreaterThan(0.0);
-        assertThat((double) MBEAN_SERVER.getAttribute(
-            segmentCopyPerSecName, "create-multipart-upload-requests-total"))
+        assertThat(MBEAN_SERVER.getAttribute(segmentCopyPerSecName, "create-multipart-upload-requests-total"))
             .isEqualTo(2.0);
 
-        assertThat((double) MBEAN_SERVER.getAttribute(
-            segmentCopyPerSecName, "upload-part-requests-rate"))
+        assertThat(MBEAN_SERVER.getAttribute(segmentCopyPerSecName, "upload-part-requests-rate"))
+            .asInstanceOf(DOUBLE)
             .isGreaterThan(0.0);
-        assertThat((double) MBEAN_SERVER.getAttribute(
-            segmentCopyPerSecName, "upload-part-requests-total"))
+        assertThat(MBEAN_SERVER.getAttribute(segmentCopyPerSecName, "upload-part-requests-total"))
             .isEqualTo(2.0);
 
-        assertThat((double) MBEAN_SERVER.getAttribute(
-            segmentCopyPerSecName, "complete-multipart-upload-requests-rate"))
+        assertThat(MBEAN_SERVER.getAttribute(segmentCopyPerSecName, "complete-multipart-upload-requests-rate"))
+            .asInstanceOf(DOUBLE)
             .isGreaterThan(0.0);
-        assertThat((double) MBEAN_SERVER.getAttribute(
-            segmentCopyPerSecName, "complete-multipart-upload-requests-total"))
+        assertThat(MBEAN_SERVER.getAttribute(segmentCopyPerSecName, "complete-multipart-upload-requests-total"))
             .isEqualTo(1.0);
 
-        assertThat((double) MBEAN_SERVER.getAttribute(
-            segmentCopyPerSecName, "abort-multipart-upload-requests-rate"))
+        assertThat(MBEAN_SERVER.getAttribute(segmentCopyPerSecName, "abort-multipart-upload-requests-rate"))
+            .asInstanceOf(DOUBLE)
             .isGreaterThan(0.0);
-        assertThat((double) MBEAN_SERVER.getAttribute(
-            segmentCopyPerSecName, "abort-multipart-upload-requests-total"))
+        assertThat(MBEAN_SERVER.getAttribute(segmentCopyPerSecName, "abort-multipart-upload-requests-total"))
             .isEqualTo(1.0);
     }
 }

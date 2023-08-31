@@ -16,6 +16,10 @@
 
 package io.aiven.kafka.tieredstorage.storage.s3;
 
+import java.lang.reflect.InvocationTargetException;
+import java.lang.reflect.Method;
+import java.net.URI;
+import java.net.URISyntaxException;
 import java.util.Map;
 import java.util.Objects;
 
@@ -25,14 +29,14 @@ import org.apache.kafka.common.config.ConfigException;
 
 import io.aiven.kafka.tieredstorage.storage.config.NonEmptyPassword;
 
-import com.amazonaws.auth.AWSCredentials;
-import com.amazonaws.auth.AWSCredentialsProvider;
-import com.amazonaws.auth.AWSStaticCredentialsProvider;
-import com.amazonaws.auth.BasicAWSCredentials;
-import com.amazonaws.client.builder.AwsClientBuilder;
-import com.amazonaws.regions.Regions;
-import com.amazonaws.services.s3.AmazonS3;
-import com.amazonaws.services.s3.AmazonS3ClientBuilder;
+import software.amazon.awssdk.auth.credentials.AwsBasicCredentials;
+import software.amazon.awssdk.auth.credentials.AwsCredentials;
+import software.amazon.awssdk.auth.credentials.AwsCredentialsProvider;
+import software.amazon.awssdk.auth.credentials.StaticCredentialsProvider;
+import software.amazon.awssdk.regions.Region;
+import software.amazon.awssdk.services.s3.S3Client;
+import software.amazon.awssdk.services.s3.S3ClientBuilder;
+import software.amazon.awssdk.utils.builder.Buildable;
 
 public class S3StorageConfig extends AbstractConfig {
 
@@ -42,9 +46,8 @@ public class S3StorageConfig extends AbstractConfig {
     private static final String S3_ENDPOINT_URL_DOC = "Custom S3 endpoint URL. "
         + "To be used with custom S3-compatible backends (e.g. minio).";
     public static final String S3_REGION_CONFIG = "s3.region";
-    static final String S3_REGION_DEFAULT = Regions.DEFAULT_REGION.getName();
     private static final String S3_REGION_DOC = "AWS region where S3 bucket is placed";
-    private static final String S3_PATH_STYLE_ENABLED_CONFIG = "s3.path.style.access.enabled";
+    static final String S3_PATH_STYLE_ENABLED_CONFIG = "s3.path.style.access.enabled";
     private static final String S3_PATH_STYLE_ENABLED_DOC = "Whether to use path style access or virtual hosts. "
         + "By default, empty value means S3 library will auto-detect. "
         + "Amazon S3 uses virtual hosts by default (true), but other S3-compatible backends may differ (e.g. minio).";
@@ -61,7 +64,7 @@ public class S3StorageConfig extends AbstractConfig {
     public static final String AWS_CREDENTIALS_PROVIDER_CLASS_CONFIG = "aws.credentials.provider.class";
     private static final String AWS_CREDENTIALS_PROVIDER_CLASS_DOC = "AWS credentials provider. "
         + "If not set, AWS SDK uses the default "
-        + "com.amazonaws.services.s3.S3CredentialsProviderChain";
+        + "software.amazon.awssdk.auth.credentials.AwsCredentialsProviderChain";
     public static final String AWS_ACCESS_KEY_ID_CONFIG = "aws.access.key.id";
     private static final String AWS_ACCESS_KEY_ID_DOC = "AWS access key ID. "
         + "To be used when static credentials are provided.";
@@ -89,8 +92,7 @@ public class S3StorageConfig extends AbstractConfig {
             .define(
                 S3_REGION_CONFIG,
                 ConfigDef.Type.STRING,
-                S3_REGION_DEFAULT,
-                new RegionValidator(),
+                ConfigDef.NO_DEFAULT_VALUE,
                 ConfigDef.Importance.MEDIUM,
                 S3_REGION_DOC)
             .define(
@@ -153,47 +155,57 @@ public class S3StorageConfig extends AbstractConfig {
         }
     }
 
-    AmazonS3 s3Client() {
-        final AmazonS3ClientBuilder s3ClientBuilder = AmazonS3ClientBuilder.standard();
-        final String s3ServiceEndpoint = getString(S3_ENDPOINT_URL_CONFIG);
+    S3Client s3Client() {
+        final S3ClientBuilder s3ClientBuilder = S3Client.builder();
         final String region = getString(S3_REGION_CONFIG);
-        if (Objects.isNull(s3ServiceEndpoint)) {
-            s3ClientBuilder.withRegion(region);
+        if (Objects.isNull(s3ServiceEndpoint())) {
+            s3ClientBuilder.region(Region.of(region));
         } else {
-            final AwsClientBuilder.EndpointConfiguration endpointConfiguration =
-                new AwsClientBuilder.EndpointConfiguration(s3ServiceEndpoint, region);
-            s3ClientBuilder.withEndpointConfiguration(endpointConfiguration);
+            s3ClientBuilder.region(Region.of(region))
+                .endpointOverride(s3ServiceEndpoint());
         }
-        final Boolean pathStyleAccessEnabled = pathStyleAccessEnabled();
+        final Boolean pathStyleAccessEnabled = getBoolean(S3_PATH_STYLE_ENABLED_CONFIG);
         if (pathStyleAccessEnabled != null) {
-            s3ClientBuilder.withPathStyleAccessEnabled(pathStyleAccessEnabled);
+            s3ClientBuilder.forcePathStyle(pathStyleAccessEnabled);
         }
-        final AWSCredentialsProvider credentialsProvider = credentialsProvider();
+        final AwsCredentialsProvider credentialsProvider = credentialsProvider();
         if (credentialsProvider != null) {
-            s3ClientBuilder.setCredentials(credentialsProvider);
+            s3ClientBuilder.credentialsProvider(credentialsProvider);
         }
-        s3ClientBuilder.setMetricsCollector(new MetricCollector());
+        s3ClientBuilder.overrideConfiguration(config -> config.addMetricPublisher(new MetricCollector()));
         return s3ClientBuilder.build();
     }
 
-    AWSCredentialsProvider credentialsProvider() {
-        @SuppressWarnings("unchecked") final Class<? extends AWSCredentialsProvider> providerClass =
-            (Class<? extends AWSCredentialsProvider>) getClass(AWS_CREDENTIALS_PROVIDER_CLASS_CONFIG);
-        if (Objects.isNull(providerClass)) {
-            final boolean areCredentialsProvided =
-                getPassword(AWS_ACCESS_KEY_ID_CONFIG) != null
-                    && getPassword(AWS_SECRET_ACCESS_KEY_CONFIG) != null;
-            if (areCredentialsProvided) {
-                final AWSCredentials staticCredentials = new BasicAWSCredentials(
-                    getPassword(AWS_ACCESS_KEY_ID_CONFIG).value(),
-                    getPassword(AWS_SECRET_ACCESS_KEY_CONFIG).value()
-                );
-                return new AWSStaticCredentialsProvider(staticCredentials);
-            } else {
-                return null; // to use S3 default provider chain. no public constructor
-            }
+    AwsCredentialsProvider credentialsProvider() {
+        @SuppressWarnings("unchecked") final Class<? extends AwsCredentialsProvider> providerClass =
+            (Class<? extends AwsCredentialsProvider>) getClass(AWS_CREDENTIALS_PROVIDER_CLASS_CONFIG);
+        final boolean credentialsProvided =
+            getPassword(AWS_ACCESS_KEY_ID_CONFIG) != null
+                && getPassword(AWS_SECRET_ACCESS_KEY_CONFIG) != null;
+        if (credentialsProvided) {
+            final AwsCredentials staticCredentials = AwsBasicCredentials.create(
+                getPassword(AWS_ACCESS_KEY_ID_CONFIG).value(),
+                getPassword(AWS_SECRET_ACCESS_KEY_CONFIG).value()
+            );
+            return StaticCredentialsProvider.create(staticCredentials);
+        } else if (Objects.isNull(providerClass)) {
+            return null; // to use S3 default provider chain. no public constructor
+        } else if (StaticCredentialsProvider.class.isAssignableFrom(providerClass)) {
+            throw new ConfigException("With " + StaticCredentialsProvider.class.getName()
+                + " AWS credentials must be provided");
         } else {
-            return getConfiguredInstance(AWS_CREDENTIALS_PROVIDER_CLASS_CONFIG, AWSCredentialsProvider.class);
+            final Class<?> klass = getClass(AWS_CREDENTIALS_PROVIDER_CLASS_CONFIG);
+            try {
+                final var builder = klass.getMethod("builder");
+                return (AwsCredentialsProvider) ((Buildable) builder.invoke(klass)).build();
+            } catch (final NoSuchMethodException | IllegalAccessException | InvocationTargetException e) {
+                try {
+                    final Method create = klass.getMethod("create");
+                    return (AwsCredentialsProvider) create.invoke(klass);
+                } catch (final NoSuchMethodException | IllegalAccessException | InvocationTargetException ex) {
+                    throw new RuntimeException("Specified AWS credentials provider is unsupported", ex);
+                }
+            }
         }
     }
 
@@ -209,15 +221,16 @@ public class S3StorageConfig extends AbstractConfig {
         return getInt(S3_MULTIPART_UPLOAD_PART_SIZE_CONFIG);
     }
 
-    private static class RegionValidator implements ConfigDef.Validator {
-        @Override
-        public void ensureValid(final String name, final Object value) {
-            final String regionStr = (String) value;
+    private URI s3ServiceEndpoint() {
+        final String url = getString(S3_ENDPOINT_URL_CONFIG);
+        if (url != null) {
             try {
-                Regions.fromName(regionStr);
-            } catch (final IllegalArgumentException e) {
-                throw new ConfigException(name, value);
+                return new URI(url);
+            } catch (final URISyntaxException e) {
+                throw new ConfigException(S3_ENDPOINT_URL_CONFIG, url, "Must be a valid URI");
             }
+        } else {
+            return null;
         }
     }
 
@@ -229,8 +242,8 @@ public class S3StorageConfig extends AbstractConfig {
             }
 
             final Class<?> providerClass = (Class<?>) value;
-            if (!AWSCredentialsProvider.class.isAssignableFrom(providerClass)) {
-                throw new ConfigException(name, value, "Class must extend " + AWSCredentialsProvider.class);
+            if (!AwsCredentialsProvider.class.isAssignableFrom(providerClass)) {
+                throw new ConfigException(name, value, "Class must extend " + AwsCredentialsProvider.class);
             }
         }
     }

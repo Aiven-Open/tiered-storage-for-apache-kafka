@@ -60,10 +60,7 @@ public class BytesRange {
 
     @Override
     public String toString() {
-        return "BytesRange("
-            + "from=" + from
-            + ", to=" + to
-            + ")";
+        return "bytes=" + from + "-" + to;
     }
 
     public static BytesRange of(final int from, final int to) {
