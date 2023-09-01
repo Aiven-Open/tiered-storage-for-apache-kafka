@@ -103,7 +103,7 @@ subprojects {
         slf4jVersion = "1.7.36"
 
         // Don't bump this version without need, as this is the min supported version for the plugin.
-        kafkaVersion = "3.3.2"
+        kafkaVersion = "3.5.1"
 
         assertJVersion = "3.24.2"
 
