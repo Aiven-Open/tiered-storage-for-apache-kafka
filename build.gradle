@@ -115,7 +115,7 @@ subprojects {
 
         awsSdkVersion = "1.12.520"
 
-        testcontainersVersion = "1.18.3"
+        testcontainersVersion = "1.19.0"
     }
 
     dependencies {
