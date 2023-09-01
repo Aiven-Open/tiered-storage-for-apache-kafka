@@ -18,7 +18,7 @@ IMAGE_NAME := aivenoy/kafka-with-ts-plugin
 IMAGE_VERSION := latest
 IMAGE_TAG := $(IMAGE_NAME):$(IMAGE_VERSION)
 
-.PHONY: clean checkstyle build integration_test e2e_test docker_image docker_push
+.PHONY: clean checkstyle build test integration_test e2e_test docker_image docker_push
 
 clean:
 	./gradlew clean
@@ -29,7 +29,10 @@ checkstyle:
 build: build/distributions/tiered-storage-for-apache-kafka-$(VERSION).tgz
 
 build/distributions/tiered-storage-for-apache-kafka-$(VERSION).tgz:
-	./gradlew build distTar -x integrationTest -x e2e:test
+	./gradlew build distTar -x test -x integrationTest -x e2e:test
+
+test: build/distributions/tiered-storage-for-apache-kafka-$(VERSION).tgz
+	./gradlew test -x e2e:test
 
 integration_test: build/distributions/tiered-storage-for-apache-kafka-$(VERSION).tgz
 	./gradlew integrationTest

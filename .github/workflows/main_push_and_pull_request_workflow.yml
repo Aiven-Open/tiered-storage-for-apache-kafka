@@ -27,6 +27,9 @@ jobs:
       - name: Build with Gradle
         run: make build
 
+      - name: Run unit tests
+        run: make test
+
       - name: Run integration tests
         run: make integration_test
 
