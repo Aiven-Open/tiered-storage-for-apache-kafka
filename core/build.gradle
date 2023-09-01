@@ -27,8 +27,6 @@ ext {
     caffeineVersion = "3.1.7"
 
     zstdVersion = "1.5.5-5"
-
-    awaitilityVersion = "4.2.0"
 }
 
 dependencies {
@@ -51,6 +49,5 @@ dependencies {
     testImplementation(project(":storage:filesystem"))
 
     testImplementation "com.github.luben:zstd-jni:$zstdVersion"
-    testImplementation "org.awaitility:awaitility:$awaitilityVersion"
     integrationTestImplementation sourceSets.test.output
 }

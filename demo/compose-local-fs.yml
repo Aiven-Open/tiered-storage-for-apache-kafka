@@ -23,7 +23,7 @@ services:
       ZOOKEEPER_CLIENT_PORT: 2181
 
   kafka:
-    image: "aivenoy/kafka:3.3-2022-10-06-tiered-storage-1-ts-2"
+    image: "aivenoy/kafka-with-ts-plugin"
     container_name: "kafka-ts"
     depends_on:
       - zookeeper

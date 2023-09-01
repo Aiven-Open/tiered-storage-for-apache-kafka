@@ -103,13 +103,17 @@ subprojects {
         slf4jVersion = "1.7.36"
 
         // Don't bump this version without need, as this is the min supported version for the plugin.
-        kafkaVersion = "3.0.0"
+        kafkaVersion = "3.3.2"
 
         assertJVersion = "3.24.2"
 
         apacheCommonsIOVersion = "2.13.0"
 
         jacksonVersion = "2.15.2"
+
+        awaitilityVersion = "4.2.0"
+
+        awsSdkVersion = "1.12.520"
 
         testcontainersVersion = "1.18.3"
     }
@@ -132,6 +136,8 @@ subprojects {
 
         testImplementation "org.mockito:mockito-core:$mockitoVersion"
         testImplementation "org.mockito:mockito-junit-jupiter:$mockitoVersion"
+
+        testImplementation "org.awaitility:awaitility:$awaitilityVersion"
 
         testRuntimeOnly "org.slf4j:slf4j-log4j12:$slf4jVersion"
     }
@@ -253,3 +259,8 @@ tasks.register('validateDependencies') {
         assert !conflictsFound : "Dependency conflicts found!"
     }
 }
+
+// TODO fix GCP dependency issues
+//tasks.named("check") {
+//    dependsOn(tasks.named("validateDependencies"))
+//}
