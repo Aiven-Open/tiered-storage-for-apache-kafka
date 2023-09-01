@@ -37,8 +37,10 @@ test: build/distributions/tiered-storage-for-apache-kafka-$(VERSION).tgz
 integration_test: build/distributions/tiered-storage-for-apache-kafka-$(VERSION).tgz
 	./gradlew integrationTest
 
+E2E_TEST=LocalSystem
+
 e2e_test:  build/distributions/tiered-storage-for-apache-kafka-$(VERSION).tgz
-	./gradlew e2e:test
+	./gradlew e2e:test --tests $(E2E_TEST)*
 
 .PHONY: docker_image
 docker_image: build/distributions/tiered-storage-for-apache-kafka-$(VERSION).tgz
