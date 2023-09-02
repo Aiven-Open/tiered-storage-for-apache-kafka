@@ -113,7 +113,7 @@ subprojects {
 
         awaitilityVersion = "4.2.0"
 
-        awsSdkVersion = "1.12.520"
+        awsSdkVersion = "1.12.543"
 
         testcontainersVersion = "1.18.3"
     }
