@@ -18,7 +18,9 @@ IMAGE_NAME := aivenoy/kafka-with-ts-plugin
 IMAGE_VERSION := latest
 IMAGE_TAG := $(IMAGE_NAME):$(IMAGE_VERSION)
 
-.PHONY: clean checkstyle build test integration_test e2e_test docker_image docker_push
+.PHONY: all clean checkstyle build test integration_test e2e_test docker_image docker_push
+
+all: clean build test
 
 clean:
 	./gradlew clean
