@@ -397,12 +397,6 @@ public class RemoteStorageManager implements org.apache.kafka.server.log.remote.
         }
     }
 
-    private SegmentManifest fetchSegmentManifest(final RemoteLogSegmentMetadata remoteLogSegmentMetadata)
-        throws StorageBackendException, IOException {
-        final String manifestKey = objectKey.key(remoteLogSegmentMetadata, ObjectKey.Suffix.MANIFEST);
-        return segmentManifestProvider.get(manifestKey);
-    }
-
     @Override
     public InputStream fetchIndex(final RemoteLogSegmentMetadata remoteLogSegmentMetadata,
                                   final IndexType indexType) throws RemoteStorageException {
@@ -434,6 +428,12 @@ public class RemoteStorageManager implements org.apache.kafka.server.log.remote.
             }
         }
 
+    }
+
+    private SegmentManifest fetchSegmentManifest(final RemoteLogSegmentMetadata remoteLogSegmentMetadata)
+        throws StorageBackendException, IOException {
+        final String manifestKey = objectKey.key(remoteLogSegmentMetadata, ObjectKey.Suffix.MANIFEST);
+        return segmentManifestProvider.get(manifestKey);
     }
 
     @Override
