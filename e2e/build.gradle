@@ -24,9 +24,12 @@ dependencies {
     testImplementation("software.amazon.awssdk:s3:$awsSdkVersion") {
         exclude group: "org.slf4j"
     }
+    implementation "com.google.cloud:google-cloud-storage:$gcpSdkVersion"
 
     testImplementation "org.testcontainers:junit-jupiter:$testcontainersVersion"
     testImplementation "org.testcontainers:kafka:$testcontainersVersion"
+
+    testImplementation "io.aiven:testcontainers-fake-gcs-server:$testcontainersFakeGcsServerVersion"
 
     testRuntimeOnly "org.slf4j:slf4j-log4j12:$slf4jVersion"
 }
