@@ -145,11 +145,14 @@ abstract class SingleBrokerTest {
             // remote metadata manager
             .withEnv("KAFKA_REMOTE_LOG_METADATA_MANAGER_CLASS_NAME",
                 "org.apache.kafka.server.log.remote.metadata.storage.TopicBasedRemoteLogMetadataManager")
-            .withEnv("KAFKA_RLMM_CONFIG_REMOTE_LOG_METADATA_TOPIC_REPLICATION_FACTOR", "1")
+            .withEnv("KAFKA_REMOTE_LOG_METADATA_MANAGER_IMPL_PREFIX", "rlmm.config.")
             .withEnv("KAFKA_REMOTE_LOG_METADATA_MANAGER_LISTENER_NAME", "BROKER")
+            .withEnv("KAFKA_RLMM_CONFIG_REMOTE_LOG_METADATA_TOPIC_REPLICATION_FACTOR", "1")
             // remote storage manager
             .withEnv("KAFKA_REMOTE_LOG_STORAGE_MANAGER_CLASS_PATH", "/tiered-storage-for-apache-kafka/*")
-            .withEnv("KAFKA_REMOTE_LOG_STORAGE_MANAGER_CLASS_NAME", "io.aiven.kafka.tieredstorage.RemoteStorageManager")
+            .withEnv("KAFKA_REMOTE_LOG_STORAGE_MANAGER_CLASS_NAME",
+                "io.aiven.kafka.tieredstorage.RemoteStorageManager")
+            .withEnv("KAFKA_REMOTE_LOG_STORAGE_MANAGER_IMPL_PREFIX", "rsm.config.")
             .withEnv("KAFKA_RSM_CONFIG_CHUNK_SIZE", Integer.toString(CHUNK_SIZE))
             .withEnv("KAFKA_RSM_CONFIG_CHUNK_CACHE_CLASS",
                 "io.aiven.kafka.tieredstorage.chunkmanager.cache.InMemoryChunkCache")
