@@ -388,7 +388,8 @@ public class RemoteStorageManager implements org.apache.kafka.server.log.remote.
 
             final var segmentManifest = fetchSegmentManifest(remoteLogSegmentMetadata);
 
-            final var segmentKey = objectKey.key(remoteLogSegmentMetadata, ObjectKey.Suffix.LOG);
+            final var suffix = ObjectKey.Suffix.LOG;
+            final var segmentKey = objectKey(remoteLogSegmentMetadata, suffix);
 
             return new FetchChunkEnumeration(chunkManager, segmentKey, segmentManifest, range)
                 .toInputStream();
@@ -405,7 +406,7 @@ public class RemoteStorageManager implements org.apache.kafka.server.log.remote.
 
             final var segmentManifest = fetchSegmentManifest(remoteLogSegmentMetadata);
 
-            final String key = objectKey.key(remoteLogSegmentMetadata, ObjectKey.Suffix.fromIndexType(indexType));
+            final var key = objectKey(remoteLogSegmentMetadata, ObjectKey.Suffix.fromIndexType(indexType));
             final var in = fetcher.fetch(key);
 
             DetransformChunkEnumeration detransformEnum = new BaseDetransformChunkEnumeration(in);
@@ -428,6 +429,18 @@ public class RemoteStorageManager implements org.apache.kafka.server.log.remote.
             }
         }
 
+    }
+
+    private String objectKey(final RemoteLogSegmentMetadata remoteLogSegmentMetadata, final ObjectKey.Suffix suffix) {
+        final String segmentKey;
+        if (remoteLogSegmentMetadata.customMetadata().isPresent()) {
+            final var customMetadataBytes = remoteLogSegmentMetadata.customMetadata().get();
+            final var fields = customMetadataSerde.deserialize(customMetadataBytes.value());
+            segmentKey = objectKey.key(fields, remoteLogSegmentMetadata, suffix);
+        } else {
+            segmentKey = objectKey.key(remoteLogSegmentMetadata, suffix);
+        }
+        return segmentKey;
     }
 
     private SegmentManifest fetchSegmentManifest(final RemoteLogSegmentMetadata remoteLogSegmentMetadata)
