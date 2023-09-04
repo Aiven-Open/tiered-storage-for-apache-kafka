@@ -72,7 +72,7 @@ class RemoteStorageManagerMetricsTest {
             new RemoteLogSegmentId(
                 new TopicIdPartition(Uuid.randomUuid(), new TopicPartition("topic", 0)),
                 Uuid.randomUuid()),
-            1, -1, -1, -1, 1L,
+            1, 100, -1, -1, 1L,
             LOG_SEGMENT_BYTES, Collections.singletonMap(1, 100L));
 
     RemoteStorageManager rsm;

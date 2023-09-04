@@ -15,9 +15,10 @@
  */
 
 dependencies {
-    testImplementation "org.apache.kafka:kafka-clients:$kafkaVersion"
-    testImplementation "org.apache.kafka:kafka-storage:$kafkaVersion"
-    testImplementation "org.apache.kafka:kafka-storage-api:$kafkaVersion"
+    testImplementation name: "kafka-clients-$kafkaVersion"
+    testImplementation name: "kafka-server-common-$kafkaVersion"
+    testImplementation name: "kafka-storage-$kafkaVersion"
+    testImplementation name: "kafka-storage-api-$kafkaVersion"
 
     testImplementation "commons-io:commons-io:$apacheCommonsIOVersion"
     testImplementation "com.amazonaws:aws-java-sdk-s3:$awsSdkVersion"
@@ -25,7 +26,6 @@ dependencies {
     testImplementation "org.testcontainers:junit-jupiter:$testcontainersVersion"
     testImplementation "org.testcontainers:kafka:$testcontainersVersion"
 
-    testRuntimeOnly "org.junit.jupiter:junit-jupiter-engine:$junitVersion"
     testRuntimeOnly "org.slf4j:slf4j-log4j12:$slf4jVersion"
 }
 

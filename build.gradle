@@ -60,6 +60,9 @@ subprojects {
     repositories {
         // Use Maven Central for resolving dependencies.
         mavenCentral()
+        flatDir {
+            dirs rootProject.file('lib')
+        }
     }
 
     java {
@@ -102,8 +105,8 @@ subprojects {
 
         slf4jVersion = "1.7.36"
 
-        // Don't bump this version without need, as this is the min supported version for the plugin.
-        kafkaVersion = "3.3.2"
+        // TODO: Use latest snapshot to include latest APIs. Expected to land on version 3.6.0
+        kafkaVersion = "3.6.0-SNAPSHOT"
 
         assertJVersion = "3.24.2"
 
@@ -119,8 +122,8 @@ subprojects {
     }
 
     dependencies {
-        compileOnly "org.apache.kafka:kafka-clients:$kafkaVersion"
-        compileOnly "org.apache.kafka:kafka-storage-api:$kafkaVersion"
+        compileOnly name: "kafka-clients-$kafkaVersion"
+        compileOnly name: "kafka-storage-api-$kafkaVersion"
 
         compileOnly "org.slf4j:slf4j-api:$slf4jVersion"
 
