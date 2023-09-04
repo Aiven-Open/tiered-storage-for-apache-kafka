@@ -10,9 +10,8 @@ jobs:
     strategy:
       matrix:
         java-version: [ 11, 17 ]
-        runs-on: [ ubuntu-latest ]
     name: Build on ${{ matrix.runs-on }} with jdk ${{ matrix.java-version }}
-    runs-on: ${{ matrix.runs-on }}
+    runs-on: ubuntu-latest
     steps:
       - name: Checkout code
         uses: actions/checkout@v3
@@ -27,44 +26,29 @@ jobs:
       - name: Build with Gradle
         run: make build
 
+      - name: Run unit tests
+        run: make test
+
       - name: Run integration tests
         run: make integration_test
-
-      - name: Upload Build Artifacts
-        uses: actions/upload-artifact@v3
-        with:
-          name: build-${{ matrix.java-version }}
-          path: build/distributions/*.tgz
   e2e_test:
     strategy:
       matrix:
-        java-version: [ 11, 17 ]
-        runs-on: [ ubuntu-latest ]
-    name: E2E tests on ${{ matrix.runs-on }} with jdk ${{ matrix.java-version }}
-    runs-on: ${{ matrix.runs-on }}
-    needs:
-      - build
+        java-version: [ 11 ]
+        test: [ 'LocalSystem', 'S3' ]
+    name: E2E tests for ${{ matrix.test }}  with jdk ${{ matrix.java-version }}
+    runs-on: ubuntu-latest
     steps:
       - name: Checkout code
         uses: actions/checkout@v3
         with:
           fetch-depth: 0
 
-      - name: Download Build Artifacts
-        uses: actions/download-artifact@v3
-        with:
-          name: build-${{ matrix.java-version }}
-          path: build/distributions
-
-      - name: Display structure of downloaded files
-        run: ls -R
-        working-directory: build/distributions
-
       - name: Build Docker image
         run: make docker_image
 
       - name: Run E2E tests
         timeout-minutes: 30
-        run: make e2e_test
+        run: E2E_TEST=${{ matrix.test }} make e2e_test
 
       # TODO: publish docker image
