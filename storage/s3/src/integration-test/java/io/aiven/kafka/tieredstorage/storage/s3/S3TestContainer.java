@@ -19,7 +19,7 @@ package io.aiven.kafka.tieredstorage.storage.s3;
 import org.testcontainers.containers.localstack.LocalStackContainer;
 import org.testcontainers.utility.DockerImageName;
 
-class S3TestContainer {
+final class S3TestContainer {
     static LocalStackContainer container() {
         return new LocalStackContainer(
             DockerImageName.parse("localstack/localstack:2.0.2")

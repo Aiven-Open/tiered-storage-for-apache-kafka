@@ -20,9 +20,10 @@ dependencies {
     implementation project(":storage:core")
 
     // Take out jackson libraries out to avoid collision with core jackson dependencies
-    implementation ("com.amazonaws:aws-java-sdk-s3:$awsSdkVersion") {
+    implementation ("software.amazon.awssdk:s3:$awsSdkVersion") {
         exclude group: "com.fasterxml.jackson.core"
         exclude group: "com.fasterxml.jackson.dataformat"
+        exclude group: "org.slf4j"
     }
     // replacing with version used by core
     implementation "com.fasterxml.jackson.core:jackson-databind:$jacksonVersion"

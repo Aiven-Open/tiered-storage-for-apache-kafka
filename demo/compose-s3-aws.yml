@@ -66,6 +66,6 @@ services:
       KAFKA_RSM_CONFIG_STORAGE_BACKEND_CLASS: "io.aiven.kafka.tieredstorage.storage.s3.S3Storage"
       AWS_ACCESS_KEY_ID: ${AWS_ACCESS_KEY_ID}
       AWS_SECRET_KEY: ${AWS_SECRET_KEY}
-      KAFKA_RSM_CONFIG_STORAGE_AWS_CREDENTIALS_PROVIDER_CLASS: "com.amazonaws.auth.EnvironmentVariableCredentialsProvider"
+      KAFKA_RSM_CONFIG_STORAGE_AWS_CREDENTIALS_PROVIDER_CLASS: "software.amazon.awssdk.auth.credentials.EnvironmentVariableCredentialsProvider"
       KAFKA_RSM_CONFIG_STORAGE_S3_BUCKET_NAME: ${KAFKA_RSM_CONFIG_STORAGE_S3_BUCKET_NAME}
       KAFKA_RSM_CONFIG_STORAGE_S3_REGION: ${KAFKA_RSM_CONFIG_STORAGE_S3_REGION}

@@ -16,6 +16,7 @@
 
 package io.aiven.kafka.tieredstorage.e2e;
 
+import java.net.URI;
 import java.util.ArrayList;
 import java.util.List;
 import java.util.stream.Collectors;
@@ -23,20 +24,19 @@ import java.util.stream.Collectors;
 import org.apache.kafka.common.TopicIdPartition;
 import org.apache.kafka.common.Uuid;
 
-import com.amazonaws.auth.AWSStaticCredentialsProvider;
-import com.amazonaws.auth.BasicAWSCredentials;
-import com.amazonaws.client.builder.AwsClientBuilder;
-import com.amazonaws.services.s3.AmazonS3;
-import com.amazonaws.services.s3.AmazonS3ClientBuilder;
-import com.amazonaws.services.s3.model.ListObjectsV2Request;
-import com.amazonaws.services.s3.model.ListObjectsV2Result;
-import com.amazonaws.services.s3.model.S3ObjectSummary;
 import org.junit.jupiter.api.AfterAll;
 import org.junit.jupiter.api.BeforeAll;
 import org.testcontainers.Testcontainers;
 import org.testcontainers.containers.GenericContainer;
 import org.testcontainers.containers.startupcheck.OneShotStartupCheckStrategy;
 import org.testcontainers.utility.DockerImageName;
+import software.amazon.awssdk.auth.credentials.AwsBasicCredentials;
+import software.amazon.awssdk.auth.credentials.StaticCredentialsProvider;
+import software.amazon.awssdk.regions.Region;
+import software.amazon.awssdk.services.s3.S3Client;
+import software.amazon.awssdk.services.s3.model.ListObjectsV2Request;
+import software.amazon.awssdk.services.s3.model.ListObjectsV2Response;
+import software.amazon.awssdk.services.s3.model.S3Object;
 
 public class S3MinioSingleBrokerTest extends SingleBrokerTest {
 
@@ -51,7 +51,7 @@ public class S3MinioSingleBrokerTest extends SingleBrokerTest {
     static final String REGION = "us-east-1";
     static final String BUCKET = "test-bucket";
 
-    static AmazonS3 s3Client;
+    static S3Client s3Client;
 
     @BeforeAll
     static void init() throws Exception {
@@ -77,24 +77,18 @@ public class S3MinioSingleBrokerTest extends SingleBrokerTest {
     private static void initializeS3Client() {
         final Integer mappedPort = MINIO.getFirstMappedPort();
         Testcontainers.exposeHostPorts(mappedPort);
-        s3Client = AmazonS3ClientBuilder
-            .standard()
-            .withEndpointConfiguration(
-                new AwsClientBuilder.EndpointConfiguration(
-                    "http://localhost:" + mappedPort,
-                    REGION
+        s3Client = S3Client.builder()
+            .region(Region.of(REGION))
+            .endpointOverride(URI.create("http://localhost:" + mappedPort))
+            .credentialsProvider(
+                StaticCredentialsProvider.create(
+                    AwsBasicCredentials.create(ACCESS_KEY_ID, SECRET_ACCESS_KEY)
                 )
             )
-            .withCredentials(
-                new AWSStaticCredentialsProvider(
-                    new BasicAWSCredentials(ACCESS_KEY_ID, SECRET_ACCESS_KEY)
-                )
-            )
-            .withPathStyleAccessEnabled(true)
+            .forcePathStyle(true)
             .build();
-
-        s3Client.listBuckets()
-            .forEach(bucket -> LOG.info("S3 bucket: " + bucket.getName()));
+        s3Client.listBuckets().buckets()
+            .forEach(bucket -> LOG.info("S3 bucket: {}", bucket.name()));
     }
 
     private static void createBucket(final String minioServerUrl) {
@@ -112,7 +106,6 @@ public class S3MinioSingleBrokerTest extends SingleBrokerTest {
         mcContainer.start();
     }
 
-
     @AfterAll
     static void cleanup() {
         stopKafka();
@@ -125,24 +118,23 @@ public class S3MinioSingleBrokerTest extends SingleBrokerTest {
     @Override
     boolean assertNoTopicDataOnTierStorage(final String topicName, final Uuid topicId) {
         final String prefix = String.format("%s-%s", topicName, topicId.toString());
-
-        final var summaries = s3Client.listObjectsV2(BUCKET, prefix).getObjectSummaries();
-        return summaries.isEmpty();
+        final var request = ListObjectsV2Request.builder().bucket(BUCKET).prefix(prefix).build();
+        return s3Client.listObjectsV2(request).keyCount() == 0;
     }
 
     @Override
     List<String> remotePartitionFiles(final TopicIdPartition topicIdPartition) {
-        ListObjectsV2Request request = new ListObjectsV2Request().withBucketName(BUCKET);
-        final List<S3ObjectSummary> summaries = new ArrayList<>();
-        ListObjectsV2Result result;
+        ListObjectsV2Request request = ListObjectsV2Request.builder().bucket(BUCKET).build();
+        final List<S3Object> s3Objects = new ArrayList<>();
+        ListObjectsV2Response result;
         while ((result = s3Client.listObjectsV2(request)).isTruncated()) {
-            summaries.addAll(result.getObjectSummaries());
-            request = request.withContinuationToken(result.getNextContinuationToken());
+            s3Objects.addAll(result.contents());
+            request = request.toBuilder().continuationToken(result.nextContinuationToken()).build();
         }
-        summaries.addAll(result.getObjectSummaries());
+        s3Objects.addAll(result.contents());
 
-        return summaries.stream()
-            .map(S3ObjectSummary::getKey)
+        return s3Objects.stream()
+            .map(S3Object::key)
             .map(k -> k.substring(k.lastIndexOf('/') + 1))
             .sorted()
             .collect(Collectors.toList());
