@@ -23,6 +23,7 @@ import java.util.Map;
 
 import org.apache.kafka.common.config.ConfigException;
 
+import io.aiven.kafka.tieredstorage.metadata.SegmentCustomMetadataField;
 import io.aiven.kafka.tieredstorage.storage.StorageBackend;
 
 import org.junit.jupiter.api.Test;
@@ -50,6 +51,7 @@ class RemoteStorageManagerConfigTest {
         assertThat(config.encryptionKeyPairId()).isNull();
         assertThat(config.encryptionKeyRing()).isNull();
         assertThat(config.keyPrefix()).isEmpty();
+        assertThat(config.customMetadataKeysIncluded()).isEmpty();
     }
 
     @Test
@@ -306,5 +308,34 @@ class RemoteStorageManagerConfigTest {
             )))
             .isInstanceOf(ConfigException.class)
             .hasMessage("compression.enabled must be enabled if compression.heuristic.enabled is");
+    }
+
+    @Test
+    void validCustomMetadataFieldsUppercase() {
+        final var config = new RemoteStorageManagerConfig(
+            Map.of(
+                "storage.backend.class", NoopStorageBackend.class.getCanonicalName(),
+                "chunk.size", "123",
+                "custom.metadata.fields.include", "REMOTE_SIZE,OBJECT_PREFIX,OBJECT_KEY"
+            )
+        );
+        assertThat(config.customMetadataKeysIncluded()).containsExactlyInAnyOrder(
+            SegmentCustomMetadataField.REMOTE_SIZE,
+            SegmentCustomMetadataField.OBJECT_KEY,
+            SegmentCustomMetadataField.OBJECT_PREFIX
+        );
+    }
+
+    @Test
+    void invalidCustomMetadataFields() {
+        assertThatThrownBy(() -> new RemoteStorageManagerConfig(
+            Map.of(
+                "storage.backend.class", NoopStorageBackend.class.getCanonicalName(),
+                "chunk.size", "123",
+                "custom.metadata.fields.include", "unknown"
+            )))
+            .isInstanceOf(ConfigException.class)
+            .hasMessage("Invalid value unknown for configuration custom.metadata.fields.include: "
+                + "String must be one of: REMOTE_SIZE, OBJECT_PREFIX, OBJECT_KEY");
     }
 }

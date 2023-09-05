@@ -18,10 +18,13 @@ package io.aiven.kafka.tieredstorage.config;
 
 import java.nio.file.Path;
 import java.time.Duration;
+import java.util.Arrays;
 import java.util.HashMap;
 import java.util.List;
 import java.util.Map;
 import java.util.Optional;
+import java.util.Set;
+import java.util.stream.Collectors;
 
 import org.apache.kafka.clients.CommonClientConfigs;
 import org.apache.kafka.common.config.AbstractConfig;
@@ -30,6 +33,7 @@ import org.apache.kafka.common.config.ConfigException;
 import org.apache.kafka.common.metrics.Sensor;
 import org.apache.kafka.common.utils.Utils;
 
+import io.aiven.kafka.tieredstorage.metadata.SegmentCustomMetadataField;
 import io.aiven.kafka.tieredstorage.storage.StorageBackend;
 
 import static org.apache.kafka.common.config.ConfigDef.Range.atLeast;
@@ -82,6 +86,10 @@ public class RemoteStorageManagerConfig extends AbstractConfig {
     public static final String METRICS_RECORDING_LEVEL_CONFIG = CommonClientConfigs.METRICS_RECORDING_LEVEL_CONFIG;
     private static final String METRICS_RECORDING_LEVEL_DOC = CommonClientConfigs.METRICS_RECORDING_LEVEL_DOC;
 
+    private static final String CUSTOM_METADATA_FIELDS_INCLUDE_CONFIG = "custom.metadata.fields.include";
+    private static final String CUSTOM_METADATA_FIELDS_INCLUDE_DOC = "Custom Metadata to be stored along "
+        + "Remote Log Segment metadata on Remote Log Metadata Manager back-end. "
+        + "Allowed values: " + Arrays.toString(SegmentCustomMetadataField.names());
 
     private static final ConfigDef CONFIG;
 
@@ -157,27 +165,36 @@ public class RemoteStorageManagerConfig extends AbstractConfig {
             ENCRYPTION_DOC
         );
 
-        CONFIG
-            .define(METRICS_SAMPLE_WINDOW_MS_CONFIG,
-                ConfigDef.Type.LONG,
-                30000,
-                atLeast(1),
-                ConfigDef.Importance.LOW,
-                METRICS_SAMPLE_WINDOW_MS_DOC);
-        CONFIG.define(METRICS_NUM_SAMPLES_CONFIG,
-                ConfigDef.Type.INT,
-                2,
-                atLeast(1),
-                ConfigDef.Importance.LOW,
-                METRICS_NUM_SAMPLES_DOC);
-        CONFIG.define(METRICS_RECORDING_LEVEL_CONFIG,
-                ConfigDef.Type.STRING,
-                Sensor.RecordingLevel.INFO.toString(),
-                in(Sensor.RecordingLevel.INFO.toString(),
-                    Sensor.RecordingLevel.DEBUG.toString(),
-                    Sensor.RecordingLevel.TRACE.toString()),
-                ConfigDef.Importance.LOW,
-                METRICS_RECORDING_LEVEL_DOC);
+        CONFIG.define(
+            METRICS_SAMPLE_WINDOW_MS_CONFIG,
+            ConfigDef.Type.LONG,
+            30000,
+            atLeast(1),
+            ConfigDef.Importance.LOW,
+            METRICS_SAMPLE_WINDOW_MS_DOC);
+        CONFIG.define(
+            METRICS_NUM_SAMPLES_CONFIG,
+            ConfigDef.Type.INT,
+            2,
+            atLeast(1),
+            ConfigDef.Importance.LOW,
+            METRICS_NUM_SAMPLES_DOC);
+        CONFIG.define(
+            METRICS_RECORDING_LEVEL_CONFIG,
+            ConfigDef.Type.STRING,
+            Sensor.RecordingLevel.INFO.toString(),
+            in(Sensor.RecordingLevel.INFO.toString(),
+                Sensor.RecordingLevel.DEBUG.toString(),
+                Sensor.RecordingLevel.TRACE.toString()),
+            ConfigDef.Importance.LOW,
+            METRICS_RECORDING_LEVEL_DOC);
+
+        CONFIG.define(CUSTOM_METADATA_FIELDS_INCLUDE_CONFIG,
+            ConfigDef.Type.LIST,
+            "",
+            ConfigDef.ValidList.in(SegmentCustomMetadataField.names()),
+            ConfigDef.Importance.LOW,
+            CUSTOM_METADATA_FIELDS_INCLUDE_DOC);
     }
 
     /**
@@ -354,5 +371,11 @@ public class RemoteStorageManagerConfig extends AbstractConfig {
             result.put(keyPairId, keyPair);
         }
         return result;
+    }
+
+    public Set<SegmentCustomMetadataField> customMetadataKeysIncluded() {
+        return getList(CUSTOM_METADATA_FIELDS_INCLUDE_CONFIG).stream()
+            .map(SegmentCustomMetadataField::valueOf)
+            .collect(Collectors.toSet());
     }
 }

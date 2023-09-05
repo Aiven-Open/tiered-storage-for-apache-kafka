@@ -28,6 +28,7 @@ import org.apache.kafka.server.log.remote.storage.RemoteStorageManager;
  * Maps Kafka segment files to object paths/keys in the storage backend.
  */
 public final class ObjectKey {
+
     /**
      * Supported files and extensions, including log, index types, and segment manifest.
      *
@@ -64,30 +65,48 @@ public final class ObjectKey {
     private final String prefix;
 
     public ObjectKey(final String prefix) {
-        this.prefix = prefix;
+        this.prefix = prefix == null ? "" : prefix;
     }
 
     /**
      * Creates the object key/path in the following format:
      *
      * <pre>
-     * $(prefix)$(topic_name)-$(topic_uuid)/$(partition)/$(000+start_offset length=20)-$(segment_uuid).$(suffix)
+     * $(prefix)$(main_path).$(suffix)
      * </pre>
      *
      * <p>For example:
      * {@code someprefix/topic-MWJ6FHTfRYy67jzwZdeqSQ/7/00000000000000001234-tqimKeZwStOEOwRzT3L5oQ.log}
+     *
+     * @see ObjectKey#mainPath(RemoteLogSegmentMetadata)
      */
     public String key(final RemoteLogSegmentMetadata remoteLogSegmentMetadata, final Suffix suffix) {
         Objects.requireNonNull(remoteLogSegmentMetadata, "remoteLogSegmentMetadata cannot be null");
         Objects.requireNonNull(suffix, "suffix cannot be null");
 
+        return prefix
+            + mainPath(remoteLogSegmentMetadata)
+            + "." + suffix.value;
+    }
+
+    /**
+     * Prepares the main part of the key path containing remote log segment metadata, following this format:
+     *
+     * <pre>
+     * $(topic_name)-$(topic_uuid)/$(partition)/$(000+start_offset length=20)-$(segment_uuid)
+     * </pre>
+     */
+    public static String mainPath(final RemoteLogSegmentMetadata remoteLogSegmentMetadata) {
         final RemoteLogSegmentId remoteLogSegmentId = remoteLogSegmentMetadata.remoteLogSegmentId();
         final TopicIdPartition topicIdPartition = remoteLogSegmentId.topicIdPartition();
-        return (prefix == null ? "" : prefix)
-            + topicIdPartition.topicPartition().topic() + "-" + topicIdPartition.topicId()
+
+        return topicIdPartition.topicPartition().topic() + "-" + topicIdPartition.topicId()
             + "/" + topicIdPartition.topicPartition().partition()
-            + "/" + filenamePrefixFromOffset(remoteLogSegmentMetadata.startOffset()) + "-" + remoteLogSegmentId.id()
-            + "." + suffix.value;
+            + "/" + filenamePrefixFromOffset(remoteLogSegmentMetadata.startOffset()) + "-" + remoteLogSegmentId.id();
+    }
+
+    public String prefix() {
+        return prefix;
     }
 
     /**

@@ -57,6 +57,8 @@ import io.aiven.kafka.tieredstorage.chunkmanager.cache.InMemoryChunkCache;
 import io.aiven.kafka.tieredstorage.manifest.index.ChunkIndex;
 import io.aiven.kafka.tieredstorage.manifest.serde.DataKeyDeserializer;
 import io.aiven.kafka.tieredstorage.manifest.serde.DataKeySerializer;
+import io.aiven.kafka.tieredstorage.metadata.SegmentCustomMetadataField;
+import io.aiven.kafka.tieredstorage.metadata.SegmentCustomMetadataSerde;
 import io.aiven.kafka.tieredstorage.security.AesEncryptionProvider;
 import io.aiven.kafka.tieredstorage.security.DataKeyAndAAD;
 import io.aiven.kafka.tieredstorage.security.EncryptedDataKey;
@@ -66,6 +68,7 @@ import com.fasterxml.jackson.databind.JsonNode;
 import com.fasterxml.jackson.databind.ObjectMapper;
 import com.fasterxml.jackson.databind.module.SimpleModule;
 import com.github.luben.zstd.Zstd;
+import org.assertj.core.api.InstanceOfAssertFactories;
 import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.io.TempDir;
 import org.junit.jupiter.params.ParameterizedTest;
@@ -107,6 +110,8 @@ class RemoteStorageManagerTest extends RsaKeyAwareTest {
         "test/topic-AAAAAAAAAAAAAAAAAAAAAQ/7/00000000000000000023-AAAAAAAAAAAAAAAAAAAAAA.log";
     static final String TARGET_MANIFEST_FILE =
         "test/topic-AAAAAAAAAAAAAAAAAAAAAQ/7/00000000000000000023-AAAAAAAAAAAAAAAAAAAAAA.rsm-manifest";
+
+    static final SegmentCustomMetadataSerde CUSTOM_METADATA_SERDE = new SegmentCustomMetadataSerde();
 
     private static List<Arguments> provideEndToEnd() {
         final List<Arguments> result = new ArrayList<>();
@@ -194,7 +199,8 @@ class RemoteStorageManagerTest extends RsaKeyAwareTest {
             "encryption.enabled", Boolean.toString(encryption),
             "chunk.cache.class", cacheClass,
             "chunk.cache.path", cacheDir.toString(),
-            "chunk.cache.size", Integer.toString(100 * 1024 * 1024)
+            "chunk.cache.size", Integer.toString(100 * 1024 * 1024),
+            "custom.metadata.fields.include", "REMOTE_SIZE,OBJECT_PREFIX,OBJECT_KEY"
         ));
         if (encryption) {
             config.put("encryption.key.pair.id", KEY_ENCRYPTION_KEY_ID);
@@ -211,8 +217,10 @@ class RemoteStorageManagerTest extends RsaKeyAwareTest {
         final LogSegmentData logSegmentData = new LogSegmentData(
             logFilePath, offsetIndexFilePath, timeIndexFilePath, txnIndexPath,
             producerSnapshotFilePath, ByteBuffer.wrap(LEADER_EPOCH_INDEX_BYTES));
-        rsm.copyLogSegmentData(REMOTE_LOG_METADATA, logSegmentData);
+        final Optional<RemoteLogSegmentMetadata.CustomMetadata> customMetadata =
+            rsm.copyLogSegmentData(REMOTE_LOG_METADATA, logSegmentData);
 
+        checkCustomMetadata(customMetadata);
         checkFilesInTargetDirectory(hasTxnIndex);
         checkManifest(chunkSize, compression, encryption);
         if (encryption) {
@@ -221,6 +229,21 @@ class RemoteStorageManagerTest extends RsaKeyAwareTest {
         checkIndexContents(hasTxnIndex);
         checkFetching(chunkSize);
         checkDeletion();
+    }
+
+    private void checkCustomMetadata(final Optional<RemoteLogSegmentMetadata.CustomMetadata> customMetadata) {
+        assertThat(customMetadata).isPresent();
+        final var fields = CUSTOM_METADATA_SERDE.deserialize(customMetadata.get().value());
+        assertThat(fields).hasSize(3);
+        assertThat(fields.get(SegmentCustomMetadataField.REMOTE_SIZE.index()))
+            .asInstanceOf(InstanceOfAssertFactories.LONG)
+            .isGreaterThan(0);
+        assertThat(fields.get(SegmentCustomMetadataField.OBJECT_KEY.index()))
+            .asInstanceOf(InstanceOfAssertFactories.STRING)
+            .isNotEmpty();
+        assertThat(fields.get(SegmentCustomMetadataField.OBJECT_PREFIX.index()))
+            .asInstanceOf(InstanceOfAssertFactories.STRING)
+            .isNotEmpty();
     }
 
     private void checkFilesInTargetDirectory(final boolean hasTxnIndex) {
@@ -234,9 +257,8 @@ class RemoteStorageManagerTest extends RsaKeyAwareTest {
         if (hasTxnIndex) {
             expectedFiles.add("topic-AAAAAAAAAAAAAAAAAAAAAQ/7/00000000000000000023-AAAAAAAAAAAAAAAAAAAAAA.txnindex");
         }
-        expectedFiles.forEach(s -> {
-            assertThat(targetDir).isDirectoryRecursivelyContaining(path -> path.toString().endsWith(s));
-        });
+        expectedFiles.forEach(s ->
+            assertThat(targetDir).isDirectoryRecursivelyContaining(path -> path.toString().endsWith(s)));
     }
 
     private void checkManifest(final int chunkSize,
