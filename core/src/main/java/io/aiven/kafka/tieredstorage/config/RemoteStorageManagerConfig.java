@@ -82,7 +82,6 @@ public class RemoteStorageManagerConfig extends AbstractConfig {
     public static final String METRICS_RECORDING_LEVEL_CONFIG = CommonClientConfigs.METRICS_RECORDING_LEVEL_CONFIG;
     private static final String METRICS_RECORDING_LEVEL_DOC = CommonClientConfigs.METRICS_RECORDING_LEVEL_DOC;
 
-
     private static final ConfigDef CONFIG;
 
     static {
@@ -157,27 +156,29 @@ public class RemoteStorageManagerConfig extends AbstractConfig {
             ENCRYPTION_DOC
         );
 
-        CONFIG
-            .define(METRICS_SAMPLE_WINDOW_MS_CONFIG,
-                ConfigDef.Type.LONG,
-                30000,
-                atLeast(1),
-                ConfigDef.Importance.LOW,
-                METRICS_SAMPLE_WINDOW_MS_DOC);
-        CONFIG.define(METRICS_NUM_SAMPLES_CONFIG,
-                ConfigDef.Type.INT,
-                2,
-                atLeast(1),
-                ConfigDef.Importance.LOW,
-                METRICS_NUM_SAMPLES_DOC);
-        CONFIG.define(METRICS_RECORDING_LEVEL_CONFIG,
-                ConfigDef.Type.STRING,
-                Sensor.RecordingLevel.INFO.toString(),
-                in(Sensor.RecordingLevel.INFO.toString(),
-                    Sensor.RecordingLevel.DEBUG.toString(),
-                    Sensor.RecordingLevel.TRACE.toString()),
-                ConfigDef.Importance.LOW,
-                METRICS_RECORDING_LEVEL_DOC);
+        CONFIG.define(
+            METRICS_SAMPLE_WINDOW_MS_CONFIG,
+            ConfigDef.Type.LONG,
+            30000,
+            atLeast(1),
+            ConfigDef.Importance.LOW,
+            METRICS_SAMPLE_WINDOW_MS_DOC);
+        CONFIG.define(
+            METRICS_NUM_SAMPLES_CONFIG,
+            ConfigDef.Type.INT,
+            2,
+            atLeast(1),
+            ConfigDef.Importance.LOW,
+            METRICS_NUM_SAMPLES_DOC);
+        CONFIG.define(
+            METRICS_RECORDING_LEVEL_CONFIG,
+            ConfigDef.Type.STRING,
+            Sensor.RecordingLevel.INFO.toString(),
+            in(Sensor.RecordingLevel.INFO.toString(),
+                Sensor.RecordingLevel.DEBUG.toString(),
+                Sensor.RecordingLevel.TRACE.toString()),
+            ConfigDef.Importance.LOW,
+            METRICS_RECORDING_LEVEL_DOC);
     }
 
     /**
