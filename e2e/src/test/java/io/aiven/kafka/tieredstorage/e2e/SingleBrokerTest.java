@@ -54,7 +54,6 @@ import io.aiven.kafka.tieredstorage.e2e.internal.RemoteSegment;
 
 import com.github.dockerjava.api.model.Ulimit;
 import org.apache.commons.io.FileUtils;
-import org.junit.jupiter.api.Disabled;
 import org.junit.jupiter.api.MethodOrderer;
 import org.junit.jupiter.api.Order;
 import org.junit.jupiter.api.Test;
@@ -427,7 +426,6 @@ abstract class SingleBrokerTest {
     }
 
     @Test
-    @Disabled("https://github.com/aiven/kafka/issues/20")
     @Order(3)
     void remoteManualDelete() throws Exception {
         final long newStartOffset = RECORDS_TO_PRODUCE / 2;
@@ -527,7 +525,6 @@ abstract class SingleBrokerTest {
     }
 
     @Test
-    @Disabled("https://github.com/aiven/kafka/issues/35")
     @Order(5)
     void topicDelete() throws Exception {
         LOG.info("Starting topic delete test");
