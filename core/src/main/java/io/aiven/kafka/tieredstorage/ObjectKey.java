@@ -17,12 +17,16 @@
 package io.aiven.kafka.tieredstorage;
 
 import java.text.NumberFormat;
+import java.util.Map;
 import java.util.Objects;
 
 import org.apache.kafka.common.TopicIdPartition;
 import org.apache.kafka.server.log.remote.storage.RemoteLogSegmentId;
 import org.apache.kafka.server.log.remote.storage.RemoteLogSegmentMetadata;
 import org.apache.kafka.server.log.remote.storage.RemoteStorageManager;
+
+import static io.aiven.kafka.tieredstorage.metadata.SegmentCustomMetadataField.OBJECT_KEY;
+import static io.aiven.kafka.tieredstorage.metadata.SegmentCustomMetadataField.OBJECT_PREFIX;
 
 /**
  * Maps Kafka segment files to object paths/keys in the storage backend.
@@ -87,6 +91,28 @@ public final class ObjectKey {
         return prefix
             + mainPath(remoteLogSegmentMetadata)
             + "." + suffix.value;
+    }
+
+    /**
+     * Creates the object key/path prioritizing fields in custom metadata with the following format:
+     *
+     * <pre>
+     * $(prefix)$(main_path).$(suffix)
+     * </pre>
+     *
+     * <p>For example:
+     * {@code someprefix/topic-MWJ6FHTfRYy67jzwZdeqSQ/7/00000000000000001234-tqimKeZwStOEOwRzT3L5oQ.log}
+     */
+    public String key(final Map<Integer, Object> fields,
+                      final RemoteLogSegmentMetadata remoteLogSegmentMetadata,
+                      final Suffix suffix) {
+        Objects.requireNonNull(fields, "fields cannot be null");
+        Objects.requireNonNull(remoteLogSegmentMetadata, "remoteLogSegmentMetadata cannot be null");
+        Objects.requireNonNull(suffix, "suffix cannot be null");
+
+        final var prefix = (String) fields.getOrDefault(OBJECT_PREFIX.index(), this.prefix);
+        final var main = (String) fields.getOrDefault(OBJECT_KEY.index(), mainPath(remoteLogSegmentMetadata));
+        return prefix + main + "." + suffix.value;
     }
 
     /**

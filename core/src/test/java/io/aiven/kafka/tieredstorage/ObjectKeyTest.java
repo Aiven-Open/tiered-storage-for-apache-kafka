@@ -25,6 +25,8 @@ import org.apache.kafka.server.log.remote.storage.RemoteLogSegmentId;
 import org.apache.kafka.server.log.remote.storage.RemoteLogSegmentMetadata;
 import org.apache.kafka.server.log.remote.storage.RemoteStorageManager;
 
+import io.aiven.kafka.tieredstorage.metadata.SegmentCustomMetadataField;
+
 import org.junit.jupiter.api.Test;
 
 import static org.assertj.core.api.Assertions.assertThat;
@@ -69,6 +71,116 @@ class ObjectKeyTest {
             .isEqualTo(
                 "prefix/topic-AAAAAAAAAAAAAAAAAAAAAQ/7/"
                     + "00000000000000001234-AAAAAAAAAAAAAAAAAAAAAA.rsm-manifest");
+    }
+
+    @Test
+    void withCustomFieldsEmpty() {
+        final ObjectKey objectKey = new ObjectKey("prefix/");
+        final Map<Integer, Object> fields = Map.of();
+        assertThat(objectKey.key(fields, REMOTE_LOG_SEGMENT_METADATA, ObjectKey.Suffix.LOG))
+            .isEqualTo(
+                "prefix/topic-AAAAAAAAAAAAAAAAAAAAAQ/7/"
+                    + "00000000000000001234-AAAAAAAAAAAAAAAAAAAAAA.log");
+        assertThat(objectKey.key(fields, REMOTE_LOG_SEGMENT_METADATA, ObjectKey.Suffix.OFFSET_INDEX))
+            .isEqualTo(
+                "prefix/topic-AAAAAAAAAAAAAAAAAAAAAQ/7/"
+                    + "00000000000000001234-AAAAAAAAAAAAAAAAAAAAAA.index");
+        assertThat(objectKey.key(fields, REMOTE_LOG_SEGMENT_METADATA, ObjectKey.Suffix.TIME_INDEX))
+            .isEqualTo(
+                "prefix/topic-AAAAAAAAAAAAAAAAAAAAAQ/7/"
+                    + "00000000000000001234-AAAAAAAAAAAAAAAAAAAAAA.timeindex");
+        assertThat(objectKey.key(fields, REMOTE_LOG_SEGMENT_METADATA, ObjectKey.Suffix.PRODUCER_SNAPSHOT))
+            .isEqualTo(
+                "prefix/topic-AAAAAAAAAAAAAAAAAAAAAQ/7/"
+                    + "00000000000000001234-AAAAAAAAAAAAAAAAAAAAAA.snapshot");
+        assertThat(objectKey.key(fields, REMOTE_LOG_SEGMENT_METADATA, ObjectKey.Suffix.TXN_INDEX))
+            .isEqualTo(
+                "prefix/topic-AAAAAAAAAAAAAAAAAAAAAQ/7/"
+                    + "00000000000000001234-AAAAAAAAAAAAAAAAAAAAAA.txnindex");
+        assertThat(objectKey.key(fields, REMOTE_LOG_SEGMENT_METADATA, ObjectKey.Suffix.LEADER_EPOCH_CHECKPOINT))
+            .isEqualTo(
+                "prefix/topic-AAAAAAAAAAAAAAAAAAAAAQ/7/"
+                    + "00000000000000001234-AAAAAAAAAAAAAAAAAAAAAA.leader-epoch-checkpoint");
+        assertThat(objectKey.key(fields, REMOTE_LOG_SEGMENT_METADATA, ObjectKey.Suffix.MANIFEST))
+            .isEqualTo(
+                "prefix/topic-AAAAAAAAAAAAAAAAAAAAAQ/7/"
+                    + "00000000000000001234-AAAAAAAAAAAAAAAAAAAAAA.rsm-manifest");
+    }
+
+    @Test
+    void withCustomFieldsOnlyPrefix() {
+        final ObjectKey objectKey = new ObjectKey("prefix/");
+        final Map<Integer, Object> fields = Map.of(SegmentCustomMetadataField.OBJECT_PREFIX.index(), "other/");
+        assertThat(objectKey.key(fields, REMOTE_LOG_SEGMENT_METADATA, ObjectKey.Suffix.LOG))
+            .isEqualTo(
+                "other/topic-AAAAAAAAAAAAAAAAAAAAAQ/7/"
+                    + "00000000000000001234-AAAAAAAAAAAAAAAAAAAAAA.log");
+        assertThat(objectKey.key(fields, REMOTE_LOG_SEGMENT_METADATA, ObjectKey.Suffix.OFFSET_INDEX))
+            .isEqualTo(
+                "other/topic-AAAAAAAAAAAAAAAAAAAAAQ/7/"
+                    + "00000000000000001234-AAAAAAAAAAAAAAAAAAAAAA.index");
+        assertThat(objectKey.key(fields, REMOTE_LOG_SEGMENT_METADATA, ObjectKey.Suffix.TIME_INDEX))
+            .isEqualTo(
+                "other/topic-AAAAAAAAAAAAAAAAAAAAAQ/7/"
+                    + "00000000000000001234-AAAAAAAAAAAAAAAAAAAAAA.timeindex");
+        assertThat(objectKey.key(fields, REMOTE_LOG_SEGMENT_METADATA, ObjectKey.Suffix.PRODUCER_SNAPSHOT))
+            .isEqualTo(
+                "other/topic-AAAAAAAAAAAAAAAAAAAAAQ/7/"
+                    + "00000000000000001234-AAAAAAAAAAAAAAAAAAAAAA.snapshot");
+        assertThat(objectKey.key(fields, REMOTE_LOG_SEGMENT_METADATA, ObjectKey.Suffix.TXN_INDEX))
+            .isEqualTo(
+                "other/topic-AAAAAAAAAAAAAAAAAAAAAQ/7/"
+                    + "00000000000000001234-AAAAAAAAAAAAAAAAAAAAAA.txnindex");
+        assertThat(objectKey.key(fields, REMOTE_LOG_SEGMENT_METADATA, ObjectKey.Suffix.LEADER_EPOCH_CHECKPOINT))
+            .isEqualTo(
+                "other/topic-AAAAAAAAAAAAAAAAAAAAAQ/7/"
+                    + "00000000000000001234-AAAAAAAAAAAAAAAAAAAAAA.leader-epoch-checkpoint");
+        assertThat(objectKey.key(fields, REMOTE_LOG_SEGMENT_METADATA, ObjectKey.Suffix.MANIFEST))
+            .isEqualTo(
+                "other/topic-AAAAAAAAAAAAAAAAAAAAAQ/7/"
+                    + "00000000000000001234-AAAAAAAAAAAAAAAAAAAAAA.rsm-manifest");
+    }
+
+    @Test
+    void withCustomFieldsOnlyKey() {
+        final ObjectKey objectKey = new ObjectKey("prefix/");
+        final Map<Integer, Object> fields = Map.of(SegmentCustomMetadataField.OBJECT_KEY.index(), "topic/7/file");
+        assertThat(objectKey.key(fields, REMOTE_LOG_SEGMENT_METADATA, ObjectKey.Suffix.LOG))
+            .isEqualTo("prefix/topic/7/file.log");
+        assertThat(objectKey.key(fields, REMOTE_LOG_SEGMENT_METADATA, ObjectKey.Suffix.OFFSET_INDEX))
+            .isEqualTo("prefix/topic/7/file.index");
+        assertThat(objectKey.key(fields, REMOTE_LOG_SEGMENT_METADATA, ObjectKey.Suffix.TIME_INDEX))
+            .isEqualTo("prefix/topic/7/file.timeindex");
+        assertThat(objectKey.key(fields, REMOTE_LOG_SEGMENT_METADATA, ObjectKey.Suffix.PRODUCER_SNAPSHOT))
+            .isEqualTo("prefix/topic/7/file.snapshot");
+        assertThat(objectKey.key(fields, REMOTE_LOG_SEGMENT_METADATA, ObjectKey.Suffix.TXN_INDEX))
+            .isEqualTo("prefix/topic/7/file.txnindex");
+        assertThat(objectKey.key(fields, REMOTE_LOG_SEGMENT_METADATA, ObjectKey.Suffix.LEADER_EPOCH_CHECKPOINT))
+            .isEqualTo("prefix/topic/7/file.leader-epoch-checkpoint");
+        assertThat(objectKey.key(fields, REMOTE_LOG_SEGMENT_METADATA, ObjectKey.Suffix.MANIFEST))
+            .isEqualTo("prefix/topic/7/file.rsm-manifest");
+    }
+
+    @Test
+    void withCustomFieldsAll() {
+        final ObjectKey objectKey = new ObjectKey("prefix/");
+        final Map<Integer, Object> fields = Map.of(
+            SegmentCustomMetadataField.OBJECT_PREFIX.index(), "other/",
+            SegmentCustomMetadataField.OBJECT_KEY.index(), "topic/7/file");
+        assertThat(objectKey.key(fields, REMOTE_LOG_SEGMENT_METADATA, ObjectKey.Suffix.LOG))
+            .isEqualTo("other/topic/7/file.log");
+        assertThat(objectKey.key(fields, REMOTE_LOG_SEGMENT_METADATA, ObjectKey.Suffix.OFFSET_INDEX))
+            .isEqualTo("other/topic/7/file.index");
+        assertThat(objectKey.key(fields, REMOTE_LOG_SEGMENT_METADATA, ObjectKey.Suffix.TIME_INDEX))
+            .isEqualTo("other/topic/7/file.timeindex");
+        assertThat(objectKey.key(fields, REMOTE_LOG_SEGMENT_METADATA, ObjectKey.Suffix.PRODUCER_SNAPSHOT))
+            .isEqualTo("other/topic/7/file.snapshot");
+        assertThat(objectKey.key(fields, REMOTE_LOG_SEGMENT_METADATA, ObjectKey.Suffix.TXN_INDEX))
+            .isEqualTo("other/topic/7/file.txnindex");
+        assertThat(objectKey.key(fields, REMOTE_LOG_SEGMENT_METADATA, ObjectKey.Suffix.LEADER_EPOCH_CHECKPOINT))
+            .isEqualTo("other/topic/7/file.leader-epoch-checkpoint");
+        assertThat(objectKey.key(fields, REMOTE_LOG_SEGMENT_METADATA, ObjectKey.Suffix.MANIFEST))
+            .isEqualTo("other/topic/7/file.rsm-manifest");
     }
 
     @Test
