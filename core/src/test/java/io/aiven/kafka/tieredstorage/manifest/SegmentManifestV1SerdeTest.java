@@ -23,14 +23,12 @@ import java.util.Base64;
 
 import io.aiven.kafka.tieredstorage.RsaKeyAwareTest;
 import io.aiven.kafka.tieredstorage.manifest.index.FixedSizeChunkIndex;
-import io.aiven.kafka.tieredstorage.manifest.serde.DataKeyDeserializer;
-import io.aiven.kafka.tieredstorage.manifest.serde.DataKeySerializer;
+import io.aiven.kafka.tieredstorage.manifest.serde.EncryptionSerdeModule;
 import io.aiven.kafka.tieredstorage.security.EncryptedDataKey;
 import io.aiven.kafka.tieredstorage.security.RsaEncryptionProvider;
 
 import com.fasterxml.jackson.core.JsonProcessingException;
 import com.fasterxml.jackson.databind.ObjectMapper;
-import com.fasterxml.jackson.databind.module.SimpleModule;
 import com.fasterxml.jackson.databind.node.ObjectNode;
 import com.fasterxml.jackson.datatype.jdk8.Jdk8Module;
 import org.junit.jupiter.api.BeforeEach;
@@ -64,13 +62,7 @@ class SegmentManifestV1SerdeTest extends RsaKeyAwareTest {
         mapper.registerModule(new Jdk8Module());
 
         rsaEncryptionProvider = new RsaEncryptionProvider(KEY_ENCRYPTION_KEY_ID, keyRing);
-
-        final SimpleModule simpleModule = new SimpleModule();
-        simpleModule.addSerializer(SecretKey.class,
-            new DataKeySerializer(rsaEncryptionProvider::encryptDataKey));
-        simpleModule.addDeserializer(SecretKey.class,
-            new DataKeyDeserializer(rsaEncryptionProvider::decryptDataKey));
-        mapper.registerModule(simpleModule);
+        mapper.registerModule(EncryptionSerdeModule.create(rsaEncryptionProvider));
     }
 
     @Test

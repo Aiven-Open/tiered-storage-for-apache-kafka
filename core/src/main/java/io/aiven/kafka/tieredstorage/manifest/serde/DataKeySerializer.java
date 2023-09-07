@@ -28,10 +28,10 @@ import com.fasterxml.jackson.core.JsonGenerator;
 import com.fasterxml.jackson.databind.SerializerProvider;
 import com.fasterxml.jackson.databind.ser.std.StdSerializer;
 
-public class DataKeySerializer extends StdSerializer<SecretKey> {
+class DataKeySerializer extends StdSerializer<SecretKey> {
     private final Function<byte[], EncryptedDataKey> dataKeyEncryptor;
 
-    public DataKeySerializer(final Function<byte[], EncryptedDataKey> dataKeyEncryptor) {
+    DataKeySerializer(final Function<byte[], EncryptedDataKey> dataKeyEncryptor) {
         super(SecretKey.class);
         this.dataKeyEncryptor = Objects.requireNonNull(dataKeyEncryptor, "dataKeyEncryptor cannot be null");
     }

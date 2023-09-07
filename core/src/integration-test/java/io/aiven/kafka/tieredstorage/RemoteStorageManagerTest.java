@@ -17,7 +17,6 @@
 package io.aiven.kafka.tieredstorage;
 
 import javax.crypto.Cipher;
-import javax.crypto.SecretKey;
 import javax.crypto.spec.GCMParameterSpec;
 import javax.crypto.spec.SecretKeySpec;
 
@@ -55,8 +54,7 @@ import org.apache.kafka.server.log.remote.storage.RemoteStorageException;
 import io.aiven.kafka.tieredstorage.chunkmanager.cache.DiskBasedChunkCache;
 import io.aiven.kafka.tieredstorage.chunkmanager.cache.InMemoryChunkCache;
 import io.aiven.kafka.tieredstorage.manifest.index.ChunkIndex;
-import io.aiven.kafka.tieredstorage.manifest.serde.DataKeyDeserializer;
-import io.aiven.kafka.tieredstorage.manifest.serde.DataKeySerializer;
+import io.aiven.kafka.tieredstorage.manifest.serde.EncryptionSerdeModule;
 import io.aiven.kafka.tieredstorage.metadata.SegmentCustomMetadataField;
 import io.aiven.kafka.tieredstorage.metadata.SegmentCustomMetadataSerde;
 import io.aiven.kafka.tieredstorage.security.AesEncryptionProvider;
@@ -66,7 +64,6 @@ import io.aiven.kafka.tieredstorage.security.RsaEncryptionProvider;
 
 import com.fasterxml.jackson.databind.JsonNode;
 import com.fasterxml.jackson.databind.ObjectMapper;
-import com.fasterxml.jackson.databind.module.SimpleModule;
 import com.github.luben.zstd.Zstd;
 import org.assertj.core.api.InstanceOfAssertFactories;
 import org.junit.jupiter.api.BeforeEach;
@@ -338,13 +335,8 @@ class RemoteStorageManagerTest extends RsaKeyAwareTest {
         final byte[] dataKey = rsaEncryptionProvider.decryptDataKey(
             new EncryptedDataKey(KEY_ENCRYPTION_KEY_ID, encryptedDataKey));
         final byte[] aad = manifest.get("encryption").get("aad").binaryValue();
+        objectMapper.registerModule(EncryptionSerdeModule.create(rsaEncryptionProvider));
 
-        final SimpleModule simpleModule = new SimpleModule();
-        simpleModule.addSerializer(SecretKey.class,
-            new DataKeySerializer(rsaEncryptionProvider::encryptDataKey));
-        simpleModule.addDeserializer(SecretKey.class,
-            new DataKeyDeserializer(rsaEncryptionProvider::decryptDataKey));
-        objectMapper.registerModule(simpleModule);
         final ChunkIndex chunkIndex = objectMapper.treeToValue(manifest.get("chunkIndex"), ChunkIndex.class);
 
         try (final InputStream originalInputStream = Files.newInputStream(logFilePath);
