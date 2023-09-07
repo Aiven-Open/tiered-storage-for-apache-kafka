@@ -55,6 +55,7 @@ import io.aiven.kafka.tieredstorage.chunkmanager.cache.DiskBasedChunkCache;
 import io.aiven.kafka.tieredstorage.chunkmanager.cache.InMemoryChunkCache;
 import io.aiven.kafka.tieredstorage.manifest.index.ChunkIndex;
 import io.aiven.kafka.tieredstorage.manifest.serde.EncryptionSerdeModule;
+import io.aiven.kafka.tieredstorage.manifest.serde.KafkaTypeSerdeModule;
 import io.aiven.kafka.tieredstorage.metadata.SegmentCustomMetadataField;
 import io.aiven.kafka.tieredstorage.metadata.SegmentCustomMetadataSerde;
 import io.aiven.kafka.tieredstorage.security.AesEncryptionProvider;
@@ -325,6 +326,7 @@ class RemoteStorageManagerTest extends RsaKeyAwareTest {
         // 3. The AAD is used.
 
         final ObjectMapper objectMapper = new ObjectMapper();
+        objectMapper.registerModule(KafkaTypeSerdeModule.create());
         final JsonNode manifest = objectMapper.readTree(new File(targetDir.toString(), TARGET_MANIFEST_FILE));
 
         final String dataKeyText = manifest.get("encryption").get("dataKey").asText();

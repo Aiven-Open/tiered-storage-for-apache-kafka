@@ -64,7 +64,8 @@ class ChunkCacheTest {
     private static final byte[] CHUNK_0 = "0123456789".getBytes();
     private static final byte[] CHUNK_1 = "1011121314".getBytes();
     private static final FixedSizeChunkIndex FIXED_SIZE_CHUNK_INDEX = new FixedSizeChunkIndex(10, 10, 10, 10);
-    private static final SegmentManifest SEGMENT_MANIFEST = new SegmentManifestV1(FIXED_SIZE_CHUNK_INDEX, false, null);
+    private static final SegmentManifest SEGMENT_MANIFEST =
+        new SegmentManifestV1(FIXED_SIZE_CHUNK_INDEX, false, null, null);
     private static final String TEST_EXCEPTION_MESSAGE = "test_message";
     private static final String SEGMENT_KEY = "topic/segment";
     @Mock

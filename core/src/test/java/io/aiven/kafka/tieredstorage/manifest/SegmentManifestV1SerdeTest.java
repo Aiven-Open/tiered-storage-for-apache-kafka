@@ -20,10 +20,17 @@ import javax.crypto.SecretKey;
 import javax.crypto.spec.SecretKeySpec;
 
 import java.util.Base64;
+import java.util.Map;
+
+import org.apache.kafka.common.TopicIdPartition;
+import org.apache.kafka.common.Uuid;
+import org.apache.kafka.server.log.remote.storage.RemoteLogSegmentId;
+import org.apache.kafka.server.log.remote.storage.RemoteLogSegmentMetadata;
 
 import io.aiven.kafka.tieredstorage.RsaKeyAwareTest;
 import io.aiven.kafka.tieredstorage.manifest.index.FixedSizeChunkIndex;
 import io.aiven.kafka.tieredstorage.manifest.serde.EncryptionSerdeModule;
+import io.aiven.kafka.tieredstorage.manifest.serde.KafkaTypeSerdeModule;
 import io.aiven.kafka.tieredstorage.security.EncryptedDataKey;
 import io.aiven.kafka.tieredstorage.security.RsaEncryptionProvider;
 
@@ -42,16 +49,43 @@ class SegmentManifestV1SerdeTest extends RsaKeyAwareTest {
     static final SecretKey DATA_KEY = new SecretKeySpec(new byte[]{0, 1, 2, 3, 4, 5, 6, 7, 8, 9}, "AES");
     static final byte[] AAD = {10, 11, 12, 13};
 
+    static final RemoteLogSegmentMetadata REMOTE_LOG_SEGMENT_METADATA = new RemoteLogSegmentMetadata(
+        new RemoteLogSegmentId(
+            new TopicIdPartition(Uuid.fromString("lZ6vvmajTWKDBUTV6SQAtQ"), 42, "topic1"),
+            Uuid.fromString("adh9f8BMS4anaUnD8KWfWg")
+        ),
+        0,
+        1000L,
+        1000000000L,
+        2,
+        2000000000L,
+        100500,
+        Map.of(0, 100L, 1, 200L, 2, 300L)
+    );
+
+    static final String REMOTE_LOG_SEGMENT_METADATA_JSON = "{"
+        + "\"remoteLogSegmentId\":{"
+        + "\"topicIdPartition\":{\"topicId\":\"lZ6vvmajTWKDBUTV6SQAtQ\",\"topicPartition\":"
+        + "{\"topic\":\"topic1\",\"partition\":42}},"
+        + "\"id\":\"adh9f8BMS4anaUnD8KWfWg\"},"
+        + "\"startOffset\":0,\"endOffset\":1000,"
+        + "\"maxTimestampMs\":1000000000,\"brokerId\":2,\"eventTimestampMs\":2000000000,"
+        + "\"segmentLeaderEpochs\":{\"0\":100,\"1\":200,\"2\":300}}";
+
     static final String WITH_ENCRYPTION_WITHOUT_SECRET_KEY_JSON =
         "{\"version\":\"1\","
             + "\"chunkIndex\":{\"type\":\"fixed\",\"originalChunkSize\":100,"
             + "\"originalFileSize\":1000,\"transformedChunkSize\":110,\"finalTransformedChunkSize\":110},"
-            + "\"compression\":false,\"encryption\":{\"aad\":\"CgsMDQ==\"}}";
+            + "\"compression\":false,\"encryption\":{\"aad\":\"CgsMDQ==\"},\"remoteLogSegmentMetadata\":"
+            + REMOTE_LOG_SEGMENT_METADATA_JSON
+            + "}";
     static final String WITHOUT_ENCRYPTION_JSON =
         "{\"version\":\"1\","
             + "\"chunkIndex\":{\"type\":\"fixed\",\"originalChunkSize\":100,"
             + "\"originalFileSize\":1000,\"transformedChunkSize\":110,\"finalTransformedChunkSize\":110},"
-            + "\"compression\":false}";
+            + "\"compression\":false,\"remoteLogSegmentMetadata\":"
+            + REMOTE_LOG_SEGMENT_METADATA_JSON
+            + "}";
 
     ObjectMapper mapper;
     RsaEncryptionProvider rsaEncryptionProvider;
@@ -60,6 +94,7 @@ class SegmentManifestV1SerdeTest extends RsaKeyAwareTest {
     void init() {
         mapper = new ObjectMapper();
         mapper.registerModule(new Jdk8Module());
+        mapper.registerModule(KafkaTypeSerdeModule.create());
 
         rsaEncryptionProvider = new RsaEncryptionProvider(KEY_ENCRYPTION_KEY_ID, keyRing);
         mapper.registerModule(EncryptionSerdeModule.create(rsaEncryptionProvider));
@@ -68,7 +103,7 @@ class SegmentManifestV1SerdeTest extends RsaKeyAwareTest {
     @Test
     void withEncryption() throws JsonProcessingException {
         final SegmentManifest manifest = new SegmentManifestV1(INDEX, false,
-            new SegmentEncryptionMetadataV1(DATA_KEY, AAD));
+            new SegmentEncryptionMetadataV1(DATA_KEY, AAD), REMOTE_LOG_SEGMENT_METADATA);
 
         final String jsonStr = mapper.writeValueAsString(manifest);
 
@@ -94,7 +129,7 @@ class SegmentManifestV1SerdeTest extends RsaKeyAwareTest {
 
     @Test
     void withoutEncryption() throws JsonProcessingException {
-        final SegmentManifest manifest = new SegmentManifestV1(INDEX, false, null);
+        final SegmentManifest manifest = new SegmentManifestV1(INDEX, false, null, REMOTE_LOG_SEGMENT_METADATA);
 
         final String jsonStr = mapper.writeValueAsString(manifest);
 

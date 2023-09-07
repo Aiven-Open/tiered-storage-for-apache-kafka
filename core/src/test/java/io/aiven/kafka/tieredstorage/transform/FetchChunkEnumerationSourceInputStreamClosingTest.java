@@ -62,7 +62,7 @@ class FetchChunkEnumerationSourceInputStreamClosingTest {
     static final FixedSizeChunkIndex CHUNK_INDEX = new FixedSizeChunkIndex(
         CHUNK_SIZE, CHUNK_SIZE * 3, CHUNK_SIZE, CHUNK_SIZE);
     static final SegmentManifest SEGMENT_MANIFEST = new SegmentManifestV1(
-        CHUNK_INDEX, false, null);
+        CHUNK_INDEX, false, null, null);
 
     TestObjectFetcher fetcher;
 

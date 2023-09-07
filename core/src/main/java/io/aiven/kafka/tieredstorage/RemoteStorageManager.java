@@ -50,6 +50,7 @@ import io.aiven.kafka.tieredstorage.manifest.SegmentManifestProvider;
 import io.aiven.kafka.tieredstorage.manifest.SegmentManifestV1;
 import io.aiven.kafka.tieredstorage.manifest.index.ChunkIndex;
 import io.aiven.kafka.tieredstorage.manifest.serde.EncryptionSerdeModule;
+import io.aiven.kafka.tieredstorage.manifest.serde.KafkaTypeSerdeModule;
 import io.aiven.kafka.tieredstorage.metadata.SegmentCustomMetadataBuilder;
 import io.aiven.kafka.tieredstorage.metadata.SegmentCustomMetadataField;
 import io.aiven.kafka.tieredstorage.metadata.SegmentCustomMetadataSerde;
@@ -174,6 +175,7 @@ public class RemoteStorageManager implements org.apache.kafka.server.log.remote.
     private ObjectMapper getObjectMapper() {
         final ObjectMapper objectMapper = new ObjectMapper();
         objectMapper.registerModule(new Jdk8Module());
+        objectMapper.registerModule(KafkaTypeSerdeModule.create());
         if (encryptionEnabled) {
             objectMapper.registerModule(EncryptionSerdeModule.create(rsaEncryptionProvider));
         }
@@ -218,7 +220,7 @@ public class RemoteStorageManager implements org.apache.kafka.server.log.remote.
 
             final ChunkIndex chunkIndex = transformFinisher.chunkIndex();
             final SegmentManifest segmentManifest =
-                new SegmentManifestV1(chunkIndex, requiresCompression, encryptionMetadata);
+                new SegmentManifestV1(chunkIndex, requiresCompression, encryptionMetadata, remoteLogSegmentMetadata);
             uploadManifest(remoteLogSegmentMetadata, segmentManifest, customMetadataBuilder);
 
             final InputStream offsetIndex = Files.newInputStream(logSegmentData.offsetIndex());
