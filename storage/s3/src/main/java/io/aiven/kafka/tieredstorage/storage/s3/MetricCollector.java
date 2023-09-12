@@ -16,11 +16,14 @@
 
 package io.aiven.kafka.tieredstorage.storage.s3;
 
+import java.util.HashMap;
 import java.util.List;
+import java.util.Map;
 
 import org.apache.kafka.common.metrics.JmxReporter;
 import org.apache.kafka.common.metrics.KafkaMetricsContext;
 import org.apache.kafka.common.metrics.MetricConfig;
+import org.apache.kafka.common.metrics.MetricsReporter;
 import org.apache.kafka.common.metrics.Sensor;
 import org.apache.kafka.common.metrics.stats.CumulativeCount;
 import org.apache.kafka.common.metrics.stats.Rate;
@@ -30,34 +33,39 @@ import software.amazon.awssdk.core.metrics.CoreMetric;
 import software.amazon.awssdk.metrics.MetricCollection;
 import software.amazon.awssdk.metrics.MetricPublisher;
 
+import static software.amazon.awssdk.core.internal.metrics.SdkErrorType.CONFIGURED_TIMEOUT;
+import static software.amazon.awssdk.core.internal.metrics.SdkErrorType.IO;
+import static software.amazon.awssdk.core.internal.metrics.SdkErrorType.OTHER;
+import static software.amazon.awssdk.core.internal.metrics.SdkErrorType.SERVER_ERROR;
+import static software.amazon.awssdk.core.internal.metrics.SdkErrorType.THROTTLING;
+
 class MetricCollector implements MetricPublisher {
     private final org.apache.kafka.common.metrics.Metrics metrics;
 
     private static final String METRIC_GROUP = "s3-metrics";
-    
-    private final Sensor getObjectRequests;
-    private final Sensor putObjectRequests;
-    private final Sensor deleteObjectRequests;
-
-    private final Sensor createMultipartUploadRequests;
-    private final Sensor uploadPartRequests;
-    private final Sensor completeMultipartUploadRequests;
-    private final Sensor abortMultipartUploadRequests;
+    private final Map<String, Sensor> requestMetrics = new HashMap<>();
+    private final Map<String, Sensor> errorMetrics = new HashMap<>();
 
     MetricCollector() {
-        final JmxReporter reporter = new JmxReporter();
+        final MetricsReporter reporter = new JmxReporter();
 
         metrics = new org.apache.kafka.common.metrics.Metrics(
             new MetricConfig(), List.of(reporter), Time.SYSTEM,
             new KafkaMetricsContext("aiven.kafka.server.tieredstorage.s3")
         );
-        getObjectRequests = createSensor("get-object-requests");
-        putObjectRequests = createSensor("put-object-requests");
-        deleteObjectRequests = createSensor("delete-object-requests");
-        createMultipartUploadRequests = createSensor("create-multipart-upload-requests");
-        uploadPartRequests = createSensor("upload-part-requests");
-        completeMultipartUploadRequests = createSensor("complete-multipart-upload-requests");
-        abortMultipartUploadRequests = createSensor("abort-multipart-upload-requests");
+        requestMetrics.put("GetObject", createSensor("get-object-requests"));
+        requestMetrics.put("UploadPart", createSensor("upload-part-requests"));
+        requestMetrics.put("CreateMultipartUpload", createSensor("create-multipart-upload-requests"));
+        requestMetrics.put("CompleteMultipartUpload", createSensor("complete-multipart-upload-requests"));
+        requestMetrics.put("PutObject", createSensor("put-object-requests"));
+        requestMetrics.put("DeleteObject", createSensor("delete-object-requests"));
+        requestMetrics.put("AbortMultipartUpload", createSensor("abort-multipart-upload-requests"));
+
+        errorMetrics.put(THROTTLING.name(), createSensor("throttling-errors"));
+        errorMetrics.put(SERVER_ERROR.name(), createSensor("server-errors"));
+        errorMetrics.put(CONFIGURED_TIMEOUT.name(), createSensor("configure-timeout-errors"));
+        errorMetrics.put(IO.name(), createSensor("io-errors"));
+        errorMetrics.put(OTHER.name(), createSensor("other-errors"));
     }
 
     private Sensor createSensor(final String name) {
@@ -71,27 +79,14 @@ class MetricCollector implements MetricPublisher {
     public void publish(final MetricCollection metricCollection) {
         final List<String> metricValues = metricCollection.metricValues(CoreMetric.OPERATION_NAME);
         for (final String metricValue : metricValues) {
-            // Try to arrange them by likelihood, at least GetObjectRequest should be first.
-            if ("GetObject".equals(metricValue)) {
-                this.getObjectRequests.record();
+            if (requestMetrics.containsKey(metricValue)) {
+                requestMetrics.get(metricValue).record();
             }
-            if ("UploadPart".equals(metricValue)) {
-                this.uploadPartRequests.record();
-            }
-            if ("CreateMultipartUpload".equals(metricValue)) {
-                this.createMultipartUploadRequests.record();
-            }
-            if ("CompleteMultipartUpload".equals(metricValue)) {
-                this.completeMultipartUploadRequests.record();
-            }
-            if ("PutObject".equals(metricValue)) {
-                this.putObjectRequests.record();
-            }
-            if ("DeleteObject".equals(metricValue)) {
-                this.deleteObjectRequests.record();
-            }
-            if ("AbortMultipartUpload".equals(metricValue)) {
-                this.abortMultipartUploadRequests.record();
+        }
+        final List<String> errorValues = metricCollection.metricValues(CoreMetric.ERROR_TYPE);
+        for (final String errorValue : errorValues) {
+            if (errorMetrics.containsKey(errorValue)) {
+                errorMetrics.get(errorValue).record();
             }
         }
     }
