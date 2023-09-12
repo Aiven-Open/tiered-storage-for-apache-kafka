@@ -156,6 +156,7 @@ abstract class SingleBrokerTest {
             .withEnv("KAFKA_RSM_CONFIG_CHUNK_CACHE_CLASS",
                 "io.aiven.kafka.tieredstorage.chunkmanager.cache.InMemoryChunkCache")
             .withEnv("KAFKA_RSM_CONFIG_CHUNK_CACHE_SIZE", "-1")
+            .withEnv("KAFKA_RSM_CONFIG_CUSTOM_METADATA_FIELDS_INCLUDE", "REMOTE_SIZE")
             // other tweaks
             .withEnv("KAFKA_OPTS", "") // disable JMX exporter
             .withEnv("KAFKA_LOG4J_LOGGERS", "io.aiven.kafka.tieredstorage=DEBUG,"
