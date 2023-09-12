@@ -61,6 +61,7 @@ services:
       KAFKA_RSM_CONFIG_CHUNK_SIZE: 5242880 # 5MiB
       KAFKA_RSM_CONFIG_CHUNK_CACHE_CLASS: "io.aiven.kafka.tieredstorage.chunkmanager.cache.InMemoryChunkCache"
       KAFKA_RSM_CONFIG_CHUNK_CACHE_SIZE: -1
+      KAFKA_RSM_CONFIG_CUSTOM_METADATA_FIELDS_INCLUDE: "REMOTE_SIZE"
       # Storage backend
       KAFKA_RSM_CONFIG_KEY_PREFIX: "tiered-storage-demo/"
       KAFKA_RSM_CONFIG_STORAGE_BACKEND_CLASS: "io.aiven.kafka.tieredstorage.storage.s3.S3Storage"
