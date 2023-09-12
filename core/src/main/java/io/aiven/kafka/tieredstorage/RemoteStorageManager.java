@@ -40,6 +40,7 @@ import org.apache.kafka.common.utils.Time;
 import org.apache.kafka.server.log.remote.storage.LogSegmentData;
 import org.apache.kafka.server.log.remote.storage.RemoteLogSegmentMetadata;
 import org.apache.kafka.server.log.remote.storage.RemoteLogSegmentMetadata.CustomMetadata;
+import org.apache.kafka.server.log.remote.storage.RemoteResourceNotFoundException;
 import org.apache.kafka.server.log.remote.storage.RemoteStorageException;
 
 import io.aiven.kafka.tieredstorage.chunkmanager.ChunkManager;
@@ -62,6 +63,7 @@ import io.aiven.kafka.tieredstorage.security.DataKeyAndAAD;
 import io.aiven.kafka.tieredstorage.security.RsaEncryptionProvider;
 import io.aiven.kafka.tieredstorage.security.RsaKeyReader;
 import io.aiven.kafka.tieredstorage.storage.BytesRange;
+import io.aiven.kafka.tieredstorage.storage.KeyNotFoundException;
 import io.aiven.kafka.tieredstorage.storage.ObjectDeleter;
 import io.aiven.kafka.tieredstorage.storage.ObjectFetcher;
 import io.aiven.kafka.tieredstorage.storage.ObjectUploader;
@@ -421,9 +423,8 @@ public class RemoteStorageManager implements org.apache.kafka.server.log.remote.
             final DetransformFinisher detransformFinisher = new DetransformFinisher(detransformEnum);
             return detransformFinisher.toInputStream();
         } catch (final Exception e) {
-            // TODO: should be aligned with upstream implementation
-            if (indexType == TRANSACTION) {
-                return null;
+            if (e instanceof KeyNotFoundException) {
+                throw new RemoteResourceNotFoundException(e);
             } else {
                 throw new RemoteStorageException(e);
             }
