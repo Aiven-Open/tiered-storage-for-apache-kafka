@@ -33,9 +33,12 @@ import software.amazon.awssdk.auth.credentials.AwsBasicCredentials;
 import software.amazon.awssdk.auth.credentials.AwsCredentials;
 import software.amazon.awssdk.auth.credentials.AwsCredentialsProvider;
 import software.amazon.awssdk.auth.credentials.StaticCredentialsProvider;
+import software.amazon.awssdk.core.internal.http.loader.DefaultSdkHttpClientBuilder;
+import software.amazon.awssdk.http.SdkHttpConfigurationOption;
 import software.amazon.awssdk.regions.Region;
 import software.amazon.awssdk.services.s3.S3Client;
 import software.amazon.awssdk.services.s3.S3ClientBuilder;
+import software.amazon.awssdk.utils.AttributeMap;
 import software.amazon.awssdk.utils.builder.Buildable;
 
 public class S3StorageConfig extends AbstractConfig {
@@ -71,6 +74,13 @@ public class S3StorageConfig extends AbstractConfig {
     public static final String AWS_SECRET_ACCESS_KEY_CONFIG = "aws.secret.access.key";
     private static final String AWS_SECRET_ACCESS_KEY_DOC = "AWS secret access key. "
         + "To be used when static credentials are provided.";
+    public static final String DISABLE_AWS_CERT_CHECKING_CONFIG = "storage.disableAWSCertChecking";
+    private static final String DISABLE_AWS_CERT_CHECKING_DOC =
+        "This property is used to disable SSL certificate checking for AWS services. "
+            + "When set to \"true\", the SSL certificate checking for AWS services will be bypassed. "
+            + "Use with caution and always only in a test environment, as disabling certificate lead the storage "
+            + "to be vulnerable to man-in-the-middle attacks.";
+
 
     private static final ConfigDef CONFIG;
 
@@ -128,7 +138,13 @@ public class S3StorageConfig extends AbstractConfig {
                 null,
                 new NonEmptyPassword(),
                 ConfigDef.Importance.MEDIUM,
-                AWS_SECRET_ACCESS_KEY_DOC);
+                AWS_SECRET_ACCESS_KEY_DOC)
+            .define(DISABLE_AWS_CERT_CHECKING_CONFIG,
+                ConfigDef.Type.BOOLEAN,
+                false,
+                ConfigDef.Importance.LOW,
+                DISABLE_AWS_CERT_CHECKING_DOC
+            );
     }
 
     public S3StorageConfig(final Map<String, ?> props) {
@@ -168,6 +184,18 @@ public class S3StorageConfig extends AbstractConfig {
         if (pathStyleAccessEnabled != null) {
             s3ClientBuilder.forcePathStyle(pathStyleAccessEnabled);
         }
+
+        if (disableAwsCertChecking()) {
+            s3ClientBuilder.httpClient(
+                new DefaultSdkHttpClientBuilder()
+                    .buildWithDefaults(
+                        AttributeMap.builder()
+                            .put(SdkHttpConfigurationOption.TRUST_ALL_CERTIFICATES, true)
+                            .build()
+                    )
+            );
+        }
+
         final AwsCredentialsProvider credentialsProvider = credentialsProvider();
         if (credentialsProvider != null) {
             s3ClientBuilder.credentialsProvider(credentialsProvider);
@@ -207,6 +235,10 @@ public class S3StorageConfig extends AbstractConfig {
                 }
             }
         }
+    }
+
+    public Boolean disableAwsCertChecking() {
+        return getBoolean(DISABLE_AWS_CERT_CHECKING_CONFIG);
     }
 
     public String bucketName() {
