@@ -22,7 +22,7 @@ import org.testcontainers.utility.DockerImageName;
 final class S3TestContainer {
     static LocalStackContainer container() {
         return new LocalStackContainer(
-            DockerImageName.parse("localstack/localstack:2.0.2")
+            DockerImageName.parse("localstack/localstack:2.2.0")
         ).withServices(LocalStackContainer.Service.S3);
     }
 }
