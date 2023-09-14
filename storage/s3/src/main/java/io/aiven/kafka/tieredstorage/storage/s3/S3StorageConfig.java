@@ -74,7 +74,7 @@ public class S3StorageConfig extends AbstractConfig {
     public static final String AWS_SECRET_ACCESS_KEY_CONFIG = "aws.secret.access.key";
     private static final String AWS_SECRET_ACCESS_KEY_DOC = "AWS secret access key. "
         + "To be used when static credentials are provided.";
-    public static final String DISABLE_AWS_CERT_CHECKING_CONFIG = "storage.disableAWSCertChecking";
+    public static final String DISABLE_AWS_CERT_CHECKING_CONFIG = "aws.disable.cert.checking";
     private static final String DISABLE_AWS_CERT_CHECKING_DOC =
         "This property is used to disable SSL certificate checking for AWS services. "
             + "When set to \"true\", the SSL certificate checking for AWS services will be bypassed. "

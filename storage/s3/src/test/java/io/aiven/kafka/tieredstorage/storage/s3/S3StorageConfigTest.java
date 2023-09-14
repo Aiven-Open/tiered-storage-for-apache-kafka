@@ -110,7 +110,7 @@ class S3StorageConfigTest {
             "s3.endpoint.url", MINIO_URL,
             "aws.access.key.id", username,
             "aws.secret.access.key", password,
-            "storage.disableAWSCertChecking", "true");
+            "aws.disable.cert.checking", "true");
 
         final var config = new S3StorageConfig(configs);
 
