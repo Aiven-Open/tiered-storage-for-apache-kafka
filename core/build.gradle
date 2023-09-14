@@ -44,6 +44,7 @@ dependencies {
     implementation "com.github.ben-manes.caffeine:caffeine:$caffeineVersion"
 
     implementation "commons-io:commons-io:$apacheCommonsIOVersion"
+    implementation project(':commons')
 
     testImplementation(testFixtures(project(":storage:core")))
     testImplementation(project(":storage:filesystem"))

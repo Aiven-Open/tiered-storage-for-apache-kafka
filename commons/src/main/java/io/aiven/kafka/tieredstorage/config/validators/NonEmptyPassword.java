@@ -14,7 +14,7 @@
  * limitations under the License.
  */
 
-package io.aiven.kafka.tieredstorage.storage.config;
+package io.aiven.kafka.tieredstorage.config.validators;
 
 import java.util.Objects;
 

@@ -24,7 +24,8 @@ import org.apache.kafka.common.config.ConfigDef;
 import org.apache.kafka.common.config.ConfigException;
 import org.apache.kafka.common.config.types.Password;
 
-import io.aiven.kafka.tieredstorage.storage.config.NonEmptyPassword;
+import io.aiven.kafka.tieredstorage.config.validators.NonEmptyPassword;
+import io.aiven.kafka.tieredstorage.config.validators.ValidUrl;
 
 import com.google.auth.Credentials;
 
@@ -71,6 +72,7 @@ class GcsStorageConfig extends AbstractConfig {
                 GCS_ENDPOINT_URL_CONFIG,
                 ConfigDef.Type.STRING,
                 null,
+                new ValidUrl(),
                 ConfigDef.Importance.LOW,
                 GCS_ENDPOINT_URL_DOC)
             .define(
@@ -98,7 +100,6 @@ class GcsStorageConfig extends AbstractConfig {
                 GCP_CREDENTIALS_DEFAULT_CONFIG,
                 ConfigDef.Type.BOOLEAN,
                 true,
-                null,
                 ConfigDef.Importance.MEDIUM,
                 GCP_CREDENTIALS_DEFAULT_DOC);
     }

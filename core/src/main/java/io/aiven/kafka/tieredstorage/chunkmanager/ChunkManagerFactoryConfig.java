@@ -20,9 +20,9 @@ import java.util.Map;
 
 import org.apache.kafka.common.config.AbstractConfig;
 import org.apache.kafka.common.config.ConfigDef;
-import org.apache.kafka.common.config.ConfigException;
 
 import io.aiven.kafka.tieredstorage.chunkmanager.cache.ChunkCache;
+import io.aiven.kafka.tieredstorage.config.validators.Subclass;
 
 public class ChunkManagerFactoryConfig extends AbstractConfig {
 
@@ -36,12 +36,12 @@ public class ChunkManagerFactoryConfig extends AbstractConfig {
         CONFIG = new ConfigDef();
 
         CONFIG.define(
-                CHUNK_CACHE_CONFIG,
-                ConfigDef.Type.CLASS,
-                null,
-                Subclass.of(ChunkManager.class),
-                ConfigDef.Importance.MEDIUM,
-                CHUNK_CACHE_DOC
+            CHUNK_CACHE_CONFIG,
+            ConfigDef.Type.CLASS,
+            null,
+            Subclass.of(ChunkCache.class),
+            ConfigDef.Importance.MEDIUM,
+            CHUNK_CACHE_DOC
         );
     }
 
@@ -52,25 +52,5 @@ public class ChunkManagerFactoryConfig extends AbstractConfig {
     @SuppressWarnings("unchecked")
     public Class<ChunkCache<?>> cacheClass() {
         return (Class<ChunkCache<?>>) getClass(CHUNK_CACHE_CONFIG);
-    }
-
-    public static class Subclass implements ConfigDef.Validator {
-        private final Class<?> parentClass;
-
-        public static Subclass of(final Class<?> parentClass) {
-            return new Subclass(parentClass);
-        }
-
-        public Subclass(final Class<?> parentClass) {
-            this.parentClass = parentClass;
-        }
-
-        @Override
-        public void ensureValid(final String name, final Object value) {
-            if (value != null && !(parentClass.isAssignableFrom((Class<?>) value))) {
-                throw new ConfigException(name + " should be a subclass of " + ChunkCache.class.getCanonicalName());
-            }
-        }
-
     }
 }
