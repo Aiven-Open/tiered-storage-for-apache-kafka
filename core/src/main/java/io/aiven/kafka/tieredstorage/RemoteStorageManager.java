@@ -365,10 +365,16 @@ public class RemoteStorageManager implements org.apache.kafka.server.log.remote.
     @Override
     public InputStream fetchLogSegment(final RemoteLogSegmentMetadata remoteLogSegmentMetadata,
                                        final int startPosition) throws RemoteStorageException {
+        final int endPosition;
+        if (chunkSize > 0) {
+            endPosition = Math.max(remoteLogSegmentMetadata.segmentSizeInBytes() - 1, startPosition + chunkSize);
+        } else {
+            endPosition = remoteLogSegmentMetadata.segmentSizeInBytes() - 1;
+        }
         return this.fetchLogSegment(
             remoteLogSegmentMetadata,
             startPosition,
-            Math.max(remoteLogSegmentMetadata.segmentSizeInBytes() - 1, startPosition + chunkSize)
+            endPosition
         );
     }
 
