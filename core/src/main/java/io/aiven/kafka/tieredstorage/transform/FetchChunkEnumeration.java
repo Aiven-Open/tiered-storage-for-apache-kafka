@@ -131,6 +131,10 @@ public class FetchChunkEnumeration implements Enumeration<InputStream> {
         }
 
         currentChunkId += 1;
+        // eagerly fetching next chunk for caching
+        if (currentChunkId <= lastChunkId) {
+            getChunkContent(currentChunkId);
+        }
         return chunkContent;
     }
 
