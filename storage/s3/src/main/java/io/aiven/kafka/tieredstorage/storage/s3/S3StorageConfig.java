@@ -19,6 +19,7 @@ package io.aiven.kafka.tieredstorage.storage.s3;
 import java.lang.reflect.InvocationTargetException;
 import java.lang.reflect.Method;
 import java.net.URI;
+import java.time.Duration;
 import java.util.Map;
 import java.util.Objects;
 
@@ -27,6 +28,7 @@ import org.apache.kafka.common.config.ConfigDef;
 import org.apache.kafka.common.config.ConfigException;
 
 import io.aiven.kafka.tieredstorage.config.validators.NonEmptyPassword;
+import io.aiven.kafka.tieredstorage.config.validators.Null;
 import io.aiven.kafka.tieredstorage.config.validators.Subclass;
 import io.aiven.kafka.tieredstorage.config.validators.ValidUrl;
 
@@ -65,6 +67,10 @@ public class S3StorageConfig extends AbstractConfig {
     static final int S3_MULTIPART_UPLOAD_PART_SIZE_MAX = Integer.MAX_VALUE;
     static final int S3_MULTIPART_UPLOAD_PART_SIZE_DEFAULT = S3_MULTIPART_UPLOAD_PART_SIZE_MIN;
 
+    private static final String S3_API_CALL_TIMEOUT_CONFIG = "s3.api.call.timeout";
+    private static final String S3_API_CALL_TIMEOUT_DOC = "AWS S3 API call timeout in milliseconds";
+    private static final String S3_API_CALL_ATTEMPT_TIMEOUT_CONFIG = "s3.api.call.attempt.timeout";
+    private static final String S3_API_CALL_ATTEMPT_TIMEOUT_DOC = "AWS S3 API call attempt timeout in milliseconds";
     public static final String AWS_CREDENTIALS_PROVIDER_CLASS_CONFIG = "aws.credentials.provider.class";
     private static final String AWS_CREDENTIALS_PROVIDER_CLASS_DOC = "AWS credentials provider. "
         + "If not set, AWS SDK uses the default "
@@ -120,6 +126,20 @@ public class S3StorageConfig extends AbstractConfig {
                 ConfigDef.Range.between(S3_MULTIPART_UPLOAD_PART_SIZE_MIN, S3_MULTIPART_UPLOAD_PART_SIZE_MAX),
                 ConfigDef.Importance.MEDIUM,
                 S3_MULTIPART_UPLOAD_PART_SIZE_DOC)
+            .define(
+                S3_API_CALL_TIMEOUT_CONFIG,
+                ConfigDef.Type.LONG,
+                null,
+                Null.or(ConfigDef.Range.between(1, Long.MAX_VALUE)),
+                ConfigDef.Importance.LOW,
+                S3_API_CALL_TIMEOUT_DOC)
+            .define(
+                S3_API_CALL_ATTEMPT_TIMEOUT_CONFIG,
+                ConfigDef.Type.LONG,
+                null,
+                Null.or(ConfigDef.Range.between(1, Long.MAX_VALUE)),
+                ConfigDef.Importance.LOW,
+                S3_API_CALL_ATTEMPT_TIMEOUT_DOC)
             .define(
                 AWS_CREDENTIALS_PROVIDER_CLASS_CONFIG,
                 ConfigDef.Type.CLASS,
@@ -202,7 +222,11 @@ public class S3StorageConfig extends AbstractConfig {
         if (credentialsProvider != null) {
             s3ClientBuilder.credentialsProvider(credentialsProvider);
         }
-        s3ClientBuilder.overrideConfiguration(config -> config.addMetricPublisher(new MetricCollector()));
+        s3ClientBuilder.overrideConfiguration(config -> {
+            config.addMetricPublisher(new MetricCollector());
+            config.apiCallTimeout(getDuration(S3_API_CALL_TIMEOUT_CONFIG));
+            config.apiCallAttemptTimeout(getDuration(S3_API_CALL_ATTEMPT_TIMEOUT_CONFIG));
+        });
         return s3ClientBuilder.build();
     }
 
@@ -259,6 +283,15 @@ public class S3StorageConfig extends AbstractConfig {
         final String url = getString(S3_ENDPOINT_URL_CONFIG);
         if (url != null) {
             return URI.create(url);
+        } else {
+            return null;
+        }
+    }
+
+    private Duration getDuration(final String key) {
+        final var value = getLong(key);
+        if (value != null) {
+            return Duration.ofMillis(value);
         } else {
             return null;
         }

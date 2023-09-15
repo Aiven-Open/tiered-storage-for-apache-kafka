@@ -17,6 +17,7 @@
 package io.aiven.kafka.tieredstorage.storage.s3;
 
 import java.net.URI;
+import java.time.Duration;
 import java.util.Map;
 
 import org.apache.kafka.common.config.ConfigException;
@@ -51,8 +52,7 @@ class S3StorageConfigTest {
         assertThat(config.credentialsProvider()).isNull();
         assertThat(config.pathStyleAccessEnabled()).isNull();
         assertThat(config.uploadPartSize()).isEqualTo(S3_MULTIPART_UPLOAD_PART_SIZE_DEFAULT);
-        assertThat(config.disableAwsCertChecking()).isEqualTo(false);
-
+        assertThat(config.disableAwsCertChecking()).isFalse();
         verifyClientConfiguration(config.s3Client(), null);
     }
 
@@ -208,11 +208,29 @@ class S3StorageConfigTest {
                 + "Value must be at least 5242880");
     }
 
+    @Test
+    void withApiCallTimeouts() {
+        final var configs = Map.of(
+            "s3.bucket.name", BUCKET_NAME,
+            "s3.region", TEST_REGION.id(),
+            "s3.api.call.timeout", 5000,
+            "s3.api.call.attempt.timeout", 1000
+        );
+        final var config = new S3StorageConfig(configs);
+
+        final var clientOverrideConfiguration = config.s3Client().serviceClientConfiguration().overrideConfiguration();
+        assertThat(clientOverrideConfiguration.apiCallTimeout()).hasValue(Duration.ofMillis(5000));
+        assertThat(clientOverrideConfiguration.apiCallAttemptTimeout()).hasValue(Duration.ofMillis(1000));
+    }
+
     private static void verifyClientConfiguration(final S3Client s3Client, final String hostnameOverride) {
         final var clientConfiguration = s3Client.serviceClientConfiguration();
         assertThat(clientConfiguration.region()).isEqualTo(TEST_REGION);
         assertThat(clientConfiguration.endpointOverride().map(URI::getHost).orElse(null)).isEqualTo(hostnameOverride);
-        assertThat(clientConfiguration.overrideConfiguration().metricPublishers())
+        final var clientOverrideConfiguration = clientConfiguration.overrideConfiguration();
+        assertThat(clientOverrideConfiguration.metricPublishers())
             .allSatisfy(metricPublisher -> assertThat(metricPublisher).isInstanceOf(MetricCollector.class));
+        assertThat(clientOverrideConfiguration.apiCallTimeout()).isEmpty();
+        assertThat(clientOverrideConfiguration.apiCallAttemptTimeout()).isEmpty();
     }
 }
