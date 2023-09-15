@@ -218,6 +218,8 @@ public class S3StorageConfig extends AbstractConfig {
             );
         }
 
+        s3ClientBuilder.serviceConfiguration(builder -> builder.checksumValidationEnabled(false));  
+
         final AwsCredentialsProvider credentialsProvider = credentialsProvider();
         if (credentialsProvider != null) {
             s3ClientBuilder.credentialsProvider(credentialsProvider);
