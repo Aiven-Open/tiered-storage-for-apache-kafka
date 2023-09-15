@@ -26,6 +26,7 @@ dependencies {
     implementation project(":storage:core")
 
     implementation "com.google.cloud:google-cloud-storage:$gcpSdkVersion"
+    implementation project(":commons")
 
     testImplementation(testFixtures(project(":storage:core")))
 

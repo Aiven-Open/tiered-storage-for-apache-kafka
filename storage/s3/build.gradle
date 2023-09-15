@@ -28,6 +28,7 @@ dependencies {
     // replacing with version used by core
     implementation "com.fasterxml.jackson.core:jackson-databind:$jacksonVersion"
     implementation "com.fasterxml.jackson.dataformat:jackson-dataformat-cbor:$jacksonVersion"
+    implementation project(':commons')
 
     testImplementation(testFixtures(project(":storage:core")))
 

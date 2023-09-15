@@ -19,7 +19,6 @@ package io.aiven.kafka.tieredstorage.storage.s3;
 import java.lang.reflect.InvocationTargetException;
 import java.lang.reflect.Method;
 import java.net.URI;
-import java.net.URISyntaxException;
 import java.util.Map;
 import java.util.Objects;
 
@@ -27,7 +26,9 @@ import org.apache.kafka.common.config.AbstractConfig;
 import org.apache.kafka.common.config.ConfigDef;
 import org.apache.kafka.common.config.ConfigException;
 
-import io.aiven.kafka.tieredstorage.storage.config.NonEmptyPassword;
+import io.aiven.kafka.tieredstorage.config.validators.NonEmptyPassword;
+import io.aiven.kafka.tieredstorage.config.validators.Subclass;
+import io.aiven.kafka.tieredstorage.config.validators.ValidUrl;
 
 import software.amazon.awssdk.auth.credentials.AwsBasicCredentials;
 import software.amazon.awssdk.auth.credentials.AwsCredentials;
@@ -97,6 +98,7 @@ public class S3StorageConfig extends AbstractConfig {
                 S3_ENDPOINT_URL_CONFIG,
                 ConfigDef.Type.STRING,
                 null,
+                new ValidUrl(),
                 ConfigDef.Importance.LOW,
                 S3_ENDPOINT_URL_DOC)
             .define(
@@ -122,7 +124,7 @@ public class S3StorageConfig extends AbstractConfig {
                 AWS_CREDENTIALS_PROVIDER_CLASS_CONFIG,
                 ConfigDef.Type.CLASS,
                 null,
-                new CredentialsProviderValidator(),
+                Subclass.of(AwsCredentialsProvider.class),
                 ConfigDef.Importance.LOW,
                 AWS_CREDENTIALS_PROVIDER_CLASS_DOC)
             .define(
@@ -256,27 +258,9 @@ public class S3StorageConfig extends AbstractConfig {
     private URI s3ServiceEndpoint() {
         final String url = getString(S3_ENDPOINT_URL_CONFIG);
         if (url != null) {
-            try {
-                return new URI(url);
-            } catch (final URISyntaxException e) {
-                throw new ConfigException(S3_ENDPOINT_URL_CONFIG, url, "Must be a valid URI");
-            }
+            return URI.create(url);
         } else {
             return null;
-        }
-    }
-
-    private static class CredentialsProviderValidator implements ConfigDef.Validator {
-        @Override
-        public void ensureValid(final String name, final Object value) {
-            if (value == null) {
-                return;
-            }
-
-            final Class<?> providerClass = (Class<?>) value;
-            if (!AwsCredentialsProvider.class.isAssignableFrom(providerClass)) {
-                throw new ConfigException(name, value, "Class must extend " + AwsCredentialsProvider.class);
-            }
         }
     }
 }

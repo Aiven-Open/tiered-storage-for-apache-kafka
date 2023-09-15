@@ -50,6 +50,26 @@ class GcsStorageConfigTest {
     }
 
     @Test
+    void invalidEndpointUrl() {
+        assertThatThrownBy(() -> new GcsStorageConfig(
+            Map.of(
+                "gcs.bucket.name", "bucket",
+                "gcs.endpoint.url", "invalid_url")
+        ))
+            .isInstanceOf(ConfigException.class)
+            .hasMessage("Invalid value invalid_url for configuration gcs.endpoint.url: Must be a valid URL");
+
+        assertThatThrownBy(() -> new GcsStorageConfig(
+            Map.of(
+                "gcs.bucket.name", "bucket",
+                "gcs.endpoint.url", "ftp://invalid_url")
+        ))
+            .isInstanceOf(ConfigException.class)
+            .hasMessage("Invalid value ftp://invalid_url for configuration gcs.endpoint.url: "
+                + "URL must have scheme from the list [http, https]");
+    }
+
+    @Test
     void emptyGcsBucketName() {
         assertThatThrownBy(() -> new GcsStorageConfig(Map.of("gcs.bucket.name", "")))
             .isInstanceOf(ConfigException.class)
