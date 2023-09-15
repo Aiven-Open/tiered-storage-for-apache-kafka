@@ -368,7 +368,7 @@ public class RemoteStorageManager implements org.apache.kafka.server.log.remote.
         return this.fetchLogSegment(
             remoteLogSegmentMetadata,
             startPosition,
-            remoteLogSegmentMetadata.segmentSizeInBytes() - 1
+            Math.max(remoteLogSegmentMetadata.segmentSizeInBytes() - 1, startPosition + chunkSize)
         );
     }
 
