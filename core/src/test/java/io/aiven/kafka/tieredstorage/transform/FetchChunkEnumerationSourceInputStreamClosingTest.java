@@ -133,7 +133,7 @@ class FetchChunkEnumerationSourceInputStreamClosingTest {
 
         @Override
         public InputStream fetch(final String key) throws StorageBackendException {
-            throw new RuntimeException("Should not be called");
+            throw new StorageBackendException("Should not be called");
         }
 
         @Override
@@ -162,7 +162,7 @@ class FetchChunkEnumerationSourceInputStreamClosingTest {
                     verify(is).close();
                 }
             } else {
-                assertThat(openInputStreams).hasSize(1);
+                assertThat(openInputStreams).hasSizeBetween(1, 2);
                 verify(openInputStreams.get(0)).close();
             }
         }

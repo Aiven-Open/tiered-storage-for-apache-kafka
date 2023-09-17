@@ -23,6 +23,8 @@ import java.util.Enumeration;
 import java.util.List;
 import java.util.NoSuchElementException;
 import java.util.Objects;
+import java.util.concurrent.CompletableFuture;
+import java.util.concurrent.ExecutionException;
 
 import io.aiven.kafka.tieredstorage.Chunk;
 import io.aiven.kafka.tieredstorage.chunkmanager.ChunkManager;
@@ -43,13 +45,13 @@ public class FetchChunkEnumeration implements Enumeration<InputStream> {
     private final ChunkIndex chunkIndex;
     int currentChunkId;
     public boolean closed;
+    CompletableFuture<InputStream> nextChunk = null;
 
     /**
-     *
-     * @param chunkManager provides chunk input to fetch from
+     * @param chunkManager  provides chunk input to fetch from
      * @param objectKeyPath required by chunkManager
-     * @param manifest provides to index to build response from
-     * @param range original offset range start/end position
+     * @param manifest      provides to index to build response from
+     * @param range         original offset range start/end position
      */
     public FetchChunkEnumeration(final ChunkManager chunkManager,
                                  final String objectKeyPath,
@@ -99,7 +101,17 @@ public class FetchChunkEnumeration implements Enumeration<InputStream> {
             throw new NoSuchElementException();
         }
 
-        InputStream chunkContent = getChunkContent(currentChunkId);
+        InputStream chunkContent;
+        if (nextChunk == null) {
+            chunkContent = getChunkContent(currentChunkId);
+        } else {
+            try { // continue fetching
+                chunkContent = nextChunk.get();
+                nextChunk = null;
+            } catch (InterruptedException | ExecutionException e) {
+                throw new RuntimeException(e);
+            }
+        }
 
         final Chunk currentChunk = chunkIndex.chunks().get(currentChunkId);
         final int chunkStartPosition = currentChunk.originalPosition;
@@ -131,6 +143,12 @@ public class FetchChunkEnumeration implements Enumeration<InputStream> {
         }
 
         currentChunkId += 1;
+
+        // eagerly fetching next chunk for caching
+        if (currentChunkId <= lastChunkId) {
+            nextChunk = CompletableFuture.supplyAsync(() -> getChunkContent(currentChunkId));
+        }
+
         return chunkContent;
     }
 
@@ -147,6 +165,7 @@ public class FetchChunkEnumeration implements Enumeration<InputStream> {
     }
 
     public void close() {
+        nextChunk = null;
         closed = true;
     }
 

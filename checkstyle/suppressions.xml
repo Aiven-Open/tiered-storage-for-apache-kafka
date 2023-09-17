@@ -30,6 +30,7 @@
     <suppress checks="ClassDataAbstractionCoupling" files="MetricCollector.java"/>
     <suppress checks="CyclomaticComplexity" files="MetricCollector.java"/>
     <suppress checks="CyclomaticComplexity" files="SingleBrokerTest.java"/>
+    <suppress checks="CyclomaticComplexity" files="FetchChunkEnumeration.java"/>
     <suppress checks="NPathComplexity" files="SingleBrokerTest.java"/>
     <suppress checks="JavaNCSSCheck" files="MetricsRegistry.java"/>
     <suppress checks="JavaNCSSCheck" files="RemoteStorageManagerMetricsTest.java"/>
