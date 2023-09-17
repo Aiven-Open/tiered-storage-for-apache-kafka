@@ -88,6 +88,12 @@ public class S3StorageConfig extends AbstractConfig {
             + "Use with caution and always only in a test environment, as disabling certificate lead the storage "
             + "to be vulnerable to man-in-the-middle attacks.";
 
+    public static final String AWS_CHECKSUM_CHECK_ENABLED_CONFIG = "aws.checksum.check.enabled";
+    private static final String AWS_CHECKSUM_CHECK_ENABLED_DOC =
+        "This property is used to enable checksum validation done by AWS library. "
+            + "When set to \"false\", there will be no validation. "
+            + "It is disabled by default as Kafka already validates integrity of the files.";
+
 
     private static final ConfigDef CONFIG;
 
@@ -166,6 +172,12 @@ public class S3StorageConfig extends AbstractConfig {
                 true,
                 ConfigDef.Importance.LOW,
                 AWS_CERTIFICATE_CHECK_ENABLED_DOC
+            )
+            .define(AWS_CHECKSUM_CHECK_ENABLED_CONFIG,
+                ConfigDef.Type.BOOLEAN,
+                false,
+                ConfigDef.Importance.MEDIUM,
+                AWS_CHECKSUM_CHECK_ENABLED_DOC
             );
     }
 
@@ -218,6 +230,8 @@ public class S3StorageConfig extends AbstractConfig {
             );
         }
 
+        s3ClientBuilder.serviceConfiguration(builder -> builder.checksumValidationEnabled(checksumCheckEnabled()));
+
         final AwsCredentialsProvider credentialsProvider = credentialsProvider();
         if (credentialsProvider != null) {
             s3ClientBuilder.credentialsProvider(credentialsProvider);
@@ -265,6 +279,10 @@ public class S3StorageConfig extends AbstractConfig {
 
     public Boolean certificateCheckEnabled() {
         return getBoolean(AWS_CERTIFICATE_CHECK_ENABLED_CONFIG);
+    }
+
+    public Boolean checksumCheckEnabled() {
+        return getBoolean(AWS_CHECKSUM_CHECK_ENABLED_CONFIG);
     }
 
     public String bucketName() {
