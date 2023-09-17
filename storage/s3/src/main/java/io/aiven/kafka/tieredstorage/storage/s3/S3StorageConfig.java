@@ -81,10 +81,10 @@ public class S3StorageConfig extends AbstractConfig {
     public static final String AWS_SECRET_ACCESS_KEY_CONFIG = "aws.secret.access.key";
     private static final String AWS_SECRET_ACCESS_KEY_DOC = "AWS secret access key. "
         + "To be used when static credentials are provided.";
-    public static final String DISABLE_AWS_CERT_CHECKING_CONFIG = "aws.disable.cert.checking";
-    private static final String DISABLE_AWS_CERT_CHECKING_DOC =
-        "This property is used to disable SSL certificate checking for AWS services. "
-            + "When set to \"true\", the SSL certificate checking for AWS services will be bypassed. "
+    public static final String AWS_CERTIFICATE_CHECK_ENABLED_CONFIG = "aws.certificate.check.enabled";
+    private static final String AWS_CERTIFICATE_CHECK_ENABLED_DOC =
+        "This property is used to enable SSL certificate checking for AWS services. "
+            + "When set to \"false\", the SSL certificate checking for AWS services will be bypassed. "
             + "Use with caution and always only in a test environment, as disabling certificate lead the storage "
             + "to be vulnerable to man-in-the-middle attacks.";
 
@@ -161,11 +161,11 @@ public class S3StorageConfig extends AbstractConfig {
                 new NonEmptyPassword(),
                 ConfigDef.Importance.MEDIUM,
                 AWS_SECRET_ACCESS_KEY_DOC)
-            .define(DISABLE_AWS_CERT_CHECKING_CONFIG,
+            .define(AWS_CERTIFICATE_CHECK_ENABLED_CONFIG,
                 ConfigDef.Type.BOOLEAN,
-                false,
+                true,
                 ConfigDef.Importance.LOW,
-                DISABLE_AWS_CERT_CHECKING_DOC
+                AWS_CERTIFICATE_CHECK_ENABLED_DOC
             );
     }
 
@@ -207,7 +207,7 @@ public class S3StorageConfig extends AbstractConfig {
             s3ClientBuilder.forcePathStyle(pathStyleAccessEnabled);
         }
 
-        if (disableAwsCertChecking()) {
+        if (!certificateCheckEnabled()) {
             s3ClientBuilder.httpClient(
                 new DefaultSdkHttpClientBuilder()
                     .buildWithDefaults(
@@ -263,8 +263,8 @@ public class S3StorageConfig extends AbstractConfig {
         }
     }
 
-    public Boolean disableAwsCertChecking() {
-        return getBoolean(DISABLE_AWS_CERT_CHECKING_CONFIG);
+    public Boolean certificateCheckEnabled() {
+        return getBoolean(AWS_CERTIFICATE_CHECK_ENABLED_CONFIG);
     }
 
     public String bucketName() {

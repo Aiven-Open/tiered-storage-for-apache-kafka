@@ -52,7 +52,7 @@ class S3StorageConfigTest {
         assertThat(config.credentialsProvider()).isNull();
         assertThat(config.pathStyleAccessEnabled()).isNull();
         assertThat(config.uploadPartSize()).isEqualTo(S3_MULTIPART_UPLOAD_PART_SIZE_DEFAULT);
-        assertThat(config.disableAwsCertChecking()).isFalse();
+        assertThat(config.certificateCheckEnabled()).isTrue();
         verifyClientConfiguration(config.s3Client(), null);
     }
 
@@ -110,7 +110,7 @@ class S3StorageConfigTest {
             "s3.endpoint.url", MINIO_URL,
             "aws.access.key.id", username,
             "aws.secret.access.key", password,
-            "aws.disable.cert.checking", "true");
+            "aws.certificate.check.enabled", "false");
 
         final var config = new S3StorageConfig(configs);
 
@@ -119,7 +119,7 @@ class S3StorageConfigTest {
         assertThat(config.getString("s3.endpoint.url")).isEqualTo(MINIO_URL);
         assertThat(config.getPassword("aws.access.key.id").value()).isEqualTo(username);
         assertThat(config.getPassword("aws.secret.access.key").value()).isEqualTo(password);
-        assertThat(config.disableAwsCertChecking()).isEqualTo(true);
+        assertThat(config.certificateCheckEnabled()).isFalse();
 
         final AwsCredentialsProvider credentialsProvider = config.credentialsProvider();
         assertThat(credentialsProvider).isInstanceOf(StaticCredentialsProvider.class);
