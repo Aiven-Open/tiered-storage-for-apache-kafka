@@ -18,11 +18,25 @@ FROM aivenoy/kafka:kips_KIP-405_3.6-2023-09-12
 ARG _VERSION
 
 USER root
-RUN mkdir /tiered-storage-for-apache-kafka
-COPY build/distributions/tiered-storage-for-apache-kafka-${_VERSION}.tgz /tiered-storage-for-apache-kafka
-RUN cd /tiered-storage-for-apache-kafka \
+
+RUN mkdir -p /tiered-storage-for-apache-kafka/core \
+    &&  mkdir -p /tiered-storage-for-apache-kafka/s3 \
+    &&  mkdir -p /tiered-storage-for-apache-kafka/gcs
+
+COPY build/distributions/tiered-storage-for-apache-kafka-${_VERSION}.tgz /tiered-storage-for-apache-kafka/core
+RUN cd /tiered-storage-for-apache-kafka/core \
     && tar -xf tiered-storage-for-apache-kafka-${_VERSION}.tgz --strip-components=1 \
     && rm tiered-storage-for-apache-kafka-${_VERSION}.tgz
+
+COPY storage/s3/build/distributions/s3-${_VERSION}.tgz /tiered-storage-for-apache-kafka/s3
+RUN cd /tiered-storage-for-apache-kafka/s3 \
+    && tar -xf s3-${_VERSION}.tgz --strip-components=1 \
+    && rm s3-${_VERSION}.tgz
+
+COPY storage/gcs/build/distributions/gcs-${_VERSION}.tgz /tiered-storage-for-apache-kafka/gcs
+RUN cd /tiered-storage-for-apache-kafka/gcs \
+    && tar -xf gcs-${_VERSION}.tgz --strip-components=1 \
+    && rm gcs-${_VERSION}.tgz
 
 # Installing JMX exporter agent
 ARG JMX_EXPORTER_VERSION=0.18.0

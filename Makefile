@@ -28,24 +28,30 @@ clean:
 checkstyle:
 	./gradlew checkstyleMain checkstyleTest checkstyleIntegrationTest
 
-build: build/distributions/tiered-storage-for-apache-kafka-$(VERSION).tgz
+build: build/distributions/tiered-storage-for-apache-kafka-$(VERSION).tgz storage/s3/build/distributions/s3-$(VERSION).tgz storage/gcs/build/distributions/gcs-$(VERSION).tgz
 
 build/distributions/tiered-storage-for-apache-kafka-$(VERSION).tgz:
 	./gradlew build distTar -x test -x integrationTest -x e2e:test
 
-test: build/distributions/tiered-storage-for-apache-kafka-$(VERSION).tgz
+storage/s3/build/distributions/s3-$(VERSION).tgz:
+	./gradlew build :storage:s3:distTar -x test -x integrationTest -x e2e:test
+
+storage/gcs/build/distributions/gcs-$(VERSION).tgz:
+	./gradlew build :storage:gcs:distTar -x test -x integrationTest -x e2e:test
+
+test: build
 	./gradlew test -x e2e:test
 
-integration_test: build/distributions/tiered-storage-for-apache-kafka-$(VERSION).tgz
+integration_test: build
 	./gradlew integrationTest
 
 E2E_TEST=LocalSystem
 
-e2e_test:  build/distributions/tiered-storage-for-apache-kafka-$(VERSION).tgz
+e2e_test: build
 	./gradlew e2e:test --tests $(E2E_TEST)*
 
 .PHONY: docker_image
-docker_image: build/distributions/tiered-storage-for-apache-kafka-$(VERSION).tgz
+docker_image: build
 	docker build . \
 		-f docker/Dockerfile \
 		--build-arg _VERSION=$(VERSION) \

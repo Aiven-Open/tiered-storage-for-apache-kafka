@@ -208,6 +208,11 @@ subprojects {
             }
         }
     }
+
+    tasks.distTar {
+        compression = Compression.GZIP
+        duplicatesStrategy DuplicatesStrategy.EXCLUDE
+    }
 }
 
 distributions {
@@ -217,8 +222,6 @@ distributions {
             from(project(":core").configurations.runtimeClasspath)
             from(project(":storage:core").jar)
             from(project(":storage:core").configurations.runtimeClasspath)
-            from(project(":storage:s3").jar)
-            from(project(":storage:s3").configurations.runtimeClasspath)
             from(project(":storage:filesystem").jar)
             from(project(":storage:filesystem").configurations.runtimeClasspath)
         }

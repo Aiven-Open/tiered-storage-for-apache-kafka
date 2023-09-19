@@ -55,7 +55,7 @@ services:
       KAFKA_REMOTE_LOG_METADATA_MANAGER_LISTENER_NAME: "BROKER"
       KAFKA_RLMM_CONFIG_REMOTE_LOG_METADATA_TOPIC_REPLICATION_FACTOR: 1
       # Remote storage manager
-      KAFKA_REMOTE_LOG_STORAGE_MANAGER_CLASS_PATH: "/tiered-storage-for-apache-kafka/*"
+      KAFKA_REMOTE_LOG_STORAGE_MANAGER_CLASS_PATH: "/tiered-storage-for-apache-kafka/core/*"
       KAFKA_REMOTE_LOG_STORAGE_MANAGER_CLASS_NAME: "io.aiven.kafka.tieredstorage.RemoteStorageManager"
       KAFKA_REMOTE_LOG_STORAGE_MANAGER_IMPL_PREFIX: "rsm.config."
       KAFKA_RSM_CONFIG_CHUNK_SIZE: 5242880 # 5MiB

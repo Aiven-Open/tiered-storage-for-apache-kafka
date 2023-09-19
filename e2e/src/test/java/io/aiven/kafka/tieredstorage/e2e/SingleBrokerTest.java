@@ -148,7 +148,6 @@ abstract class SingleBrokerTest {
             .withEnv("KAFKA_REMOTE_LOG_METADATA_MANAGER_LISTENER_NAME", "BROKER")
             .withEnv("KAFKA_RLMM_CONFIG_REMOTE_LOG_METADATA_TOPIC_REPLICATION_FACTOR", "1")
             // remote storage manager
-            .withEnv("KAFKA_REMOTE_LOG_STORAGE_MANAGER_CLASS_PATH", "/tiered-storage-for-apache-kafka/*")
             .withEnv("KAFKA_REMOTE_LOG_STORAGE_MANAGER_CLASS_NAME",
                 "io.aiven.kafka.tieredstorage.RemoteStorageManager")
             .withEnv("KAFKA_REMOTE_LOG_STORAGE_MANAGER_IMPL_PREFIX", "rsm.config.")
