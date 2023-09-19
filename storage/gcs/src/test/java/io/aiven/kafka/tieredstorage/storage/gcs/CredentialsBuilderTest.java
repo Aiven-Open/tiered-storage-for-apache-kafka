@@ -18,6 +18,7 @@ package io.aiven.kafka.tieredstorage.storage.gcs;
 
 import java.io.IOException;
 import java.nio.charset.StandardCharsets;
+import java.util.stream.Stream;
 
 import com.google.auth.Credentials;
 import com.google.auth.oauth2.GoogleCredentials;
@@ -25,6 +26,9 @@ import com.google.auth.oauth2.UserCredentials;
 import com.google.cloud.NoCredentials;
 import com.google.common.io.Resources;
 import org.junit.jupiter.api.Test;
+import org.junit.jupiter.params.ParameterizedTest;
+import org.junit.jupiter.params.provider.Arguments;
+import org.junit.jupiter.params.provider.MethodSource;
 import org.mockito.MockedStatic;
 import org.mockito.Mockito;
 
@@ -33,24 +37,32 @@ import static org.assertj.core.api.Assertions.assertThatThrownBy;
 
 class CredentialsBuilderTest {
     @Test
-    void defaultAndJsonProvided() {
-        assertThatThrownBy(() -> CredentialsBuilder.build(true, "{}", null))
+    void allNull() {
+        assertThatThrownBy(() -> CredentialsBuilder.build(null, null, null))
             .isInstanceOf(IllegalArgumentException.class)
-            .hasMessage("defaultCredentials == true and credentialsJson != null cannot be simultaneously.");
+            .hasMessage("All defaultCredentials, credentialsJson, and credentialsPath cannot be null simultaneously.");
     }
 
-    @Test
-    void defaultAndPathProvided() {
-        assertThatThrownBy(() -> CredentialsBuilder.build(true, null, "file.json"))
+    @ParameterizedTest
+    @MethodSource("provideMoreThanOneNonNull")
+    void moreThanOneNonNull(final Boolean defaultCredentials,
+                            final String credentialsJson,
+                            final String credentialsPath) {
+        assertThatThrownBy(() -> CredentialsBuilder.build(defaultCredentials, credentialsJson, credentialsPath))
             .isInstanceOf(IllegalArgumentException.class)
-            .hasMessage("defaultCredentials == true and credentialsPath != null cannot be simultaneously.");
+            .hasMessage("Only one of defaultCredentials, credentialsJson, and credentialsPath can be non-null.");
     }
 
-    @Test
-    void bothCredentialsProvided() {
-        assertThatThrownBy(() -> CredentialsBuilder.build(false, "{}", "file.json"))
-            .isInstanceOf(IllegalArgumentException.class)
-            .hasMessage("Both credentialsPath and credentialsJson cannot be non-null.");
+    private static Stream<Arguments> provideMoreThanOneNonNull() {
+        return Stream.of(
+            Arguments.of(true, "json", "path"),
+            Arguments.of(false, "json", "path"),
+            Arguments.of(true, "json", null),
+            Arguments.of(false, "json", null),
+            Arguments.of(true, null, "path"),
+            Arguments.of(false, null, "path"),
+            Arguments.of(null, "json", "path")
+        );
     }
 
     @Test
@@ -75,7 +87,7 @@ class CredentialsBuilderTest {
         final String credentialsJson = Resources.toString(
             Thread.currentThread().getContextClassLoader().getResource("test_gcs_credentials.json"),
             StandardCharsets.UTF_8);
-        final Credentials credentials = CredentialsBuilder.build(false, credentialsJson, null);
+        final Credentials credentials = CredentialsBuilder.build(null, credentialsJson, null);
         assertCredentials(credentials);
     }
 
@@ -85,7 +97,7 @@ class CredentialsBuilderTest {
             .getContextClassLoader()
             .getResource("test_gcs_credentials.json")
             .getPath();
-        final Credentials credentials = CredentialsBuilder.build(false, null, credentialsPath);
+        final Credentials credentials = CredentialsBuilder.build(null, null, credentialsPath);
         assertCredentials(credentials);
     }
 

@@ -99,7 +99,7 @@ class GcsStorageConfig extends AbstractConfig {
             .define(
                 GCP_CREDENTIALS_DEFAULT_CONFIG,
                 ConfigDef.Type.BOOLEAN,
-                true,
+                null,
                 ConfigDef.Importance.MEDIUM,
                 GCP_CREDENTIALS_DEFAULT_DOC);
     }
@@ -110,28 +110,22 @@ class GcsStorageConfig extends AbstractConfig {
     }
 
     private void validate() {
-        if (getBoolean(GCP_CREDENTIALS_DEFAULT_CONFIG)
-            && getPassword(GCP_CREDENTIALS_JSON_CONFIG) != null) {
-            throw new ConfigException(GCP_CREDENTIALS_JSON_CONFIG
-                + " and "
-                + GCP_CREDENTIALS_DEFAULT_CONFIG
-                + " cannot be set together");
-        }
+        final String credentialsJson = getPassword(GCP_CREDENTIALS_JSON_CONFIG) == null
+            ? null
+            : getPassword(GCP_CREDENTIALS_JSON_CONFIG).value();
 
-        if (getBoolean(GCP_CREDENTIALS_DEFAULT_CONFIG)
-            && getString(GCP_CREDENTIALS_PATH_CONFIG) != null) {
-            throw new ConfigException(GCP_CREDENTIALS_PATH_CONFIG
-                + " and "
-                + GCP_CREDENTIALS_DEFAULT_CONFIG
-                + " cannot be set together");
-        }
-
-        if (getPassword(GCP_CREDENTIALS_JSON_CONFIG) != null
-            && getString(GCP_CREDENTIALS_PATH_CONFIG) != null) {
-            throw new ConfigException(GCP_CREDENTIALS_JSON_CONFIG
-                + " and "
-                + GCP_CREDENTIALS_PATH_CONFIG
-                + " cannot be set together");
+        try {
+            CredentialsBuilder.validate(
+                getBoolean(GCP_CREDENTIALS_DEFAULT_CONFIG),
+                credentialsJson,
+                getString(GCP_CREDENTIALS_PATH_CONFIG)
+            );
+        } catch (final IllegalArgumentException e) {
+            final String message = e.getMessage()
+                .replace("credentialsPath", GCP_CREDENTIALS_PATH_CONFIG)
+                .replace("credentialsJson", GCP_CREDENTIALS_JSON_CONFIG)
+                .replace("defaultCredentials", GCP_CREDENTIALS_DEFAULT_CONFIG);
+            throw new ConfigException(message);
         }
     }
 
@@ -148,7 +142,7 @@ class GcsStorageConfig extends AbstractConfig {
     }
 
     Credentials credentials() {
-        final boolean defaultCredentials = getBoolean(GCP_CREDENTIALS_DEFAULT_CONFIG);
+        final Boolean defaultCredentials = getBoolean(GCP_CREDENTIALS_DEFAULT_CONFIG);
         final Password credentialsJsonPwd = getPassword(GCP_CREDENTIALS_JSON_CONFIG);
         final String credentialsJson = credentialsJsonPwd == null ? null : credentialsJsonPwd.value();
         final String credentialsPath = getString(GCP_CREDENTIALS_PATH_CONFIG);

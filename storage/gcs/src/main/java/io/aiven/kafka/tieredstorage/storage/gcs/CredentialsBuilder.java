@@ -22,6 +22,8 @@ import java.io.InputStream;
 import java.nio.charset.StandardCharsets;
 import java.nio.file.Files;
 import java.nio.file.Paths;
+import java.util.Objects;
+import java.util.stream.Stream;
 
 import com.google.auth.Credentials;
 import com.google.auth.oauth2.GoogleCredentials;
@@ -32,12 +34,26 @@ final class CredentialsBuilder {
         // hide constructor
     }
 
+    public static void validate(final Boolean defaultCredentials,
+                                final String credentialsJson,
+                                final String credentialsPath) {
+        final long nonNulls = Stream.of(defaultCredentials, credentialsJson, credentialsPath)
+            .filter(Objects::nonNull).count();
+        if (nonNulls == 0) {
+            throw new IllegalArgumentException(
+                "All defaultCredentials, credentialsJson, and credentialsPath cannot be null simultaneously.");
+        }
+        if (nonNulls > 1) {
+            throw new IllegalArgumentException(
+                "Only one of defaultCredentials, credentialsJson, and credentialsPath can be non-null.");
+        }
+    }
+
     /**
      * Builds {@link GoogleCredentials}.
      *
-     * <p>{@code credentialsPath} and {@code credentialsJson} are mutually exclusive: if both are provided (are
-     * non-{@code null}), this is an error. They are also cannot be set together with
-     * {@code defaultCredentials == true}.
+     * <p>{@code credentialsPath}, {@code credentialsJson}, and {@code defaultCredentials true}
+     * are mutually exclusive: if more than one are provided (are non-{@code null}), this is an error.
      *
      * <p>If either {@code credentialsPath} or {@code credentialsJson} is provided, it's used to
      * construct the credentials.
@@ -52,26 +68,11 @@ final class CredentialsBuilder {
      * @throws IOException              if some error getting the credentials happen.
      * @throws IllegalArgumentException if a combination of parameters is invalid.
      */
-    public static Credentials build(final boolean defaultCredentials,
+    public static Credentials build(final Boolean defaultCredentials,
                                     final String credentialsJson,
                                     final String credentialsPath)
         throws IOException {
-        if (defaultCredentials && credentialsJson != null) {
-            throw new IllegalArgumentException(
-                "defaultCredentials == true and credentialsJson != null cannot be simultaneously.");
-        }
-        if (defaultCredentials && credentialsPath != null) {
-            throw new IllegalArgumentException(
-                "defaultCredentials == true and credentialsPath != null cannot be simultaneously.");
-        }
-        if (credentialsJson != null && credentialsPath != null) {
-            throw new IllegalArgumentException(
-                "Both credentialsPath and credentialsJson cannot be non-null.");
-        }
-
-        if (defaultCredentials) {
-            return GoogleCredentials.getApplicationDefault();
-        }
+        validate(defaultCredentials, credentialsJson, credentialsPath);
 
         if (credentialsJson != null) {
             return getCredentialsFromJson(credentialsJson);
@@ -81,7 +82,11 @@ final class CredentialsBuilder {
             return getCredentialsFromPath(credentialsPath);
         }
 
-        return NoCredentials.getInstance();
+        if (Boolean.TRUE.equals(defaultCredentials)) {
+            return GoogleCredentials.getApplicationDefault();
+        } else {
+            return NoCredentials.getInstance();
+        }
     }
 
     private static GoogleCredentials getCredentialsFromPath(final String credentialsPath) throws IOException {
