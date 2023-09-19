@@ -65,6 +65,8 @@ public class S3MinioSingleBrokerTest extends SingleBrokerTest {
 
         setupKafka(kafka -> kafka.withEnv("KAFKA_RSM_CONFIG_STORAGE_BACKEND_CLASS",
                 "io.aiven.kafka.tieredstorage.storage.s3.S3Storage")
+            .withEnv("KAFKA_REMOTE_LOG_STORAGE_MANAGER_CLASS_PATH",
+                "/tiered-storage-for-apache-kafka/core/*:/tiered-storage-for-apache-kafka/s3/*")
             .withEnv("KAFKA_RSM_CONFIG_STORAGE_S3_BUCKET_NAME", BUCKET)
             .withEnv("KAFKA_RSM_CONFIG_STORAGE_S3_REGION", REGION)
             .withEnv("KAFKA_RSM_CONFIG_STORAGE_S3_PATH_STYLE_ACCESS_ENABLED", "true")

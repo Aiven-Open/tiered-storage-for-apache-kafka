@@ -42,6 +42,7 @@ public class LocalSystemSingleBrokerTest extends SingleBrokerTest {
             tieredDataDir.toFile().setWritable(true, false);
 
             kafka
+                .withEnv("KAFKA_REMOTE_LOG_STORAGE_MANAGER_CLASS_PATH", "/tiered-storage-for-apache-kafka/core/*")
                 .withEnv("KAFKA_RSM_CONFIG_STORAGE_BACKEND_CLASS",
                     "io.aiven.kafka.tieredstorage.storage.filesystem.FileSystemStorage")
                 .withEnv("KAFKA_RSM_CONFIG_STORAGE_ROOT", TS_DATA_DIR_CONTAINER)
