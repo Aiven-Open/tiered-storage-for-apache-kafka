@@ -217,6 +217,8 @@ distributions {
             from(project(":core").configurations.runtimeClasspath)
             from(project(":storage:core").jar)
             from(project(":storage:core").configurations.runtimeClasspath)
+            from(project(":storage:gcs").jar)
+            from(project(":storage:gcs").configurations.runtimeClasspath)
             from(project(":storage:s3").jar)
             from(project(":storage:s3").configurations.runtimeClasspath)
             from(project(":storage:filesystem").jar)
