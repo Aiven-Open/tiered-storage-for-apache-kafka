@@ -16,6 +16,10 @@
 
 archivesBaseName = "storage-s3"
 
+ext {
+    wireMockVersion = "3.0.4"
+}
+
 dependencies {
     implementation project(":storage:core")
 
@@ -34,4 +38,5 @@ dependencies {
 
     testImplementation "org.testcontainers:junit-jupiter:$testcontainersVersion"
     testImplementation "org.testcontainers:localstack:$testcontainersVersion"
+    integrationTestImplementation "org.wiremock:wiremock:$wireMockVersion"
 }
