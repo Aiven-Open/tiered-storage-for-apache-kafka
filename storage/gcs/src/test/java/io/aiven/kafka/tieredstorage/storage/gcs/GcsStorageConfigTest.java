@@ -16,13 +16,18 @@
 
 package io.aiven.kafka.tieredstorage.storage.gcs;
 
+import java.util.HashMap;
 import java.util.Map;
+import java.util.stream.Stream;
 
 import org.apache.kafka.common.config.ConfigException;
 
 import com.google.auth.oauth2.GoogleCredentials;
 import org.junit.jupiter.api.Test;
 import org.junit.jupiter.api.extension.ExtendWith;
+import org.junit.jupiter.params.ParameterizedTest;
+import org.junit.jupiter.params.provider.Arguments;
+import org.junit.jupiter.params.provider.MethodSource;
 import org.mockito.MockedStatic;
 import org.mockito.Mockito;
 import org.mockito.junit.jupiter.MockitoExtension;
@@ -35,7 +40,9 @@ class GcsStorageConfigTest {
     @Test
     void minimalConfig() {
         final String bucketName = "b1";
-        final Map<String, Object> configs = Map.of("gcs.bucket.name", bucketName);
+        final Map<String, Object> configs = Map.of(
+            "gcs.bucket.name", bucketName,
+            "gcs.credentials.default", "true");
         final GcsStorageConfig config = new GcsStorageConfig(configs);
         assertThat(config.bucketName()).isEqualTo(bucketName);
         assertThat(config.endpointUrl()).isNull();
@@ -99,37 +106,42 @@ class GcsStorageConfigTest {
     }
 
     @Test
-    void jsonAndPathCredentialsSet() {
+    void allCredentialsNull() {
         final var props = Map.of(
-            "gcs.bucket.name", "bucket",
-            "gcs.credentials.default", "false",
-            "gcs.credentials.json", "json",
-            "gcs.credentials.path", "path");
+            "gcs.bucket.name", "bucket"
+        );
         assertThatThrownBy(() -> new GcsStorageConfig(props))
             .isInstanceOf(ConfigException.class)
-            .hasMessage("gcs.credentials.json and gcs.credentials.path cannot be set together");
+            .hasMessage("All gcs.credentials.default, gcs.credentials.json, and gcs.credentials.path "
+                + "cannot be null simultaneously.");
     }
 
-    @Test
-    void jsonAndDefaultCredentialsSet() {
-        final var props = Map.of(
-            "gcs.bucket.name", "bucket",
-            "gcs.credentials.json", "json",
-            "gcs.credentials.default", "true");
+    @ParameterizedTest
+    @MethodSource("provideMoreThanOneCredentialsNonNull")
+    void moreThanOneCredentialsNonNull(final Boolean defaultCredentials,
+                                       final String credentialsJson,
+                                       final String credentialsPath) {
+        final Map<String, Object> props = new HashMap<>();
+        props.put("gcs.bucket.name", "bucket");
+        props.put("gcs.credentials.default", defaultCredentials);
+        props.put("gcs.credentials.json", credentialsJson);
+        props.put("gcs.credentials.path", credentialsPath);
         assertThatThrownBy(() -> new GcsStorageConfig(props))
             .isInstanceOf(ConfigException.class)
-            .hasMessage("gcs.credentials.json and gcs.credentials.default cannot be set together");
+            .hasMessage("Only one of gcs.credentials.default, gcs.credentials.json, and gcs.credentials.path "
+                + "can be non-null.");
     }
 
-    @Test
-    void pathAndDefaultCredentialsSet() {
-        final var props = Map.of(
-            "gcs.bucket.name", "bucket",
-            "gcs.credentials.path", "path",
-            "gcs.credentials.default", "true");
-        assertThatThrownBy(() -> new GcsStorageConfig(props))
-            .isInstanceOf(ConfigException.class)
-            .hasMessage("gcs.credentials.path and gcs.credentials.default cannot be set together");
+    private static Stream<Arguments> provideMoreThanOneCredentialsNonNull() {
+        return Stream.of(
+            Arguments.of(true, "json", "path"),
+            Arguments.of(false, "json", "path"),
+            Arguments.of(true, "json", null),
+            Arguments.of(false, "json", null),
+            Arguments.of(true, null, "path"),
+            Arguments.of(false, null, "path"),
+            Arguments.of(null, "json", "path")
+        );
     }
 
     @Test
@@ -137,6 +149,7 @@ class GcsStorageConfigTest {
         final GcsStorageConfig config = new GcsStorageConfig(
             Map.of(
                 "gcs.bucket.name", "b1",
+                "gcs.credentials.default", "true",
                 "gcs.resumable.upload.chunk.size", Integer.toString(10 * 1024 * 1024)
             )
         );
