@@ -33,6 +33,12 @@ public class ChunkCacheConfig extends AbstractConfig {
             + "where \"-1\" represents infinite retention";
     private static final long DEFAULT_CACHE_RETENTION_MS = 600_000;
 
+    private static final String CACHE_PREFETCHING_SIZE_CONFIG = "prefetching.bytes";
+    private static final String CACHE_PREFETCHING_SIZE_DOC =
+        "The amount of data that should be eagerly prefetched and cached";
+
+    private static final int CACHE_PREFETCHING_SIZE_DEFAULT = 0; //TODO find out what it should be
+
     private static ConfigDef addCacheConfigs(final ConfigDef configDef) {
         configDef.define(
                 CACHE_SIZE_CONFIG,
@@ -49,6 +55,14 @@ public class ChunkCacheConfig extends AbstractConfig {
                 ConfigDef.Range.between(-1L, Long.MAX_VALUE),
                 ConfigDef.Importance.MEDIUM,
                 CACHE_RETENTION_DOC
+        );
+        configDef.define(
+                CACHE_PREFETCHING_SIZE_CONFIG,
+                ConfigDef.Type.INT,
+                CACHE_PREFETCHING_SIZE_DEFAULT,
+                ConfigDef.Range.between(0, Integer.MAX_VALUE),
+                ConfigDef.Importance.MEDIUM,
+                CACHE_PREFETCHING_SIZE_DOC
         );
         return configDef;
     }
@@ -71,5 +85,9 @@ public class ChunkCacheConfig extends AbstractConfig {
             return Optional.empty();
         }
         return Optional.of(Duration.ofMillis(rawValue));
+    }
+
+    public int cachePrefetchingSize() {
+        return getInt(CACHE_PREFETCHING_SIZE_CONFIG);
     }
 }

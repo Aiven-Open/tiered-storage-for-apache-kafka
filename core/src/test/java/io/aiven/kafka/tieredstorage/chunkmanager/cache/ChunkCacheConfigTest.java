@@ -110,4 +110,16 @@ class ChunkCacheConfigTest {
         )).isInstanceOf(ConfigException.class)
                 .hasMessage("Invalid value -2 for configuration retention.ms: Value must be at least -1");
     }
+
+    @Test
+    void invalidPrefetchingSize() {
+        assertThatThrownBy(() -> new ChunkCacheConfig(
+                new ConfigDef(),
+                Map.of(
+                    "size", "-1",
+                    "prefetching.bytes", "-1"
+                )
+        )).isInstanceOf(ConfigException.class)
+                .hasMessage("Invalid value -1 for configuration prefetching.bytes: Value must be at least 0");
+    }
 }

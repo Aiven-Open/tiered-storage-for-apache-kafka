@@ -67,7 +67,7 @@ class ChunkCacheTest {
 
     private static final byte[] CHUNK_0 = "0123456789".getBytes();
     private static final byte[] CHUNK_1 = "1011121314".getBytes();
-    private static final FixedSizeChunkIndex FIXED_SIZE_CHUNK_INDEX = new FixedSizeChunkIndex(10, 10, 10, 10);
+    private static final FixedSizeChunkIndex FIXED_SIZE_CHUNK_INDEX = new FixedSizeChunkIndex(10, 20, 10, 10);
     private static final SegmentIndexesV1 SEGMENT_INDEXES = SegmentIndexesV1.builder()
         .add(IndexType.OFFSET, 1)
         .add(IndexType.TIMESTAMP, 1)
@@ -203,6 +203,45 @@ class ChunkCacheTest {
             verify(chunkManager, times(3)).getChunk(eq(SEGMENT_OBJECT_KEY), eq(SEGMENT_MANIFEST), anyInt());
         }
 
+        @Test
+        void prefetching() throws Exception {
+            chunkCache.configure(Map.of(
+                "retention.ms", "-1",
+                "size", "-1",
+                "prefetching.bytes", "20" // both chunks
+            ));
+            chunkCache.startPrefetching(SEGMENT_OBJECT_KEY, SEGMENT_MANIFEST, 0);
+            await().pollInterval(Duration.ofMillis(5)).until(() -> chunkCache.statsCounter.snapshot().loadCount() == 2);
+            verify(chunkManager, times(2)).getChunk(eq(SEGMENT_OBJECT_KEY), eq(SEGMENT_MANIFEST), anyInt());
+
+            final InputStream cachedChunk0 = chunkCache.getChunk(SEGMENT_OBJECT_KEY, SEGMENT_MANIFEST, 0);
+            assertThat(cachedChunk0).hasBinaryContent(CHUNK_0);
+            verifyNoMoreInteractions(chunkManager);
+
+            final InputStream cachedChunk1 = chunkCache.getChunk(SEGMENT_OBJECT_KEY, SEGMENT_MANIFEST, 1);
+            assertThat(cachedChunk1).hasBinaryContent(CHUNK_1);
+            verifyNoMoreInteractions(chunkManager);
+        }
+
+        @Test
+        void prefetchingFirstChunk() throws Exception {
+            chunkCache.configure(Map.of(
+                "retention.ms", "-1",
+                "size", "-1",
+                "prefetching.bytes", "10" // both chunks
+            ));
+            chunkCache.startPrefetching(SEGMENT_OBJECT_KEY, SEGMENT_MANIFEST, 0);
+            await().pollInterval(Duration.ofMillis(5)).until(() -> chunkCache.statsCounter.snapshot().loadCount() == 1);
+            verify(chunkManager).getChunk(SEGMENT_OBJECT_KEY, SEGMENT_MANIFEST, 0);
+
+            final InputStream cachedChunk0 = chunkCache.getChunk(SEGMENT_OBJECT_KEY, SEGMENT_MANIFEST, 0);
+            assertThat(cachedChunk0).hasBinaryContent(CHUNK_0);
+            verifyNoMoreInteractions(chunkManager);
+
+            final InputStream cachedChunk1 = chunkCache.getChunk(SEGMENT_OBJECT_KEY, SEGMENT_MANIFEST, 1);
+            assertThat(cachedChunk1).hasBinaryContent(CHUNK_1);
+            verify(chunkManager).getChunk(SEGMENT_OBJECT_KEY, SEGMENT_MANIFEST, 1);
+        }
     }
 
     @Nested

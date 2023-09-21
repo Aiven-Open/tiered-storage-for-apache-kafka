@@ -20,6 +20,7 @@ import java.util.ArrayList;
 import java.util.List;
 
 import io.aiven.kafka.tieredstorage.Chunk;
+import io.aiven.kafka.tieredstorage.storage.BytesRange;
 
 import com.fasterxml.jackson.annotation.JsonProperty;
 
@@ -106,6 +107,17 @@ public abstract class AbstractChunkIndex implements ChunkIndex {
             curTransformedChunkPosition,
             transformedChunkSize(chunkI)
         );
+    }
+
+    @Override
+    public List<Chunk> listChunksForRange(final BytesRange bytesRange) {
+        Chunk current;
+        final var result = new ArrayList<Chunk>();
+        for (int i = bytesRange.from; i < bytesRange.to && i < originalFileSize; i += current.originalSize) {
+            current = findChunkForOriginalOffset(i);
+            result.add(current);
+        }
+        return result;
     }
 
     private int originalChunkSize(final int chunkI) {
