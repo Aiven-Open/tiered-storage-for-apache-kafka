@@ -28,6 +28,7 @@
     <suppress checks="ClassDataAbstractionCoupling" files="RemoteStorageManager.java"/>
     <suppress checks="ClassDataAbstractionCoupling" files="Metrics.java"/>
     <suppress checks="ClassDataAbstractionCoupling" files="MetricCollector.java"/>
+    <suppress checks="ClassDataAbstractionCoupling" files=".*Benchmark\.java"/>
     <suppress checks="CyclomaticComplexity" files="MetricCollector.java"/>
     <suppress checks="CyclomaticComplexity" files="SingleBrokerTest.java"/>
     <suppress checks="NPathComplexity" files="SingleBrokerTest.java"/>
