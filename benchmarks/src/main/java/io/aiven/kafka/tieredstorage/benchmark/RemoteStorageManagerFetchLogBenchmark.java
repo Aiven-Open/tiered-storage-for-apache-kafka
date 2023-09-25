@@ -83,7 +83,7 @@ public class RemoteStorageManagerFetchLogBenchmark {
             "encryption.enabled", Boolean.toString(encryption),
             "chunk.cache.class", cacheClass,
             "chunk.cache.path", cacheDir.toString(),
-            "chunk.cache.size", Integer.toString(100 * 1024 * 1024),
+            "chunk.cache.size", Integer.toString(100),
             "custom.metadata.fields.include", "REMOTE_SIZE,OBJECT_PREFIX,OBJECT_KEY"
         ));
 
