@@ -106,6 +106,9 @@ public class FetchChunkEnumeration implements Enumeration<InputStream> {
             throw new NoSuchElementException();
         }
 
+        // eagerly fetching next chunk for caching
+        prefetch();
+
         nextChunks.remove(currentChunkId);
         InputStream chunkContent = getChunkContent(currentChunkId);
 
@@ -140,16 +143,13 @@ public class FetchChunkEnumeration implements Enumeration<InputStream> {
 
         currentChunkId += 1;
 
-        // eagerly fetching next chunk for caching
-        prefetch();
-
         return chunkContent;
     }
 
     void prefetch() {
         // if there is enough chunks to prefetch
         if (nextChunks.isEmpty() || lastChunkId - currentChunkId > prefetchSize) {
-            for (int i = 0; i < prefetchSize; i++) {
+            for (int i = 0; i < prefetchSize && currentChunkId + i <= lastChunkId; i++) {
                 nextChunks.computeIfAbsent(
                     currentChunkId + i,
                     chunkId -> CompletableFuture.runAsync(() -> getChunkContent(chunkId)));
