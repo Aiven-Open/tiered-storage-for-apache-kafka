@@ -58,7 +58,7 @@ class FetchChunkEnumerationTest {
         final int to = from + 1;
         // Then
         assertThatThrownBy(
-            () -> new FetchChunkEnumeration(chunkManager, SEGMENT_KEY_PATH, manifest, BytesRange.of(from, to)))
+            () -> new FetchChunkEnumeration(chunkManager, SEGMENT_KEY_PATH, manifest, BytesRange.of(from, to), 0))
             .hasMessage("Invalid start position " + from + " in segment path topic/segment");
     }
 
@@ -71,7 +71,7 @@ class FetchChunkEnumerationTest {
         final int to = 80;
         // Then
         final FetchChunkEnumeration fetchChunk =
-            new FetchChunkEnumeration(chunkManager, SEGMENT_KEY_PATH, manifest, BytesRange.of(from, to));
+            new FetchChunkEnumeration(chunkManager, SEGMENT_KEY_PATH, manifest, BytesRange.of(from, to), 0);
         assertThat(fetchChunk.startChunkId).isEqualTo(0);
         assertThat(fetchChunk.lastChunkId).isEqualTo(8);
     }
@@ -84,7 +84,7 @@ class FetchChunkEnumerationTest {
         final int from = 0;
         final int to = 110;
         final FetchChunkEnumeration fetchChunk =
-            new FetchChunkEnumeration(chunkManager, SEGMENT_KEY_PATH, manifest, BytesRange.of(from, to));
+            new FetchChunkEnumeration(chunkManager, SEGMENT_KEY_PATH, manifest, BytesRange.of(from, to), 0);
         // Then
         assertThat(fetchChunk.startChunkId).isEqualTo(0);
         assertThat(fetchChunk.lastChunkId).isEqualTo(9);
@@ -98,7 +98,7 @@ class FetchChunkEnumerationTest {
         final int from = 32;
         final int to = 34;
         final FetchChunkEnumeration fetchChunk =
-            new FetchChunkEnumeration(chunkManager, SEGMENT_KEY_PATH, manifest, BytesRange.of(from, to));
+            new FetchChunkEnumeration(chunkManager, SEGMENT_KEY_PATH, manifest, BytesRange.of(from, to), 0);
         when(chunkManager.getChunk(SEGMENT_KEY_PATH, manifest, fetchChunk.currentChunkId))
             .thenReturn(new ByteArrayInputStream(CHUNK_CONTENT));
         // Then
@@ -116,7 +116,7 @@ class FetchChunkEnumerationTest {
         final int from = 15;
         final int to = 34;
         final FetchChunkEnumeration fetchChunk =
-            new FetchChunkEnumeration(chunkManager, SEGMENT_KEY_PATH, manifest, BytesRange.of(from, to));
+            new FetchChunkEnumeration(chunkManager, SEGMENT_KEY_PATH, manifest, BytesRange.of(from, to), 0);
         when(chunkManager.getChunk(SEGMENT_KEY_PATH, manifest, 1))
             .thenReturn(new ByteArrayInputStream(CHUNK_CONTENT));
         when(chunkManager.getChunk(SEGMENT_KEY_PATH, manifest, 2))

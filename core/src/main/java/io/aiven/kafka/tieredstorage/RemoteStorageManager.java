@@ -393,7 +393,7 @@ public class RemoteStorageManager implements org.apache.kafka.server.log.remote.
             final var suffix = ObjectKey.Suffix.LOG;
             final var segmentKey = objectKey(remoteLogSegmentMetadata, suffix);
 
-            return new FetchChunkEnumeration(chunkManager, segmentKey, segmentManifest, range)
+            return new FetchChunkEnumeration(chunkManager, segmentKey, segmentManifest, range, 2)
                 .toInputStream();
         } catch (final Exception e) {
             throw new RemoteStorageException(e);

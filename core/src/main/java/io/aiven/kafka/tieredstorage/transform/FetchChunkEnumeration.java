@@ -20,7 +20,9 @@ import java.io.IOException;
 import java.io.InputStream;
 import java.io.SequenceInputStream;
 import java.util.Enumeration;
+import java.util.HashMap;
 import java.util.List;
+import java.util.Map;
 import java.util.NoSuchElementException;
 import java.util.Objects;
 import java.util.concurrent.CompletableFuture;
@@ -45,7 +47,8 @@ public class FetchChunkEnumeration implements Enumeration<InputStream> {
     private final ChunkIndex chunkIndex;
     int currentChunkId;
     public boolean closed;
-    CompletableFuture<InputStream> nextChunk = null;
+    final int prefetchSize;
+    final Map<Integer, CompletableFuture<InputStream>> nextChunks;
 
     /**
      * @param chunkManager  provides chunk input to fetch from
@@ -56,7 +59,8 @@ public class FetchChunkEnumeration implements Enumeration<InputStream> {
     public FetchChunkEnumeration(final ChunkManager chunkManager,
                                  final String objectKeyPath,
                                  final SegmentManifest manifest,
-                                 final BytesRange range) {
+                                 final BytesRange range,
+                                 final int prefetchSize) {
         this.chunkManager = Objects.requireNonNull(chunkManager, "chunkManager cannot be null");
         this.objectKeyPath = Objects.requireNonNull(objectKeyPath, "objectKeyPath cannot be null");
         this.manifest = Objects.requireNonNull(manifest, "manifest cannot be null");
@@ -69,6 +73,8 @@ public class FetchChunkEnumeration implements Enumeration<InputStream> {
         currentChunkId = startChunkId;
         final Chunk lastChunk = getLastChunk(range.to);
         lastChunkId = lastChunk.id;
+        this.prefetchSize = prefetchSize;
+        nextChunks = new HashMap<>(prefetchSize);
     }
 
     private Chunk getFirstChunk(final int fromPosition) {
@@ -102,12 +108,11 @@ public class FetchChunkEnumeration implements Enumeration<InputStream> {
         }
 
         InputStream chunkContent;
-        if (nextChunk == null) {
+        if (!nextChunks.containsKey(currentChunkId)) {
             chunkContent = getChunkContent(currentChunkId);
         } else {
             try { // continue fetching
-                chunkContent = nextChunk.get();
-                nextChunk = null;
+                chunkContent = nextChunks.remove(currentChunkId).get();
             } catch (InterruptedException | ExecutionException e) {
                 throw new RuntimeException(e);
             }
@@ -145,11 +150,20 @@ public class FetchChunkEnumeration implements Enumeration<InputStream> {
         currentChunkId += 1;
 
         // eagerly fetching next chunk for caching
-        if (currentChunkId <= lastChunkId) {
-            nextChunk = CompletableFuture.supplyAsync(() -> getChunkContent(currentChunkId));
-        }
+        prefetch();
 
         return chunkContent;
+    }
+
+    void prefetch() {
+        // if there is enough chunks to prefetch
+        if (nextChunks.isEmpty() || lastChunkId - currentChunkId > prefetchSize) {
+            for (int i = 0; i < prefetchSize; i++) {
+                nextChunks.computeIfAbsent(
+                    currentChunkId + i,
+                    chunkId -> CompletableFuture.supplyAsync(() -> getChunkContent(chunkId)));
+            }
+        }
     }
 
     private InputStream getChunkContent(final int chunkId) {
@@ -165,7 +179,7 @@ public class FetchChunkEnumeration implements Enumeration<InputStream> {
     }
 
     public void close() {
-        nextChunk = null;
+        nextChunks.values().forEach(chunk -> chunk.cancel(true));
         closed = true;
     }
 
