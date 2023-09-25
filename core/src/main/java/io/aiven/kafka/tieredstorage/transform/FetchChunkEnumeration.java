@@ -26,7 +26,6 @@ import java.util.Map;
 import java.util.NoSuchElementException;
 import java.util.Objects;
 import java.util.concurrent.CompletableFuture;
-import java.util.concurrent.ExecutionException;
 
 import io.aiven.kafka.tieredstorage.Chunk;
 import io.aiven.kafka.tieredstorage.chunkmanager.ChunkManager;
@@ -48,7 +47,7 @@ public class FetchChunkEnumeration implements Enumeration<InputStream> {
     int currentChunkId;
     public boolean closed;
     final int prefetchSize;
-    final Map<Integer, CompletableFuture<InputStream>> nextChunks;
+    final Map<Integer, CompletableFuture<Void>> nextChunks;
 
     /**
      * @param chunkManager  provides chunk input to fetch from
@@ -107,16 +106,8 @@ public class FetchChunkEnumeration implements Enumeration<InputStream> {
             throw new NoSuchElementException();
         }
 
-        InputStream chunkContent;
-        if (!nextChunks.containsKey(currentChunkId)) {
-            chunkContent = getChunkContent(currentChunkId);
-        } else {
-            try { // continue fetching
-                chunkContent = nextChunks.remove(currentChunkId).get();
-            } catch (InterruptedException | ExecutionException e) {
-                throw new RuntimeException(e);
-            }
-        }
+        nextChunks.remove(currentChunkId);
+        InputStream chunkContent = getChunkContent(currentChunkId);
 
         final Chunk currentChunk = chunkIndex.chunks().get(currentChunkId);
         final int chunkStartPosition = currentChunk.originalPosition;
@@ -161,7 +152,7 @@ public class FetchChunkEnumeration implements Enumeration<InputStream> {
             for (int i = 0; i < prefetchSize; i++) {
                 nextChunks.computeIfAbsent(
                     currentChunkId + i,
-                    chunkId -> CompletableFuture.supplyAsync(() -> getChunkContent(chunkId)));
+                    chunkId -> CompletableFuture.runAsync(() -> getChunkContent(chunkId)));
             }
         }
     }
