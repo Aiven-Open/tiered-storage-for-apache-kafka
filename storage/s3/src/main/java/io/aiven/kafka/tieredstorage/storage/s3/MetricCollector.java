@@ -27,10 +27,14 @@ import org.apache.kafka.common.metrics.KafkaMetricsContext;
 import org.apache.kafka.common.metrics.MetricConfig;
 import org.apache.kafka.common.metrics.MetricsReporter;
 import org.apache.kafka.common.metrics.Sensor;
+import org.apache.kafka.common.metrics.stats.Avg;
 import org.apache.kafka.common.metrics.stats.CumulativeCount;
+import org.apache.kafka.common.metrics.stats.Max;
 import org.apache.kafka.common.metrics.stats.Rate;
 import org.apache.kafka.common.utils.Time;
 
+import org.slf4j.Logger;
+import org.slf4j.LoggerFactory;
 import software.amazon.awssdk.core.metrics.CoreMetric;
 import software.amazon.awssdk.metrics.MetricCollection;
 import software.amazon.awssdk.metrics.MetricPublisher;
@@ -42,10 +46,13 @@ import static software.amazon.awssdk.core.internal.metrics.SdkErrorType.SERVER_E
 import static software.amazon.awssdk.core.internal.metrics.SdkErrorType.THROTTLING;
 
 class MetricCollector implements MetricPublisher {
+    private static final Logger log = LoggerFactory.getLogger(MetricCollector.class);
+
     private final org.apache.kafka.common.metrics.Metrics metrics;
 
     private static final String METRIC_GROUP = "s3-metrics";
     private final Map<String, Sensor> requestMetrics = new HashMap<>();
+    private final Map<String, Sensor> latencyMetrics = new HashMap<>();
     private final Map<String, Sensor> errorMetrics = new HashMap<>();
 
     MetricCollector() {
@@ -55,41 +62,71 @@ class MetricCollector implements MetricPublisher {
             new MetricConfig(), List.of(reporter), Time.SYSTEM,
             new KafkaMetricsContext("aiven.kafka.server.tieredstorage.s3")
         );
-        requestMetrics.put("GetObject", createSensor("get-object-requests"));
-        requestMetrics.put("UploadPart", createSensor("upload-part-requests"));
-        requestMetrics.put("CreateMultipartUpload", createSensor("create-multipart-upload-requests"));
-        requestMetrics.put("CompleteMultipartUpload", createSensor("complete-multipart-upload-requests"));
-        requestMetrics.put("PutObject", createSensor("put-object-requests"));
-        requestMetrics.put("DeleteObject", createSensor("delete-object-requests"));
-        requestMetrics.put("AbortMultipartUpload", createSensor("abort-multipart-upload-requests"));
+        requestMetrics.put("GetObject", createRequestsSensor("get-object-requests"));
+        latencyMetrics.put("GetObject", createLatencySensor("get-object-time"));
+        requestMetrics.put("UploadPart", createRequestsSensor("upload-part-requests"));
+        latencyMetrics.put("UploadPart", createLatencySensor("upload-part-time"));
+        requestMetrics.put("CreateMultipartUpload", createRequestsSensor("create-multipart-upload-requests"));
+        latencyMetrics.put("CreateMultipartUpload", createLatencySensor("create-multipart-upload-time"));
+        requestMetrics.put("CompleteMultipartUpload", createRequestsSensor("complete-multipart-upload-requests"));
+        latencyMetrics.put("CompleteMultipartUpload", createLatencySensor("complete-multipart-upload-time"));
+        requestMetrics.put("PutObject", createRequestsSensor("put-object-requests"));
+        latencyMetrics.put("PutObject", createLatencySensor("put-object-time"));
+        requestMetrics.put("DeleteObject", createRequestsSensor("delete-object-requests"));
+        latencyMetrics.put("DeleteObject", createLatencySensor("delete-object-time"));
+        requestMetrics.put("AbortMultipartUpload", createRequestsSensor("abort-multipart-upload-requests"));
+        latencyMetrics.put("AbortMultipartUpload", createLatencySensor("abort-multipart-upload-time"));
 
-        errorMetrics.put(THROTTLING.toString(), createSensor("throttling-errors"));
-        errorMetrics.put(SERVER_ERROR.toString(), createSensor("server-errors"));
-        errorMetrics.put(CONFIGURED_TIMEOUT.toString(), createSensor("configured-timeout-errors"));
-        errorMetrics.put(IO.toString(), createSensor("io-errors"));
-        errorMetrics.put(OTHER.toString(), createSensor("other-errors"));
+        errorMetrics.put(THROTTLING.toString(), createRequestsSensor("throttling-errors"));
+        errorMetrics.put(SERVER_ERROR.toString(), createRequestsSensor("server-errors"));
+        errorMetrics.put(CONFIGURED_TIMEOUT.toString(), createRequestsSensor("configured-timeout-errors"));
+        errorMetrics.put(IO.toString(), createRequestsSensor("io-errors"));
+        errorMetrics.put(OTHER.toString(), createRequestsSensor("other-errors"));
     }
 
-    private Sensor createSensor(final String name) {
+    private Sensor createRequestsSensor(final String name) {
         final Sensor sensor = metrics.sensor(name);
         sensor.add(metrics.metricName(name + "-rate", METRIC_GROUP), new Rate());
         sensor.add(metrics.metricName(name + "-total", METRIC_GROUP), new CumulativeCount());
         return sensor;
     }
 
+    private Sensor createLatencySensor(final String name) {
+        final Sensor sensor = metrics.sensor(name);
+        sensor.add(metrics.metricName(name + "-max", METRIC_GROUP), new Max());
+        sensor.add(metrics.metricName(name + "-avg", METRIC_GROUP), new Avg());
+        return sensor;
+    }
+
     @Override
     public void publish(final MetricCollection metricCollection) {
         final List<String> metricValues = metricCollection.metricValues(CoreMetric.OPERATION_NAME);
-        for (final String metricValue : metricValues) {
-            final var sensor = requestMetrics.get(metricValue);
-            if (sensor != null) {
-                sensor.record();
+        // metrics are reported per request, so 1 value can be assumed.
+        if (metricValues.size() == 1) {
+            final var metricValue = metricValues.get(0);
+            final var requests = requestMetrics.get(metricValue);
+            if (requests != null) {
+                requests.record();
             }
+
+            final var durations = metricCollection.metricValues(CoreMetric.API_CALL_DURATION);
+            if (durations.size() == 1) {
+                final var latency = latencyMetrics.get(metricValue);
+                if (latency != null) {
+                    latency.record(durations.get(0).toMillis());
+                }
+            } else {
+                log.warn("Latencies included on metric collection is larger than 1: " + metricValues);
+            }
+        } else {
+            log.warn("Operations included on metric collection is larger than 1: " + metricValues);
         }
+
         final List<String> errorValues = metricCollection.childrenWithName("ApiCallAttempt")
             .map(metricRecords -> metricRecords.metricValues(CoreMetric.ERROR_TYPE))
             .flatMap(Collection::stream)
             .collect(Collectors.toList());
+
         for (final String errorValue : errorValues) {
             final var sensor = errorMetrics.get(errorValue);
             if (sensor != null) {
