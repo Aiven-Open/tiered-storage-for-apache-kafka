@@ -28,6 +28,7 @@ import java.util.Map;
 
 import io.aiven.kafka.tieredstorage.storage.BytesRange;
 import io.aiven.kafka.tieredstorage.storage.StorageBackendException;
+import io.aiven.testcontainers.fakegcsserver.FakeGcsServerContainer;
 
 import com.google.cloud.NoCredentials;
 import com.google.cloud.storage.BucketInfo;
@@ -62,7 +63,7 @@ public class GcsStorageMetricsTest {
     static void setUpClass() throws Exception {
         storageClient = StorageOptions.newBuilder()
             .setCredentials(NoCredentials.getInstance())
-            .setHost(GCS_SERVER.getURL())
+            .setHost(GCS_SERVER.url())
             .setProjectId("test-project")
             .build()
             .getService();
@@ -82,7 +83,7 @@ public class GcsStorageMetricsTest {
         storage = new GcsStorage();
         final Map<String, Object> configs = Map.of(
             "gcs.bucket.name", bucketName,
-            "gcs.endpoint.url", GCS_SERVER.getURL(),
+            "gcs.endpoint.url", GCS_SERVER.url(),
             "gcs.resumable.upload.chunk.size", Integer.toString(RESUMABLE_UPLOAD_CHUNK_SIZE),
             "gcs.credentials.default", "false"
         );
