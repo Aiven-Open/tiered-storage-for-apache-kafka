@@ -20,6 +20,7 @@ import java.util.Map;
 
 import io.aiven.kafka.tieredstorage.storage.BaseStorageTest;
 import io.aiven.kafka.tieredstorage.storage.StorageBackend;
+import io.aiven.testcontainers.fakegcsserver.FakeGcsServerContainer;
 
 import com.google.cloud.NoCredentials;
 import com.google.cloud.storage.BucketInfo;
@@ -43,7 +44,7 @@ class GcsStorageTest extends BaseStorageTest {
     static void setUpClass() throws Exception {
         storage = StorageOptions.newBuilder()
             .setCredentials(NoCredentials.getInstance())
-            .setHost(GCS_SERVER.getURL())
+            .setHost(GCS_SERVER.url())
             .setProjectId("test-project")
             .build()
             .getService();
@@ -66,7 +67,7 @@ class GcsStorageTest extends BaseStorageTest {
         final GcsStorage gcsStorage = new GcsStorage();
         final Map<String, Object> configs = Map.of(
             "gcs.bucket.name", bucketName,
-            "gcs.endpoint.url", GCS_SERVER.getURL(),
+            "gcs.endpoint.url", GCS_SERVER.url(),
             "gcs.credentials.default", "false"
         );
         gcsStorage.configure(configs);

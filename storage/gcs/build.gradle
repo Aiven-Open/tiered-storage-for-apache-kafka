@@ -31,4 +31,6 @@ dependencies {
     testImplementation(testFixtures(project(":storage:core")))
 
     testImplementation "org.testcontainers:junit-jupiter:$testcontainersVersion"
+
+    testImplementation "io.aiven:testcontainers-fake-gcs-server:0.1.0"
 }
