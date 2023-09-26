@@ -76,10 +76,10 @@ class S3StorageMetricsTest {
                         LOCALSTACK.getSecretKey()
                     )
                 )
-            )
-            .build();
-        final S3Client s3Client = clientBuilder.build();
-        s3Client.createBucket(CreateBucketRequest.builder().bucket(BUCKET_NAME).build());
+            );
+        try (final S3Client s3Client = clientBuilder.build()) {
+            s3Client.createBucket(CreateBucketRequest.builder().bucket(BUCKET_NAME).build());
+        }
     }
 
     @BeforeEach
