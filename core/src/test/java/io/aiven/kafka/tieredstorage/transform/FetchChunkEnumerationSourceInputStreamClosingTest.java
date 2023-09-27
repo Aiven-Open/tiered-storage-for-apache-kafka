@@ -79,7 +79,7 @@ class FetchChunkEnumerationSourceInputStreamClosingTest {
         final ChunkManagerFactory chunkManagerFactory = new ChunkManagerFactory();
         chunkManagerFactory.configure(config);
         final ChunkManager chunkManager = chunkManagerFactory.initChunkManager(fetcher, null);
-        final var is = new FetchChunkEnumeration(chunkManager, OBJECT_KEY_PATH, SEGMENT_MANIFEST, range)
+        final var is = new FetchChunkEnumeration(chunkManager, OBJECT_KEY_PATH, SEGMENT_MANIFEST, range, 1)
             .toInputStream();
         if (readFully) {
             is.readAllBytes();

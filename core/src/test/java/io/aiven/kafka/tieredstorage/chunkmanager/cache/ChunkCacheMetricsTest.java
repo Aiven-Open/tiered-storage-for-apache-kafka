@@ -25,6 +25,7 @@ import java.nio.file.Path;
 import java.util.Map;
 import java.util.stream.Stream;
 
+import io.aiven.kafka.tieredstorage.Part;
 import io.aiven.kafka.tieredstorage.chunkmanager.ChunkManager;
 import io.aiven.kafka.tieredstorage.manifest.SegmentManifest;
 
@@ -39,7 +40,6 @@ import org.mockito.junit.jupiter.MockitoExtension;
 import static org.assertj.core.api.Assertions.assertThat;
 import static org.assertj.core.api.InstanceOfAssertFactories.DOUBLE;
 import static org.mockito.ArgumentMatchers.any;
-import static org.mockito.ArgumentMatchers.anyInt;
 import static org.mockito.Mockito.when;
 
 /**
@@ -58,6 +58,8 @@ class ChunkCacheMetricsTest {
     ChunkManager chunkManager;
     @Mock
     SegmentManifest segmentManifest;
+    @Mock
+    Part firstPart;
 
     private static Stream<Arguments> caches() {
         return Stream.of(
@@ -83,7 +85,7 @@ class ChunkCacheMetricsTest {
     void shouldRecordMetrics(final Class<ChunkCache<?>> chunkCacheClass, final Map<String, ?> config)
         throws Exception {
         // Given a chunk cache implementation
-        when(chunkManager.getChunk(any(), any(), anyInt()))
+        when(chunkManager.chunksContent(any(), any(), any()))
             .thenReturn(new ByteArrayInputStream("test".getBytes()));
 
         final var chunkCache = chunkCacheClass.getDeclaredConstructor(ChunkManager.class).newInstance(chunkManager);
@@ -92,13 +94,13 @@ class ChunkCacheMetricsTest {
         final var objectName = new ObjectName("aiven.kafka.server.tieredstorage.cache:type=chunk-cache");
 
         // When getting a existing chunk from cache
-        chunkCache.getChunk(OBJECT_KEY_PATH, segmentManifest, 0);
+        chunkCache.chunksContent(OBJECT_KEY_PATH, segmentManifest, firstPart);
 
         // check cache size increases after first miss
         assertThat(MBEAN_SERVER.getAttribute(objectName, "cache-size-total"))
             .isEqualTo(1.0);
 
-        chunkCache.getChunk(OBJECT_KEY_PATH, segmentManifest, 0);
+        chunkCache.chunksContent(OBJECT_KEY_PATH, segmentManifest, firstPart);
 
         // Then the following metrics should be available
         assertThat(MBEAN_SERVER.getAttribute(objectName, "cache-hits-total"))

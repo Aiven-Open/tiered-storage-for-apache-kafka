@@ -29,6 +29,7 @@ import java.util.concurrent.atomic.AtomicReference;
 
 import org.apache.kafka.common.Configurable;
 
+import io.aiven.kafka.tieredstorage.Part;
 import io.aiven.kafka.tieredstorage.chunkmanager.ChunkKey;
 import io.aiven.kafka.tieredstorage.chunkmanager.ChunkManager;
 import io.aiven.kafka.tieredstorage.manifest.SegmentManifest;
@@ -65,10 +66,11 @@ public abstract class ChunkCache<T> implements ChunkManager, Configurable {
      * opened right when fetching from cache happens even if the actual value is removed from the cache,
      * the InputStream will still contain the data.
      */
-    public InputStream getChunk(final String objectKeyPath,
-                                final SegmentManifest manifest,
-                                final int chunkId) throws StorageBackendException, IOException {
-        final ChunkKey chunkKey = new ChunkKey(objectKeyPath, chunkId);
+    @Override
+    public InputStream chunksContent(final String objectKeyPath,
+                                     final SegmentManifest manifest,
+                                     final Part part) throws StorageBackendException, IOException {
+        final ChunkKey chunkKey = new ChunkKey(objectKeyPath, part.firstChunkId);
         final AtomicReference<InputStream> result = new AtomicReference<>();
         try {
             return cache.asMap()
@@ -77,7 +79,7 @@ public abstract class ChunkCache<T> implements ChunkManager, Configurable {
                         statsCounter.recordMiss();
                         try {
                             final InputStream chunk =
-                                chunkManager.getChunk(objectKeyPath, manifest, chunkId);
+                                chunkManager.chunksContent(objectKeyPath, manifest, part);
                             final T t = this.cacheChunk(chunkKey, chunk);
                             result.getAndSet(cachedChunkToInputStream(t));
                             return t;

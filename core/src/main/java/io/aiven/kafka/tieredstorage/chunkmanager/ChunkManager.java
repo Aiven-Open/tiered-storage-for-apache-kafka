@@ -19,12 +19,13 @@ package io.aiven.kafka.tieredstorage.chunkmanager;
 import java.io.IOException;
 import java.io.InputStream;
 
+import io.aiven.kafka.tieredstorage.Part;
 import io.aiven.kafka.tieredstorage.manifest.SegmentManifest;
 import io.aiven.kafka.tieredstorage.storage.StorageBackendException;
 
 public interface ChunkManager {
-
-    InputStream getChunk(final String objectKeyPath,
-                         final SegmentManifest manifest,
-                         final int chunkId) throws StorageBackendException, IOException;
+    InputStream chunksContent(final String objectKeyPath,
+                              final SegmentManifest manifest,
+                              final Part part)
+        throws StorageBackendException, IOException;
 }
