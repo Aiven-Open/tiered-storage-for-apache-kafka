@@ -113,8 +113,8 @@ class ChunkCacheTest {
         @Test
         void noEviction() throws IOException, StorageBackendException {
             chunkCache.configure(Map.of(
-                    "retention.ms", "-1",
-                    "size", "-1"
+                "retention.ms", "-1",
+                "size", "-1"
             ));
 
             final InputStream chunk0 = chunkCache.getChunk(SEGMENT_OBJECT_KEY, SEGMENT_MANIFEST, 0);
@@ -137,8 +137,8 @@ class ChunkCacheTest {
         @Test
         void timeBasedEviction() throws IOException, StorageBackendException, InterruptedException {
             chunkCache.configure(Map.of(
-                    "retention.ms", "100",
-                    "size", "-1"
+                "retention.ms", "100",
+                "size", "-1"
             ));
 
             assertThat(chunkCache.getChunk(SEGMENT_OBJECT_KEY, SEGMENT_MANIFEST, 0))
@@ -158,13 +158,13 @@ class ChunkCacheTest {
             verifyNoMoreInteractions(chunkManager);
 
             await().atMost(Duration.ofMillis(5000)).pollInterval(Duration.ofMillis(100))
-                    .until(() -> !mockingDetails(removalListener).getInvocations().isEmpty());
+                .until(() -> !mockingDetails(removalListener).getInvocations().isEmpty());
 
             verify(removalListener)
-                    .onRemoval(
-                            argThat(argument -> argument.chunkId == 0),
-                            any(),
-                            eq(RemovalCause.EXPIRED));
+                .onRemoval(
+                    argThat(argument -> argument.chunkId == 0),
+                    any(),
+                    eq(RemovalCause.EXPIRED));
 
             assertThat(chunkCache.getChunk(SEGMENT_OBJECT_KEY, SEGMENT_MANIFEST, 0))
                     .hasBinaryContent(CHUNK_0);
@@ -190,9 +190,9 @@ class ChunkCacheTest {
             verify(chunkManager).getChunk(SEGMENT_OBJECT_KEY, SEGMENT_MANIFEST, 1);
 
             await().atMost(Duration.ofMillis(5000))
-                    .pollDelay(Duration.ofSeconds(2))
-                    .pollInterval(Duration.ofMillis(10))
-                    .until(() -> !mockingDetails(removalListener).getInvocations().isEmpty());
+                .pollDelay(Duration.ofSeconds(2))
+                .pollInterval(Duration.ofMillis(10))
+                .until(() -> !mockingDetails(removalListener).getInvocations().isEmpty());
 
             verify(removalListener).onRemoval(any(ChunkKey.class), any(), eq(RemovalCause.SIZE));
 
@@ -208,8 +208,8 @@ class ChunkCacheTest {
     @Nested
     class ErrorHandlingTests {
         private final Map<String, String> configs = Map.of(
-                "retention.ms", "-1",
-                "size", "-1"
+            "retention.ms", "-1",
+            "size", "-1"
         );
 
         @BeforeEach

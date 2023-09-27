@@ -57,15 +57,14 @@ public class DefaultChunkManager implements ChunkManager {
         final Optional<SegmentEncryptionMetadata> encryptionMetadata = manifest.encryption();
         if (encryptionMetadata.isPresent()) {
             detransformEnum = new DecryptionChunkEnumeration(
-                    detransformEnum,
-                    encryptionMetadata.get().ivSize(),
-                    encryptedChunk -> aesEncryptionProvider.decryptionCipher(encryptedChunk, encryptionMetadata.get())
+                detransformEnum,
+                encryptionMetadata.get().ivSize(),
+                encryptedChunk -> aesEncryptionProvider.decryptionCipher(encryptedChunk, encryptionMetadata.get())
             );
         }
         if (manifest.compression()) {
             detransformEnum = new DecompressionChunkEnumeration(detransformEnum);
         }
-        final DetransformFinisher detransformFinisher = new DetransformFinisher(detransformEnum);
-        return detransformFinisher.toInputStream();
+        return new DetransformFinisher(detransformEnum).toInputStream();
     }
 }
