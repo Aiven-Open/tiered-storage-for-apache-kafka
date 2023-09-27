@@ -75,6 +75,7 @@ class RemoteStorageManagerMetricsTest {
             1, 100, -1, -1, 1L,
             LOG_SEGMENT_BYTES, Collections.singletonMap(1, 100L));
 
+    Time time;
     RemoteStorageManager rsm;
     LogSegmentData logSegmentData;
 
@@ -82,9 +83,10 @@ class RemoteStorageManagerMetricsTest {
 
     @BeforeEach
     void setup(@TempDir final Path tmpDir,
-                      @Mock final Time time) throws IOException {
-        when(time.milliseconds()).thenReturn(0L);
-        rsm = new RemoteStorageManager(time);
+               @Mock final Time time) throws IOException {
+        this.time = time;
+        when(this.time.milliseconds()).thenReturn(0L);
+        rsm = new RemoteStorageManager(this.time);
 
         final Path target = tmpDir.resolve("target");
         Files.createDirectories(target);
@@ -117,6 +119,7 @@ class RemoteStorageManagerMetricsTest {
     void metricsShouldBeReported(final String tags) throws RemoteStorageException, JMException {
         rsm.configure(configs);
 
+        when(time.nanoseconds()).thenReturn(0L, 1000000L);
         rsm.copyLogSegmentData(REMOTE_LOG_SEGMENT_METADATA, logSegmentData);
         logSegmentData.leaderEpochIndex().flip(); // so leader epoch can be consumed again
         rsm.copyLogSegmentData(REMOTE_LOG_SEGMENT_METADATA, logSegmentData);
@@ -132,6 +135,11 @@ class RemoteStorageManagerMetricsTest {
             .isEqualTo(0.0);
         assertThat(MBEAN_SERVER.getAttribute(metricName, "segment-copy-time-max"))
             .isEqualTo(0.0);
+
+        assertThat(MBEAN_SERVER.getAttribute(metricName, "chunk-transform-time-avg"))
+            .isEqualTo(1.0);
+        assertThat(MBEAN_SERVER.getAttribute(metricName, "chunk-transform-time-max"))
+            .isEqualTo(1.0);
 
         assertThat(MBEAN_SERVER.getAttribute(metricName, "object-upload-total"))
             .isEqualTo(18.0);
@@ -177,13 +185,28 @@ class RemoteStorageManagerMetricsTest {
         final var segmentManifestCacheObjectName =
             new ObjectName("aiven.kafka.server.tieredstorage.cache:type=segment-manifest-cache");
 
-        rsm.fetchLogSegment(REMOTE_LOG_SEGMENT_METADATA, 0);
+        when(time.nanoseconds()).thenReturn(0L, 1000000L);
+        try (final var inputStream = rsm.fetchLogSegment(REMOTE_LOG_SEGMENT_METADATA, 0)) {
+            inputStream.readAllBytes();
+        } catch (final IOException e) {
+            throw new RuntimeException(e);
+        }
+
+        assertThat(MBEAN_SERVER.getAttribute(metricName, "chunk-detransform-time-avg"))
+            .isEqualTo(1.0);
+        assertThat(MBEAN_SERVER.getAttribute(metricName, "chunk-detransform-time-max"))
+            .isEqualTo(1.0);
 
         // check cache size increases after first miss
         assertThat(MBEAN_SERVER.getAttribute(segmentManifestCacheObjectName, "cache-size-total"))
             .isEqualTo(1.0);
 
-        rsm.fetchLogSegment(REMOTE_LOG_SEGMENT_METADATA, 0);
+        when(time.nanoseconds()).thenReturn(0L, 1000000L);
+        try (final var inputStream = rsm.fetchLogSegment(REMOTE_LOG_SEGMENT_METADATA, 0)) {
+            inputStream.readAllBytes();
+        } catch (final IOException e) {
+            throw new RuntimeException(e);
+        }
 
         assertThat(MBEAN_SERVER.getAttribute(metricName, "segment-fetch-requested-bytes-rate"))
             .isEqualTo(20.0 / METRIC_TIME_WINDOW_SEC);

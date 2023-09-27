@@ -35,6 +35,8 @@ import io.aiven.kafka.tieredstorage.ObjectKey;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
+import static io.aiven.kafka.tieredstorage.metrics.MetricsRegistry.CHUNK_DETRANSFORM_TIME;
+import static io.aiven.kafka.tieredstorage.metrics.MetricsRegistry.CHUNK_TRANSFORM_TIME;
 import static io.aiven.kafka.tieredstorage.metrics.MetricsRegistry.OBJECT_UPLOAD;
 import static io.aiven.kafka.tieredstorage.metrics.MetricsRegistry.OBJECT_UPLOAD_BYTES;
 import static io.aiven.kafka.tieredstorage.metrics.MetricsRegistry.SEGMENT_COPY_TIME;
@@ -208,6 +210,46 @@ public class Metrics {
             .with(metricsRegistry.segmentFetchRequestedBytesTotalByTopicPartition, new CumulativeSum())
             .get()
             .record(bytes);
+    }
+
+    public void recordChunkTransformTime(final TopicPartition topicPartition, final long millis) {
+        new SensorProvider(metrics, sensorName(CHUNK_TRANSFORM_TIME))
+            .with(metricsRegistry.chunkTransformTimeAvg, new Avg())
+            .with(metricsRegistry.chunkTransformTimeMax, new Max())
+            .get()
+            .record(millis);
+        new SensorProvider(metrics, sensorNameByTopic(topicPartition, CHUNK_TRANSFORM_TIME),
+            () -> topicTags(topicPartition))
+            .with(metricsRegistry.chunkTransformTimeAvgByTopic, new Avg())
+            .with(metricsRegistry.chunkTransformTimeMaxByTopic, new Max())
+            .get()
+            .record(millis);
+        new SensorProvider(metrics, sensorNameByTopicPartition(topicPartition, CHUNK_TRANSFORM_TIME),
+            () -> topicPartitionTags(topicPartition), Sensor.RecordingLevel.DEBUG)
+            .with(metricsRegistry.chunkTransformTimeAvgByTopicPartition, new Avg())
+            .with(metricsRegistry.chunkTransformTimeMaxByTopicPartition, new Max())
+            .get()
+            .record(millis);
+    }
+
+    public void recordChunkDetransformTime(final TopicPartition topicPartition, final long millis) {
+        new SensorProvider(metrics, sensorName(CHUNK_DETRANSFORM_TIME))
+            .with(metricsRegistry.chunkDetransformTimeAvg, new Avg())
+            .with(metricsRegistry.chunkDetransformTimeMax, new Max())
+            .get()
+            .record(millis);
+        new SensorProvider(metrics, sensorNameByTopic(topicPartition, CHUNK_DETRANSFORM_TIME),
+            () -> topicTags(topicPartition))
+            .with(metricsRegistry.chunkDetransformTimeAvgByTopic, new Avg())
+            .with(metricsRegistry.chunkDetransformTimeMaxByTopic, new Max())
+            .get()
+            .record(millis);
+        new SensorProvider(metrics, sensorNameByTopicPartition(topicPartition, CHUNK_DETRANSFORM_TIME),
+            () -> topicPartitionTags(topicPartition), Sensor.RecordingLevel.DEBUG)
+            .with(metricsRegistry.chunkDetransformTimeAvgByTopicPartition, new Avg())
+            .with(metricsRegistry.chunkDetransformTimeMaxByTopicPartition, new Max())
+            .get()
+            .record(millis);
     }
 
     public void recordObjectUpload(final TopicPartition topicPartition, final ObjectKey.Suffix suffix,

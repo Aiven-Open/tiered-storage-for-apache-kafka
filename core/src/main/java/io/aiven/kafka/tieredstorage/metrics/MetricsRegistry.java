@@ -133,6 +133,37 @@ public class MetricsRegistry {
     final MetricNameTemplate segmentFetchRequestedBytesTotalByTopicPartition =
         new MetricNameTemplate(SEGMENT_FETCH_REQUESTED_BYTES_TOTAL, METRIC_GROUP, "", TOPIC_PARTITION_TAG_NAMES);
 
+    // Transform/Detransform metrics
+    static final String CHUNK_TRANSFORM_TIME = "chunk-transform-time";
+    static final String CHUNK_TRANSFORM_TIME_AVG = CHUNK_TRANSFORM_TIME + "-avg";
+    final MetricNameTemplate chunkTransformTimeAvg = new MetricNameTemplate(CHUNK_TRANSFORM_TIME_AVG, METRIC_GROUP, "");
+    final MetricNameTemplate chunkTransformTimeAvgByTopic =
+        new MetricNameTemplate(CHUNK_TRANSFORM_TIME_AVG, METRIC_GROUP, "", TOPIC_TAG_NAMES);
+    final MetricNameTemplate chunkTransformTimeAvgByTopicPartition =
+        new MetricNameTemplate(CHUNK_TRANSFORM_TIME_AVG, METRIC_GROUP, "", TOPIC_PARTITION_TAG_NAMES);
+    static final String CHUNK_TRANSFORM_TIME_MAX = CHUNK_TRANSFORM_TIME + "-max";
+    final MetricNameTemplate chunkTransformTimeMax = new MetricNameTemplate(CHUNK_TRANSFORM_TIME_MAX, METRIC_GROUP, "");
+    final MetricNameTemplate chunkTransformTimeMaxByTopic =
+        new MetricNameTemplate(CHUNK_TRANSFORM_TIME_MAX, METRIC_GROUP, "", TOPIC_TAG_NAMES);
+    final MetricNameTemplate chunkTransformTimeMaxByTopicPartition =
+        new MetricNameTemplate(CHUNK_TRANSFORM_TIME_MAX, METRIC_GROUP, "", TOPIC_PARTITION_TAG_NAMES);
+
+    static final String CHUNK_DETRANSFORM_TIME = "chunk-detransform-time";
+    static final String CHUNK_DETRANSFORM_TIME_AVG = CHUNK_DETRANSFORM_TIME + "-avg";
+    final MetricNameTemplate chunkDetransformTimeAvg =
+        new MetricNameTemplate(CHUNK_DETRANSFORM_TIME_AVG, METRIC_GROUP, "");
+    final MetricNameTemplate chunkDetransformTimeAvgByTopic =
+        new MetricNameTemplate(CHUNK_DETRANSFORM_TIME_AVG, METRIC_GROUP, "", TOPIC_TAG_NAMES);
+    final MetricNameTemplate chunkDetransformTimeAvgByTopicPartition =
+        new MetricNameTemplate(CHUNK_DETRANSFORM_TIME_AVG, METRIC_GROUP, "", TOPIC_PARTITION_TAG_NAMES);
+    static final String CHUNK_DETRANSFORM_TIME_MAX = CHUNK_DETRANSFORM_TIME + "-max";
+    final MetricNameTemplate chunkDetransformTimeMax =
+        new MetricNameTemplate(CHUNK_DETRANSFORM_TIME_MAX, METRIC_GROUP, "");
+    final MetricNameTemplate chunkDetransformTimeMaxByTopic =
+        new MetricNameTemplate(CHUNK_DETRANSFORM_TIME_MAX, METRIC_GROUP, "", TOPIC_TAG_NAMES);
+    final MetricNameTemplate chunkDetransformTimeMaxByTopicPartition =
+        new MetricNameTemplate(CHUNK_DETRANSFORM_TIME_MAX, METRIC_GROUP, "", TOPIC_PARTITION_TAG_NAMES);
+
     // Object upload metrics
     static final String OBJECT_UPLOAD = "object-upload";
     static final String OBJECT_UPLOAD_RATE = OBJECT_UPLOAD + "-rate";

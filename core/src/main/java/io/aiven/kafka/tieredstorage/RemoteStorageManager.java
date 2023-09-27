@@ -55,6 +55,7 @@ import io.aiven.kafka.tieredstorage.manifest.serde.KafkaTypeSerdeModule;
 import io.aiven.kafka.tieredstorage.metadata.SegmentCustomMetadataBuilder;
 import io.aiven.kafka.tieredstorage.metadata.SegmentCustomMetadataField;
 import io.aiven.kafka.tieredstorage.metadata.SegmentCustomMetadataSerde;
+import io.aiven.kafka.tieredstorage.metrics.MeteredInputStream;
 import io.aiven.kafka.tieredstorage.metrics.Metrics;
 import io.aiven.kafka.tieredstorage.security.AesEncryptionProvider;
 import io.aiven.kafka.tieredstorage.security.DataKeyAndAAD;
@@ -287,7 +288,15 @@ public class RemoteStorageManager implements org.apache.kafka.server.log.remote.
                                   final SegmentCustomMetadataBuilder customMetadataBuilder)
         throws IOException, StorageBackendException {
         final String fileKey = objectKey.key(remoteLogSegmentMetadata, ObjectKey.Suffix.LOG);
-        try (final var sis = transformFinisher.toInputStream()) {
+        try (
+            final var sis = new MeteredInputStream(
+                transformFinisher.toInputStream(),
+                time,
+                millis -> metrics.recordChunkTransformTime(
+                    remoteLogSegmentMetadata.topicIdPartition().topicPartition(),
+                    millis
+                ))
+        ) {
             final var bytes = uploader.upload(sis, fileKey);
             metrics.recordObjectUpload(
                 remoteLogSegmentMetadata.remoteLogSegmentId().topicIdPartition().topicPartition(),
@@ -318,7 +327,15 @@ public class RemoteStorageManager implements org.apache.kafka.server.log.remote.
 
         final var suffix = ObjectKey.Suffix.fromIndexType(indexType);
         final String key = objectKey.key(remoteLogSegmentMetadata, suffix);
-        try (final var in = transformFinisher.toInputStream()) {
+        try (
+            final var in = new MeteredInputStream(
+                transformFinisher.toInputStream(),
+                time,
+                millis -> metrics.recordChunkTransformTime(
+                    remoteLogSegmentMetadata.topicIdPartition().topicPartition(),
+                    millis
+                ))
+        ) {
             final var bytes = uploader.upload(in, key);
             metrics.recordObjectUpload(
                 remoteLogSegmentMetadata.remoteLogSegmentId().topicIdPartition().topicPartition(),
@@ -382,8 +399,14 @@ public class RemoteStorageManager implements org.apache.kafka.server.log.remote.
             final var suffix = ObjectKey.Suffix.LOG;
             final var segmentKey = objectKey(remoteLogSegmentMetadata, suffix);
 
-            return new FetchChunkEnumeration(chunkManager, segmentKey, segmentManifest, range)
-                .toInputStream();
+            return new MeteredInputStream(
+                new FetchChunkEnumeration(chunkManager, segmentKey, segmentManifest, range).toInputStream(),
+                time,
+                millis -> metrics.recordChunkDetransformTime(
+                    remoteLogSegmentMetadata.topicIdPartition().topicPartition(),
+                    millis
+                )
+            );
         } catch (final KeyNotFoundException | KeyNotFoundRuntimeException e) {
             throw new RemoteResourceNotFoundException(e);
         } catch (final Exception e) {
