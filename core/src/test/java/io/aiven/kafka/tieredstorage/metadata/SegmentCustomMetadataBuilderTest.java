@@ -25,7 +25,7 @@ import org.apache.kafka.common.Uuid;
 import org.apache.kafka.server.log.remote.storage.RemoteLogSegmentId;
 import org.apache.kafka.server.log.remote.storage.RemoteLogSegmentMetadata;
 
-import io.aiven.kafka.tieredstorage.ObjectKey;
+import io.aiven.kafka.tieredstorage.ObjectKeyFactory;
 
 import org.junit.jupiter.api.Test;
 
@@ -43,24 +43,24 @@ class SegmentCustomMetadataBuilderTest {
                 SEGMENT_ID),
             1, 100, -1, -1, 1L,
             100, Collections.singletonMap(1, 100L));
-    static final ObjectKey OBJECT_KEY = new ObjectKey("p1");
+    static final ObjectKeyFactory OBJECT_KEY_FACTORY = new ObjectKeyFactory("p1");
 
     @Test
     void shouldBuildEmptyMap() {
-        final var b = new SegmentCustomMetadataBuilder(Set.of(), OBJECT_KEY, REMOTE_LOG_SEGMENT_METADATA);
+        final var b = new SegmentCustomMetadataBuilder(Set.of(), OBJECT_KEY_FACTORY, REMOTE_LOG_SEGMENT_METADATA);
         assertThat(b.build()).isEmpty();
 
         // even when upload results are added
-        b.addUploadResult(ObjectKey.Suffix.MANIFEST, 10L);
+        b.addUploadResult(ObjectKeyFactory.Suffix.MANIFEST, 10L);
         assertThat(b.build()).isEmpty();
     }
 
     @Test
     void shouldFailWhenAddingExistingSuffixUploadResult() {
-        final var b = new SegmentCustomMetadataBuilder(Set.of(), OBJECT_KEY, REMOTE_LOG_SEGMENT_METADATA);
+        final var b = new SegmentCustomMetadataBuilder(Set.of(), OBJECT_KEY_FACTORY, REMOTE_LOG_SEGMENT_METADATA);
 
-        b.addUploadResult(ObjectKey.Suffix.MANIFEST, 10L);
-        assertThatThrownBy(() -> b.addUploadResult(ObjectKey.Suffix.MANIFEST, 20L))
+        b.addUploadResult(ObjectKeyFactory.Suffix.MANIFEST, 10L);
+        assertThatThrownBy(() -> b.addUploadResult(ObjectKeyFactory.Suffix.MANIFEST, 20L))
             .isInstanceOf(IllegalArgumentException.class)
             .hasMessage("Upload results for suffix MANIFEST already added");
     }
@@ -68,15 +68,15 @@ class SegmentCustomMetadataBuilderTest {
     @Test
     void shouldIncludeTotalSize() {
         final var field = SegmentCustomMetadataField.REMOTE_SIZE;
-        final var b = new SegmentCustomMetadataBuilder(Set.of(field), OBJECT_KEY, REMOTE_LOG_SEGMENT_METADATA);
+        final var b = new SegmentCustomMetadataBuilder(Set.of(field), OBJECT_KEY_FACTORY, REMOTE_LOG_SEGMENT_METADATA);
         var fields = b.build();
         assertThat(fields)
             .containsExactly(entry(field.index, 0L)); // i.e. no upload results
 
         // but, when existing upload results
         b
-            .addUploadResult(ObjectKey.Suffix.LOG, 40L)
-            .addUploadResult(ObjectKey.Suffix.MANIFEST, 2L);
+            .addUploadResult(ObjectKeyFactory.Suffix.LOG, 40L)
+            .addUploadResult(ObjectKeyFactory.Suffix.MANIFEST, 2L);
         fields = b.build();
         assertThat(fields)
             .containsExactly(entry(field.index, 42L)); // i.e. sum
@@ -85,7 +85,7 @@ class SegmentCustomMetadataBuilderTest {
     @Test
     void shouldIncludeObjectPrefix() {
         final var field = SegmentCustomMetadataField.OBJECT_PREFIX;
-        final var b = new SegmentCustomMetadataBuilder(Set.of(field), OBJECT_KEY, REMOTE_LOG_SEGMENT_METADATA);
+        final var b = new SegmentCustomMetadataBuilder(Set.of(field), OBJECT_KEY_FACTORY, REMOTE_LOG_SEGMENT_METADATA);
         final var fields = b.build();
         assertThat(fields)
             .containsExactly(entry(field.index, "p1"));
@@ -94,7 +94,7 @@ class SegmentCustomMetadataBuilderTest {
     @Test
     void shouldIncludeObjectKey() {
         final var field = SegmentCustomMetadataField.OBJECT_KEY;
-        final var b = new SegmentCustomMetadataBuilder(Set.of(field), OBJECT_KEY, REMOTE_LOG_SEGMENT_METADATA);
+        final var b = new SegmentCustomMetadataBuilder(Set.of(field), OBJECT_KEY_FACTORY, REMOTE_LOG_SEGMENT_METADATA);
         final var fields = b.build();
         assertThat(fields)
             .containsExactly(entry(field.index, "topic-" + TOPIC_ID + "/0/00000000000000000001-" + SEGMENT_ID));

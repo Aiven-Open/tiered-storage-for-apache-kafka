@@ -31,7 +31,7 @@ import static io.aiven.kafka.tieredstorage.metadata.SegmentCustomMetadataField.O
 /**
  * Maps Kafka segment files to object paths/keys in the storage backend.
  */
-public final class ObjectKey {
+public final class ObjectKeyFactory {
 
     /**
      * Supported files and extensions, including log, index types, and segment manifest.
@@ -68,7 +68,10 @@ public final class ObjectKey {
 
     private final String prefix;
 
-    public ObjectKey(final String prefix) {
+    /**
+     * @param prefix the prefix to add to all created keys.
+     */
+    public ObjectKeyFactory(final String prefix) {
         this.prefix = prefix == null ? "" : prefix;
     }
 
@@ -82,7 +85,7 @@ public final class ObjectKey {
      * <p>For example:
      * {@code someprefix/topic-MWJ6FHTfRYy67jzwZdeqSQ/7/00000000000000001234-tqimKeZwStOEOwRzT3L5oQ.log}
      *
-     * @see ObjectKey#mainPath(RemoteLogSegmentMetadata)
+     * @see ObjectKeyFactory#mainPath(RemoteLogSegmentMetadata)
      */
     public String key(final RemoteLogSegmentMetadata remoteLogSegmentMetadata, final Suffix suffix) {
         Objects.requireNonNull(remoteLogSegmentMetadata, "remoteLogSegmentMetadata cannot be null");

@@ -143,7 +143,7 @@ class RemoteStorageManagerMetricsTest {
         assertThat(MBEAN_SERVER.getAttribute(metricName, "object-upload-bytes-rate"))
             .isEqualTo(1575.0 / METRIC_TIME_WINDOW_SEC);
 
-        for (final var suffix : ObjectKey.Suffix.values()) {
+        for (final var suffix : ObjectKeyFactory.Suffix.values()) {
             final ObjectName storageMetricsName = ObjectName.getInstance(objectName + ",object-type=" + suffix.value);
             switch (suffix) {
                 case TXN_INDEX:

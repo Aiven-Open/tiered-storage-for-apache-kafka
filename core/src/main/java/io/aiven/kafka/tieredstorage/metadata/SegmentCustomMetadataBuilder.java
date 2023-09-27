@@ -23,25 +23,25 @@ import java.util.TreeMap;
 
 import org.apache.kafka.server.log.remote.storage.RemoteLogSegmentMetadata;
 
-import io.aiven.kafka.tieredstorage.ObjectKey;
+import io.aiven.kafka.tieredstorage.ObjectKeyFactory;
 
 public class SegmentCustomMetadataBuilder {
-    final ObjectKey objectKey;
+    final ObjectKeyFactory objectKeyFactory;
     final RemoteLogSegmentMetadata segmentMetadata;
-    final EnumMap<ObjectKey.Suffix, Long> uploadResults;
+    final EnumMap<ObjectKeyFactory.Suffix, Long> uploadResults;
 
     final Set<SegmentCustomMetadataField> fields;
 
     public SegmentCustomMetadataBuilder(final Set<SegmentCustomMetadataField> fields,
-                                        final ObjectKey objectKey,
+                                        final ObjectKeyFactory objectKeyFactory,
                                         final RemoteLogSegmentMetadata segmentMetadata) {
         this.fields = fields;
-        this.objectKey = objectKey;
+        this.objectKeyFactory = objectKeyFactory;
         this.segmentMetadata = segmentMetadata;
-        this.uploadResults = new EnumMap<>(ObjectKey.Suffix.class);
+        this.uploadResults = new EnumMap<>(ObjectKeyFactory.Suffix.class);
     }
 
-    public SegmentCustomMetadataBuilder addUploadResult(final ObjectKey.Suffix suffix,
+    public SegmentCustomMetadataBuilder addUploadResult(final ObjectKeyFactory.Suffix suffix,
                                                         final long bytes) {
         if (uploadResults.containsKey(suffix)) {
             throw new IllegalArgumentException("Upload results for suffix " + suffix + " already added");

@@ -21,7 +21,7 @@ import java.util.Map;
 import org.apache.kafka.common.MetricNameTemplate;
 import org.apache.kafka.common.TopicPartition;
 
-import io.aiven.kafka.tieredstorage.ObjectKey;
+import io.aiven.kafka.tieredstorage.ObjectKeyFactory;
 
 public class MetricsRegistry {
 
@@ -190,7 +190,7 @@ public class MetricsRegistry {
         return name;
     }
 
-    public static String sensorNameByObjectType(final ObjectKey.Suffix suffix, final String name) {
+    public static String sensorNameByObjectType(final ObjectKeyFactory.Suffix suffix, final String name) {
         return TAG_NAME_OBJECT_TYPE + "." + suffix.value + "." + name;
     }
 
@@ -199,7 +199,7 @@ public class MetricsRegistry {
     }
 
     public static String sensorNameByTopicAndObjectType(final TopicPartition topicPartition,
-                                                        final ObjectKey.Suffix suffix,
+                                                        final ObjectKeyFactory.Suffix suffix,
                                                         final String name) {
         return TAG_NAME_TOPIC + "." + topicPartition.topic() + "."
             + TAG_NAME_OBJECT_TYPE + "." + suffix.value
@@ -213,7 +213,7 @@ public class MetricsRegistry {
     }
 
     public static String sensorNameByTopicPartitionAndObjectType(final TopicPartition topicPartition,
-                                                                 final ObjectKey.Suffix suffix,
+                                                                 final ObjectKeyFactory.Suffix suffix,
                                                                  final String name) {
         return TAG_NAME_TOPIC + "." + topicPartition.topic()
             + "." + TAG_NAME_PARTITION + "." + topicPartition.partition()
@@ -226,7 +226,7 @@ public class MetricsRegistry {
     }
 
     static Map<String, String> topicAndObjectTypeTags(final TopicPartition topicPartition,
-                                                      final ObjectKey.Suffix suffix) {
+                                                      final ObjectKeyFactory.Suffix suffix) {
         return Map.of(
             TAG_NAME_TOPIC, topicPartition.topic(),
             TAG_NAME_OBJECT_TYPE, suffix.value
@@ -241,7 +241,7 @@ public class MetricsRegistry {
     }
 
     static Map<String, String> topicPartitionAndObjectTypeTags(final TopicPartition topicPartition,
-                                                               final ObjectKey.Suffix suffix) {
+                                                               final ObjectKeyFactory.Suffix suffix) {
         return Map.of(
             TAG_NAME_TOPIC, topicPartition.topic(),
             TAG_NAME_PARTITION, String.valueOf(topicPartition.partition()),
@@ -249,7 +249,7 @@ public class MetricsRegistry {
         );
     }
 
-    static Map<String, String> objectTypeTags(final ObjectKey.Suffix suffix) {
+    static Map<String, String> objectTypeTags(final ObjectKeyFactory.Suffix suffix) {
         return Map.of(TAG_NAME_OBJECT_TYPE, suffix.value);
     }
 }

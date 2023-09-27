@@ -24,13 +24,13 @@ import org.apache.kafka.common.protocol.types.Field.TaggedFieldsSection;
 import org.apache.kafka.common.protocol.types.Schema;
 import org.apache.kafka.common.protocol.types.Type;
 
-import io.aiven.kafka.tieredstorage.ObjectKey;
+import io.aiven.kafka.tieredstorage.ObjectKeyFactory;
 
 // index define values on custom metadata fields and cannot be changed without breaking compatibility.
 public enum SegmentCustomMetadataField {
     REMOTE_SIZE(0, new Field("remote_size", Type.VARLONG), SegmentCustomMetadataBuilder::totalSize),
-    OBJECT_PREFIX(1, new Field("object_prefix", Type.COMPACT_STRING), b -> b.objectKey.prefix()),
-    OBJECT_KEY(2, new Field("object_key", Type.COMPACT_STRING), b -> ObjectKey.mainPath(b.segmentMetadata));
+    OBJECT_PREFIX(1, new Field("object_prefix", Type.COMPACT_STRING), b -> b.objectKeyFactory.prefix()),
+    OBJECT_KEY(2, new Field("object_key", Type.COMPACT_STRING), b -> ObjectKeyFactory.mainPath(b.segmentMetadata));
 
     static final TaggedFieldsSection FIELDS_SECTION = TaggedFieldsSection.of(
         REMOTE_SIZE.index, REMOTE_SIZE.field,

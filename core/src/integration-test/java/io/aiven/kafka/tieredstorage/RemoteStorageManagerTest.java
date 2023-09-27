@@ -480,14 +480,15 @@ class RemoteStorageManagerTest extends RsaKeyAwareTest {
         );
         rsm.configure(config);
 
-        final ObjectKey objectKey = new ObjectKey("");
+        final ObjectKeyFactory objectKeyFactory = new ObjectKeyFactory("");
 
         // Ensure the manifest exists.
-        writeManifest(objectKey);
+        writeManifest(objectKeyFactory);
 
         // Make sure the exception is connected to the log file.
-        final String expectedMessage =
-            "Key " + objectKey.key(REMOTE_LOG_METADATA, ObjectKey.Suffix.LOG) + " does not exists in storage";
+        final String expectedMessage = "Key "
+                + objectKeyFactory.key(REMOTE_LOG_METADATA, ObjectKeyFactory.Suffix.LOG)
+                + " does not exists in storage";
 
         assertThatThrownBy(() -> rsm.fetchLogSegment(REMOTE_LOG_METADATA, 0))
             .isInstanceOf(RemoteResourceNotFoundException.class)
@@ -509,9 +510,10 @@ class RemoteStorageManagerTest extends RsaKeyAwareTest {
         rsm.configure(config);
 
         // Make sure the exception is connected to the manifest file.
-        final ObjectKey objectKey = new ObjectKey("");
-        final String expectedMessage =
-            "Key " + objectKey.key(REMOTE_LOG_METADATA, ObjectKey.Suffix.MANIFEST) + " does not exists in storage";
+        final ObjectKeyFactory objectKeyFactory = new ObjectKeyFactory("");
+        final String expectedMessage = "Key "
+            + objectKeyFactory.key(REMOTE_LOG_METADATA, ObjectKeyFactory.Suffix.MANIFEST)
+            + " does not exists in storage";
 
         assertThatThrownBy(() -> rsm.fetchLogSegment(REMOTE_LOG_METADATA, 0))
             .isInstanceOf(RemoteResourceNotFoundException.class)
@@ -533,15 +535,15 @@ class RemoteStorageManagerTest extends RsaKeyAwareTest {
         );
         rsm.configure(config);
 
-        final ObjectKey objectKey = new ObjectKey("");
+        final ObjectKeyFactory objectKeyFactory = new ObjectKeyFactory("");
 
         // Ensure the manifest exists.
-        writeManifest(objectKey);
+        writeManifest(objectKeyFactory);
 
         // Make sure the exception is connected to the index file.
-        final String expectedMessage =
-            "Key " + objectKey.key(REMOTE_LOG_METADATA, ObjectKey.Suffix.fromIndexType(indexType))
-                + " does not exists in storage";
+        final String expectedMessage = "Key "
+            + objectKeyFactory.key(REMOTE_LOG_METADATA, ObjectKeyFactory.Suffix.fromIndexType(indexType))
+            + " does not exists in storage";
 
         assertThatThrownBy(() -> rsm.fetchIndex(REMOTE_LOG_METADATA, indexType))
             .isInstanceOf(RemoteResourceNotFoundException.class)
@@ -560,9 +562,10 @@ class RemoteStorageManagerTest extends RsaKeyAwareTest {
         rsm.configure(config);
 
         // Make sure the exception is connected to the manifest file.
-        final ObjectKey objectKey = new ObjectKey("");
-        final String expectedMessage =
-            "Key " + objectKey.key(REMOTE_LOG_METADATA, ObjectKey.Suffix.MANIFEST) + " does not exists in storage";
+        final ObjectKeyFactory objectKeyFactory = new ObjectKeyFactory("");
+        final String expectedMessage = "Key "
+            + objectKeyFactory.key(REMOTE_LOG_METADATA, ObjectKeyFactory.Suffix.MANIFEST)
+            + " does not exists in storage";
 
         assertThatThrownBy(() -> rsm.fetchIndex(REMOTE_LOG_METADATA, indexType))
             .isInstanceOf(RemoteResourceNotFoundException.class)
@@ -570,14 +573,15 @@ class RemoteStorageManagerTest extends RsaKeyAwareTest {
             .hasStackTraceContaining(expectedMessage);
     }
 
-    private void writeManifest(final ObjectKey objectKey) throws IOException {
+    private void writeManifest(final ObjectKeyFactory objectKeyFactory) throws IOException {
         // Ensure the manifest exists.
         final String manifest =
             "{\"version\":\"1\","
                 + "\"chunkIndex\":{\"type\":\"fixed\",\"originalChunkSize\":100,"
                 + "\"originalFileSize\":1000,\"transformedChunkSize\":110,\"finalTransformedChunkSize\":110},"
                 + "\"compression\":false}";
-        final Path manifestPath = targetDir.resolve(objectKey.key(REMOTE_LOG_METADATA, ObjectKey.Suffix.MANIFEST));
+        final Path manifestPath = targetDir.resolve(
+            objectKeyFactory.key(REMOTE_LOG_METADATA, ObjectKeyFactory.Suffix.MANIFEST));
         Files.createDirectories(manifestPath.getParent());
         Files.writeString(manifestPath, manifest);
     }
