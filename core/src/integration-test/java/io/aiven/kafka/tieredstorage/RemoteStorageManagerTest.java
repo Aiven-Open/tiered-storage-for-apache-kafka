@@ -49,7 +49,9 @@ import org.apache.kafka.common.record.TimestampType;
 import org.apache.kafka.server.log.remote.storage.LogSegmentData;
 import org.apache.kafka.server.log.remote.storage.RemoteLogSegmentId;
 import org.apache.kafka.server.log.remote.storage.RemoteLogSegmentMetadata;
+import org.apache.kafka.server.log.remote.storage.RemoteResourceNotFoundException;
 import org.apache.kafka.server.log.remote.storage.RemoteStorageException;
+import org.apache.kafka.server.log.remote.storage.RemoteStorageManager.IndexType;
 
 import io.aiven.kafka.tieredstorage.chunkmanager.cache.DiskBasedChunkCache;
 import io.aiven.kafka.tieredstorage.chunkmanager.cache.InMemoryChunkCache;
@@ -62,19 +64,24 @@ import io.aiven.kafka.tieredstorage.security.AesEncryptionProvider;
 import io.aiven.kafka.tieredstorage.security.DataKeyAndAAD;
 import io.aiven.kafka.tieredstorage.security.EncryptedDataKey;
 import io.aiven.kafka.tieredstorage.security.RsaEncryptionProvider;
+import io.aiven.kafka.tieredstorage.storage.KeyNotFoundException;
+import io.aiven.kafka.tieredstorage.storage.StorageBackendException;
 
 import com.fasterxml.jackson.databind.JsonNode;
 import com.fasterxml.jackson.databind.ObjectMapper;
 import com.github.luben.zstd.Zstd;
 import org.assertj.core.api.InstanceOfAssertFactories;
 import org.junit.jupiter.api.BeforeEach;
+import org.junit.jupiter.api.Test;
 import org.junit.jupiter.api.io.TempDir;
 import org.junit.jupiter.params.ParameterizedTest;
 import org.junit.jupiter.params.provider.Arguments;
 import org.junit.jupiter.params.provider.CsvSource;
+import org.junit.jupiter.params.provider.EnumSource;
 import org.junit.jupiter.params.provider.MethodSource;
 
 import static org.assertj.core.api.Assertions.assertThat;
+import static org.assertj.core.api.Assertions.assertThatThrownBy;
 
 class RemoteStorageManagerTest extends RsaKeyAwareTest {
     RemoteStorageManager rsm;
@@ -461,5 +468,69 @@ class RemoteStorageManagerTest extends RsaKeyAwareTest {
 
         final boolean requires = rsm.requiresCompression(logSegmentData);
         assertThat(requires).isEqualTo(expectedResult);
+    }
+
+    @Test
+    void testFetchingSegmentNonExistent() throws StorageBackendException, IOException {
+        final var config = Map.of(
+            "chunk.size", "1",
+            "storage.backend.class", "io.aiven.kafka.tieredstorage.storage.filesystem.FileSystemStorage",
+            "storage.root", targetDir.toString()
+        );
+        rsm.configure(config);
+
+        assertThatThrownBy(() -> rsm.fetchLogSegment(REMOTE_LOG_METADATA, 0))
+            .isInstanceOf(RemoteResourceNotFoundException.class)
+            .hasCauseInstanceOf(KeyNotFoundException.class);
+        assertThatThrownBy(() -> rsm.fetchLogSegment(REMOTE_LOG_METADATA, 0, 100))
+            .isInstanceOf(RemoteResourceNotFoundException.class)
+            .hasCauseInstanceOf(KeyNotFoundException.class);
+    }
+
+    @Test
+    void testFetchingSegmentManifestNotFound() throws StorageBackendException, IOException {
+        final var config = Map.of(
+            "chunk.size", "1",
+            "storage.backend.class", "io.aiven.kafka.tieredstorage.storage.filesystem.FileSystemStorage",
+            "storage.root", targetDir.toString()
+        );
+        rsm.configure(config);
+
+        assertThatThrownBy(() -> rsm.fetchLogSegment(REMOTE_LOG_METADATA, 0))
+            .isInstanceOf(RemoteResourceNotFoundException.class)
+            .hasCauseInstanceOf(KeyNotFoundException.class);
+        assertThatThrownBy(() -> rsm.fetchLogSegment(REMOTE_LOG_METADATA, 0, 100))
+            .isInstanceOf(RemoteResourceNotFoundException.class)
+            .hasCauseInstanceOf(KeyNotFoundException.class);
+    }
+
+    @ParameterizedTest
+    @EnumSource(IndexType.class)
+    void testFetchingIndexNonExistent(final IndexType indexType) throws StorageBackendException {
+        final var config = Map.of(
+            "chunk.size", "1",
+            "storage.backend.class", "io.aiven.kafka.tieredstorage.storage.filesystem.FileSystemStorage",
+            "storage.root", targetDir.toString()
+        );
+        rsm.configure(config);
+
+        assertThatThrownBy(() -> rsm.fetchIndex(REMOTE_LOG_METADATA, indexType))
+            .isInstanceOf(RemoteResourceNotFoundException.class)
+            .hasCauseInstanceOf(KeyNotFoundException.class);
+    }
+
+    @ParameterizedTest
+    @EnumSource(IndexType.class)
+    void testFetchingIndexManifestNotFound(final IndexType indexType) throws StorageBackendException, IOException {
+        final var config = Map.of(
+            "chunk.size", "1",
+            "storage.backend.class", "io.aiven.kafka.tieredstorage.storage.filesystem.FileSystemStorage",
+            "storage.root", targetDir.toString()
+        );
+        rsm.configure(config);
+
+        assertThatThrownBy(() -> rsm.fetchIndex(REMOTE_LOG_METADATA, indexType))
+            .isInstanceOf(RemoteResourceNotFoundException.class)
+            .hasCauseInstanceOf(KeyNotFoundException.class);
     }
 }

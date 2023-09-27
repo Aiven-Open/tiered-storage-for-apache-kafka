@@ -29,6 +29,7 @@ import io.aiven.kafka.tieredstorage.chunkmanager.ChunkManager;
 import io.aiven.kafka.tieredstorage.manifest.SegmentManifest;
 import io.aiven.kafka.tieredstorage.manifest.index.ChunkIndex;
 import io.aiven.kafka.tieredstorage.storage.BytesRange;
+import io.aiven.kafka.tieredstorage.storage.KeyNotFoundException;
 import io.aiven.kafka.tieredstorage.storage.StorageBackendException;
 
 import org.apache.commons.io.input.BoundedInputStream;
@@ -137,6 +138,8 @@ public class FetchChunkEnumeration implements Enumeration<InputStream> {
     private InputStream getChunkContent(final int chunkId) {
         try {
             return chunkManager.getChunk(objectKeyPath, manifest, chunkId);
+        } catch (final KeyNotFoundException e) {
+            throw new KeyNotFoundRuntimeException(e);
         } catch (final StorageBackendException | IOException e) {
             throw new RuntimeException(e);
         }

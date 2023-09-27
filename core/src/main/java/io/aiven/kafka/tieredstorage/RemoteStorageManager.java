@@ -75,6 +75,7 @@ import io.aiven.kafka.tieredstorage.transform.DetransformChunkEnumeration;
 import io.aiven.kafka.tieredstorage.transform.DetransformFinisher;
 import io.aiven.kafka.tieredstorage.transform.EncryptionChunkEnumeration;
 import io.aiven.kafka.tieredstorage.transform.FetchChunkEnumeration;
+import io.aiven.kafka.tieredstorage.transform.KeyNotFoundRuntimeException;
 import io.aiven.kafka.tieredstorage.transform.TransformChunkEnumeration;
 import io.aiven.kafka.tieredstorage.transform.TransformFinisher;
 
@@ -388,6 +389,8 @@ public class RemoteStorageManager implements org.apache.kafka.server.log.remote.
 
             return new FetchChunkEnumeration(chunkManager, segmentKey, segmentManifest, range)
                 .toInputStream();
+        } catch (final KeyNotFoundException | KeyNotFoundRuntimeException e) {
+            throw new RemoteResourceNotFoundException(e);
         } catch (final Exception e) {
             throw new RemoteStorageException(e);
         }
@@ -415,14 +418,11 @@ public class RemoteStorageManager implements org.apache.kafka.server.log.remote.
             }
             final DetransformFinisher detransformFinisher = new DetransformFinisher(detransformEnum);
             return detransformFinisher.toInputStream();
+        } catch (final KeyNotFoundException e) {
+            throw new RemoteResourceNotFoundException(e);
         } catch (final Exception e) {
-            if (e instanceof KeyNotFoundException) {
-                throw new RemoteResourceNotFoundException(e);
-            } else {
-                throw new RemoteStorageException(e);
-            }
+            throw new RemoteStorageException(e);
         }
-
     }
 
     private String objectKey(final RemoteLogSegmentMetadata remoteLogSegmentMetadata, final ObjectKey.Suffix suffix) {
