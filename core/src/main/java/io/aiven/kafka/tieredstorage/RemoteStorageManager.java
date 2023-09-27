@@ -194,9 +194,6 @@ public class RemoteStorageManager implements org.apache.kafka.server.log.remote.
 
         log.info("Copying log segment data, metadata: {}", remoteLogSegmentMetadata);
 
-        metrics.recordSegmentCopy(remoteLogSegmentMetadata.remoteLogSegmentId().topicIdPartition().topicPartition(),
-            remoteLogSegmentMetadata.segmentSizeInBytes());
-
         final var customMetadataBuilder =
             new SegmentCustomMetadataBuilder(customMetadataFields, objectKey, remoteLogSegmentMetadata);
 
@@ -242,8 +239,6 @@ public class RemoteStorageManager implements org.apache.kafka.server.log.remote.
             uploadIndexFile(remoteLogSegmentMetadata, leaderEpoch, LEADER_EPOCH, encryptionMetadata,
                 customMetadataBuilder);
         } catch (final Exception e) {
-            metrics.recordSegmentCopyError(remoteLogSegmentMetadata.remoteLogSegmentId()
-                .topicIdPartition().topicPartition());
             throw new RemoteStorageException(e);
         }
 
