@@ -33,6 +33,7 @@ import io.aiven.kafka.tieredstorage.chunkmanager.ChunkKey;
 import io.aiven.kafka.tieredstorage.chunkmanager.ChunkManager;
 import io.aiven.kafka.tieredstorage.manifest.SegmentManifest;
 import io.aiven.kafka.tieredstorage.metrics.CaffeineStatsCounter;
+import io.aiven.kafka.tieredstorage.storage.ObjectKey;
 import io.aiven.kafka.tieredstorage.storage.StorageBackendException;
 
 import com.github.benmanes.caffeine.cache.AsyncCache;
@@ -65,10 +66,10 @@ public abstract class ChunkCache<T> implements ChunkManager, Configurable {
      * opened right when fetching from cache happens even if the actual value is removed from the cache,
      * the InputStream will still contain the data.
      */
-    public InputStream getChunk(final String objectKeyPath,
+    public InputStream getChunk(final ObjectKey objectKey,
                                 final SegmentManifest manifest,
                                 final int chunkId) throws StorageBackendException, IOException {
-        final ChunkKey chunkKey = new ChunkKey(objectKeyPath, chunkId);
+        final ChunkKey chunkKey = new ChunkKey(objectKey.value(), chunkId);
         final AtomicReference<InputStream> result = new AtomicReference<>();
         try {
             return cache.asMap()
@@ -77,7 +78,7 @@ public abstract class ChunkCache<T> implements ChunkManager, Configurable {
                         statsCounter.recordMiss();
                         try {
                             final InputStream chunk =
-                                chunkManager.getChunk(objectKeyPath, manifest, chunkId);
+                                chunkManager.getChunk(objectKey, manifest, chunkId);
                             final T t = this.cacheChunk(chunkKey, chunk);
                             result.getAndSet(cachedChunkToInputStream(t));
                             return t;

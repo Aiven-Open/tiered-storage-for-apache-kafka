@@ -64,6 +64,7 @@ import io.aiven.kafka.tieredstorage.storage.BytesRange;
 import io.aiven.kafka.tieredstorage.storage.KeyNotFoundException;
 import io.aiven.kafka.tieredstorage.storage.ObjectDeleter;
 import io.aiven.kafka.tieredstorage.storage.ObjectFetcher;
+import io.aiven.kafka.tieredstorage.storage.ObjectKey;
 import io.aiven.kafka.tieredstorage.storage.ObjectUploader;
 import io.aiven.kafka.tieredstorage.storage.StorageBackend;
 import io.aiven.kafka.tieredstorage.storage.StorageBackendException;
@@ -286,7 +287,7 @@ public class RemoteStorageManager implements org.apache.kafka.server.log.remote.
                                   final TransformFinisher transformFinisher,
                                   final SegmentCustomMetadataBuilder customMetadataBuilder)
         throws IOException, StorageBackendException {
-        final String fileKey = objectKeyFactory.key(remoteLogSegmentMetadata, ObjectKeyFactory.Suffix.LOG);
+        final ObjectKey fileKey = objectKeyFactory.key(remoteLogSegmentMetadata, ObjectKeyFactory.Suffix.LOG);
         try (final var sis = transformFinisher.toInputStream()) {
             final var bytes = uploader.upload(sis, fileKey);
             metrics.recordObjectUpload(
@@ -317,7 +318,7 @@ public class RemoteStorageManager implements org.apache.kafka.server.log.remote.
             new TransformFinisher(transformEnum);
 
         final var suffix = ObjectKeyFactory.Suffix.fromIndexType(indexType);
-        final String key = objectKeyFactory.key(remoteLogSegmentMetadata, suffix);
+        final ObjectKey key = objectKeyFactory.key(remoteLogSegmentMetadata, suffix);
         try (final var in = transformFinisher.toInputStream()) {
             final var bytes = uploader.upload(in, key);
             metrics.recordObjectUpload(
@@ -336,10 +337,11 @@ public class RemoteStorageManager implements org.apache.kafka.server.log.remote.
                                 final SegmentCustomMetadataBuilder customMetadataBuilder)
         throws StorageBackendException, IOException {
         final String manifest = mapper.writeValueAsString(segmentManifest);
-        final String manifestFileKey = objectKeyFactory.key(remoteLogSegmentMetadata, ObjectKeyFactory.Suffix.MANIFEST);
+        final ObjectKey manifestObjectKey =
+            objectKeyFactory.key(remoteLogSegmentMetadata, ObjectKeyFactory.Suffix.MANIFEST);
 
         try (final ByteArrayInputStream manifestContent = new ByteArrayInputStream(manifest.getBytes())) {
-            final var bytes = uploader.upload(manifestContent, manifestFileKey);
+            final var bytes = uploader.upload(manifestContent, manifestObjectKey);
             metrics.recordObjectUpload(
                 remoteLogSegmentMetadata.remoteLogSegmentId().topicIdPartition().topicPartition(),
                 ObjectKeyFactory.Suffix.MANIFEST,
@@ -420,9 +422,9 @@ public class RemoteStorageManager implements org.apache.kafka.server.log.remote.
         }
     }
 
-    private String objectKey(final RemoteLogSegmentMetadata remoteLogSegmentMetadata,
-                             final ObjectKeyFactory.Suffix suffix) {
-        final String segmentKey;
+    private ObjectKey objectKey(final RemoteLogSegmentMetadata remoteLogSegmentMetadata,
+                                final ObjectKeyFactory.Suffix suffix) {
+        final ObjectKey segmentKey;
         if (remoteLogSegmentMetadata.customMetadata().isPresent()) {
             final var customMetadataBytes = remoteLogSegmentMetadata.customMetadata().get();
             final var fields = customMetadataSerde.deserialize(customMetadataBytes.value());
@@ -435,7 +437,7 @@ public class RemoteStorageManager implements org.apache.kafka.server.log.remote.
 
     private SegmentManifest fetchSegmentManifest(final RemoteLogSegmentMetadata remoteLogSegmentMetadata)
         throws StorageBackendException, IOException {
-        final String manifestKey = objectKeyFactory.key(remoteLogSegmentMetadata, ObjectKeyFactory.Suffix.MANIFEST);
+        final ObjectKey manifestKey = objectKeyFactory.key(remoteLogSegmentMetadata, ObjectKeyFactory.Suffix.MANIFEST);
         return segmentManifestProvider.get(manifestKey);
     }
 
@@ -452,7 +454,7 @@ public class RemoteStorageManager implements org.apache.kafka.server.log.remote.
 
         try {
             for (final ObjectKeyFactory.Suffix suffix : ObjectKeyFactory.Suffix.values()) {
-                final String key = objectKeyFactory.key(remoteLogSegmentMetadata, suffix);
+                final ObjectKey key = objectKeyFactory.key(remoteLogSegmentMetadata, suffix);
                 deleter.delete(key);
             }
         } catch (final Exception e) {

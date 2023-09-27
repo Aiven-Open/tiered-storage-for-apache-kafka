@@ -25,6 +25,8 @@ import org.apache.kafka.server.log.remote.storage.RemoteLogSegmentId;
 import org.apache.kafka.server.log.remote.storage.RemoteLogSegmentMetadata;
 import org.apache.kafka.server.log.remote.storage.RemoteStorageManager;
 
+import io.aiven.kafka.tieredstorage.storage.ObjectKey;
+
 import static io.aiven.kafka.tieredstorage.metadata.SegmentCustomMetadataField.OBJECT_KEY;
 import static io.aiven.kafka.tieredstorage.metadata.SegmentCustomMetadataField.OBJECT_PREFIX;
 
@@ -87,13 +89,11 @@ public final class ObjectKeyFactory {
      *
      * @see ObjectKeyFactory#mainPath(RemoteLogSegmentMetadata)
      */
-    public String key(final RemoteLogSegmentMetadata remoteLogSegmentMetadata, final Suffix suffix) {
+    public ObjectKey key(final RemoteLogSegmentMetadata remoteLogSegmentMetadata, final Suffix suffix) {
         Objects.requireNonNull(remoteLogSegmentMetadata, "remoteLogSegmentMetadata cannot be null");
         Objects.requireNonNull(suffix, "suffix cannot be null");
 
-        return prefix
-            + mainPath(remoteLogSegmentMetadata)
-            + "." + suffix.value;
+        return new PlainObjectKey(prefix, mainPath(remoteLogSegmentMetadata) + "." + suffix.value);
     }
 
     /**
@@ -106,16 +106,16 @@ public final class ObjectKeyFactory {
      * <p>For example:
      * {@code someprefix/topic-MWJ6FHTfRYy67jzwZdeqSQ/7/00000000000000001234-tqimKeZwStOEOwRzT3L5oQ.log}
      */
-    public String key(final Map<Integer, Object> fields,
-                      final RemoteLogSegmentMetadata remoteLogSegmentMetadata,
-                      final Suffix suffix) {
+    public ObjectKey key(final Map<Integer, Object> fields,
+                         final RemoteLogSegmentMetadata remoteLogSegmentMetadata,
+                         final Suffix suffix) {
         Objects.requireNonNull(fields, "fields cannot be null");
         Objects.requireNonNull(remoteLogSegmentMetadata, "remoteLogSegmentMetadata cannot be null");
         Objects.requireNonNull(suffix, "suffix cannot be null");
 
         final var prefix = (String) fields.getOrDefault(OBJECT_PREFIX.index(), this.prefix);
         final var main = (String) fields.getOrDefault(OBJECT_KEY.index(), mainPath(remoteLogSegmentMetadata));
-        return prefix + main + "." + suffix.value;
+        return new PlainObjectKey(prefix, main + "." + suffix.value);
     }
 
     /**
@@ -152,5 +152,50 @@ public final class ObjectKeyFactory {
         nf.setMaximumFractionDigits(0);
         nf.setGroupingUsed(false);
         return nf.format(offset);
+    }
+
+    /**
+     * The object key that consists of a prefix and main part + suffix.
+     *
+     * <p>Its string representation is identical to its value.
+     */
+    static class PlainObjectKey implements ObjectKey {
+        private final String prefix;
+        private final String mainPathAndSuffix;
+
+        PlainObjectKey(final String prefix, final String mainPathAndSuffix) {
+            this.prefix = Objects.requireNonNull(prefix, "prefix cannot be null");
+            this.mainPathAndSuffix = Objects.requireNonNull(mainPathAndSuffix, "mainPathAndSuffix cannot be null");
+        }
+
+        @Override
+        public boolean equals(final Object o) {
+            if (this == o) {
+                return true;
+            }
+            if (o == null || getClass() != o.getClass()) {
+                return false;
+            }
+            final PlainObjectKey that = (PlainObjectKey) o;
+            return Objects.equals(prefix, that.prefix)
+                && Objects.equals(mainPathAndSuffix, that.mainPathAndSuffix);
+        }
+
+        @Override
+        public int hashCode() {
+            int result = prefix.hashCode();
+            result = 31 * result + mainPathAndSuffix.hashCode();
+            return result;
+        }
+
+        @Override
+        public String value() {
+            return prefix + mainPathAndSuffix;
+        }
+
+        @Override
+        public String toString() {
+            return value();
+        }
     }
 }

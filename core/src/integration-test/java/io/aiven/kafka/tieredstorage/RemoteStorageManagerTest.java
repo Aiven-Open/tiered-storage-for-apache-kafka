@@ -581,7 +581,7 @@ class RemoteStorageManagerTest extends RsaKeyAwareTest {
                 + "\"originalFileSize\":1000,\"transformedChunkSize\":110,\"finalTransformedChunkSize\":110},"
                 + "\"compression\":false}";
         final Path manifestPath = targetDir.resolve(
-            objectKeyFactory.key(REMOTE_LOG_METADATA, ObjectKeyFactory.Suffix.MANIFEST));
+            objectKeyFactory.key(REMOTE_LOG_METADATA, ObjectKeyFactory.Suffix.MANIFEST).value());
         Files.createDirectories(manifestPath.getParent());
         Files.writeString(manifestPath, manifest);
     }

@@ -24,6 +24,7 @@ import java.util.Map;
 import io.aiven.kafka.tieredstorage.storage.BaseStorageTest;
 import io.aiven.kafka.tieredstorage.storage.StorageBackend;
 import io.aiven.kafka.tieredstorage.storage.StorageBackendException;
+import io.aiven.kafka.tieredstorage.storage.TestObjectKey;
 
 import org.junit.jupiter.api.Test;
 import org.junit.jupiter.api.io.TempDir;
@@ -71,7 +72,7 @@ class FileSystemStorageTest extends BaseStorageTest {
 
     @Test
     void testDeleteAllParentsButRoot() throws IOException, StorageBackendException {
-        final Path keyPath = root.resolve(TOPIC_PARTITION_SEGMENT_KEY);
+        final Path keyPath = root.resolve(TOPIC_PARTITION_SEGMENT_KEY.value());
         Files.createDirectories(keyPath.getParent());
         Files.writeString(keyPath, "test");
         final FileSystemStorage storage = new FileSystemStorage();
@@ -95,7 +96,7 @@ class FileSystemStorageTest extends BaseStorageTest {
         Files.writeString(keyPath, "test");
         final FileSystemStorage storage = new FileSystemStorage();
         storage.configure(Map.of("root", root.toString()));
-        storage.delete(parent + "/" + key);
+        storage.delete(new TestObjectKey(parent + "/" + key));
 
         assertThat(keyPath).doesNotExist();
         assertThat(parentPath).exists();

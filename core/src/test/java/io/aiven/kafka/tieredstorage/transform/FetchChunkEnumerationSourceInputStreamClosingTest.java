@@ -33,6 +33,7 @@ import io.aiven.kafka.tieredstorage.manifest.SegmentManifestV1;
 import io.aiven.kafka.tieredstorage.manifest.index.FixedSizeChunkIndex;
 import io.aiven.kafka.tieredstorage.storage.BytesRange;
 import io.aiven.kafka.tieredstorage.storage.ObjectFetcher;
+import io.aiven.kafka.tieredstorage.storage.ObjectKey;
 import io.aiven.kafka.tieredstorage.storage.StorageBackendException;
 
 import org.junit.jupiter.api.BeforeEach;
@@ -49,7 +50,7 @@ import static org.mockito.Mockito.verify;
 
 @ExtendWith(MockitoExtension.class)
 class FetchChunkEnumerationSourceInputStreamClosingTest {
-    static final String OBJECT_KEY_PATH = "topic/segment";
+    static final ObjectKey OBJECT_KEY = () -> "topic/segment";
     static final int CHUNK_SIZE = 10;
 
     static final BytesRange RANGE1 = BytesRange.ofFromPositionAndSize(0, CHUNK_SIZE);
@@ -79,7 +80,7 @@ class FetchChunkEnumerationSourceInputStreamClosingTest {
         final ChunkManagerFactory chunkManagerFactory = new ChunkManagerFactory();
         chunkManagerFactory.configure(config);
         final ChunkManager chunkManager = chunkManagerFactory.initChunkManager(fetcher, null);
-        final var is = new FetchChunkEnumeration(chunkManager, OBJECT_KEY_PATH, SEGMENT_MANIFEST, range)
+        final var is = new FetchChunkEnumeration(chunkManager, OBJECT_KEY, SEGMENT_MANIFEST, range)
             .toInputStream();
         if (readFully) {
             is.readAllBytes();
@@ -132,13 +133,13 @@ class FetchChunkEnumerationSourceInputStreamClosingTest {
         private final List<InputStream> openInputStreams = new ArrayList<>();
 
         @Override
-        public InputStream fetch(final String key) throws StorageBackendException {
+        public InputStream fetch(final ObjectKey key) throws StorageBackendException {
             throw new RuntimeException("Should not be called");
         }
 
         @Override
-        public InputStream fetch(final String key, final BytesRange range) {
-            if (!key.equals(OBJECT_KEY_PATH)) {
+        public InputStream fetch(final ObjectKey key, final BytesRange range) {
+            if (!key.equals(OBJECT_KEY)) {
                 throw new IllegalArgumentException("Invalid key: " + key);
             }
 

@@ -27,6 +27,7 @@ import java.util.stream.Stream;
 
 import io.aiven.kafka.tieredstorage.chunkmanager.ChunkManager;
 import io.aiven.kafka.tieredstorage.manifest.SegmentManifest;
+import io.aiven.kafka.tieredstorage.storage.ObjectKey;
 
 import org.junit.jupiter.api.extension.ExtendWith;
 import org.junit.jupiter.api.io.TempDir;
@@ -49,7 +50,7 @@ import static org.mockito.Mockito.when;
 class ChunkCacheMetricsTest {
     static final MBeanServer MBEAN_SERVER = ManagementFactory.getPlatformMBeanServer();
 
-    public static final String OBJECT_KEY_PATH = "topic/segment";
+    public static final ObjectKey OBJECT_KEY_PATH = () -> "topic/segment";
 
     @TempDir
     static Path baseCachePath;

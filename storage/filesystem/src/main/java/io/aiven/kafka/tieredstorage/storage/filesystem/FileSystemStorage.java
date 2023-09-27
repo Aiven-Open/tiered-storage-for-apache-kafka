@@ -27,6 +27,7 @@ import java.util.Map;
 import io.aiven.kafka.tieredstorage.storage.BytesRange;
 import io.aiven.kafka.tieredstorage.storage.InvalidRangeException;
 import io.aiven.kafka.tieredstorage.storage.KeyNotFoundException;
+import io.aiven.kafka.tieredstorage.storage.ObjectKey;
 import io.aiven.kafka.tieredstorage.storage.StorageBackend;
 import io.aiven.kafka.tieredstorage.storage.StorageBackendException;
 
@@ -47,9 +48,9 @@ public class FileSystemStorage implements StorageBackend {
     }
 
     @Override
-    public long upload(final InputStream inputStream, final String key) throws StorageBackendException {
+    public long upload(final InputStream inputStream, final ObjectKey key) throws StorageBackendException {
         try {
-            final Path path = fsRoot.resolve(key);
+            final Path path = fsRoot.resolve(key.value());
             Files.createDirectories(path.getParent());
             Files.copy(inputStream, path, StandardCopyOption.REPLACE_EXISTING);
             return Files.size(path);
@@ -59,9 +60,9 @@ public class FileSystemStorage implements StorageBackend {
     }
 
     @Override
-    public InputStream fetch(final String key) throws StorageBackendException {
+    public InputStream fetch(final ObjectKey key) throws StorageBackendException {
         try {
-            final Path path = fsRoot.resolve(key);
+            final Path path = fsRoot.resolve(key.value());
             return Files.newInputStream(path);
         } catch (final NoSuchFileException e) {
             throw new KeyNotFoundException(this, key, e);
@@ -71,9 +72,9 @@ public class FileSystemStorage implements StorageBackend {
     }
 
     @Override
-    public InputStream fetch(final String key, final BytesRange range) throws StorageBackendException {
+    public InputStream fetch(final ObjectKey key, final BytesRange range) throws StorageBackendException {
         try {
-            final Path path = fsRoot.resolve(key);
+            final Path path = fsRoot.resolve(key.value());
             final long fileSize = Files.size(path);
             if (range.from >= fileSize) {
                 throw new InvalidRangeException("Range start position " + range.from
@@ -92,9 +93,9 @@ public class FileSystemStorage implements StorageBackend {
     }
 
     @Override
-    public void delete(final String key) throws StorageBackendException {
+    public void delete(final ObjectKey key) throws StorageBackendException {
         try {
-            final Path path = fsRoot.resolve(key);
+            final Path path = fsRoot.resolve(key.value());
             Files.deleteIfExists(path);
             Path parent = path.getParent();
             while (parent != null && Files.isDirectory(parent) && !parent.equals(fsRoot)

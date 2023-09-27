@@ -27,6 +27,7 @@ import java.util.concurrent.TimeoutException;
 
 import io.aiven.kafka.tieredstorage.metrics.CaffeineStatsCounter;
 import io.aiven.kafka.tieredstorage.storage.ObjectFetcher;
+import io.aiven.kafka.tieredstorage.storage.ObjectKey;
 import io.aiven.kafka.tieredstorage.storage.StorageBackendException;
 
 import com.fasterxml.jackson.databind.ObjectMapper;
@@ -37,7 +38,7 @@ public class SegmentManifestProvider {
     private static final String SEGMENT_MANIFEST_METRIC_GROUP_NAME = "segment-manifest-cache";
     private static final long GET_TIMEOUT_SEC = 10;
 
-    private final AsyncLoadingCache<String, SegmentManifest> cache;
+    private final AsyncLoadingCache<ObjectKey, SegmentManifest> cache;
 
     /**
      * @param maxCacheSize the max cache size (in items) or empty if the cache is unbounded.
@@ -62,7 +63,7 @@ public class SegmentManifestProvider {
         statsCounter.registerSizeMetric(cache.synchronous()::estimatedSize);
     }
 
-    public SegmentManifest get(final String manifestKey)
+    public SegmentManifest get(final ObjectKey manifestKey)
         throws StorageBackendException, IOException {
         try {
             return cache.get(manifestKey).get(GET_TIMEOUT_SEC, TimeUnit.SECONDS);

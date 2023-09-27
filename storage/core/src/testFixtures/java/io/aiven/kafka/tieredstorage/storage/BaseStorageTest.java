@@ -28,7 +28,7 @@ import static org.assertj.core.api.Assertions.assertThatThrownBy;
 
 public abstract class BaseStorageTest {
 
-    protected static final String TOPIC_PARTITION_SEGMENT_KEY = "topic/partition/log";
+    protected static final ObjectKey TOPIC_PARTITION_SEGMENT_KEY = new TestObjectKey("topic/partition/log");
 
     protected abstract StorageBackend storage();
 
@@ -80,10 +80,10 @@ public abstract class BaseStorageTest {
 
     @Test
     void testFetchFailWhenNonExistingKey() {
-        assertThatThrownBy(() -> storage().fetch("non-existing"))
+        assertThatThrownBy(() -> storage().fetch(new TestObjectKey("non-existing")))
             .isInstanceOf(KeyNotFoundException.class)
             .hasMessage("Key non-existing does not exists in storage " + storage());
-        assertThatThrownBy(() -> storage().fetch("non-existing", BytesRange.of(0, 1)))
+        assertThatThrownBy(() -> storage().fetch(new TestObjectKey("non-existing"), BytesRange.of(0, 1)))
             .isInstanceOf(KeyNotFoundException.class)
             .hasMessage("Key non-existing does not exists in storage " + storage());
     }
@@ -146,10 +146,10 @@ public abstract class BaseStorageTest {
 
     @Test
     void testFetchNonExistingKey() {
-        assertThatThrownBy(() -> storage().fetch("non-existing"))
+        assertThatThrownBy(() -> storage().fetch(new TestObjectKey("non-existing")))
             .isInstanceOf(KeyNotFoundException.class)
             .hasMessage("Key non-existing does not exists in storage " + storage());
-        assertThatThrownBy(() -> storage().fetch("non-existing", BytesRange.of(0, 1)))
+        assertThatThrownBy(() -> storage().fetch(new TestObjectKey("non-existing"), BytesRange.of(0, 1)))
             .isInstanceOf(KeyNotFoundException.class)
             .hasMessage("Key non-existing does not exists in storage " + storage());
     }

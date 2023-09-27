@@ -21,6 +21,7 @@ import java.util.Map;
 
 import io.aiven.kafka.tieredstorage.storage.BaseStorageTest;
 import io.aiven.kafka.tieredstorage.storage.StorageBackend;
+import io.aiven.kafka.tieredstorage.storage.TestObjectKey;
 
 import org.junit.jupiter.api.BeforeAll;
 import org.junit.jupiter.api.BeforeEach;
@@ -90,7 +91,7 @@ public class S3StorageTest extends BaseStorageTest {
 
     @Test
     void partSizePassedToStream() throws IOException {
-        try (final var os = ((S3Storage) storage()).s3OutputStream("test")) {
+        try (final var os = ((S3Storage) storage()).s3OutputStream(new TestObjectKey("test"))) {
             assertThat(os.partSize).isEqualTo(PART_SIZE);
         }
     }

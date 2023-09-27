@@ -43,31 +43,32 @@ class ObjectKeyFactoryTest {
     @Test
     void test() {
         final ObjectKeyFactory objectKeyFactory = new ObjectKeyFactory("prefix/");
-        assertThat(objectKeyFactory.key(REMOTE_LOG_SEGMENT_METADATA, ObjectKeyFactory.Suffix.LOG))
+        assertThat(objectKeyFactory.key(REMOTE_LOG_SEGMENT_METADATA, ObjectKeyFactory.Suffix.LOG).value())
             .isEqualTo(
                 "prefix/topic-AAAAAAAAAAAAAAAAAAAAAQ/7/"
                     + "00000000000000001234-AAAAAAAAAAAAAAAAAAAAAA.log");
-        assertThat(objectKeyFactory.key(REMOTE_LOG_SEGMENT_METADATA, ObjectKeyFactory.Suffix.OFFSET_INDEX))
+        assertThat(objectKeyFactory.key(REMOTE_LOG_SEGMENT_METADATA, ObjectKeyFactory.Suffix.OFFSET_INDEX).value())
             .isEqualTo(
                 "prefix/topic-AAAAAAAAAAAAAAAAAAAAAQ/7/"
                     + "00000000000000001234-AAAAAAAAAAAAAAAAAAAAAA.index");
-        assertThat(objectKeyFactory.key(REMOTE_LOG_SEGMENT_METADATA, ObjectKeyFactory.Suffix.TIME_INDEX))
+        assertThat(objectKeyFactory.key(REMOTE_LOG_SEGMENT_METADATA, ObjectKeyFactory.Suffix.TIME_INDEX).value())
             .isEqualTo(
                 "prefix/topic-AAAAAAAAAAAAAAAAAAAAAQ/7/"
                     + "00000000000000001234-AAAAAAAAAAAAAAAAAAAAAA.timeindex");
-        assertThat(objectKeyFactory.key(REMOTE_LOG_SEGMENT_METADATA, ObjectKeyFactory.Suffix.PRODUCER_SNAPSHOT))
+        assertThat(objectKeyFactory.key(REMOTE_LOG_SEGMENT_METADATA, ObjectKeyFactory.Suffix.PRODUCER_SNAPSHOT).value())
             .isEqualTo(
                 "prefix/topic-AAAAAAAAAAAAAAAAAAAAAQ/7/"
                     + "00000000000000001234-AAAAAAAAAAAAAAAAAAAAAA.snapshot");
-        assertThat(objectKeyFactory.key(REMOTE_LOG_SEGMENT_METADATA, ObjectKeyFactory.Suffix.TXN_INDEX))
+        assertThat(objectKeyFactory.key(REMOTE_LOG_SEGMENT_METADATA, ObjectKeyFactory.Suffix.TXN_INDEX).value())
             .isEqualTo(
                 "prefix/topic-AAAAAAAAAAAAAAAAAAAAAQ/7/"
                     + "00000000000000001234-AAAAAAAAAAAAAAAAAAAAAA.txnindex");
-        assertThat(objectKeyFactory.key(REMOTE_LOG_SEGMENT_METADATA, ObjectKeyFactory.Suffix.LEADER_EPOCH_CHECKPOINT))
+        assertThat(objectKeyFactory.key(REMOTE_LOG_SEGMENT_METADATA, ObjectKeyFactory.Suffix.LEADER_EPOCH_CHECKPOINT)
+            .value())
             .isEqualTo(
                 "prefix/topic-AAAAAAAAAAAAAAAAAAAAAQ/7/"
                     + "00000000000000001234-AAAAAAAAAAAAAAAAAAAAAA.leader-epoch-checkpoint");
-        assertThat(objectKeyFactory.key(REMOTE_LOG_SEGMENT_METADATA, ObjectKeyFactory.Suffix.MANIFEST))
+        assertThat(objectKeyFactory.key(REMOTE_LOG_SEGMENT_METADATA, ObjectKeyFactory.Suffix.MANIFEST).value())
             .isEqualTo(
                 "prefix/topic-AAAAAAAAAAAAAAAAAAAAAQ/7/"
                     + "00000000000000001234-AAAAAAAAAAAAAAAAAAAAAA.rsm-manifest");
@@ -78,37 +79,38 @@ class ObjectKeyFactoryTest {
         final ObjectKeyFactory objectKeyFactory = new ObjectKeyFactory("prefix/");
         final Map<Integer, Object> fields = Map.of();
         assertThat(
-            objectKeyFactory.key(fields, REMOTE_LOG_SEGMENT_METADATA, ObjectKeyFactory.Suffix.LOG)
+            objectKeyFactory.key(fields, REMOTE_LOG_SEGMENT_METADATA, ObjectKeyFactory.Suffix.LOG).value()
         ).isEqualTo(
             "prefix/topic-AAAAAAAAAAAAAAAAAAAAAQ/7/"
                 + "00000000000000001234-AAAAAAAAAAAAAAAAAAAAAA.log");
         assertThat(
-            objectKeyFactory.key(fields, REMOTE_LOG_SEGMENT_METADATA, ObjectKeyFactory.Suffix.OFFSET_INDEX)
+            objectKeyFactory.key(fields, REMOTE_LOG_SEGMENT_METADATA, ObjectKeyFactory.Suffix.OFFSET_INDEX).value()
         ).isEqualTo(
             "prefix/topic-AAAAAAAAAAAAAAAAAAAAAQ/7/"
                 + "00000000000000001234-AAAAAAAAAAAAAAAAAAAAAA.index");
         assertThat(
-            objectKeyFactory.key(fields, REMOTE_LOG_SEGMENT_METADATA, ObjectKeyFactory.Suffix.TIME_INDEX)
+            objectKeyFactory.key(fields, REMOTE_LOG_SEGMENT_METADATA, ObjectKeyFactory.Suffix.TIME_INDEX).value()
         ).isEqualTo(
             "prefix/topic-AAAAAAAAAAAAAAAAAAAAAQ/7/"
                 + "00000000000000001234-AAAAAAAAAAAAAAAAAAAAAA.timeindex");
         assertThat(
-            objectKeyFactory.key(fields, REMOTE_LOG_SEGMENT_METADATA, ObjectKeyFactory.Suffix.PRODUCER_SNAPSHOT)
+            objectKeyFactory.key(fields, REMOTE_LOG_SEGMENT_METADATA, ObjectKeyFactory.Suffix.PRODUCER_SNAPSHOT).value()
         ).isEqualTo(
             "prefix/topic-AAAAAAAAAAAAAAAAAAAAAQ/7/"
                 + "00000000000000001234-AAAAAAAAAAAAAAAAAAAAAA.snapshot");
         assertThat(
-            objectKeyFactory.key(fields, REMOTE_LOG_SEGMENT_METADATA, ObjectKeyFactory.Suffix.TXN_INDEX)
+            objectKeyFactory.key(fields, REMOTE_LOG_SEGMENT_METADATA, ObjectKeyFactory.Suffix.TXN_INDEX).value()
         ).isEqualTo(
             "prefix/topic-AAAAAAAAAAAAAAAAAAAAAQ/7/"
                 + "00000000000000001234-AAAAAAAAAAAAAAAAAAAAAA.txnindex");
         assertThat(
             objectKeyFactory.key(fields, REMOTE_LOG_SEGMENT_METADATA, ObjectKeyFactory.Suffix.LEADER_EPOCH_CHECKPOINT)
+                .value()
         ).isEqualTo(
             "prefix/topic-AAAAAAAAAAAAAAAAAAAAAQ/7/"
                 + "00000000000000001234-AAAAAAAAAAAAAAAAAAAAAA.leader-epoch-checkpoint");
         assertThat(
-            objectKeyFactory.key(fields, REMOTE_LOG_SEGMENT_METADATA, ObjectKeyFactory.Suffix.MANIFEST)
+            objectKeyFactory.key(fields, REMOTE_LOG_SEGMENT_METADATA, ObjectKeyFactory.Suffix.MANIFEST).value()
         ).isEqualTo(
             "prefix/topic-AAAAAAAAAAAAAAAAAAAAAQ/7/"
                 + "00000000000000001234-AAAAAAAAAAAAAAAAAAAAAA.rsm-manifest");
@@ -119,37 +121,38 @@ class ObjectKeyFactoryTest {
         final ObjectKeyFactory objectKeyFactory = new ObjectKeyFactory("prefix/");
         final Map<Integer, Object> fields = Map.of(SegmentCustomMetadataField.OBJECT_PREFIX.index(), "other/");
         assertThat(
-            objectKeyFactory.key(fields, REMOTE_LOG_SEGMENT_METADATA, ObjectKeyFactory.Suffix.LOG)
+            objectKeyFactory.key(fields, REMOTE_LOG_SEGMENT_METADATA, ObjectKeyFactory.Suffix.LOG).value()
         ).isEqualTo(
             "other/topic-AAAAAAAAAAAAAAAAAAAAAQ/7/"
                 + "00000000000000001234-AAAAAAAAAAAAAAAAAAAAAA.log");
         assertThat(
-            objectKeyFactory.key(fields, REMOTE_LOG_SEGMENT_METADATA, ObjectKeyFactory.Suffix.OFFSET_INDEX)
+            objectKeyFactory.key(fields, REMOTE_LOG_SEGMENT_METADATA, ObjectKeyFactory.Suffix.OFFSET_INDEX).value()
         ).isEqualTo(
             "other/topic-AAAAAAAAAAAAAAAAAAAAAQ/7/"
                 + "00000000000000001234-AAAAAAAAAAAAAAAAAAAAAA.index");
         assertThat(
-            objectKeyFactory.key(fields, REMOTE_LOG_SEGMENT_METADATA, ObjectKeyFactory.Suffix.TIME_INDEX)
+            objectKeyFactory.key(fields, REMOTE_LOG_SEGMENT_METADATA, ObjectKeyFactory.Suffix.TIME_INDEX).value()
         ).isEqualTo(
             "other/topic-AAAAAAAAAAAAAAAAAAAAAQ/7/"
                 + "00000000000000001234-AAAAAAAAAAAAAAAAAAAAAA.timeindex");
         assertThat(
-            objectKeyFactory.key(fields, REMOTE_LOG_SEGMENT_METADATA, ObjectKeyFactory.Suffix.PRODUCER_SNAPSHOT)
+            objectKeyFactory.key(fields, REMOTE_LOG_SEGMENT_METADATA, ObjectKeyFactory.Suffix.PRODUCER_SNAPSHOT).value()
         ).isEqualTo(
             "other/topic-AAAAAAAAAAAAAAAAAAAAAQ/7/"
                 + "00000000000000001234-AAAAAAAAAAAAAAAAAAAAAA.snapshot");
         assertThat(
-            objectKeyFactory.key(fields, REMOTE_LOG_SEGMENT_METADATA, ObjectKeyFactory.Suffix.TXN_INDEX)
+            objectKeyFactory.key(fields, REMOTE_LOG_SEGMENT_METADATA, ObjectKeyFactory.Suffix.TXN_INDEX).value()
         ).isEqualTo(
             "other/topic-AAAAAAAAAAAAAAAAAAAAAQ/7/"
                 + "00000000000000001234-AAAAAAAAAAAAAAAAAAAAAA.txnindex");
         assertThat(
             objectKeyFactory.key(fields, REMOTE_LOG_SEGMENT_METADATA, ObjectKeyFactory.Suffix.LEADER_EPOCH_CHECKPOINT)
+                .value()
         ).isEqualTo(
             "other/topic-AAAAAAAAAAAAAAAAAAAAAQ/7/"
                 + "00000000000000001234-AAAAAAAAAAAAAAAAAAAAAA.leader-epoch-checkpoint");
         assertThat(
-            objectKeyFactory.key(fields, REMOTE_LOG_SEGMENT_METADATA, ObjectKeyFactory.Suffix.MANIFEST)
+            objectKeyFactory.key(fields, REMOTE_LOG_SEGMENT_METADATA, ObjectKeyFactory.Suffix.MANIFEST).value()
         ).isEqualTo(
             "other/topic-AAAAAAAAAAAAAAAAAAAAAQ/7/"
                 + "00000000000000001234-AAAAAAAAAAAAAAAAAAAAAA.rsm-manifest");
@@ -160,25 +163,26 @@ class ObjectKeyFactoryTest {
         final ObjectKeyFactory objectKeyFactory = new ObjectKeyFactory("prefix/");
         final Map<Integer, Object> fields = Map.of(SegmentCustomMetadataField.OBJECT_KEY.index(), "topic/7/file");
         assertThat(
-            objectKeyFactory.key(fields, REMOTE_LOG_SEGMENT_METADATA, ObjectKeyFactory.Suffix.LOG)
+            objectKeyFactory.key(fields, REMOTE_LOG_SEGMENT_METADATA, ObjectKeyFactory.Suffix.LOG).value()
         ).isEqualTo("prefix/topic/7/file.log");
         assertThat(
-            objectKeyFactory.key(fields, REMOTE_LOG_SEGMENT_METADATA, ObjectKeyFactory.Suffix.OFFSET_INDEX)
+            objectKeyFactory.key(fields, REMOTE_LOG_SEGMENT_METADATA, ObjectKeyFactory.Suffix.OFFSET_INDEX).value()
         ).isEqualTo("prefix/topic/7/file.index");
         assertThat(
-            objectKeyFactory.key(fields, REMOTE_LOG_SEGMENT_METADATA, ObjectKeyFactory.Suffix.TIME_INDEX)
+            objectKeyFactory.key(fields, REMOTE_LOG_SEGMENT_METADATA, ObjectKeyFactory.Suffix.TIME_INDEX).value()
         ).isEqualTo("prefix/topic/7/file.timeindex");
         assertThat(
-            objectKeyFactory.key(fields, REMOTE_LOG_SEGMENT_METADATA, ObjectKeyFactory.Suffix.PRODUCER_SNAPSHOT)
+            objectKeyFactory.key(fields, REMOTE_LOG_SEGMENT_METADATA, ObjectKeyFactory.Suffix.PRODUCER_SNAPSHOT).value()
         ).isEqualTo("prefix/topic/7/file.snapshot");
         assertThat(
-            objectKeyFactory.key(fields, REMOTE_LOG_SEGMENT_METADATA, ObjectKeyFactory.Suffix.TXN_INDEX)
+            objectKeyFactory.key(fields, REMOTE_LOG_SEGMENT_METADATA, ObjectKeyFactory.Suffix.TXN_INDEX).value()
         ).isEqualTo("prefix/topic/7/file.txnindex");
         assertThat(
             objectKeyFactory.key(fields, REMOTE_LOG_SEGMENT_METADATA, ObjectKeyFactory.Suffix.LEADER_EPOCH_CHECKPOINT)
+                .value()
         ).isEqualTo("prefix/topic/7/file.leader-epoch-checkpoint");
         assertThat(
-            objectKeyFactory.key(fields, REMOTE_LOG_SEGMENT_METADATA, ObjectKeyFactory.Suffix.MANIFEST)
+            objectKeyFactory.key(fields, REMOTE_LOG_SEGMENT_METADATA, ObjectKeyFactory.Suffix.MANIFEST).value()
         ).isEqualTo("prefix/topic/7/file.rsm-manifest");
     }
 
@@ -189,32 +193,33 @@ class ObjectKeyFactoryTest {
             SegmentCustomMetadataField.OBJECT_PREFIX.index(), "other/",
             SegmentCustomMetadataField.OBJECT_KEY.index(), "topic/7/file");
         assertThat(
-            objectKeyFactory.key(fields, REMOTE_LOG_SEGMENT_METADATA, ObjectKeyFactory.Suffix.LOG)
+            objectKeyFactory.key(fields, REMOTE_LOG_SEGMENT_METADATA, ObjectKeyFactory.Suffix.LOG).value()
         ).isEqualTo("other/topic/7/file.log");
         assertThat(
-            objectKeyFactory.key(fields, REMOTE_LOG_SEGMENT_METADATA, ObjectKeyFactory.Suffix.OFFSET_INDEX)
+            objectKeyFactory.key(fields, REMOTE_LOG_SEGMENT_METADATA, ObjectKeyFactory.Suffix.OFFSET_INDEX).value()
         ).isEqualTo("other/topic/7/file.index");
         assertThat(
-            objectKeyFactory.key(fields, REMOTE_LOG_SEGMENT_METADATA, ObjectKeyFactory.Suffix.TIME_INDEX)
+            objectKeyFactory.key(fields, REMOTE_LOG_SEGMENT_METADATA, ObjectKeyFactory.Suffix.TIME_INDEX).value()
         ).isEqualTo("other/topic/7/file.timeindex");
         assertThat(
-            objectKeyFactory.key(fields, REMOTE_LOG_SEGMENT_METADATA, ObjectKeyFactory.Suffix.PRODUCER_SNAPSHOT)
+            objectKeyFactory.key(fields, REMOTE_LOG_SEGMENT_METADATA, ObjectKeyFactory.Suffix.PRODUCER_SNAPSHOT).value()
         ).isEqualTo("other/topic/7/file.snapshot");
         assertThat(
-            objectKeyFactory.key(fields, REMOTE_LOG_SEGMENT_METADATA, ObjectKeyFactory.Suffix.TXN_INDEX)
+            objectKeyFactory.key(fields, REMOTE_LOG_SEGMENT_METADATA, ObjectKeyFactory.Suffix.TXN_INDEX).value()
         ).isEqualTo("other/topic/7/file.txnindex");
         assertThat(
             objectKeyFactory.key(fields, REMOTE_LOG_SEGMENT_METADATA, ObjectKeyFactory.Suffix.LEADER_EPOCH_CHECKPOINT)
+                .value()
         ).isEqualTo("other/topic/7/file.leader-epoch-checkpoint");
         assertThat(
-            objectKeyFactory.key(fields, REMOTE_LOG_SEGMENT_METADATA, ObjectKeyFactory.Suffix.MANIFEST)
+            objectKeyFactory.key(fields, REMOTE_LOG_SEGMENT_METADATA, ObjectKeyFactory.Suffix.MANIFEST).value()
         ).isEqualTo("other/topic/7/file.rsm-manifest");
     }
 
     @Test
     void nullPrefix() {
         final ObjectKeyFactory objectKeyFactory = new ObjectKeyFactory(null);
-        assertThat(objectKeyFactory.key(REMOTE_LOG_SEGMENT_METADATA, ObjectKeyFactory.Suffix.LOG))
+        assertThat(objectKeyFactory.key(REMOTE_LOG_SEGMENT_METADATA, ObjectKeyFactory.Suffix.LOG).value())
             .isEqualTo(
                 "topic-AAAAAAAAAAAAAAAAAAAAAQ/7/00000000000000001234-AAAAAAAAAAAAAAAAAAAAAA.log");
     }
