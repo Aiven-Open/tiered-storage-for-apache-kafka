@@ -43,7 +43,7 @@ class SegmentCustomMetadataBuilderTest {
                 SEGMENT_ID),
             1, 100, -1, -1, 1L,
             100, Collections.singletonMap(1, 100L));
-    static final ObjectKeyFactory OBJECT_KEY_FACTORY = new ObjectKeyFactory("p1");
+    static final ObjectKeyFactory OBJECT_KEY_FACTORY = new ObjectKeyFactory("p1", false);
 
     @Test
     void shouldBuildEmptyMap() {

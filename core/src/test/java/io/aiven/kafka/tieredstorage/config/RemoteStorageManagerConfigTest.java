@@ -51,6 +51,7 @@ class RemoteStorageManagerConfigTest {
         assertThat(config.encryptionKeyPairId()).isNull();
         assertThat(config.encryptionKeyRing()).isNull();
         assertThat(config.keyPrefix()).isEmpty();
+        assertThat(config.keyPrefixMask()).isFalse();
         assertThat(config.customMetadataKeysIncluded()).isEmpty();
     }
 
@@ -337,5 +338,17 @@ class RemoteStorageManagerConfigTest {
             .isInstanceOf(ConfigException.class)
             .hasMessage("Invalid value unknown for configuration custom.metadata.fields.include: "
                 + "String must be one of: REMOTE_SIZE, OBJECT_PREFIX, OBJECT_KEY");
+    }
+
+    @Test
+    void keyPrefixMasking() {
+        final var config = new RemoteStorageManagerConfig(
+            Map.of(
+                "storage.backend.class", NoopStorageBackend.class.getCanonicalName(),
+                "chunk.size", "123",
+                "key.prefix.mask", "true"
+            )
+        );
+        assertThat(config.keyPrefixMask()).isTrue();
     }
 }

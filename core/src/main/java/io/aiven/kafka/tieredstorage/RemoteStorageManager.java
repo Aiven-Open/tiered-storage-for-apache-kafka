@@ -139,7 +139,7 @@ public class RemoteStorageManager implements org.apache.kafka.server.log.remote.
             .recordLevel(Sensor.RecordingLevel.forName(config.getString(METRICS_RECORDING_LEVEL_CONFIG)));
         metrics = new Metrics(time, metricConfig);
         setStorage(config.storage());
-        objectKeyFactory = new ObjectKeyFactory(config.keyPrefix());
+        objectKeyFactory = new ObjectKeyFactory(config.keyPrefix(), config.keyPrefixMask());
         encryptionEnabled = config.encryptionEnabled();
         if (encryptionEnabled) {
             final Map<String, KeyPair> keyRing = new HashMap<>();

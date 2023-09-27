@@ -20,6 +20,7 @@ import java.io.ByteArrayInputStream;
 import java.io.IOException;
 import java.io.InputStream;
 
+import org.assertj.core.util.Throwables;
 import org.junit.jupiter.api.Test;
 
 import static org.assertj.core.api.Assertions.assertThat;
@@ -152,6 +153,33 @@ public abstract class BaseStorageTest {
         assertThatThrownBy(() -> storage().fetch(new TestObjectKey("non-existing"), BytesRange.of(0, 1)))
             .isInstanceOf(KeyNotFoundException.class)
             .hasMessage("Key non-existing does not exists in storage " + storage());
+    }
+
+    @Test
+    void testFetchNonExistingKeyMasking() {
+        final ObjectKey key = new ObjectKey() {
+            @Override
+            public String value() {
+                return "real-key";
+            }
+
+            @Override
+            public String toString() {
+                return "masked-key";
+            }
+        };
+
+        assertThatThrownBy(() -> storage().fetch(key))
+            .extracting(Throwables::getStackTrace)
+            .asString()
+            .contains("masked-key")
+            .doesNotContain("real-key");
+
+        assertThatThrownBy(() -> storage().fetch(key, BytesRange.of(0, 1)))
+            .extracting(Throwables::getStackTrace)
+            .asString()
+            .contains("masked-key")
+            .doesNotContain("real-key");
     }
 
     @Test

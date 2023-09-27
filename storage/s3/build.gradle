@@ -38,5 +38,8 @@ dependencies {
 
     testImplementation "org.testcontainers:junit-jupiter:$testcontainersVersion"
     testImplementation "org.testcontainers:localstack:$testcontainersVersion"
-    integrationTestImplementation "org.wiremock:wiremock:$wireMockVersion"
+
+    integrationTestImplementation("org.wiremock:wiremock:$wireMockVersion") {
+        exclude group: "org.slf4j"
+    }
 }

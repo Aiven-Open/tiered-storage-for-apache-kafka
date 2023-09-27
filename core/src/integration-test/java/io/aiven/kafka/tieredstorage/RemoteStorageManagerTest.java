@@ -480,7 +480,7 @@ class RemoteStorageManagerTest extends RsaKeyAwareTest {
         );
         rsm.configure(config);
 
-        final ObjectKeyFactory objectKeyFactory = new ObjectKeyFactory("");
+        final ObjectKeyFactory objectKeyFactory = new ObjectKeyFactory("", false);
 
         // Ensure the manifest exists.
         writeManifest(objectKeyFactory);
@@ -510,7 +510,7 @@ class RemoteStorageManagerTest extends RsaKeyAwareTest {
         rsm.configure(config);
 
         // Make sure the exception is connected to the manifest file.
-        final ObjectKeyFactory objectKeyFactory = new ObjectKeyFactory("");
+        final ObjectKeyFactory objectKeyFactory = new ObjectKeyFactory("", false);
         final String expectedMessage = "Key "
             + objectKeyFactory.key(REMOTE_LOG_METADATA, ObjectKeyFactory.Suffix.MANIFEST)
             + " does not exists in storage";
@@ -535,7 +535,7 @@ class RemoteStorageManagerTest extends RsaKeyAwareTest {
         );
         rsm.configure(config);
 
-        final ObjectKeyFactory objectKeyFactory = new ObjectKeyFactory("");
+        final ObjectKeyFactory objectKeyFactory = new ObjectKeyFactory("", false);
 
         // Ensure the manifest exists.
         writeManifest(objectKeyFactory);
@@ -562,7 +562,7 @@ class RemoteStorageManagerTest extends RsaKeyAwareTest {
         rsm.configure(config);
 
         // Make sure the exception is connected to the manifest file.
-        final ObjectKeyFactory objectKeyFactory = new ObjectKeyFactory("");
+        final ObjectKeyFactory objectKeyFactory = new ObjectKeyFactory("", false);
         final String expectedMessage = "Key "
             + objectKeyFactory.key(REMOTE_LOG_METADATA, ObjectKeyFactory.Suffix.MANIFEST)
             + " does not exists in storage";

@@ -48,6 +48,9 @@ public class RemoteStorageManagerConfig extends AbstractConfig {
     private static final String OBJECT_KEY_PREFIX_CONFIG = "key.prefix";
     private static final String OBJECT_KEY_PREFIX_DOC = "The object storage path prefix";
 
+    private static final String OBJECT_KEY_PREFIX_MASK_CONFIG = "key.prefix.mask";
+    private static final String OBJECT_KEY_PREFIX_MASK_DOC = "Whether to mask path prefix in logs";
+
     private static final String SEGMENT_MANIFEST_CACHE_PREFIX = "segment.manifest.cache.";
     private static final String SEGMENT_MANIFEST_CACHE_SIZE_CONFIG = SEGMENT_MANIFEST_CACHE_PREFIX + "size";
     private static final Long SEGMENT_MANIFEST_CACHE_SIZE_DEFAULT = 1000L;  // TODO consider a better default
@@ -113,6 +116,14 @@ public class RemoteStorageManagerConfig extends AbstractConfig {
             new ConfigDef.NonNullValidator(),
             ConfigDef.Importance.HIGH,
             OBJECT_KEY_PREFIX_DOC
+        );
+
+        CONFIG.define(
+            OBJECT_KEY_PREFIX_MASK_CONFIG,
+            ConfigDef.Type.BOOLEAN,
+            false,
+            ConfigDef.Importance.LOW,
+            OBJECT_KEY_PREFIX_MASK_DOC
         );
 
         CONFIG.define(
@@ -333,6 +344,10 @@ public class RemoteStorageManagerConfig extends AbstractConfig {
 
     public String keyPrefix() {
         return getString(OBJECT_KEY_PREFIX_CONFIG);
+    }
+
+    public boolean keyPrefixMask() {
+        return getBoolean(OBJECT_KEY_PREFIX_MASK_CONFIG);
     }
 
     public int chunkSize() {

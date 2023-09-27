@@ -65,7 +65,7 @@ public class FileSystemStorage implements StorageBackend {
             final Path path = fsRoot.resolve(key.value());
             return Files.newInputStream(path);
         } catch (final NoSuchFileException e) {
-            throw new KeyNotFoundException(this, key, e);
+            throw new KeyNotFoundException(this, key);
         } catch (final IOException e) {
             throw new StorageBackendException("Failed to fetch " + key, e);
         }
@@ -86,7 +86,7 @@ public class FileSystemStorage implements StorageBackend {
             final long size = Math.min(range.to, fileSize) - range.from + 1;
             return new BoundedInputStream(chunkContent, size);
         } catch (final NoSuchFileException e) {
-            throw new KeyNotFoundException(this, key, e);
+            throw new KeyNotFoundException(this, key);
         } catch (final IOException e) {
             throw new StorageBackendException("Failed to fetch " + key + ", with range " + range, e);
         }

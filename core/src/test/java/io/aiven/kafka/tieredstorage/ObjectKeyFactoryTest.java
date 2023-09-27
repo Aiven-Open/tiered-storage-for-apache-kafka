@@ -42,7 +42,7 @@ class ObjectKeyFactoryTest {
 
     @Test
     void test() {
-        final ObjectKeyFactory objectKeyFactory = new ObjectKeyFactory("prefix/");
+        final ObjectKeyFactory objectKeyFactory = new ObjectKeyFactory("prefix/", false);
         assertThat(objectKeyFactory.key(REMOTE_LOG_SEGMENT_METADATA, ObjectKeyFactory.Suffix.LOG).value())
             .isEqualTo(
                 "prefix/topic-AAAAAAAAAAAAAAAAAAAAAQ/7/"
@@ -76,7 +76,7 @@ class ObjectKeyFactoryTest {
 
     @Test
     void withCustomFieldsEmpty() {
-        final ObjectKeyFactory objectKeyFactory = new ObjectKeyFactory("prefix/");
+        final ObjectKeyFactory objectKeyFactory = new ObjectKeyFactory("prefix/", false);
         final Map<Integer, Object> fields = Map.of();
         assertThat(
             objectKeyFactory.key(fields, REMOTE_LOG_SEGMENT_METADATA, ObjectKeyFactory.Suffix.LOG).value()
@@ -118,7 +118,7 @@ class ObjectKeyFactoryTest {
 
     @Test
     void withCustomFieldsOnlyPrefix() {
-        final ObjectKeyFactory objectKeyFactory = new ObjectKeyFactory("prefix/");
+        final ObjectKeyFactory objectKeyFactory = new ObjectKeyFactory("prefix/", false);
         final Map<Integer, Object> fields = Map.of(SegmentCustomMetadataField.OBJECT_PREFIX.index(), "other/");
         assertThat(
             objectKeyFactory.key(fields, REMOTE_LOG_SEGMENT_METADATA, ObjectKeyFactory.Suffix.LOG).value()
@@ -160,7 +160,7 @@ class ObjectKeyFactoryTest {
 
     @Test
     void withCustomFieldsOnlyKey() {
-        final ObjectKeyFactory objectKeyFactory = new ObjectKeyFactory("prefix/");
+        final ObjectKeyFactory objectKeyFactory = new ObjectKeyFactory("prefix/", false);
         final Map<Integer, Object> fields = Map.of(SegmentCustomMetadataField.OBJECT_KEY.index(), "topic/7/file");
         assertThat(
             objectKeyFactory.key(fields, REMOTE_LOG_SEGMENT_METADATA, ObjectKeyFactory.Suffix.LOG).value()
@@ -188,7 +188,7 @@ class ObjectKeyFactoryTest {
 
     @Test
     void withCustomFieldsAll() {
-        final ObjectKeyFactory objectKeyFactory = new ObjectKeyFactory("prefix/");
+        final ObjectKeyFactory objectKeyFactory = new ObjectKeyFactory("prefix/", false);
         final Map<Integer, Object> fields = Map.of(
             SegmentCustomMetadataField.OBJECT_PREFIX.index(), "other/",
             SegmentCustomMetadataField.OBJECT_KEY.index(), "topic/7/file");
@@ -218,7 +218,7 @@ class ObjectKeyFactoryTest {
 
     @Test
     void nullPrefix() {
-        final ObjectKeyFactory objectKeyFactory = new ObjectKeyFactory(null);
+        final ObjectKeyFactory objectKeyFactory = new ObjectKeyFactory(null, false);
         assertThat(objectKeyFactory.key(REMOTE_LOG_SEGMENT_METADATA, ObjectKeyFactory.Suffix.LOG).value())
             .isEqualTo(
                 "topic-AAAAAAAAAAAAAAAAAAAAAQ/7/00000000000000001234-AAAAAAAAAAAAAAAAAAAAAA.log");
@@ -246,5 +246,54 @@ class ObjectKeyFactoryTest {
             .isEqualTo(ObjectKeyFactory.Suffix.LEADER_EPOCH_CHECKPOINT)
             .extracting("value")
             .isEqualTo("leader-epoch-checkpoint");
+    }
+
+    @Test
+    void prefixMasking() {
+        final ObjectKeyFactory objectKeyFactory = new ObjectKeyFactory("prefix/", true);
+        assertThat(
+            objectKeyFactory.key(REMOTE_LOG_SEGMENT_METADATA, ObjectKeyFactory.Suffix.LOG)
+        ).hasToString(
+            "<prefix>/topic-AAAAAAAAAAAAAAAAAAAAAQ/7/00000000000000001234-AAAAAAAAAAAAAAAAAAAAAA.log");
+    }
+
+    @Test
+    void prefixMaskingWithCustomFieldsEmpty() {
+        final ObjectKeyFactory objectKeyFactory = new ObjectKeyFactory("real-prefix/", true);
+        final Map<Integer, Object> fields = Map.of();
+        assertThat(
+            objectKeyFactory.key(fields, REMOTE_LOG_SEGMENT_METADATA, ObjectKeyFactory.Suffix.LOG)
+        ).hasToString(
+            "<prefix>/topic-AAAAAAAAAAAAAAAAAAAAAQ/7/00000000000000001234-AAAAAAAAAAAAAAAAAAAAAA.log");
+    }
+
+    @Test
+    void prefixMaskingWithCustomFieldsOnlyPrefix() {
+        final ObjectKeyFactory objectKeyFactory = new ObjectKeyFactory("real-prefix/", true);
+        final Map<Integer, Object> fields = Map.of(SegmentCustomMetadataField.OBJECT_PREFIX.index(), "other/");
+        assertThat(
+            objectKeyFactory.key(fields, REMOTE_LOG_SEGMENT_METADATA, ObjectKeyFactory.Suffix.LOG)
+        ).hasToString(
+            "<prefix>/topic-AAAAAAAAAAAAAAAAAAAAAQ/7/00000000000000001234-AAAAAAAAAAAAAAAAAAAAAA.log");
+    }
+
+    @Test
+    void prefixMaskingWithCustomFieldsOnlyKey() {
+        final ObjectKeyFactory objectKeyFactory = new ObjectKeyFactory("real-prefix/", true);
+        final Map<Integer, Object> fields = Map.of(SegmentCustomMetadataField.OBJECT_KEY.index(), "topic/7/file");
+        assertThat(
+            objectKeyFactory.key(fields, REMOTE_LOG_SEGMENT_METADATA, ObjectKeyFactory.Suffix.LOG)
+        ).hasToString("<prefix>/topic/7/file.log");
+    }
+
+    @Test
+    void prefixMaskingWithCustomFieldsAll() {
+        final ObjectKeyFactory objectKeyFactory = new ObjectKeyFactory("real-prefix/", true);
+        final Map<Integer, Object> fields = Map.of(
+            SegmentCustomMetadataField.OBJECT_PREFIX.index(), "other/",
+            SegmentCustomMetadataField.OBJECT_KEY.index(), "topic/7/file");
+        assertThat(
+            objectKeyFactory.key(fields, REMOTE_LOG_SEGMENT_METADATA, ObjectKeyFactory.Suffix.LOG)
+        ).hasToString("<prefix>/topic/7/file.log");
     }
 }
