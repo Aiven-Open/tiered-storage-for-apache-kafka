@@ -18,6 +18,10 @@ package io.aiven.kafka.tieredstorage.chunkmanager.cache;
 
 import java.io.IOException;
 import java.io.InputStream;
+import java.util.ArrayList;
+import java.util.Collections;
+import java.util.Enumeration;
+import java.util.List;
 import java.util.concurrent.CompletableFuture;
 import java.util.concurrent.CompletionException;
 import java.util.concurrent.ExecutionException;
@@ -65,6 +69,7 @@ public abstract class ChunkCache<T> implements ChunkManager, Configurable {
      * opened right when fetching from cache happens even if the actual value is removed from the cache,
      * the InputStream will still contain the data.
      */
+    @Override
     public InputStream getChunk(final String objectKeyPath,
                                 final SegmentManifest manifest,
                                 final int chunkId) throws StorageBackendException, IOException {
@@ -116,6 +121,40 @@ public abstract class ChunkCache<T> implements ChunkManager, Configurable {
         } catch (final InterruptedException | TimeoutException e) {
             throw new RuntimeException(e);
         }
+    }
+
+    @Override
+    public Enumeration<InputStream> chunksContent(final String objectKeyPath,
+                                                  final SegmentManifest manifest,
+                                                  final int startChunkId,
+                                                  final int endChunkId) throws StorageBackendException, IOException {
+        final var chunks = manifest.chunkIndex().chunks().subList(startChunkId, endChunkId);
+        final List<InputStream> cachedChunks = new ArrayList<>();
+        for (final var chunk: chunks) {
+            final var chunkKey = new ChunkKey(objectKeyPath, chunk.id);
+            final var cached = cache.getIfPresent(chunkKey);
+            if (cached == null) {
+                // fetch all missing range
+                final var r = chunkManager.chunksContent(objectKeyPath, manifest, chunk.id, endChunkId);
+                int i = 0;
+                while (r.hasMoreElements()) {
+                    final var key = new ChunkKey(objectKeyPath, chunk.id + i);
+                    final var content = cacheChunk(key, r.nextElement());
+                    cache.put(key, CompletableFuture.completedFuture(content));
+                    cachedChunks.add(cachedChunkToInputStream(content));
+                    i++;
+                }
+                break;
+            } else {
+                try {
+                    cachedChunks.add(cachedChunkToInputStream(cached.get()));
+                } catch (InterruptedException | ExecutionException e) {
+                    throw new RuntimeException(e);
+                }
+            }
+        }
+        Collections.reverse(cachedChunks);
+        return Collections.enumeration(cachedChunks);
     }
 
     public abstract InputStream cachedChunkToInputStream(final T cachedChunk);

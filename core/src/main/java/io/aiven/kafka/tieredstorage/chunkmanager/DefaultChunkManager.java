@@ -17,6 +17,7 @@
 package io.aiven.kafka.tieredstorage.chunkmanager;
 
 import java.io.InputStream;
+import java.util.Enumeration;
 import java.util.List;
 import java.util.Optional;
 
@@ -24,6 +25,7 @@ import io.aiven.kafka.tieredstorage.Chunk;
 import io.aiven.kafka.tieredstorage.manifest.SegmentEncryptionMetadata;
 import io.aiven.kafka.tieredstorage.manifest.SegmentManifest;
 import io.aiven.kafka.tieredstorage.security.AesEncryptionProvider;
+import io.aiven.kafka.tieredstorage.storage.BytesRange;
 import io.aiven.kafka.tieredstorage.storage.ObjectFetcher;
 import io.aiven.kafka.tieredstorage.storage.StorageBackendException;
 import io.aiven.kafka.tieredstorage.transform.BaseDetransformChunkEnumeration;
@@ -66,5 +68,33 @@ public class DefaultChunkManager implements ChunkManager {
         }
         final DetransformFinisher detransformFinisher = new DetransformFinisher(detransformEnum);
         return detransformFinisher.toInputStream();
+    }
+
+    @Override
+    public Enumeration<InputStream> chunksContent(final String objectKeyPath,
+                                                  final SegmentManifest manifest,
+                                                  final int startChunkId,
+                                                  final int endChunkId) throws StorageBackendException {
+        final var chunkIndex = manifest.chunkIndex();
+        final var fetchRange = BytesRange.of(
+            chunkIndex.chunks().get(startChunkId).range().from,
+            chunkIndex.chunks().get(endChunkId).range().to);
+
+        final InputStream chunkContent = fetcher.fetch(objectKeyPath, fetchRange);
+
+        DetransformChunkEnumeration detransformEnum =
+            new BaseDetransformChunkEnumeration(chunkContent, chunkIndex.chunks().subList(startChunkId, endChunkId));
+        final Optional<SegmentEncryptionMetadata> encryptionMetadata = manifest.encryption();
+        if (encryptionMetadata.isPresent()) {
+            detransformEnum = new DecryptionChunkEnumeration(
+                detransformEnum,
+                encryptionMetadata.get().ivSize(),
+                encryptedChunk -> aesEncryptionProvider.decryptionCipher(encryptedChunk, encryptionMetadata.get())
+            );
+        }
+        if (manifest.compression()) {
+            detransformEnum = new DecompressionChunkEnumeration(detransformEnum);
+        }
+        return new DetransformFinisher(detransformEnum);
     }
 }

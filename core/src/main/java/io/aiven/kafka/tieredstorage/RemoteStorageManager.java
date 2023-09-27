@@ -76,7 +76,6 @@ import io.aiven.kafka.tieredstorage.transform.DecryptionChunkEnumeration;
 import io.aiven.kafka.tieredstorage.transform.DetransformChunkEnumeration;
 import io.aiven.kafka.tieredstorage.transform.DetransformFinisher;
 import io.aiven.kafka.tieredstorage.transform.EncryptionChunkEnumeration;
-import io.aiven.kafka.tieredstorage.transform.FetchChunkEnumeration;
 import io.aiven.kafka.tieredstorage.transform.TransformChunkEnumeration;
 import io.aiven.kafka.tieredstorage.transform.TransformFinisher;
 
@@ -393,8 +392,7 @@ public class RemoteStorageManager implements org.apache.kafka.server.log.remote.
             final var suffix = ObjectKey.Suffix.LOG;
             final var segmentKey = objectKey(remoteLogSegmentMetadata, suffix);
 
-            return new FetchChunkEnumeration(chunkManager, segmentKey, segmentManifest, range)
-                .toInputStream();
+            return new FetchChunkManager(chunkManager, segmentKey, segmentManifest, range).fetch();
         } catch (final Exception e) {
             throw new RemoteStorageException(e);
         }
