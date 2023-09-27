@@ -41,7 +41,7 @@ class FetchChunkEnumerationTest {
     DefaultChunkManager chunkManager;
 
     final FixedSizeChunkIndex chunkIndex = new FixedSizeChunkIndex(10, 100, 10, 100);
-    final SegmentManifest manifest = new SegmentManifestV1(chunkIndex, false, null);
+    final SegmentManifest manifest = new SegmentManifestV1(chunkIndex, false, null, null);
 
     static final byte[] CHUNK_CONTENT = "0123456789".getBytes();
     static final String SEGMENT_KEY_PATH = "topic/segment";
@@ -52,7 +52,7 @@ class FetchChunkEnumerationTest {
     @Test
     void failsWhenLargerStartPosition() {
         // Given
-        final SegmentManifest manifest = new SegmentManifestV1(chunkIndex, false, null);
+        final SegmentManifest manifest = new SegmentManifestV1(chunkIndex, false, null, null);
         // When
         final int from = 1000;
         final int to = from + 1;

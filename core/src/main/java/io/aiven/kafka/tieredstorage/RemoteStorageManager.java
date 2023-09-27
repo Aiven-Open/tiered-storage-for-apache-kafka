@@ -16,8 +16,6 @@
 
 package io.aiven.kafka.tieredstorage;
 
-import javax.crypto.SecretKey;
-
 import java.io.ByteArrayInputStream;
 import java.io.File;
 import java.io.IOException;
@@ -52,8 +50,8 @@ import io.aiven.kafka.tieredstorage.manifest.SegmentManifest;
 import io.aiven.kafka.tieredstorage.manifest.SegmentManifestProvider;
 import io.aiven.kafka.tieredstorage.manifest.SegmentManifestV1;
 import io.aiven.kafka.tieredstorage.manifest.index.ChunkIndex;
-import io.aiven.kafka.tieredstorage.manifest.serde.DataKeyDeserializer;
-import io.aiven.kafka.tieredstorage.manifest.serde.DataKeySerializer;
+import io.aiven.kafka.tieredstorage.manifest.serde.EncryptionSerdeModule;
+import io.aiven.kafka.tieredstorage.manifest.serde.KafkaTypeSerdeModule;
 import io.aiven.kafka.tieredstorage.metadata.SegmentCustomMetadataBuilder;
 import io.aiven.kafka.tieredstorage.metadata.SegmentCustomMetadataField;
 import io.aiven.kafka.tieredstorage.metadata.SegmentCustomMetadataSerde;
@@ -81,7 +79,6 @@ import io.aiven.kafka.tieredstorage.transform.TransformChunkEnumeration;
 import io.aiven.kafka.tieredstorage.transform.TransformFinisher;
 
 import com.fasterxml.jackson.databind.ObjectMapper;
-import com.fasterxml.jackson.databind.module.SimpleModule;
 import com.fasterxml.jackson.datatype.jdk8.Jdk8Module;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
@@ -180,13 +177,9 @@ public class RemoteStorageManager implements org.apache.kafka.server.log.remote.
     private ObjectMapper getObjectMapper() {
         final ObjectMapper objectMapper = new ObjectMapper();
         objectMapper.registerModule(new Jdk8Module());
+        objectMapper.registerModule(KafkaTypeSerdeModule.create());
         if (encryptionEnabled) {
-            final SimpleModule simpleModule = new SimpleModule();
-            simpleModule.addSerializer(SecretKey.class,
-                new DataKeySerializer(rsaEncryptionProvider::encryptDataKey));
-            simpleModule.addDeserializer(SecretKey.class,
-                new DataKeyDeserializer(rsaEncryptionProvider::decryptDataKey));
-            objectMapper.registerModule(simpleModule);
+            objectMapper.registerModule(EncryptionSerdeModule.create(rsaEncryptionProvider));
         }
         return objectMapper;
     }
@@ -229,7 +222,7 @@ public class RemoteStorageManager implements org.apache.kafka.server.log.remote.
 
             final ChunkIndex chunkIndex = transformFinisher.chunkIndex();
             final SegmentManifest segmentManifest =
-                new SegmentManifestV1(chunkIndex, requiresCompression, encryptionMetadata);
+                new SegmentManifestV1(chunkIndex, requiresCompression, encryptionMetadata, remoteLogSegmentMetadata);
             uploadManifest(remoteLogSegmentMetadata, segmentManifest, customMetadataBuilder);
 
             final InputStream offsetIndex = Files.newInputStream(logSegmentData.offsetIndex());

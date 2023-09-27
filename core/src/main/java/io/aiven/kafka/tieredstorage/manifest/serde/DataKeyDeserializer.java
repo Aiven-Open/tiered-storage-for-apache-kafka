@@ -30,10 +30,10 @@ import com.fasterxml.jackson.core.JsonParser;
 import com.fasterxml.jackson.databind.DeserializationContext;
 import com.fasterxml.jackson.databind.deser.std.StdDeserializer;
 
-public class DataKeyDeserializer extends StdDeserializer<SecretKey> {
+class DataKeyDeserializer extends StdDeserializer<SecretKey> {
     private final Function<EncryptedDataKey, byte[]> keyDecryptor;
 
-    public DataKeyDeserializer(final Function<EncryptedDataKey, byte[]> keyDecryptor) {
+    DataKeyDeserializer(final Function<EncryptedDataKey, byte[]> keyDecryptor) {
         super(SecretKey.class);
         this.keyDecryptor = Objects.requireNonNull(keyDecryptor, "keyDecryptor cannot be null");
     }

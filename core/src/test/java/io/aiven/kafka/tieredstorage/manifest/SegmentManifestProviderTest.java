@@ -24,6 +24,7 @@ import java.util.Optional;
 import java.util.concurrent.ForkJoinPool;
 
 import io.aiven.kafka.tieredstorage.manifest.index.FixedSizeChunkIndex;
+import io.aiven.kafka.tieredstorage.manifest.serde.KafkaTypeSerdeModule;
 import io.aiven.kafka.tieredstorage.storage.StorageBackend;
 import io.aiven.kafka.tieredstorage.storage.StorageBackendException;
 
@@ -51,6 +52,7 @@ class SegmentManifestProviderTest {
 
     static {
         MAPPER.registerModule(new Jdk8Module());
+        MAPPER.registerModule(KafkaTypeSerdeModule.create());
     }
 
     static final String MANIFEST =
@@ -94,7 +96,7 @@ class SegmentManifestProviderTest {
             .thenReturn(new ByteArrayInputStream(MANIFEST.getBytes()));
         final SegmentManifestV1 expectedManifest = new SegmentManifestV1(
             new FixedSizeChunkIndex(100, 1000, 110, 110),
-            false, null
+            false, null, null
         );
         assertThat(provider.get(key)).isEqualTo(expectedManifest);
         verify(storage).fetch(key);

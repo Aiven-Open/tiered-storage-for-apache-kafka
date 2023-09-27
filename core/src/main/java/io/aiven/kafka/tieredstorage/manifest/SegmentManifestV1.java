@@ -19,6 +19,8 @@ package io.aiven.kafka.tieredstorage.manifest;
 import java.util.Objects;
 import java.util.Optional;
 
+import org.apache.kafka.server.log.remote.storage.RemoteLogSegmentMetadata;
+
 import io.aiven.kafka.tieredstorage.manifest.index.ChunkIndex;
 
 import com.fasterxml.jackson.annotation.JsonCreator;
@@ -29,6 +31,7 @@ public class SegmentManifestV1 implements SegmentManifest {
     private final ChunkIndex chunkIndex;
     private final boolean compression;
     private final SegmentEncryptionMetadataV1 encryption;
+    private final RemoteLogSegmentMetadata remoteLogSegmentMetadata;
 
     @JsonCreator
     public SegmentManifestV1(@JsonProperty(value = "chunkIndex", required = true)
@@ -37,10 +40,19 @@ public class SegmentManifestV1 implements SegmentManifest {
                              final boolean compression,
                              @JsonProperty("encryption")
                              final SegmentEncryptionMetadataV1 encryption) {
+        this(chunkIndex, compression, encryption, null);
+    }
+
+    public SegmentManifestV1(final ChunkIndex chunkIndex,
+                             final boolean compression,
+                             final SegmentEncryptionMetadataV1 encryption,
+                             final RemoteLogSegmentMetadata remoteLogSegmentMetadata) {
         this.chunkIndex = Objects.requireNonNull(chunkIndex, "chunkIndex cannot be null");
         this.compression = compression;
 
         this.encryption = encryption;
+
+        this.remoteLogSegmentMetadata = remoteLogSegmentMetadata;
     }
 
     @Override
@@ -63,6 +75,13 @@ public class SegmentManifestV1 implements SegmentManifest {
     }
 
     @Override
+    // We don't need to deserialize it
+    @JsonProperty(value = "remoteLogSegmentMetadata", access = JsonProperty.Access.READ_ONLY)
+    public RemoteLogSegmentMetadata remoteLogSegmentMetadata() {
+        return remoteLogSegmentMetadata;
+    }
+
+    @Override
     public boolean equals(final Object o) {
         if (this == o) {
             return true;
@@ -79,6 +98,7 @@ public class SegmentManifestV1 implements SegmentManifest {
         if (!chunkIndex.equals(that.chunkIndex)) {
             return false;
         }
+        // We don't want remoteLogSegmentMetadata to participate in hash code and equality checks.
         return Objects.equals(encryption, that.encryption);
     }
 
@@ -87,6 +107,7 @@ public class SegmentManifestV1 implements SegmentManifest {
         int result = chunkIndex.hashCode();
         result = 31 * result + (compression ? 1 : 0);
         result = 31 * result + (encryption != null ? encryption.hashCode() : 0);
+        // We don't want remoteLogSegmentMetadata to participate in hash code and equality checks.
         return result;
     }
 

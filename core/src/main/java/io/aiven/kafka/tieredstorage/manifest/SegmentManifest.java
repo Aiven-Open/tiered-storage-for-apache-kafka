@@ -18,6 +18,8 @@ package io.aiven.kafka.tieredstorage.manifest;
 
 import java.util.Optional;
 
+import org.apache.kafka.server.log.remote.storage.RemoteLogSegmentMetadata;
+
 import io.aiven.kafka.tieredstorage.manifest.index.ChunkIndex;
 
 import com.fasterxml.jackson.annotation.JsonSubTypes;
@@ -38,4 +40,6 @@ public interface SegmentManifest {
     boolean compression();
 
     Optional<SegmentEncryptionMetadata> encryption();
+
+    RemoteLogSegmentMetadata remoteLogSegmentMetadata();
 }
