@@ -13,7 +13,7 @@
 # See the License for the specific language governing permissions and
 # limitations under the License.
 ##
-VERSION := $(shell grep -oP 'version=\K[^[:space:]]+' gradle.properties)
+VERSION := $(shell grep -o -E '^version=[0-9]+\.[0-9]+\.[0-9]+(-SNAPSHOT)?' gradle.properties | cut -c9-)
 IMAGE_NAME := aivenoy/kafka-with-ts-plugin
 IMAGE_VERSION := latest
 IMAGE_TAG := $(IMAGE_NAME):$(IMAGE_VERSION)
