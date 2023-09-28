@@ -38,31 +38,6 @@ public class MetricsRegistry {
 
     // Segment copy metric names
     static final String SEGMENT_COPY = "segment-copy";
-    static final String SEGMENT_COPY_RATE = SEGMENT_COPY + "-rate";
-    final MetricNameTemplate segmentCopyRequestsRate = new MetricNameTemplate(SEGMENT_COPY_RATE, METRIC_GROUP, "");
-    final MetricNameTemplate segmentCopyRequestsRateByTopic =
-        new MetricNameTemplate(SEGMENT_COPY_RATE, METRIC_GROUP, "", TOPIC_TAG_NAMES);
-    final MetricNameTemplate segmentCopyRequestsRateByTopicPartition =
-        new MetricNameTemplate(SEGMENT_COPY_RATE, METRIC_GROUP, "", TOPIC_PARTITION_TAG_NAMES);
-    static final String SEGMENT_COPY_TOTAL = SEGMENT_COPY + "-total";
-    final MetricNameTemplate segmentCopyRequestsTotal = new MetricNameTemplate(SEGMENT_COPY_TOTAL, METRIC_GROUP, "");
-    final MetricNameTemplate segmentCopyRequestsTotalByTopic =
-        new MetricNameTemplate(SEGMENT_COPY_TOTAL, METRIC_GROUP, "", TOPIC_TAG_NAMES);
-    final MetricNameTemplate segmentCopyRequestsTotalByTopicPartition =
-        new MetricNameTemplate(SEGMENT_COPY_TOTAL, METRIC_GROUP, "", TOPIC_PARTITION_TAG_NAMES);
-    static final String SEGMENT_COPY_BYTES = SEGMENT_COPY + "-bytes";
-    static final String SEGMENT_COPY_BYTES_RATE = SEGMENT_COPY_BYTES + "-rate";
-    final MetricNameTemplate segmentCopyBytesRate = new MetricNameTemplate(SEGMENT_COPY_BYTES_RATE, METRIC_GROUP, "");
-    final MetricNameTemplate segmentCopyBytesRateByTopic =
-        new MetricNameTemplate(SEGMENT_COPY_BYTES_RATE, METRIC_GROUP, "", TOPIC_TAG_NAMES);
-    final MetricNameTemplate segmentCopyBytesRateByTopicPartition =
-        new MetricNameTemplate(SEGMENT_COPY_BYTES_RATE, METRIC_GROUP, "", TOPIC_PARTITION_TAG_NAMES);
-    public static final String SEGMENT_COPY_BYTES_TOTAL = SEGMENT_COPY_BYTES + "-total";
-    final MetricNameTemplate segmentCopyBytesTotal = new MetricNameTemplate(SEGMENT_COPY_BYTES_TOTAL, METRIC_GROUP, "");
-    final MetricNameTemplate segmentCopyBytesTotalByTopic =
-        new MetricNameTemplate(SEGMENT_COPY_BYTES_TOTAL, METRIC_GROUP, "", TOPIC_TAG_NAMES);
-    final MetricNameTemplate segmentCopyBytesTotalByTopicPartition =
-        new MetricNameTemplate(SEGMENT_COPY_BYTES_TOTAL, METRIC_GROUP, "", TOPIC_PARTITION_TAG_NAMES);
     static final String SEGMENT_COPY_TIME = SEGMENT_COPY + "-time";
     static final String SEGMENT_COPY_TIME_AVG = SEGMENT_COPY_TIME + "-avg";
     final MetricNameTemplate segmentCopyTimeAvg = new MetricNameTemplate(SEGMENT_COPY_TIME_AVG, METRIC_GROUP, "");
@@ -76,20 +51,6 @@ public class MetricsRegistry {
         new MetricNameTemplate(SEGMENT_COPY_TIME_MAX, METRIC_GROUP, "", TOPIC_TAG_NAMES);
     final MetricNameTemplate segmentCopyTimeMaxByTopicPartition =
         new MetricNameTemplate(SEGMENT_COPY_TIME_MAX, METRIC_GROUP, "", TOPIC_PARTITION_TAG_NAMES);
-    static final String SEGMENT_COPY_ERRORS = SEGMENT_COPY + "-errors";
-    static final String SEGMENT_COPY_ERRORS_RATE = SEGMENT_COPY_ERRORS + "-rate";
-    final MetricNameTemplate segmentCopyErrorsRate = new MetricNameTemplate(SEGMENT_COPY_ERRORS_RATE, METRIC_GROUP, "");
-    final MetricNameTemplate segmentCopyErrorsRateByTopic =
-        new MetricNameTemplate(SEGMENT_COPY_ERRORS_RATE, METRIC_GROUP, "", TOPIC_TAG_NAMES);
-    final MetricNameTemplate segmentCopyErrorsRateByTopicPartition =
-        new MetricNameTemplate(SEGMENT_COPY_ERRORS_RATE, METRIC_GROUP, "", TOPIC_PARTITION_TAG_NAMES);
-    static final String SEGMENT_COPY_ERRORS_TOTAL = SEGMENT_COPY_ERRORS + "-total";
-    final MetricNameTemplate segmentCopyErrorsTotal =
-        new MetricNameTemplate(SEGMENT_COPY_ERRORS_TOTAL, METRIC_GROUP, "");
-    final MetricNameTemplate segmentCopyErrorsTotalByTopic =
-        new MetricNameTemplate(SEGMENT_COPY_ERRORS_TOTAL, METRIC_GROUP, "", TOPIC_TAG_NAMES);
-    final MetricNameTemplate segmentCopyErrorsTotalByTopicPartition =
-        new MetricNameTemplate(SEGMENT_COPY_ERRORS_TOTAL, METRIC_GROUP, "", TOPIC_PARTITION_TAG_NAMES);
 
     // Segment delete metric names
     static final String SEGMENT_DELETE = "segment-delete";
@@ -156,18 +117,6 @@ public class MetricsRegistry {
 
     // Segment fetch metric names
     static final String SEGMENT_FETCH = "segment-fetch";
-    static final String SEGMENT_FETCH_RATE = SEGMENT_FETCH + "-rate";
-    final MetricNameTemplate segmentFetchRequestsRate = new MetricNameTemplate(SEGMENT_FETCH_RATE, METRIC_GROUP, "");
-    final MetricNameTemplate segmentFetchRequestsRateByTopic =
-        new MetricNameTemplate(SEGMENT_FETCH_RATE, METRIC_GROUP, "", TOPIC_TAG_NAMES);
-    final MetricNameTemplate segmentFetchRequestsRateByTopicPartition =
-        new MetricNameTemplate(SEGMENT_FETCH_RATE, METRIC_GROUP, "", TOPIC_PARTITION_TAG_NAMES);
-    static final String SEGMENT_FETCH_TOTAL = SEGMENT_FETCH + "-total";
-    final MetricNameTemplate segmentFetchRequestsTotal = new MetricNameTemplate(SEGMENT_FETCH_TOTAL, METRIC_GROUP, "");
-    final MetricNameTemplate segmentFetchRequestsTotalByTopic =
-        new MetricNameTemplate(SEGMENT_FETCH_TOTAL, METRIC_GROUP, "", TOPIC_TAG_NAMES);
-    final MetricNameTemplate segmentFetchRequestsTotalByTopicPartition =
-        new MetricNameTemplate(SEGMENT_FETCH_TOTAL, METRIC_GROUP, "", TOPIC_PARTITION_TAG_NAMES);
     static final String SEGMENT_FETCH_REQUESTED_BYTES = SEGMENT_FETCH + "-requested-bytes";
     static final String SEGMENT_FETCH_REQUESTED_BYTES_RATE = SEGMENT_FETCH_REQUESTED_BYTES + "-rate";
     final MetricNameTemplate segmentFetchRequestedBytesRate =
