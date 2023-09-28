@@ -111,6 +111,7 @@ public class RemoteStorageManager implements org.apache.kafka.server.log.remote.
     private boolean compressionHeuristic;
     private boolean encryptionEnabled;
     private int chunkSize;
+    private int partSize;
     private RsaEncryptionProvider rsaEncryptionProvider;
     private AesEncryptionProvider aesEncryptionProvider;
     private ObjectMapper mapper;
@@ -154,6 +155,7 @@ public class RemoteStorageManager implements org.apache.kafka.server.log.remote.
         chunkManagerFactory.configure(configs);
         chunkManager = chunkManagerFactory.initChunkManager(fetcher, aesEncryptionProvider);
         chunkSize = config.chunkSize();
+        partSize = config.fetchPartSize() / chunkSize; // e.g. 16MB/100KB
         compressionEnabled = config.compressionEnabled();
         compressionHeuristic = config.compressionHeuristicEnabled();
 
@@ -422,7 +424,7 @@ public class RemoteStorageManager implements org.apache.kafka.server.log.remote.
                 Math.min(endPosition, remoteLogSegmentMetadata.segmentSizeInBytes() - 1)
             );
 
-            log.trace("Fetching log segment {} with range: {}", remoteLogSegmentMetadata, range);
+            log.debug("Fetching log segment {} with range: {}", remoteLogSegmentMetadata, range);
 
             metrics.recordSegmentFetch(
                 remoteLogSegmentMetadata.remoteLogSegmentId().topicIdPartition().topicPartition(),
@@ -433,7 +435,7 @@ public class RemoteStorageManager implements org.apache.kafka.server.log.remote.
             final var suffix = ObjectKeyFactory.Suffix.LOG;
             final var segmentKey = objectKey(remoteLogSegmentMetadata, suffix);
 
-            return new FetchChunkEnumeration(chunkManager, segmentKey, segmentManifest, range)
+            return new FetchChunkEnumeration(chunkManager, segmentKey, segmentManifest, range, partSize)
                 .toInputStream();
         } catch (final KeyNotFoundException | KeyNotFoundRuntimeException e) {
             throw new RemoteResourceNotFoundException(e);

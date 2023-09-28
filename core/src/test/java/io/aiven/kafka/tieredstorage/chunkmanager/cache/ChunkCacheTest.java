@@ -25,6 +25,7 @@ import java.util.concurrent.ExecutionException;
 
 import org.apache.kafka.server.log.remote.storage.RemoteStorageManager.IndexType;
 
+import io.aiven.kafka.tieredstorage.FetchPart;
 import io.aiven.kafka.tieredstorage.chunkmanager.ChunkKey;
 import io.aiven.kafka.tieredstorage.chunkmanager.ChunkManager;
 import io.aiven.kafka.tieredstorage.manifest.SegmentIndexesV1;
@@ -48,7 +49,6 @@ import static org.assertj.core.api.Assertions.assertThat;
 import static org.assertj.core.api.Assertions.assertThatThrownBy;
 import static org.awaitility.Awaitility.await;
 import static org.mockito.Mockito.any;
-import static org.mockito.Mockito.anyInt;
 import static org.mockito.Mockito.argThat;
 import static org.mockito.Mockito.doAnswer;
 import static org.mockito.Mockito.doCallRealMethod;
@@ -67,7 +67,7 @@ class ChunkCacheTest {
 
     private static final byte[] CHUNK_0 = "0123456789".getBytes();
     private static final byte[] CHUNK_1 = "1011121314".getBytes();
-    private static final FixedSizeChunkIndex FIXED_SIZE_CHUNK_INDEX = new FixedSizeChunkIndex(10, 10, 10, 10);
+    private static final FixedSizeChunkIndex FIXED_SIZE_CHUNK_INDEX = new FixedSizeChunkIndex(10, 20, 12, 24);
     private static final SegmentIndexesV1 SEGMENT_INDEXES = SegmentIndexesV1.builder()
         .add(IndexType.OFFSET, 1)
         .add(IndexType.TIMESTAMP, 1)
@@ -79,8 +79,7 @@ class ChunkCacheTest {
     private static final SegmentManifest SEGMENT_MANIFEST =
         new SegmentManifestV1(FIXED_SIZE_CHUNK_INDEX, SEGMENT_INDEXES, false, null, null);
     private static final String TEST_EXCEPTION_MESSAGE = "test_message";
-    private static final String SEGMENT_KEY = "topic/segment";
-    private static final ObjectKey SEGMENT_OBJECT_KEY = () -> SEGMENT_KEY;
+    private static final ObjectKey SEGMENT_OBJECT_KEY = () -> "topic/segment";
 
     @Mock
     private ChunkManager chunkManager;
@@ -101,13 +100,19 @@ class ChunkCacheTest {
         @Mock
         RemovalListener<ChunkKey, ?> removalListener;
 
+        FetchPart firstPart;
+        FetchPart nextPart;
+
         @BeforeEach
         void setUp() throws Exception {
             doAnswer(invocation -> removalListener).when(chunkCache).removalListener();
-            when(chunkManager.getChunk(SEGMENT_OBJECT_KEY, SEGMENT_MANIFEST, 0))
-                    .thenAnswer(invocation -> new ByteArrayInputStream(CHUNK_0));
-            when(chunkManager.getChunk(SEGMENT_OBJECT_KEY, SEGMENT_MANIFEST, 1))
-                    .thenAnswer(invocation -> new ByteArrayInputStream(CHUNK_1));
+            final var chunkIndex = SEGMENT_MANIFEST.chunkIndex();
+            firstPart = new FetchPart(chunkIndex, chunkIndex.chunks().get(0), 1);
+            when(chunkManager.partChunks(SEGMENT_OBJECT_KEY, SEGMENT_MANIFEST, firstPart))
+                .thenAnswer(invocation -> new ByteArrayInputStream(CHUNK_0));
+            nextPart = firstPart.next().get();
+            when(chunkManager.partChunks(SEGMENT_OBJECT_KEY, SEGMENT_MANIFEST, nextPart))
+                .thenAnswer(invocation -> new ByteArrayInputStream(CHUNK_1));
         }
 
         @Test
@@ -117,17 +122,17 @@ class ChunkCacheTest {
                 "size", "-1"
             ));
 
-            final InputStream chunk0 = chunkCache.getChunk(SEGMENT_OBJECT_KEY, SEGMENT_MANIFEST, 0);
+            final InputStream chunk0 = chunkCache.partChunks(SEGMENT_OBJECT_KEY, SEGMENT_MANIFEST, firstPart);
             assertThat(chunk0).hasBinaryContent(CHUNK_0);
-            verify(chunkManager).getChunk(SEGMENT_OBJECT_KEY, SEGMENT_MANIFEST, 0);
-            final InputStream cachedChunk0 = chunkCache.getChunk(SEGMENT_OBJECT_KEY, SEGMENT_MANIFEST, 0);
+            verify(chunkManager).partChunks(SEGMENT_OBJECT_KEY, SEGMENT_MANIFEST, firstPart);
+            final InputStream cachedChunk0 = chunkCache.partChunks(SEGMENT_OBJECT_KEY, SEGMENT_MANIFEST, firstPart);
             assertThat(cachedChunk0).hasBinaryContent(CHUNK_0);
             verifyNoMoreInteractions(chunkManager);
 
-            final InputStream chunk1 = chunkCache.getChunk(SEGMENT_OBJECT_KEY, SEGMENT_MANIFEST, 1);
+            final InputStream chunk1 = chunkCache.partChunks(SEGMENT_OBJECT_KEY, SEGMENT_MANIFEST, nextPart);
             assertThat(chunk1).hasBinaryContent(CHUNK_1);
-            verify(chunkManager).getChunk(SEGMENT_OBJECT_KEY, SEGMENT_MANIFEST, 1);
-            final InputStream cachedChunk1 = chunkCache.getChunk(SEGMENT_OBJECT_KEY, SEGMENT_MANIFEST, 1);
+            verify(chunkManager).partChunks(SEGMENT_OBJECT_KEY, SEGMENT_MANIFEST, nextPart);
+            final InputStream cachedChunk1 = chunkCache.partChunks(SEGMENT_OBJECT_KEY, SEGMENT_MANIFEST, nextPart);
             assertThat(cachedChunk1).hasBinaryContent(CHUNK_1);
             verifyNoMoreInteractions(chunkManager);
 
@@ -141,20 +146,20 @@ class ChunkCacheTest {
                 "size", "-1"
             ));
 
-            assertThat(chunkCache.getChunk(SEGMENT_OBJECT_KEY, SEGMENT_MANIFEST, 0))
-                    .hasBinaryContent(CHUNK_0);
-            verify(chunkManager).getChunk(SEGMENT_OBJECT_KEY, SEGMENT_MANIFEST, 0);
-            assertThat(chunkCache.getChunk(SEGMENT_OBJECT_KEY, SEGMENT_MANIFEST, 0))
-                    .hasBinaryContent(CHUNK_0);
+            assertThat(chunkCache.partChunks(SEGMENT_OBJECT_KEY, SEGMENT_MANIFEST, firstPart))
+                .hasBinaryContent(CHUNK_0);
+            verify(chunkManager).partChunks(SEGMENT_OBJECT_KEY, SEGMENT_MANIFEST, firstPart);
+            assertThat(chunkCache.partChunks(SEGMENT_OBJECT_KEY, SEGMENT_MANIFEST, firstPart))
+                .hasBinaryContent(CHUNK_0);
             verifyNoMoreInteractions(chunkManager);
 
             Thread.sleep(100);
 
-            assertThat(chunkCache.getChunk(SEGMENT_OBJECT_KEY, SEGMENT_MANIFEST, 1))
-                    .hasBinaryContent(CHUNK_1);
-            verify(chunkManager).getChunk(SEGMENT_OBJECT_KEY, SEGMENT_MANIFEST, 1);
-            assertThat(chunkCache.getChunk(SEGMENT_OBJECT_KEY, SEGMENT_MANIFEST, 1))
-                    .hasBinaryContent(CHUNK_1);
+            assertThat(chunkCache.partChunks(SEGMENT_OBJECT_KEY, SEGMENT_MANIFEST, nextPart))
+                .hasBinaryContent(CHUNK_1);
+            verify(chunkManager).partChunks(SEGMENT_OBJECT_KEY, SEGMENT_MANIFEST, nextPart);
+            assertThat(chunkCache.partChunks(SEGMENT_OBJECT_KEY, SEGMENT_MANIFEST, nextPart))
+                .hasBinaryContent(CHUNK_1);
             verifyNoMoreInteractions(chunkManager);
 
             await().atMost(Duration.ofMillis(5000)).pollInterval(Duration.ofMillis(100))
@@ -166,28 +171,28 @@ class ChunkCacheTest {
                     any(),
                     eq(RemovalCause.EXPIRED));
 
-            assertThat(chunkCache.getChunk(SEGMENT_OBJECT_KEY, SEGMENT_MANIFEST, 0))
-                    .hasBinaryContent(CHUNK_0);
-            verify(chunkManager, times(2)).getChunk(SEGMENT_OBJECT_KEY, SEGMENT_MANIFEST, 0);
+            assertThat(chunkCache.partChunks(SEGMENT_OBJECT_KEY, SEGMENT_MANIFEST, firstPart))
+                .hasBinaryContent(CHUNK_0);
+            verify(chunkManager, times(2)).partChunks(SEGMENT_OBJECT_KEY, SEGMENT_MANIFEST, firstPart);
         }
 
         @Test
         void sizeBasedEviction() throws IOException, StorageBackendException {
             chunkCache.configure(Map.of(
-                    "retention.ms", "-1",
-                    "size", "18"
+                "retention.ms", "-1",
+                "size", "18"
             ));
 
-            assertThat(chunkCache.getChunk(SEGMENT_OBJECT_KEY, SEGMENT_MANIFEST, 0))
-                    .hasBinaryContent(CHUNK_0);
-            verify(chunkManager).getChunk(SEGMENT_OBJECT_KEY, SEGMENT_MANIFEST, 0);
-            assertThat(chunkCache.getChunk(SEGMENT_OBJECT_KEY, SEGMENT_MANIFEST, 0))
-                    .hasBinaryContent(CHUNK_0);
+            assertThat(chunkCache.partChunks(SEGMENT_OBJECT_KEY, SEGMENT_MANIFEST, firstPart))
+                .hasBinaryContent(CHUNK_0);
+            verify(chunkManager).partChunks(SEGMENT_OBJECT_KEY, SEGMENT_MANIFEST, firstPart);
+            assertThat(chunkCache.partChunks(SEGMENT_OBJECT_KEY, SEGMENT_MANIFEST, firstPart))
+                .hasBinaryContent(CHUNK_0);
             verifyNoMoreInteractions(chunkManager);
 
-            assertThat(chunkCache.getChunk(SEGMENT_OBJECT_KEY, SEGMENT_MANIFEST, 1))
-                    .hasBinaryContent(CHUNK_1);
-            verify(chunkManager).getChunk(SEGMENT_OBJECT_KEY, SEGMENT_MANIFEST, 1);
+            assertThat(chunkCache.partChunks(SEGMENT_OBJECT_KEY, SEGMENT_MANIFEST, nextPart))
+                .hasBinaryContent(CHUNK_1);
+            verify(chunkManager).partChunks(SEGMENT_OBJECT_KEY, SEGMENT_MANIFEST, nextPart);
 
             await().atMost(Duration.ofMillis(5000))
                 .pollDelay(Duration.ofSeconds(2))
@@ -196,17 +201,20 @@ class ChunkCacheTest {
 
             verify(removalListener).onRemoval(any(ChunkKey.class), any(), eq(RemovalCause.SIZE));
 
-            assertThat(chunkCache.getChunk(SEGMENT_OBJECT_KEY, SEGMENT_MANIFEST, 0))
-                    .hasBinaryContent(CHUNK_0);
-            assertThat(chunkCache.getChunk(SEGMENT_OBJECT_KEY, SEGMENT_MANIFEST, 1))
-                    .hasBinaryContent(CHUNK_1);
-            verify(chunkManager, times(3)).getChunk(eq(SEGMENT_OBJECT_KEY), eq(SEGMENT_MANIFEST), anyInt());
+            assertThat(chunkCache.partChunks(SEGMENT_OBJECT_KEY, SEGMENT_MANIFEST, firstPart))
+                .hasBinaryContent(CHUNK_0);
+            assertThat(chunkCache.partChunks(SEGMENT_OBJECT_KEY, SEGMENT_MANIFEST, nextPart))
+                .hasBinaryContent(CHUNK_1);
+            verify(chunkManager, times(3)).partChunks(eq(SEGMENT_OBJECT_KEY), eq(SEGMENT_MANIFEST), any());
         }
 
     }
 
     @Nested
     class ErrorHandlingTests {
+        FetchPart firstPart;
+        FetchPart nextPart;
+
         private final Map<String, String> configs = Map.of(
             "retention.ms", "-1",
             "size", "-1"
@@ -215,57 +223,56 @@ class ChunkCacheTest {
         @BeforeEach
         void setUp() {
             chunkCache.configure(configs);
+
+            firstPart = new FetchPart(SEGMENT_MANIFEST.chunkIndex(), SEGMENT_MANIFEST.chunkIndex().chunks().get(0), 1);
+            nextPart = firstPart.next().get();
         }
 
         @Test
         void failedFetching() throws Exception {
-            when(chunkManager.getChunk(eq(SEGMENT_OBJECT_KEY), eq(SEGMENT_MANIFEST), anyInt()))
-                    .thenThrow(new StorageBackendException(TEST_EXCEPTION_MESSAGE))
-                    .thenThrow(new IOException(TEST_EXCEPTION_MESSAGE));
+            when(chunkManager.partChunks(eq(SEGMENT_OBJECT_KEY), eq(SEGMENT_MANIFEST), any()))
+                .thenThrow(new StorageBackendException(TEST_EXCEPTION_MESSAGE))
+                .thenThrow(new IOException(TEST_EXCEPTION_MESSAGE));
 
-            assertThatThrownBy(() -> chunkCache
-                    .getChunk(SEGMENT_OBJECT_KEY, SEGMENT_MANIFEST, 0))
-                    .isInstanceOf(StorageBackendException.class)
-                    .hasMessage(TEST_EXCEPTION_MESSAGE);
-            assertThatThrownBy(() -> chunkCache
-                    .getChunk(SEGMENT_OBJECT_KEY, SEGMENT_MANIFEST, 1))
-                    .isInstanceOf(IOException.class)
-                    .hasMessage(TEST_EXCEPTION_MESSAGE);
+            assertThatThrownBy(() -> chunkCache.partChunks(SEGMENT_OBJECT_KEY, SEGMENT_MANIFEST, firstPart))
+                .isInstanceOf(StorageBackendException.class)
+                .hasMessage(TEST_EXCEPTION_MESSAGE);
+            assertThatThrownBy(() -> chunkCache.partChunks(SEGMENT_OBJECT_KEY, SEGMENT_MANIFEST, nextPart))
+                .isInstanceOf(IOException.class)
+                .hasMessage(TEST_EXCEPTION_MESSAGE);
         }
 
         @Test
         void failedReadingCachedValueWithInterruptedException() throws Exception {
-            when(chunkManager.getChunk(SEGMENT_OBJECT_KEY, SEGMENT_MANIFEST, 0))
-                    .thenReturn(new ByteArrayInputStream(CHUNK_0));
+            when(chunkManager.partChunks(SEGMENT_OBJECT_KEY, SEGMENT_MANIFEST, firstPart))
+                .thenReturn(new ByteArrayInputStream(CHUNK_0));
 
             doCallRealMethod().doAnswer(invocation -> {
                 throw new InterruptedException(TEST_EXCEPTION_MESSAGE);
             }).when(chunkCache).cachedChunkToInputStream(any());
 
-            chunkCache.getChunk(SEGMENT_OBJECT_KEY, SEGMENT_MANIFEST, 0);
-            assertThatThrownBy(() -> chunkCache
-                    .getChunk(SEGMENT_OBJECT_KEY, SEGMENT_MANIFEST, 0))
-                    .isInstanceOf(RuntimeException.class)
-                    .hasCauseInstanceOf(ExecutionException.class)
-                    .hasRootCauseInstanceOf(InterruptedException.class)
-                    .hasRootCauseMessage(TEST_EXCEPTION_MESSAGE);
+            chunkCache.partChunks(SEGMENT_OBJECT_KEY, SEGMENT_MANIFEST, firstPart);
+            assertThatThrownBy(() -> chunkCache.partChunks(SEGMENT_OBJECT_KEY, SEGMENT_MANIFEST, firstPart))
+                .isInstanceOf(RuntimeException.class)
+                .hasCauseInstanceOf(ExecutionException.class)
+                .hasRootCauseInstanceOf(InterruptedException.class)
+                .hasRootCauseMessage(TEST_EXCEPTION_MESSAGE);
         }
 
         @Test
         void failedReadingCachedValueWithExecutionException() throws Exception {
-            when(chunkManager.getChunk(SEGMENT_OBJECT_KEY, SEGMENT_MANIFEST, 0)).thenReturn(
-                    new ByteArrayInputStream(CHUNK_0));
+            when(chunkManager.partChunks(SEGMENT_OBJECT_KEY, SEGMENT_MANIFEST, firstPart)).thenReturn(
+                new ByteArrayInputStream(CHUNK_0));
             doCallRealMethod().doAnswer(invocation -> {
                 throw new ExecutionException(new RuntimeException(TEST_EXCEPTION_MESSAGE));
             }).when(chunkCache).cachedChunkToInputStream(any());
 
-            chunkCache.getChunk(SEGMENT_OBJECT_KEY, SEGMENT_MANIFEST, 0);
-            assertThatThrownBy(() -> chunkCache
-                    .getChunk(SEGMENT_OBJECT_KEY, SEGMENT_MANIFEST, 0))
-                    .isInstanceOf(RuntimeException.class)
-                    .hasCauseInstanceOf(ExecutionException.class)
-                    .hasRootCauseInstanceOf(RuntimeException.class)
-                    .hasRootCauseMessage(TEST_EXCEPTION_MESSAGE);
+            chunkCache.partChunks(SEGMENT_OBJECT_KEY, SEGMENT_MANIFEST, firstPart);
+            assertThatThrownBy(() -> chunkCache.partChunks(SEGMENT_OBJECT_KEY, SEGMENT_MANIFEST, firstPart))
+                .isInstanceOf(RuntimeException.class)
+                .hasCauseInstanceOf(ExecutionException.class)
+                .hasRootCauseInstanceOf(RuntimeException.class)
+                .hasRootCauseMessage(TEST_EXCEPTION_MESSAGE);
         }
     }
 }

@@ -68,6 +68,10 @@ public class RemoteStorageManagerConfig extends AbstractConfig {
     private static final String CHUNK_SIZE_CONFIG = "chunk.size";
     private static final String CHUNK_SIZE_DOC = "The chunk size of log files";
 
+    private static final String FETCH_PART_SIZE_CONFIG = "fetch.part.size";
+    private static final String FETCH_PART_SIZE_DOC = "The size of parts used to fetch from tiered storage. "
+        + "Has to be larger than chunk size.";
+
     private static final String COMPRESSION_ENABLED_CONFIG = "compression.enabled";
     private static final String COMPRESSION_ENABLED_DOC = "Whether to enable compression";
 
@@ -151,6 +155,14 @@ public class RemoteStorageManagerConfig extends AbstractConfig {
             ConfigDef.Range.between(1, Integer.MAX_VALUE / 2),
             ConfigDef.Importance.HIGH,
             CHUNK_SIZE_DOC
+        );
+        CONFIG.define(
+            FETCH_PART_SIZE_CONFIG,
+            ConfigDef.Type.INT,
+            16 * 1024 * 1024, // 16MiB
+            ConfigDef.Range.between(1, Integer.MAX_VALUE),
+            ConfigDef.Importance.MEDIUM,
+            FETCH_PART_SIZE_DOC
         );
 
         CONFIG.define(
@@ -309,7 +321,17 @@ public class RemoteStorageManagerConfig extends AbstractConfig {
     }
 
     private void validate() {
+        validateSizes();
         validateCompression();
+    }
+
+    private void validateSizes() {
+        final var chunkSize = getInt(CHUNK_SIZE_CONFIG);
+        final var fetchPartSize = getInt(FETCH_PART_SIZE_CONFIG);
+        if (chunkSize > fetchPartSize) {
+            throw new ConfigException(FETCH_PART_SIZE_CONFIG + " (" + fetchPartSize + ") "
+                + "must be larger than " + CHUNK_SIZE_CONFIG + " (" + chunkSize + ")");
+        }
     }
 
     private void validateCompression() {
@@ -352,6 +374,10 @@ public class RemoteStorageManagerConfig extends AbstractConfig {
 
     public int chunkSize() {
         return getInt(CHUNK_SIZE_CONFIG);
+    }
+
+    public int fetchPartSize() {
+        return getInt(FETCH_PART_SIZE_CONFIG);
     }
 
     public boolean compressionEnabled() {

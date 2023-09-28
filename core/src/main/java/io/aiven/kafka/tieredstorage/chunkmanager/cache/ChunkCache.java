@@ -29,6 +29,7 @@ import java.util.concurrent.atomic.AtomicReference;
 
 import org.apache.kafka.common.Configurable;
 
+import io.aiven.kafka.tieredstorage.FetchPart;
 import io.aiven.kafka.tieredstorage.chunkmanager.ChunkKey;
 import io.aiven.kafka.tieredstorage.chunkmanager.ChunkManager;
 import io.aiven.kafka.tieredstorage.manifest.SegmentManifest;
@@ -59,17 +60,18 @@ public abstract class ChunkCache<T> implements ChunkManager, Configurable {
     }
 
     /**
-     * Fetches a specific chunk from remote storage and stores into the cache.
+     * Fetches chunks of a specific range defined by {@code Part} from remote storage and stores into the cache.
      * Since it's not possible to cache an opened InputStream, the actual data is cached, and everytime
      * there is a call to cache the InputStream is recreated from the data stored in cache and stored into local
      * variable. This also allows solving the race condition between eviction and fetching. Since the InputStream is
      * opened right when fetching from cache happens even if the actual value is removed from the cache,
      * the InputStream will still contain the data.
      */
-    public InputStream getChunk(final ObjectKey objectKey,
-                                final SegmentManifest manifest,
-                                final int chunkId) throws StorageBackendException, IOException {
-        final ChunkKey chunkKey = new ChunkKey(objectKey.value(), chunkId);
+    @Override
+    public InputStream partChunks(final ObjectKey objectKey,
+                                  final SegmentManifest manifest,
+                                  final FetchPart part) throws StorageBackendException, IOException {
+        final ChunkKey chunkKey = new ChunkKey(objectKey.value(), part.firstChunkId);
         final AtomicReference<InputStream> result = new AtomicReference<>();
         try {
             return cache.asMap()
@@ -77,8 +79,7 @@ public abstract class ChunkCache<T> implements ChunkManager, Configurable {
                     if (val == null) {
                         statsCounter.recordMiss();
                         try {
-                            final InputStream chunk =
-                                chunkManager.getChunk(objectKey, manifest, chunkId);
+                            final InputStream chunk = chunkManager.partChunks(objectKey, manifest, part);
                             final T t = this.cacheChunk(chunkKey, chunk);
                             result.getAndSet(cachedChunkToInputStream(t));
                             return t;

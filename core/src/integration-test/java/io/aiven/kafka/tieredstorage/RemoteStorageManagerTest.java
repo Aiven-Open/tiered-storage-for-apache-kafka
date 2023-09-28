@@ -195,17 +195,22 @@ class RemoteStorageManagerTest extends RsaKeyAwareTest {
         // Configure the RSM.
         final var cacheDir = tmpDir.resolve("cache");
         Files.createDirectories(cacheDir);
-        final Map<String, String> config = new HashMap<>(Map.of(
+        final Map<String, String> config = new HashMap<>();
+        config.putAll(Map.of(
             "chunk.size", Integer.toString(chunkSize),
+            // TODO: make tests with different fetch part size
+            "fetch.part.size", Integer.toString(chunkSize + 1),
             "storage.backend.class", "io.aiven.kafka.tieredstorage.storage.filesystem.FileSystemStorage",
             "key.prefix", "test/",
             "storage.root", targetDir.toString(),
             "compression.enabled", Boolean.toString(compression),
             "encryption.enabled", Boolean.toString(encryption),
+            "custom.metadata.fields.include", "REMOTE_SIZE,OBJECT_PREFIX,OBJECT_KEY"
+        ));
+        config.putAll(Map.of(
             "chunk.cache.class", cacheClass,
             "chunk.cache.path", cacheDir.toString(),
-            "chunk.cache.size", Integer.toString(100 * 1024 * 1024),
-            "custom.metadata.fields.include", "REMOTE_SIZE,OBJECT_PREFIX,OBJECT_KEY"
+            "chunk.cache.size", Integer.toString(100 * 1024 * 1024)
         ));
         if (encryption) {
             config.put("encryption.key.pair.id", KEY_ENCRYPTION_KEY_ID);
@@ -441,18 +446,18 @@ class RemoteStorageManagerTest extends RsaKeyAwareTest {
 
         // Configure the RSM.
         final int chunkSize = 1024 * 1024;
-        final Map<String, ?> config = new HashMap<>() {{
-                put("chunk.size", Integer.toString(chunkSize));
-                put("storage.backend.class",
-                    "io.aiven.kafka.tieredstorage.storage.filesystem.FileSystemStorage");
-                put("key.prefix", "test/");
-                put("storage.root", targetDir.toString());
-                put("compression.enabled", "true");
-                put("compression.heuristic.enabled", "true");
-                put("chunk.cache.size", 10000);
-                put("chunk.cache.class", InMemoryChunkCache.class.getCanonicalName());
-                put("chunk.cache.retention.ms", 10000);
-            }};
+        final Map<String, ?> config = Map.of(
+            "chunk.size", Integer.toString(chunkSize),
+            "storage.backend.class",
+            "io.aiven.kafka.tieredstorage.storage.filesystem.FileSystemStorage",
+            "key.prefix", "test/",
+            "storage.root", targetDir.toString(),
+            "compression.enabled", "true",
+            "compression.heuristic.enabled", "true",
+            "chunk.cache.size", "10000",
+            "chunk.cache.class", InMemoryChunkCache.class.getCanonicalName(),
+            "chunk.cache.retention.ms", "10000"
+        );
 
         rsm.configure(config);
 

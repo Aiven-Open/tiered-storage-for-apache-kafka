@@ -45,6 +45,7 @@ class RemoteStorageManagerConfigTest {
         assertThat(config.segmentManifestCacheSize()).hasValue(1000L);
         assertThat(config.segmentManifestCacheRetention()).hasValue(Duration.ofHours(1));
         assertThat(config.chunkSize()).isEqualTo(123);
+        assertThat(config.fetchPartSize()).isEqualTo(16 * 1024 * 1024);
         assertThat(config.compressionEnabled()).isFalse();
         assertThat(config.compressionHeuristicEnabled()).isFalse();
         assertThat(config.encryptionEnabled()).isFalse();
@@ -53,6 +54,18 @@ class RemoteStorageManagerConfigTest {
         assertThat(config.keyPrefix()).isEmpty();
         assertThat(config.keyPrefixMask()).isFalse();
         assertThat(config.customMetadataKeysIncluded()).isEmpty();
+    }
+
+    @Test
+    void validFetchPartSize() {
+        final var config = new RemoteStorageManagerConfig(
+            Map.of(
+                "storage.backend.class", NoopStorageBackend.class.getCanonicalName(),
+                "chunk.size", "123",
+                "fetch.part.size", "124"
+            )
+        );
+        assertThat(config.fetchPartSize()).isEqualTo(124);
     }
 
     @Test
@@ -276,6 +289,36 @@ class RemoteStorageManagerConfigTest {
             "config2", "123",
             "config3", "true"
         )));
+    }
+
+    @Test
+    void invalidFetchPartSizeRange() {
+        assertThatThrownBy(() -> new RemoteStorageManagerConfig(
+            Map.of(
+                "storage.backend.class", NoopStorageBackend.class.getCanonicalName(),
+                "chunk.size", "10",
+                "fetch.part.size", "0"
+            )
+        )).isInstanceOf(ConfigException.class)
+            .hasMessage("Invalid value 0 for configuration fetch.part.size: Value must be at least 1");
+
+        assertThatThrownBy(() -> new RemoteStorageManagerConfig(
+            Map.of(
+                "storage.backend.class", NoopStorageBackend.class.getCanonicalName(),
+                "chunk.size", "10",
+                "fetch.part.size", Long.toString((long) Integer.MAX_VALUE + 1)
+            )
+        )).isInstanceOf(ConfigException.class)
+            .hasMessage("Invalid value 2147483648 for configuration fetch.part.size: Not a number of type INT");
+
+        assertThatThrownBy(() -> new RemoteStorageManagerConfig(
+            Map.of(
+                "storage.backend.class", NoopStorageBackend.class.getCanonicalName(),
+                "chunk.size", "10",
+                "fetch.part.size", "5"
+            )
+        )).isInstanceOf(ConfigException.class)
+            .hasMessage("fetch.part.size (5) must be larger than chunk.size (10)");
     }
 
     @Test

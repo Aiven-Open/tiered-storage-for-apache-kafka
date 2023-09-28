@@ -73,7 +73,7 @@ class FetchChunkEnumerationSourceInputStreamClosingTest {
         .add(IndexType.TRANSACTION, 1)
         .build();
     static final SegmentManifest SEGMENT_MANIFEST = new SegmentManifestV1(
-        CHUNK_INDEX, SEGMENT_INDEXES, false, null, null);
+        CHUNK_INDEX, SEGMENT_INDEXES, false, null);
 
     TestObjectFetcher fetcher;
 
@@ -90,7 +90,7 @@ class FetchChunkEnumerationSourceInputStreamClosingTest {
         final ChunkManagerFactory chunkManagerFactory = new ChunkManagerFactory();
         chunkManagerFactory.configure(config);
         final ChunkManager chunkManager = chunkManagerFactory.initChunkManager(fetcher, null);
-        final var is = new FetchChunkEnumeration(chunkManager, OBJECT_KEY, SEGMENT_MANIFEST, range)
+        final var is = new FetchChunkEnumeration(chunkManager, OBJECT_KEY, SEGMENT_MANIFEST, range, 1)
             .toInputStream();
         if (readFully) {
             is.readAllBytes();
