@@ -80,7 +80,7 @@ class GcsStorageConfigTest {
     void emptyGcsBucketName() {
         assertThatThrownBy(() -> new GcsStorageConfig(Map.of("gcs.bucket.name", "")))
             .isInstanceOf(ConfigException.class)
-            .hasMessage("Invalid value  for configuration gcs.bucket.name: String must be non-empty");
+            .hasMessage("gcs.bucket.name value must not be empty");
     }
 
     @Test

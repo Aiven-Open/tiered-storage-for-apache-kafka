@@ -64,9 +64,9 @@ class GcsStorageConfig extends AbstractConfig {
         CONFIG = new ConfigDef()
             .define(
                 GCS_BUCKET_NAME_CONFIG,
-                ConfigDef.Type.STRING,
+                ConfigDef.Type.PASSWORD,
                 ConfigDef.NO_DEFAULT_VALUE,
-                new ConfigDef.NonEmptyString(),
+                new NonEmptyPassword(),
                 ConfigDef.Importance.HIGH,
                 GCS_BUCKET_NAME_DOC)
             .define(
@@ -142,7 +142,7 @@ class GcsStorageConfig extends AbstractConfig {
     }
 
     String bucketName() {
-        return getString(GCS_BUCKET_NAME_CONFIG);
+        return getPassword(GCS_BUCKET_NAME_CONFIG).value();
     }
 
     String endpointUrl() {
