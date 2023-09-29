@@ -21,6 +21,9 @@ import java.util.ArrayList;
 import java.util.List;
 import java.util.Random;
 
+import io.aiven.kafka.tieredstorage.storage.ObjectKey;
+import io.aiven.kafka.tieredstorage.storage.TestObjectKey;
+
 import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.Test;
 import org.junit.jupiter.api.extension.ExtendWith;
@@ -51,7 +54,7 @@ import static org.mockito.Mockito.when;
 @ExtendWith(MockitoExtension.class)
 class S3MultiPartOutputStreamTest {
     private static final String BUCKET_NAME = "some_bucket";
-    private static final String FILE_KEY = "some_key";
+    private static final ObjectKey FILE_KEY = new TestObjectKey("some_key");
     private static final String UPLOAD_ID = "some_upload_id";
 
     @Mock
@@ -327,7 +330,7 @@ class S3MultiPartOutputStreamTest {
         assertThat(uploadPartRequest.uploadId()).isEqualTo(UPLOAD_ID);
         assertThat(uploadPartRequest.partNumber()).isEqualTo(expectedPartNumber);
         assertThat(uploadPartRequest.bucket()).isEqualTo(BUCKET_NAME);
-        assertThat(uploadPartRequest.key()).isEqualTo(FILE_KEY);
+        assertThat(uploadPartRequest.key()).isEqualTo(FILE_KEY.value());
         assertThat(requestBody.optionalContentLength()).hasValue(expectedPartSize);
         assertThat(requestBody.contentStreamProvider().newStream()).hasBinaryContent(expectedBytes);
     }
@@ -335,14 +338,14 @@ class S3MultiPartOutputStreamTest {
     private static void assertCompleteMultipartUploadRequest(final CompleteMultipartUploadRequest request,
                                                              final List<CompletedPart> expectedETags) {
         assertThat(request.bucket()).isEqualTo(BUCKET_NAME);
-        assertThat(request.key()).isEqualTo(FILE_KEY);
+        assertThat(request.key()).isEqualTo(FILE_KEY.value());
         assertThat(request.uploadId()).isEqualTo(UPLOAD_ID);
         assertThat(request.multipartUpload().parts()).containsExactlyElementsOf(expectedETags);
     }
 
     private static void assertAbortMultipartUploadRequest(final AbortMultipartUploadRequest request) {
         assertThat(request.bucket()).isEqualTo(BUCKET_NAME);
-        assertThat(request.key()).isEqualTo(FILE_KEY);
+        assertThat(request.key()).isEqualTo(FILE_KEY.value());
         assertThat(request.uploadId()).isEqualTo(UPLOAD_ID);
     }
 }

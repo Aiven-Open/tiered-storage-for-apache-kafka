@@ -17,15 +17,15 @@
 package io.aiven.kafka.tieredstorage.storage;
 
 public class KeyNotFoundException extends StorageBackendException {
-    public KeyNotFoundException(final StorageBackend storage, final String key) {
+    public KeyNotFoundException(final StorageBackend storage, final ObjectKey key) {
         super(getMessage(storage, key));
     }
 
-    public KeyNotFoundException(final StorageBackend storage, final String key, final Exception e) {
+    public KeyNotFoundException(final StorageBackend storage, final ObjectKey key, final Exception e) {
         super(getMessage(storage, key), e);
     }
 
-    private static String getMessage(final StorageBackend storage, final String key) {
+    private static String getMessage(final StorageBackend storage, final ObjectKey key) {
         return "Key " + key + " does not exists in storage " + storage;
     }
 }

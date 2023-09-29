@@ -23,6 +23,7 @@ import org.apache.kafka.common.config.AbstractConfig;
 import org.apache.kafka.common.config.ConfigDef;
 
 import io.aiven.kafka.tieredstorage.storage.BytesRange;
+import io.aiven.kafka.tieredstorage.storage.ObjectKey;
 import io.aiven.kafka.tieredstorage.storage.StorageBackend;
 import io.aiven.kafka.tieredstorage.storage.StorageBackendException;
 
@@ -37,22 +38,22 @@ public class NoopStorageBackend implements StorageBackend {
     }
 
     @Override
-    public long upload(final InputStream inputStream, final String key) throws StorageBackendException {
+    public long upload(final InputStream inputStream, final ObjectKey key) throws StorageBackendException {
         return 0;
     }
 
     @Override
-    public InputStream fetch(final String key) throws StorageBackendException {
+    public InputStream fetch(final ObjectKey key) throws StorageBackendException {
         return null;
     }
 
     @Override
-    public InputStream fetch(final String key, final BytesRange range) throws StorageBackendException {
+    public InputStream fetch(final ObjectKey key, final BytesRange range) throws StorageBackendException {
         return null;
     }
 
     @Override
-    public void delete(final String key) throws StorageBackendException {
+    public void delete(final ObjectKey key) throws StorageBackendException {
     }
 
 

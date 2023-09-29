@@ -24,6 +24,8 @@ import java.io.InputStream;
 import java.lang.management.ManagementFactory;
 import java.util.Map;
 
+import io.aiven.kafka.tieredstorage.storage.TestObjectKey;
+
 import com.github.tomakehurst.wiremock.http.Fault;
 import com.github.tomakehurst.wiremock.junit5.WireMockRuntimeInfo;
 import com.github.tomakehurst.wiremock.junit5.WireMockTest;
@@ -84,7 +86,7 @@ class S3ErrorMetricsTest {
                 .withHeader(CONTENT_TYPE, APPLICATION_XML.getMimeType())
                 .withBody(String.format(ERROR_RESPONSE_TEMPLATE, statusCode))));
         final S3Exception s3Exception = catchThrowableOfType(
-            () -> storage.upload(InputStream.nullInputStream(), "key"),
+            () -> storage.upload(InputStream.nullInputStream(), new TestObjectKey("key")),
             S3Exception.class);
 
         assertThat(s3Exception.statusCode()).isEqualTo(statusCode);
@@ -115,7 +117,7 @@ class S3ErrorMetricsTest {
                 .withHeader(CONTENT_TYPE, APPLICATION_XML.getMimeType())
                 .withBody("unparsable_xml")));
 
-        assertThatThrownBy(() -> storage.upload(InputStream.nullInputStream(), "key"))
+        assertThatThrownBy(() -> storage.upload(InputStream.nullInputStream(), new TestObjectKey("key")))
             .isInstanceOf(SdkClientException.class)
             .hasMessage("Could not parse XML response.");
 
@@ -140,7 +142,7 @@ class S3ErrorMetricsTest {
 
         stubFor(any(anyUrl()).willReturn(aResponse().withFixedDelay(100)));
 
-        assertThatThrownBy(() -> storage.fetch("key"))
+        assertThatThrownBy(() -> storage.fetch(new TestObjectKey("key")))
             .isInstanceOf(ApiCallAttemptTimeoutException.class)
             .hasMessage("HTTP request execution did not complete before the specified timeout configuration: 1 millis");
 
@@ -169,7 +171,7 @@ class S3ErrorMetricsTest {
                 .withStatus(HttpStatusCode.OK)
                 .withFault(Fault.RANDOM_DATA_THEN_CLOSE)));
 
-        assertThatThrownBy(() -> storage.fetch("key"))
+        assertThatThrownBy(() -> storage.fetch(new TestObjectKey("key")))
             .isInstanceOf(SdkClientException.class)
             .hasMessage("Unable to execute HTTP request: null");
 

@@ -24,7 +24,9 @@ import io.aiven.kafka.tieredstorage.manifest.SegmentManifest;
 import io.aiven.kafka.tieredstorage.manifest.SegmentManifestV1;
 import io.aiven.kafka.tieredstorage.manifest.index.FixedSizeChunkIndex;
 import io.aiven.kafka.tieredstorage.storage.BytesRange;
+import io.aiven.kafka.tieredstorage.storage.ObjectKey;
 import io.aiven.kafka.tieredstorage.storage.StorageBackendException;
+import io.aiven.kafka.tieredstorage.storage.TestObjectKey;
 
 import org.junit.jupiter.api.Test;
 import org.junit.jupiter.api.extension.ExtendWith;
@@ -44,7 +46,7 @@ class FetchChunkEnumerationTest {
     final SegmentManifest manifest = new SegmentManifestV1(chunkIndex, false, null, null);
 
     static final byte[] CHUNK_CONTENT = "0123456789".getBytes();
-    static final String SEGMENT_KEY_PATH = "topic/segment";
+    static final ObjectKey SEGMENT_KEY = new TestObjectKey("topic/segment");
 
     // Test scenarios
     // - Initialization
@@ -58,7 +60,7 @@ class FetchChunkEnumerationTest {
         final int to = from + 1;
         // Then
         assertThatThrownBy(
-            () -> new FetchChunkEnumeration(chunkManager, SEGMENT_KEY_PATH, manifest, BytesRange.of(from, to)))
+            () -> new FetchChunkEnumeration(chunkManager, SEGMENT_KEY, manifest, BytesRange.of(from, to)))
             .hasMessage("Invalid start position " + from + " in segment path topic/segment");
     }
 
@@ -71,7 +73,7 @@ class FetchChunkEnumerationTest {
         final int to = 80;
         // Then
         final FetchChunkEnumeration fetchChunk =
-            new FetchChunkEnumeration(chunkManager, SEGMENT_KEY_PATH, manifest, BytesRange.of(from, to));
+            new FetchChunkEnumeration(chunkManager, SEGMENT_KEY, manifest, BytesRange.of(from, to));
         assertThat(fetchChunk.startChunkId).isEqualTo(0);
         assertThat(fetchChunk.lastChunkId).isEqualTo(8);
     }
@@ -84,7 +86,7 @@ class FetchChunkEnumerationTest {
         final int from = 0;
         final int to = 110;
         final FetchChunkEnumeration fetchChunk =
-            new FetchChunkEnumeration(chunkManager, SEGMENT_KEY_PATH, manifest, BytesRange.of(from, to));
+            new FetchChunkEnumeration(chunkManager, SEGMENT_KEY, manifest, BytesRange.of(from, to));
         // Then
         assertThat(fetchChunk.startChunkId).isEqualTo(0);
         assertThat(fetchChunk.lastChunkId).isEqualTo(9);
@@ -98,8 +100,8 @@ class FetchChunkEnumerationTest {
         final int from = 32;
         final int to = 34;
         final FetchChunkEnumeration fetchChunk =
-            new FetchChunkEnumeration(chunkManager, SEGMENT_KEY_PATH, manifest, BytesRange.of(from, to));
-        when(chunkManager.getChunk(SEGMENT_KEY_PATH, manifest, fetchChunk.currentChunkId))
+            new FetchChunkEnumeration(chunkManager, SEGMENT_KEY, manifest, BytesRange.of(from, to));
+        when(chunkManager.getChunk(SEGMENT_KEY, manifest, fetchChunk.currentChunkId))
             .thenReturn(new ByteArrayInputStream(CHUNK_CONTENT));
         // Then
         assertThat(fetchChunk.startChunkId).isEqualTo(fetchChunk.lastChunkId);
@@ -116,12 +118,12 @@ class FetchChunkEnumerationTest {
         final int from = 15;
         final int to = 34;
         final FetchChunkEnumeration fetchChunk =
-            new FetchChunkEnumeration(chunkManager, SEGMENT_KEY_PATH, manifest, BytesRange.of(from, to));
-        when(chunkManager.getChunk(SEGMENT_KEY_PATH, manifest, 1))
+            new FetchChunkEnumeration(chunkManager, SEGMENT_KEY, manifest, BytesRange.of(from, to));
+        when(chunkManager.getChunk(SEGMENT_KEY, manifest, 1))
             .thenReturn(new ByteArrayInputStream(CHUNK_CONTENT));
-        when(chunkManager.getChunk(SEGMENT_KEY_PATH, manifest, 2))
+        when(chunkManager.getChunk(SEGMENT_KEY, manifest, 2))
             .thenReturn(new ByteArrayInputStream(CHUNK_CONTENT));
-        when(chunkManager.getChunk(SEGMENT_KEY_PATH, manifest, 3))
+        when(chunkManager.getChunk(SEGMENT_KEY, manifest, 3))
             .thenReturn(new ByteArrayInputStream(CHUNK_CONTENT));
         // Then
         assertThat(fetchChunk.startChunkId).isNotEqualTo(fetchChunk.lastChunkId);

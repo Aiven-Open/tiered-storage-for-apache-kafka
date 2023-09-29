@@ -25,6 +25,7 @@ import java.util.concurrent.ForkJoinPool;
 
 import io.aiven.kafka.tieredstorage.manifest.index.FixedSizeChunkIndex;
 import io.aiven.kafka.tieredstorage.manifest.serde.KafkaTypeSerdeModule;
+import io.aiven.kafka.tieredstorage.storage.ObjectKey;
 import io.aiven.kafka.tieredstorage.storage.StorageBackend;
 import io.aiven.kafka.tieredstorage.storage.StorageBackendException;
 
@@ -39,7 +40,7 @@ import org.mockito.junit.jupiter.MockitoExtension;
 import static org.assertj.core.api.Assertions.assertThat;
 import static org.assertj.core.api.Assertions.assertThatNoException;
 import static org.assertj.core.api.Assertions.assertThatThrownBy;
-import static org.mockito.ArgumentMatchers.anyString;
+import static org.mockito.ArgumentMatchers.any;
 import static org.mockito.Mockito.doAnswer;
 import static org.mockito.Mockito.verify;
 import static org.mockito.Mockito.verifyNoMoreInteractions;
@@ -48,7 +49,7 @@ import static org.mockito.Mockito.when;
 @ExtendWith(MockitoExtension.class)
 class SegmentManifestProviderTest {
     static final ObjectMapper MAPPER = new ObjectMapper();
-    public static final String MANIFEST_KEY = "topic/manifest";
+    public static final ObjectKey MANIFEST_KEY = () -> "topic/manifest";
 
     static {
         MAPPER.registerModule(new Jdk8Module());
@@ -91,7 +92,8 @@ class SegmentManifestProviderTest {
 
     @Test
     void shouldReturnAndCache() throws StorageBackendException, IOException {
-        final String key = "topic-AAAAAAAAAAAAAAAAAAAAAQ/7/00000000000000000023-AAAAAAAAAAAAAAAAAAAAAA.rsm-manifest";
+        final ObjectKey key =
+            () -> "topic-AAAAAAAAAAAAAAAAAAAAAQ/7/00000000000000000023-AAAAAAAAAAAAAAAAAAAAAA.rsm-manifest";
         when(storage.fetch(key))
             .thenReturn(new ByteArrayInputStream(MANIFEST.getBytes()));
         final SegmentManifestV1 expectedManifest = new SegmentManifestV1(
@@ -106,7 +108,7 @@ class SegmentManifestProviderTest {
 
     @Test
     void shouldPropagateStorageBackendException() throws StorageBackendException {
-        when(storage.fetch(anyString()))
+        when(storage.fetch(any()))
             .thenThrow(new StorageBackendException("test"));
         assertThatThrownBy(() -> provider.get(MANIFEST_KEY))
             .isInstanceOf(StorageBackendException.class)
@@ -118,7 +120,7 @@ class SegmentManifestProviderTest {
         doAnswer(invocation -> {
             throw new IOException("test");
         }).when(isMock).close();
-        when(storage.fetch(anyString()))
+        when(storage.fetch(any()))
             .thenReturn(isMock);
         assertThatThrownBy(() -> provider.get(MANIFEST_KEY))
             .isInstanceOf(IOException.class)

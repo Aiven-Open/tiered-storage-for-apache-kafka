@@ -30,7 +30,7 @@ import org.apache.kafka.common.metrics.stats.Max;
 import org.apache.kafka.common.metrics.stats.Rate;
 import org.apache.kafka.common.utils.Time;
 
-import io.aiven.kafka.tieredstorage.ObjectKey;
+import io.aiven.kafka.tieredstorage.ObjectKeyFactory;
 
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
@@ -210,14 +210,14 @@ public class Metrics {
             .record(bytes);
     }
 
-    public void recordObjectUpload(final TopicPartition topicPartition, final ObjectKey.Suffix suffix,
+    public void recordObjectUpload(final TopicPartition topicPartition, final ObjectKeyFactory.Suffix suffix,
                                    final long bytes) {
         recordObjectUploadRequests(topicPartition, suffix);
         recordObjectUploadBytes(topicPartition, suffix, bytes);
     }
 
     private void recordObjectUploadBytes(final TopicPartition topicPartition,
-                                         final ObjectKey.Suffix suffix,
+                                         final ObjectKeyFactory.Suffix suffix,
                                          final long bytes) {
         new SensorProvider(metrics, sensorName(OBJECT_UPLOAD_BYTES))
             .with(metricsRegistry.objectUploadBytesRate, new Rate())
@@ -258,7 +258,7 @@ public class Metrics {
             .record(bytes);
     }
 
-    private void recordObjectUploadRequests(final TopicPartition topicPartition, final ObjectKey.Suffix suffix) {
+    private void recordObjectUploadRequests(final TopicPartition topicPartition, final ObjectKeyFactory.Suffix suffix) {
         new SensorProvider(metrics, sensorName(OBJECT_UPLOAD))
             .with(metricsRegistry.objectUploadRequestsRate, new Rate())
             .with(metricsRegistry.objectUploadRequestsTotal, new CumulativeCount())

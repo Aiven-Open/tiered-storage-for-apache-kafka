@@ -30,13 +30,14 @@ import io.aiven.kafka.tieredstorage.manifest.SegmentManifest;
 import io.aiven.kafka.tieredstorage.manifest.index.ChunkIndex;
 import io.aiven.kafka.tieredstorage.storage.BytesRange;
 import io.aiven.kafka.tieredstorage.storage.KeyNotFoundException;
+import io.aiven.kafka.tieredstorage.storage.ObjectKey;
 import io.aiven.kafka.tieredstorage.storage.StorageBackendException;
 
 import org.apache.commons.io.input.BoundedInputStream;
 
 public class FetchChunkEnumeration implements Enumeration<InputStream> {
     private final ChunkManager chunkManager;
-    private final String objectKeyPath;
+    private final ObjectKey objectKey;
     private final SegmentManifest manifest;
     private final BytesRange range;
     final int startChunkId;
@@ -48,16 +49,16 @@ public class FetchChunkEnumeration implements Enumeration<InputStream> {
     /**
      *
      * @param chunkManager provides chunk input to fetch from
-     * @param objectKeyPath required by chunkManager
+     * @param objectKey required by chunkManager
      * @param manifest provides to index to build response from
      * @param range original offset range start/end position
      */
     public FetchChunkEnumeration(final ChunkManager chunkManager,
-                                 final String objectKeyPath,
+                                 final ObjectKey objectKey,
                                  final SegmentManifest manifest,
                                  final BytesRange range) {
         this.chunkManager = Objects.requireNonNull(chunkManager, "chunkManager cannot be null");
-        this.objectKeyPath = Objects.requireNonNull(objectKeyPath, "objectKeyPath cannot be null");
+        this.objectKey = Objects.requireNonNull(objectKey, "objectKey cannot be null");
         this.manifest = Objects.requireNonNull(manifest, "manifest cannot be null");
         this.range = Objects.requireNonNull(range, "range cannot be null");
 
@@ -74,7 +75,7 @@ public class FetchChunkEnumeration implements Enumeration<InputStream> {
         final Chunk firstChunk = chunkIndex.findChunkForOriginalOffset(fromPosition);
         if (firstChunk == null) {
             throw new IllegalArgumentException("Invalid start position " + fromPosition
-                + " in segment path " + objectKeyPath);
+                + " in segment path " + objectKey);
         }
         return firstChunk;
     }
@@ -137,7 +138,7 @@ public class FetchChunkEnumeration implements Enumeration<InputStream> {
 
     private InputStream getChunkContent(final int chunkId) {
         try {
-            return chunkManager.getChunk(objectKeyPath, manifest, chunkId);
+            return chunkManager.getChunk(objectKey, manifest, chunkId);
         } catch (final KeyNotFoundException e) {
             throw new KeyNotFoundRuntimeException(e);
         } catch (final StorageBackendException | IOException e) {

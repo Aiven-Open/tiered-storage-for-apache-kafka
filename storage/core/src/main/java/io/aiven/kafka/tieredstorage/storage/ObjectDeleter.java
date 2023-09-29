@@ -22,5 +22,5 @@ public interface ObjectDeleter {
      *
      * <p>If the object doesn't exist, the operation still succeeds as it is idempotent.
      */
-    void delete(String key) throws StorageBackendException;
+    void delete(ObjectKey key) throws StorageBackendException;
 }

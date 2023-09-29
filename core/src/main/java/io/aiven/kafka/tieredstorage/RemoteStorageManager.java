@@ -64,6 +64,7 @@ import io.aiven.kafka.tieredstorage.storage.BytesRange;
 import io.aiven.kafka.tieredstorage.storage.KeyNotFoundException;
 import io.aiven.kafka.tieredstorage.storage.ObjectDeleter;
 import io.aiven.kafka.tieredstorage.storage.ObjectFetcher;
+import io.aiven.kafka.tieredstorage.storage.ObjectKey;
 import io.aiven.kafka.tieredstorage.storage.ObjectUploader;
 import io.aiven.kafka.tieredstorage.storage.StorageBackend;
 import io.aiven.kafka.tieredstorage.storage.StorageBackendException;
@@ -113,7 +114,7 @@ public class RemoteStorageManager implements org.apache.kafka.server.log.remote.
     private AesEncryptionProvider aesEncryptionProvider;
     private ObjectMapper mapper;
     private ChunkManager chunkManager;
-    private ObjectKey objectKey;
+    private ObjectKeyFactory objectKeyFactory;
     private SegmentCustomMetadataSerde customMetadataSerde;
     private Set<SegmentCustomMetadataField> customMetadataFields;
 
@@ -138,7 +139,7 @@ public class RemoteStorageManager implements org.apache.kafka.server.log.remote.
             .recordLevel(Sensor.RecordingLevel.forName(config.getString(METRICS_RECORDING_LEVEL_CONFIG)));
         metrics = new Metrics(time, metricConfig);
         setStorage(config.storage());
-        objectKey = new ObjectKey(config.keyPrefix());
+        objectKeyFactory = new ObjectKeyFactory(config.keyPrefix(), config.keyPrefixMask());
         encryptionEnabled = config.encryptionEnabled();
         if (encryptionEnabled) {
             final Map<String, KeyPair> keyRing = new HashMap<>();
@@ -195,7 +196,7 @@ public class RemoteStorageManager implements org.apache.kafka.server.log.remote.
         log.info("Copying log segment data, metadata: {}", remoteLogSegmentMetadata);
 
         final var customMetadataBuilder =
-            new SegmentCustomMetadataBuilder(customMetadataFields, objectKey, remoteLogSegmentMetadata);
+            new SegmentCustomMetadataBuilder(customMetadataFields, objectKeyFactory, remoteLogSegmentMetadata);
 
         final long startedMs = time.milliseconds();
 
@@ -286,15 +287,15 @@ public class RemoteStorageManager implements org.apache.kafka.server.log.remote.
                                   final TransformFinisher transformFinisher,
                                   final SegmentCustomMetadataBuilder customMetadataBuilder)
         throws IOException, StorageBackendException {
-        final String fileKey = objectKey.key(remoteLogSegmentMetadata, ObjectKey.Suffix.LOG);
+        final ObjectKey fileKey = objectKeyFactory.key(remoteLogSegmentMetadata, ObjectKeyFactory.Suffix.LOG);
         try (final var sis = transformFinisher.toInputStream()) {
             final var bytes = uploader.upload(sis, fileKey);
             metrics.recordObjectUpload(
                 remoteLogSegmentMetadata.remoteLogSegmentId().topicIdPartition().topicPartition(),
-                ObjectKey.Suffix.LOG,
+                ObjectKeyFactory.Suffix.LOG,
                 bytes
             );
-            customMetadataBuilder.addUploadResult(ObjectKey.Suffix.LOG, bytes);
+            customMetadataBuilder.addUploadResult(ObjectKeyFactory.Suffix.LOG, bytes);
 
             log.debug("Uploaded segment log for {}, size: {}", remoteLogSegmentMetadata, bytes);
         }
@@ -316,8 +317,8 @@ public class RemoteStorageManager implements org.apache.kafka.server.log.remote.
         final TransformFinisher transformFinisher =
             new TransformFinisher(transformEnum);
 
-        final var suffix = ObjectKey.Suffix.fromIndexType(indexType);
-        final String key = objectKey.key(remoteLogSegmentMetadata, suffix);
+        final var suffix = ObjectKeyFactory.Suffix.fromIndexType(indexType);
+        final ObjectKey key = objectKeyFactory.key(remoteLogSegmentMetadata, suffix);
         try (final var in = transformFinisher.toInputStream()) {
             final var bytes = uploader.upload(in, key);
             metrics.recordObjectUpload(
@@ -336,16 +337,17 @@ public class RemoteStorageManager implements org.apache.kafka.server.log.remote.
                                 final SegmentCustomMetadataBuilder customMetadataBuilder)
         throws StorageBackendException, IOException {
         final String manifest = mapper.writeValueAsString(segmentManifest);
-        final String manifestFileKey = objectKey.key(remoteLogSegmentMetadata, ObjectKey.Suffix.MANIFEST);
+        final ObjectKey manifestObjectKey =
+            objectKeyFactory.key(remoteLogSegmentMetadata, ObjectKeyFactory.Suffix.MANIFEST);
 
         try (final ByteArrayInputStream manifestContent = new ByteArrayInputStream(manifest.getBytes())) {
-            final var bytes = uploader.upload(manifestContent, manifestFileKey);
+            final var bytes = uploader.upload(manifestContent, manifestObjectKey);
             metrics.recordObjectUpload(
                 remoteLogSegmentMetadata.remoteLogSegmentId().topicIdPartition().topicPartition(),
-                ObjectKey.Suffix.MANIFEST,
+                ObjectKeyFactory.Suffix.MANIFEST,
                 bytes
             );
-            customMetadataBuilder.addUploadResult(ObjectKey.Suffix.MANIFEST, bytes);
+            customMetadataBuilder.addUploadResult(ObjectKeyFactory.Suffix.MANIFEST, bytes);
 
             log.debug("Uploaded segment manifest for {}, size: {}", remoteLogSegmentMetadata, bytes);
         }
@@ -379,7 +381,7 @@ public class RemoteStorageManager implements org.apache.kafka.server.log.remote.
 
             final var segmentManifest = fetchSegmentManifest(remoteLogSegmentMetadata);
 
-            final var suffix = ObjectKey.Suffix.LOG;
+            final var suffix = ObjectKeyFactory.Suffix.LOG;
             final var segmentKey = objectKey(remoteLogSegmentMetadata, suffix);
 
             return new FetchChunkEnumeration(chunkManager, segmentKey, segmentManifest, range)
@@ -399,7 +401,7 @@ public class RemoteStorageManager implements org.apache.kafka.server.log.remote.
 
             final var segmentManifest = fetchSegmentManifest(remoteLogSegmentMetadata);
 
-            final var key = objectKey(remoteLogSegmentMetadata, ObjectKey.Suffix.fromIndexType(indexType));
+            final var key = objectKey(remoteLogSegmentMetadata, ObjectKeyFactory.Suffix.fromIndexType(indexType));
             final var in = fetcher.fetch(key);
 
             DetransformChunkEnumeration detransformEnum = new BaseDetransformChunkEnumeration(in);
@@ -420,21 +422,22 @@ public class RemoteStorageManager implements org.apache.kafka.server.log.remote.
         }
     }
 
-    private String objectKey(final RemoteLogSegmentMetadata remoteLogSegmentMetadata, final ObjectKey.Suffix suffix) {
-        final String segmentKey;
+    private ObjectKey objectKey(final RemoteLogSegmentMetadata remoteLogSegmentMetadata,
+                                final ObjectKeyFactory.Suffix suffix) {
+        final ObjectKey segmentKey;
         if (remoteLogSegmentMetadata.customMetadata().isPresent()) {
             final var customMetadataBytes = remoteLogSegmentMetadata.customMetadata().get();
             final var fields = customMetadataSerde.deserialize(customMetadataBytes.value());
-            segmentKey = objectKey.key(fields, remoteLogSegmentMetadata, suffix);
+            segmentKey = objectKeyFactory.key(fields, remoteLogSegmentMetadata, suffix);
         } else {
-            segmentKey = objectKey.key(remoteLogSegmentMetadata, suffix);
+            segmentKey = objectKeyFactory.key(remoteLogSegmentMetadata, suffix);
         }
         return segmentKey;
     }
 
     private SegmentManifest fetchSegmentManifest(final RemoteLogSegmentMetadata remoteLogSegmentMetadata)
         throws StorageBackendException, IOException {
-        final String manifestKey = objectKey.key(remoteLogSegmentMetadata, ObjectKey.Suffix.MANIFEST);
+        final ObjectKey manifestKey = objectKeyFactory.key(remoteLogSegmentMetadata, ObjectKeyFactory.Suffix.MANIFEST);
         return segmentManifestProvider.get(manifestKey);
     }
 
@@ -450,8 +453,8 @@ public class RemoteStorageManager implements org.apache.kafka.server.log.remote.
         final long startedMs = time.milliseconds();
 
         try {
-            for (final ObjectKey.Suffix suffix : ObjectKey.Suffix.values()) {
-                final String key = objectKey.key(remoteLogSegmentMetadata, suffix);
+            for (final ObjectKeyFactory.Suffix suffix : ObjectKeyFactory.Suffix.values()) {
+                final ObjectKey key = objectKeyFactory.key(remoteLogSegmentMetadata, suffix);
                 deleter.delete(key);
             }
         } catch (final Exception e) {

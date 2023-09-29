@@ -24,6 +24,8 @@ import java.nio.ByteBuffer;
 import java.util.ArrayList;
 import java.util.List;
 
+import io.aiven.kafka.tieredstorage.storage.ObjectKey;
+
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 import software.amazon.awssdk.core.sync.RequestBody;
@@ -52,7 +54,7 @@ public class S3MultiPartOutputStream extends OutputStream {
     private final S3Client client;
     private final ByteBuffer partBuffer;
     private final String bucketName;
-    private final String key;
+    private final ObjectKey key;
     final int partSize;
 
     private final String uploadId;
@@ -62,7 +64,7 @@ public class S3MultiPartOutputStream extends OutputStream {
     private long processedBytes;
 
     public S3MultiPartOutputStream(final String bucketName,
-                                   final String key,
+                                   final ObjectKey key,
                                    final int partSize,
                                    final S3Client client) {
         this.bucketName = bucketName;
@@ -71,7 +73,7 @@ public class S3MultiPartOutputStream extends OutputStream {
         this.partSize = partSize;
         this.partBuffer = ByteBuffer.allocate(partSize);
         final CreateMultipartUploadRequest initialRequest = CreateMultipartUploadRequest.builder().bucket(bucketName)
-            .key(key).build();
+            .key(key.value()).build();
         final CreateMultipartUploadResponse initiateResult = client.createMultipartUpload(initialRequest);
         log.debug("Create new multipart upload request: {}", initiateResult.uploadId());
         this.uploadId = initiateResult.uploadId();
@@ -147,7 +149,7 @@ public class S3MultiPartOutputStream extends OutputStream {
             .build();
         final var request = CompleteMultipartUploadRequest.builder()
             .bucket(bucketName)
-            .key(key)
+            .key(key.value())
             .uploadId(uploadId)
             .multipartUpload(completedMultipartUpload)
             .build();
@@ -158,7 +160,7 @@ public class S3MultiPartOutputStream extends OutputStream {
     private void abortUpload() {
         final var request = AbortMultipartUploadRequest.builder()
             .bucket(bucketName)
-            .key(key)
+            .key(key.value())
             .uploadId(uploadId)
             .build();
         client.abortMultipartUpload(request);
@@ -177,7 +179,7 @@ public class S3MultiPartOutputStream extends OutputStream {
         final UploadPartRequest uploadPartRequest =
             UploadPartRequest.builder()
                 .bucket(bucketName)
-                .key(key)
+                .key(key.value())
                 .uploadId(uploadId)
                 .partNumber(partNumber)
                 .build();

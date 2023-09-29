@@ -23,6 +23,7 @@ import java.util.Map;
 import io.aiven.kafka.tieredstorage.storage.BytesRange;
 import io.aiven.kafka.tieredstorage.storage.InvalidRangeException;
 import io.aiven.kafka.tieredstorage.storage.KeyNotFoundException;
+import io.aiven.kafka.tieredstorage.storage.ObjectKey;
 import io.aiven.kafka.tieredstorage.storage.StorageBackend;
 import io.aiven.kafka.tieredstorage.storage.StorageBackendException;
 
@@ -46,7 +47,7 @@ public class S3Storage implements StorageBackend {
     }
 
     @Override
-    public long upload(final InputStream inputStream, final String key) throws StorageBackendException {
+    public long upload(final InputStream inputStream, final ObjectKey key) throws StorageBackendException {
         try (final var out = s3OutputStream(key)) {
             inputStream.transferTo(out);
             return out.processedBytes();
@@ -55,14 +56,14 @@ public class S3Storage implements StorageBackend {
         }
     }
 
-    S3MultiPartOutputStream s3OutputStream(final String key) {
+    S3MultiPartOutputStream s3OutputStream(final ObjectKey key) {
         return new S3MultiPartOutputStream(bucketName, key, partSize, s3Client);
     }
 
     @Override
-    public void delete(final String key) throws StorageBackendException {
+    public void delete(final ObjectKey key) throws StorageBackendException {
         try {
-            final var deleteRequest = DeleteObjectRequest.builder().bucket(bucketName).key(key).build();
+            final var deleteRequest = DeleteObjectRequest.builder().bucket(bucketName).key(key.value()).build();
             s3Client.deleteObject(deleteRequest);
         } catch (final AwsServiceException e) {
             throw new StorageBackendException("Failed to delete " + key, e);
@@ -70,8 +71,8 @@ public class S3Storage implements StorageBackend {
     }
 
     @Override
-    public InputStream fetch(final String key) throws StorageBackendException {
-        final GetObjectRequest getRequest = GetObjectRequest.builder().bucket(bucketName).key(key).build();
+    public InputStream fetch(final ObjectKey key) throws StorageBackendException {
+        final GetObjectRequest getRequest = GetObjectRequest.builder().bucket(bucketName).key(key.value()).build();
         try {
             return s3Client.getObject(getRequest);
         } catch (final AwsServiceException e) {
@@ -84,11 +85,11 @@ public class S3Storage implements StorageBackend {
     }
 
     @Override
-    public InputStream fetch(final String key, final BytesRange range) throws StorageBackendException {
+    public InputStream fetch(final ObjectKey key, final BytesRange range) throws StorageBackendException {
         try {
             final GetObjectRequest getRequest = GetObjectRequest.builder()
                 .bucket(bucketName)
-                .key(key)
+                .key(key.value())
                 .range(range.toString())
                 .build();
             return s3Client.getObject(getRequest);

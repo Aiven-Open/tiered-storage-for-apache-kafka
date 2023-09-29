@@ -27,7 +27,9 @@ import java.lang.management.ManagementFactory;
 import java.util.Map;
 
 import io.aiven.kafka.tieredstorage.storage.BytesRange;
+import io.aiven.kafka.tieredstorage.storage.ObjectKey;
 import io.aiven.kafka.tieredstorage.storage.StorageBackendException;
+import io.aiven.kafka.tieredstorage.storage.TestObjectKey;
 import io.aiven.testcontainers.fakegcsserver.FakeGcsServerContainer;
 
 import com.google.cloud.NoCredentials;
@@ -94,7 +96,7 @@ public class GcsStorageMetricsTest {
     void metricsShouldBeReported() throws StorageBackendException, IOException, JMException {
         final byte[] data = new byte[RESUMABLE_UPLOAD_CHUNK_SIZE + 1];
 
-        final String key = "x";
+        final ObjectKey key = new TestObjectKey("x");
 
         storage.upload(new ByteArrayInputStream(data), key);
         try (final InputStream fetch = storage.fetch(key)) {

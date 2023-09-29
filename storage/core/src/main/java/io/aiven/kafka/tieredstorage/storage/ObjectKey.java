@@ -16,13 +16,6 @@
 
 package io.aiven.kafka.tieredstorage.storage;
 
-import java.io.InputStream;
-
-public interface ObjectUploader {
-    /**
-     * @param inputStream content to upload. Not closed as part of the upload.
-     * @param key         path to an object within a storage backend.
-     * @return number of bytes uploaded
-     */
-    long upload(InputStream inputStream, ObjectKey key) throws StorageBackendException;
+public interface ObjectKey {
+    String value();
 }

@@ -25,6 +25,7 @@ import io.aiven.kafka.tieredstorage.manifest.SegmentEncryptionMetadata;
 import io.aiven.kafka.tieredstorage.manifest.SegmentManifest;
 import io.aiven.kafka.tieredstorage.security.AesEncryptionProvider;
 import io.aiven.kafka.tieredstorage.storage.ObjectFetcher;
+import io.aiven.kafka.tieredstorage.storage.ObjectKey;
 import io.aiven.kafka.tieredstorage.storage.StorageBackendException;
 import io.aiven.kafka.tieredstorage.transform.BaseDetransformChunkEnumeration;
 import io.aiven.kafka.tieredstorage.transform.DecompressionChunkEnumeration;
@@ -46,11 +47,11 @@ public class DefaultChunkManager implements ChunkManager {
      *
      * @return an {@link InputStream} of the chunk, plain text (i.e., decrypted and decompressed).
      */
-    public InputStream getChunk(final String objectKeyPath, final SegmentManifest manifest,
+    public InputStream getChunk(final ObjectKey objectKey, final SegmentManifest manifest,
                                 final int chunkId) throws StorageBackendException {
         final Chunk chunk = manifest.chunkIndex().chunks().get(chunkId);
 
-        final InputStream chunkContent = fetcher.fetch(objectKeyPath, chunk.range());
+        final InputStream chunkContent = fetcher.fetch(objectKey, chunk.range());
 
         DetransformChunkEnumeration detransformEnum = new BaseDetransformChunkEnumeration(chunkContent, List.of(chunk));
         final Optional<SegmentEncryptionMetadata> encryptionMetadata = manifest.encryption();

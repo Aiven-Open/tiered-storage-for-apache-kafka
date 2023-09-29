@@ -26,6 +26,8 @@ import java.lang.management.ManagementFactory;
 import java.util.Map;
 
 import io.aiven.kafka.tieredstorage.storage.BytesRange;
+import io.aiven.kafka.tieredstorage.storage.ObjectKey;
+import io.aiven.kafka.tieredstorage.storage.TestObjectKey;
 
 import org.junit.jupiter.api.BeforeAll;
 import org.junit.jupiter.api.BeforeEach;
@@ -99,7 +101,7 @@ class S3StorageMetricsTest {
     void metricsShouldBeReported() throws Exception {
         final byte[] data = new byte[PART_SIZE + 1];
 
-        final String key = "x";
+        final ObjectKey key = new TestObjectKey("x");
 
         storage.upload(new ByteArrayInputStream(data), key);
         try (final InputStream fetch = storage.fetch(key)) {

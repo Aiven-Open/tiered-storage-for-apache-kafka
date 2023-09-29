@@ -24,6 +24,7 @@ import java.util.Map;
 import io.aiven.kafka.tieredstorage.storage.BytesRange;
 import io.aiven.kafka.tieredstorage.storage.InvalidRangeException;
 import io.aiven.kafka.tieredstorage.storage.KeyNotFoundException;
+import io.aiven.kafka.tieredstorage.storage.ObjectKey;
 import io.aiven.kafka.tieredstorage.storage.StorageBackend;
 import io.aiven.kafka.tieredstorage.storage.StorageBackendException;
 
@@ -57,9 +58,9 @@ public class GcsStorage implements StorageBackend {
     }
 
     @Override
-    public long upload(final InputStream inputStream, final String key) throws StorageBackendException {
+    public long upload(final InputStream inputStream, final ObjectKey key) throws StorageBackendException {
         try {
-            final BlobInfo blobInfo = BlobInfo.newBuilder(this.bucketName, key).build();
+            final BlobInfo blobInfo = BlobInfo.newBuilder(this.bucketName, key.value()).build();
             final Blob blob;
             if (resumableUploadChunkSize != null) {
                 blob = storage.createFrom(blobInfo, inputStream, resumableUploadChunkSize);
@@ -73,16 +74,16 @@ public class GcsStorage implements StorageBackend {
     }
 
     @Override
-    public void delete(final String key) throws StorageBackendException {
+    public void delete(final ObjectKey key) throws StorageBackendException {
         try {
-            storage.delete(this.bucketName, key);
+            storage.delete(this.bucketName, key.value());
         } catch (final StorageException e) {
             throw new StorageBackendException("Failed to delete " + key, e);
         }
     }
 
     @Override
-    public InputStream fetch(final String key) throws StorageBackendException {
+    public InputStream fetch(final ObjectKey key) throws StorageBackendException {
         try {
             final Blob blob = getBlob(key);
             final ReadChannel reader = blob.reader();
@@ -93,7 +94,7 @@ public class GcsStorage implements StorageBackend {
     }
 
     @Override
-    public InputStream fetch(final String key, final BytesRange range) throws StorageBackendException {
+    public InputStream fetch(final ObjectKey key, final BytesRange range) throws StorageBackendException {
         try {
             final Blob blob = getBlob(key);
 
@@ -118,11 +119,11 @@ public class GcsStorage implements StorageBackend {
         }
     }
 
-    private Blob getBlob(final String key) throws KeyNotFoundException {
+    private Blob getBlob(final ObjectKey key) throws KeyNotFoundException {
         // Unfortunately, it seems Google will do two a separate (HEAD-like) call to get blob metadata.
         // Since the blobs are immutable in tiered storage, we can consider caching them locally
         // to avoid the extra round trip.
-        final Blob blob = storage.get(this.bucketName, key);
+        final Blob blob = storage.get(this.bucketName, key.value());
         if (blob == null) {
             throw new KeyNotFoundException(this, key);
         }

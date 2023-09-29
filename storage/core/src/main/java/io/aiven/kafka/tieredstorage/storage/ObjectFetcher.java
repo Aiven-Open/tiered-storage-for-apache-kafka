@@ -23,12 +23,12 @@ public interface ObjectFetcher {
      * Fetch file.
      * @param key file key.
      */
-    InputStream fetch(String key) throws StorageBackendException;
+    InputStream fetch(ObjectKey key) throws StorageBackendException;
 
     /**
      * Fetch file.
      * @param key file key.
      * @param range range with inclusive start/end positions
      */
-    InputStream fetch(String key, BytesRange range) throws StorageBackendException;
+    InputStream fetch(ObjectKey key, BytesRange range) throws StorageBackendException;
 }

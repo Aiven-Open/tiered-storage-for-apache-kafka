@@ -20,6 +20,7 @@ import java.io.ByteArrayInputStream;
 import java.io.IOException;
 import java.io.InputStream;
 
+import org.assertj.core.util.Throwables;
 import org.junit.jupiter.api.Test;
 
 import static org.assertj.core.api.Assertions.assertThat;
@@ -28,7 +29,7 @@ import static org.assertj.core.api.Assertions.assertThatThrownBy;
 
 public abstract class BaseStorageTest {
 
-    protected static final String TOPIC_PARTITION_SEGMENT_KEY = "topic/partition/log";
+    protected static final ObjectKey TOPIC_PARTITION_SEGMENT_KEY = new TestObjectKey("topic/partition/log");
 
     protected abstract StorageBackend storage();
 
@@ -80,10 +81,10 @@ public abstract class BaseStorageTest {
 
     @Test
     void testFetchFailWhenNonExistingKey() {
-        assertThatThrownBy(() -> storage().fetch("non-existing"))
+        assertThatThrownBy(() -> storage().fetch(new TestObjectKey("non-existing")))
             .isInstanceOf(KeyNotFoundException.class)
             .hasMessage("Key non-existing does not exists in storage " + storage());
-        assertThatThrownBy(() -> storage().fetch("non-existing", BytesRange.of(0, 1)))
+        assertThatThrownBy(() -> storage().fetch(new TestObjectKey("non-existing"), BytesRange.of(0, 1)))
             .isInstanceOf(KeyNotFoundException.class)
             .hasMessage("Key non-existing does not exists in storage " + storage());
     }
@@ -146,12 +147,39 @@ public abstract class BaseStorageTest {
 
     @Test
     void testFetchNonExistingKey() {
-        assertThatThrownBy(() -> storage().fetch("non-existing"))
+        assertThatThrownBy(() -> storage().fetch(new TestObjectKey("non-existing")))
             .isInstanceOf(KeyNotFoundException.class)
             .hasMessage("Key non-existing does not exists in storage " + storage());
-        assertThatThrownBy(() -> storage().fetch("non-existing", BytesRange.of(0, 1)))
+        assertThatThrownBy(() -> storage().fetch(new TestObjectKey("non-existing"), BytesRange.of(0, 1)))
             .isInstanceOf(KeyNotFoundException.class)
             .hasMessage("Key non-existing does not exists in storage " + storage());
+    }
+
+    @Test
+    void testFetchNonExistingKeyMasking() {
+        final ObjectKey key = new ObjectKey() {
+            @Override
+            public String value() {
+                return "real-key";
+            }
+
+            @Override
+            public String toString() {
+                return "masked-key";
+            }
+        };
+
+        assertThatThrownBy(() -> storage().fetch(key))
+            .extracting(Throwables::getStackTrace)
+            .asString()
+            .contains("masked-key")
+            .doesNotContain("real-key");
+
+        assertThatThrownBy(() -> storage().fetch(key, BytesRange.of(0, 1)))
+            .extracting(Throwables::getStackTrace)
+            .asString()
+            .contains("masked-key")
+            .doesNotContain("real-key");
     }
 
     @Test
