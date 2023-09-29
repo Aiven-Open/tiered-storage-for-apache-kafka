@@ -14,12 +14,13 @@
  * limitations under the License.
  */
 
-package io.aiven.kafka.tieredstorage;
+package io.aiven.kafka.tieredstorage.fetch;
 
 import java.util.List;
 import java.util.Objects;
 import java.util.Optional;
 
+import io.aiven.kafka.tieredstorage.Chunk;
 import io.aiven.kafka.tieredstorage.manifest.index.ChunkIndex;
 import io.aiven.kafka.tieredstorage.storage.BytesRange;
 
@@ -52,8 +53,13 @@ public class FetchPart {
 
         // set first and last chunk included in part, and final chunk (last in segment)
         this.finalChunkId = chunkIndex.chunks().size() - 1;
+        if (chunk.id > finalChunkId) {
+            throw new IllegalArgumentException("Chunk does not belong to this segment, chunk id "
+                + chunk.id + " is larger than final chunk id: " + finalChunkId);
+        }
 
-        this.firstChunkId = Math.min((chunk.id / partSize) * partSize, finalChunkId);
+        this.firstChunkId = Math.floorDiv(chunk.id, partSize) * partSize;
+
         final var firstChunk = chunkIndex.chunks().get(firstChunkId);
 
         lastChunkId = Math.min(firstChunkId + partSize - 1, finalChunkId);
@@ -65,26 +71,6 @@ public class FetchPart {
     }
 
     /**
-     * @see FetchPart#next()
-     */
-    private FetchPart(final ChunkIndex chunkIndex,
-                      final int partSize,
-                      final int finalChunkId,
-                      final int firstChunkId,
-                      final int lastChunkId,
-                      final BytesRange range,
-                      final List<Chunk> chunks) {
-        this.chunkIndex = chunkIndex;
-        this.partSize = partSize;
-        this.finalChunkId = finalChunkId;
-
-        this.firstChunkId = firstChunkId;
-        this.lastChunkId = lastChunkId;
-        this.range = range;
-        this.chunks = chunks;
-    }
-
-    /**
      * @return Maybe the next part from a segment. Empty if no more parts are available.
      */
     public Optional<FetchPart> next() {
@@ -92,17 +78,13 @@ public class FetchPart {
             return Optional.empty();
         } else {
             final var nextFirstChunkId = Math.min(firstChunkId + partSize, finalChunkId);
-            final var firstChunk = chunkIndex.chunks().get(nextFirstChunkId);
-            final var nextLastChunkId = Math.min(nextFirstChunkId + partSize - 1, finalChunkId);
-            final var lastChunk = chunkIndex.chunks().get(nextLastChunkId);
-
-            final var range = BytesRange.of(firstChunk.range().from, lastChunk.range().to);
-            final var chunks = chunkIndex.chunks().subList(nextFirstChunkId, nextLastChunkId + 1);
-
-            final var part = new FetchPart(chunkIndex, partSize, finalChunkId,
-                nextFirstChunkId, nextLastChunkId, range, chunks);
-            return Optional.of(part);
+            final var nextFirstChunk = chunkIndex.chunks().get(nextFirstChunkId);
+            return Optional.of(new FetchPart(chunkIndex, nextFirstChunk, partSize));
         }
+    }
+
+    public int startPosition() {
+        return chunks.get(0).originalPosition;
     }
 
     @Override
@@ -122,10 +104,6 @@ public class FetchPart {
     @Override
     public int hashCode() {
         return Objects.hash(firstChunkId, range, chunks);
-    }
-
-    public int startPosition() {
-        return chunks.get(0).originalPosition;
     }
 
     @Override

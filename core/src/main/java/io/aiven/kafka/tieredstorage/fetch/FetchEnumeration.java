@@ -14,7 +14,7 @@
  * limitations under the License.
  */
 
-package io.aiven.kafka.tieredstorage.transform;
+package io.aiven.kafka.tieredstorage.fetch;
 
 import java.io.IOException;
 import java.io.InputStream;
@@ -26,8 +26,6 @@ import java.util.Objects;
 import java.util.Optional;
 
 import io.aiven.kafka.tieredstorage.Chunk;
-import io.aiven.kafka.tieredstorage.FetchPart;
-import io.aiven.kafka.tieredstorage.chunkmanager.ChunkManager;
 import io.aiven.kafka.tieredstorage.manifest.SegmentManifest;
 import io.aiven.kafka.tieredstorage.manifest.index.ChunkIndex;
 import io.aiven.kafka.tieredstorage.storage.BytesRange;
@@ -39,36 +37,38 @@ import org.apache.commons.io.input.BoundedInputStream;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
-public class FetchChunkEnumeration implements Enumeration<InputStream> {
-    static final Logger log = LoggerFactory.getLogger(FetchChunkEnumeration.class);
+public class FetchEnumeration implements Enumeration<InputStream> {
+    static final Logger log = LoggerFactory.getLogger(FetchEnumeration.class);
 
-    private final ChunkManager chunkManager;
+    private final FetchManager fetchManager;
     private final ObjectKey objectKey;
     private final SegmentManifest manifest;
     private final BytesRange range;
     final FetchPart firstPart;
-    final Chunk firstChunk;
     final FetchPart lastPart;
-    final Chunk lastChunk;
     private final ChunkIndex chunkIndex;
     Optional<FetchPart> currentPart;
     public boolean closed;
 
     final int partSize;
 
+    // for testing
+    final Chunk firstChunk;
+    final Chunk lastChunk;
+
     /**
-     * @param chunkManager  provides chunk input to fetch from
-     * @param objectKey required by chunkManager
-     * @param manifest      provides to index to build response from
-     * @param range         original offset range start/end position
-     * @param partSize      fetch part size
+     * @param fetchManager provides part input to fetch from
+     * @param objectKey    required by chunkManager
+     * @param manifest     provides to index to build response from
+     * @param range        original offset range start/end position
+     * @param partSize     fetch part size
      */
-    public FetchChunkEnumeration(final ChunkManager chunkManager,
-                                 final ObjectKey objectKey,
-                                 final SegmentManifest manifest,
-                                 final BytesRange range,
-                                 final int partSize) {
-        this.chunkManager = Objects.requireNonNull(chunkManager, "chunkManager cannot be null");
+    public FetchEnumeration(final FetchManager fetchManager,
+                            final ObjectKey objectKey,
+                            final SegmentManifest manifest,
+                            final BytesRange range,
+                            final int partSize) {
+        this.fetchManager = Objects.requireNonNull(fetchManager, "chunkManager cannot be null");
         this.objectKey = Objects.requireNonNull(objectKey, "objectKey cannot be null");
         this.manifest = Objects.requireNonNull(manifest, "manifest cannot be null");
         this.range = Objects.requireNonNull(range, "range cannot be null");
@@ -160,7 +160,7 @@ public class FetchChunkEnumeration implements Enumeration<InputStream> {
 
     private InputStream partChunks(final FetchPart part) {
         try {
-            return chunkManager.partChunks(objectKey, manifest, part);
+            return fetchManager.partContent(objectKey, manifest, part);
         } catch (final KeyNotFoundException e) {
             throw new KeyNotFoundRuntimeException(e);
         } catch (final StorageBackendException | IOException e) {
@@ -178,13 +178,13 @@ public class FetchChunkEnumeration implements Enumeration<InputStream> {
 
     /**
      * This class overrides the behavior of {@link SequenceInputStream#close()} to avoid unnecessary calls to
-     * {@link FetchChunkEnumeration#nextElement()} since {@link FetchChunkEnumeration} is supposed
+     * {@link FetchEnumeration#nextElement()} since {@link FetchEnumeration} is supposed
      * to be lazy and does not create inout streams unless there was such a call.
      */
     private static class LazySequenceInputStream extends SequenceInputStream {
-        private final FetchChunkEnumeration closeableEnumeration;
+        private final FetchEnumeration closeableEnumeration;
 
-        LazySequenceInputStream(final FetchChunkEnumeration e) {
+        LazySequenceInputStream(final FetchEnumeration e) {
             super(e);
             this.closeableEnumeration = e;
         }

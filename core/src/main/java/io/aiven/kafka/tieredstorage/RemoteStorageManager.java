@@ -45,9 +45,11 @@ import org.apache.kafka.server.log.remote.storage.RemoteLogSegmentMetadata.Custo
 import org.apache.kafka.server.log.remote.storage.RemoteResourceNotFoundException;
 import org.apache.kafka.server.log.remote.storage.RemoteStorageException;
 
-import io.aiven.kafka.tieredstorage.chunkmanager.ChunkManager;
-import io.aiven.kafka.tieredstorage.chunkmanager.ChunkManagerFactory;
 import io.aiven.kafka.tieredstorage.config.RemoteStorageManagerConfig;
+import io.aiven.kafka.tieredstorage.fetch.FetchEnumeration;
+import io.aiven.kafka.tieredstorage.fetch.FetchManager;
+import io.aiven.kafka.tieredstorage.fetch.FetchManagerFactory;
+import io.aiven.kafka.tieredstorage.fetch.KeyNotFoundRuntimeException;
 import io.aiven.kafka.tieredstorage.manifest.SegmentEncryptionMetadata;
 import io.aiven.kafka.tieredstorage.manifest.SegmentEncryptionMetadataV1;
 import io.aiven.kafka.tieredstorage.manifest.SegmentIndexesV1;
@@ -81,8 +83,6 @@ import io.aiven.kafka.tieredstorage.transform.DecryptionChunkEnumeration;
 import io.aiven.kafka.tieredstorage.transform.DetransformChunkEnumeration;
 import io.aiven.kafka.tieredstorage.transform.DetransformFinisher;
 import io.aiven.kafka.tieredstorage.transform.EncryptionChunkEnumeration;
-import io.aiven.kafka.tieredstorage.transform.FetchChunkEnumeration;
-import io.aiven.kafka.tieredstorage.transform.KeyNotFoundRuntimeException;
 import io.aiven.kafka.tieredstorage.transform.TransformChunkEnumeration;
 import io.aiven.kafka.tieredstorage.transform.TransformFinisher;
 
@@ -115,7 +115,7 @@ public class RemoteStorageManager implements org.apache.kafka.server.log.remote.
     private RsaEncryptionProvider rsaEncryptionProvider;
     private AesEncryptionProvider aesEncryptionProvider;
     private ObjectMapper mapper;
-    private ChunkManager chunkManager;
+    private FetchManager fetchManager;
     private ObjectKeyFactory objectKeyFactory;
     private SegmentCustomMetadataSerde customMetadataSerde;
     private Set<SegmentCustomMetadataField> customMetadataFields;
@@ -146,14 +146,13 @@ public class RemoteStorageManager implements org.apache.kafka.server.log.remote.
         if (encryptionEnabled) {
             final Map<String, KeyPair> keyRing = new HashMap<>();
             config.encryptionKeyRing().forEach((keyId, keyPaths) ->
-                keyRing.put(keyId, RsaKeyReader.read(keyPaths.publicKey, keyPaths.privateKey)
-            ));
+                keyRing.put(keyId, RsaKeyReader.read(keyPaths.publicKey, keyPaths.privateKey)));
             rsaEncryptionProvider = new RsaEncryptionProvider(config.encryptionKeyPairId(), keyRing);
             aesEncryptionProvider = new AesEncryptionProvider();
         }
-        final ChunkManagerFactory chunkManagerFactory = new ChunkManagerFactory();
-        chunkManagerFactory.configure(configs);
-        chunkManager = chunkManagerFactory.initChunkManager(fetcher, aesEncryptionProvider);
+        final FetchManagerFactory fetchManagerFactory = new FetchManagerFactory();
+        fetchManagerFactory.configure(configs);
+        fetchManager = fetchManagerFactory.initChunkManager(fetcher, aesEncryptionProvider);
         chunkSize = config.chunkSize();
         partSize = config.fetchPartSize() / chunkSize; // e.g. 16MB/100KB
         compressionEnabled = config.compressionEnabled();
@@ -435,7 +434,7 @@ public class RemoteStorageManager implements org.apache.kafka.server.log.remote.
             final var suffix = ObjectKeyFactory.Suffix.LOG;
             final var segmentKey = objectKey(remoteLogSegmentMetadata, suffix);
 
-            return new FetchChunkEnumeration(chunkManager, segmentKey, segmentManifest, range, partSize)
+            return new FetchEnumeration(fetchManager, segmentKey, segmentManifest, range, partSize)
                 .toInputStream();
         } catch (final KeyNotFoundException | KeyNotFoundRuntimeException e) {
             throw new RemoteResourceNotFoundException(e);

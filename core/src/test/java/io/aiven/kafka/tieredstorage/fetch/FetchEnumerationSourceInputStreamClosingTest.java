@@ -14,7 +14,7 @@
  * limitations under the License.
  */
 
-package io.aiven.kafka.tieredstorage.transform;
+package io.aiven.kafka.tieredstorage.fetch;
 
 import java.io.ByteArrayInputStream;
 import java.io.IOException;
@@ -26,10 +26,8 @@ import java.util.Map;
 
 import org.apache.kafka.server.log.remote.storage.RemoteStorageManager.IndexType;
 
-import io.aiven.kafka.tieredstorage.chunkmanager.ChunkManager;
-import io.aiven.kafka.tieredstorage.chunkmanager.ChunkManagerFactory;
-import io.aiven.kafka.tieredstorage.chunkmanager.cache.DiskBasedChunkCache;
-import io.aiven.kafka.tieredstorage.chunkmanager.cache.InMemoryChunkCache;
+import io.aiven.kafka.tieredstorage.fetch.cache.DiskBasedFetchCache;
+import io.aiven.kafka.tieredstorage.fetch.cache.InMemoryFetchCache;
 import io.aiven.kafka.tieredstorage.manifest.SegmentIndexesV1;
 import io.aiven.kafka.tieredstorage.manifest.SegmentManifest;
 import io.aiven.kafka.tieredstorage.manifest.SegmentManifestV1;
@@ -52,7 +50,7 @@ import static org.mockito.Mockito.spy;
 import static org.mockito.Mockito.verify;
 
 @ExtendWith(MockitoExtension.class)
-class FetchChunkEnumerationSourceInputStreamClosingTest {
+class FetchEnumerationSourceInputStreamClosingTest {
     static final ObjectKey OBJECT_KEY = () -> "topic/segment";
     static final int CHUNK_SIZE = 10;
 
@@ -87,10 +85,10 @@ class FetchChunkEnumerationSourceInputStreamClosingTest {
     void test(final Map<String, String> config,
               final boolean readFully,
               final BytesRange range) throws StorageBackendException, IOException {
-        final ChunkManagerFactory chunkManagerFactory = new ChunkManagerFactory();
-        chunkManagerFactory.configure(config);
-        final ChunkManager chunkManager = chunkManagerFactory.initChunkManager(fetcher, null);
-        final var is = new FetchChunkEnumeration(chunkManager, OBJECT_KEY, SEGMENT_MANIFEST, range, 1)
+        final FetchManagerFactory fetchManagerFactory = new FetchManagerFactory();
+        fetchManagerFactory.configure(config);
+        final FetchManager fetchManager = fetchManagerFactory.initChunkManager(fetcher, null);
+        final var is = new FetchEnumeration(fetchManager, OBJECT_KEY, SEGMENT_MANIFEST, range, 1)
             .toInputStream();
         if (readFully) {
             is.readAllBytes();
@@ -116,8 +114,8 @@ class FetchChunkEnumerationSourceInputStreamClosingTest {
                 result.add(Arguments.of(
                     Named.of("with in-memory cache",
                         Map.of(
-                            "chunk.cache.class", InMemoryChunkCache.class.getCanonicalName(),
-                            "chunk.cache.size", "-1"
+                            "fetch.cache.class", InMemoryFetchCache.class.getCanonicalName(),
+                            "fetch.cache.size", "-1"
                         )
                     ),
                     readFully,
@@ -126,9 +124,9 @@ class FetchChunkEnumerationSourceInputStreamClosingTest {
                 result.add(Arguments.of(
                     Named.of("with disk-based cache",
                         Map.of(
-                            "chunk.cache.class", DiskBasedChunkCache.class.getCanonicalName(),
-                            "chunk.cache.path", Files.createTempDirectory("cache").toString(),
-                            "chunk.cache.size", "-1"
+                            "fetch.cache.class", DiskBasedFetchCache.class.getCanonicalName(),
+                            "fetch.cache.path", Files.createTempDirectory("cache").toString(),
+                            "fetch.cache.size", "-1"
                         )
                     ),
                     readFully,

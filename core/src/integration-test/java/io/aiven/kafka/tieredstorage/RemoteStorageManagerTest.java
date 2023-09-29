@@ -53,8 +53,9 @@ import org.apache.kafka.server.log.remote.storage.RemoteResourceNotFoundExceptio
 import org.apache.kafka.server.log.remote.storage.RemoteStorageException;
 import org.apache.kafka.server.log.remote.storage.RemoteStorageManager.IndexType;
 
-import io.aiven.kafka.tieredstorage.chunkmanager.cache.DiskBasedChunkCache;
-import io.aiven.kafka.tieredstorage.chunkmanager.cache.InMemoryChunkCache;
+import io.aiven.kafka.tieredstorage.fetch.KeyNotFoundRuntimeException;
+import io.aiven.kafka.tieredstorage.fetch.cache.DiskBasedFetchCache;
+import io.aiven.kafka.tieredstorage.fetch.cache.InMemoryFetchCache;
 import io.aiven.kafka.tieredstorage.manifest.index.ChunkIndex;
 import io.aiven.kafka.tieredstorage.manifest.serde.EncryptionSerdeModule;
 import io.aiven.kafka.tieredstorage.manifest.serde.KafkaTypeSerdeModule;
@@ -65,6 +66,7 @@ import io.aiven.kafka.tieredstorage.security.DataKeyAndAAD;
 import io.aiven.kafka.tieredstorage.security.EncryptedDataKey;
 import io.aiven.kafka.tieredstorage.security.RsaEncryptionProvider;
 import io.aiven.kafka.tieredstorage.storage.KeyNotFoundException;
+import io.aiven.kafka.tieredstorage.storage.StorageBackendException;
 import io.aiven.kafka.tieredstorage.transform.KeyNotFoundRuntimeException;
 
 import com.fasterxml.jackson.databind.JsonNode;
@@ -121,7 +123,7 @@ class RemoteStorageManagerTest extends RsaKeyAwareTest {
     private static List<Arguments> provideEndToEnd() {
         final List<Arguments> result = new ArrayList<>();
         final var cacheNames =
-            List.of(InMemoryChunkCache.class.getCanonicalName(), DiskBasedChunkCache.class.getCanonicalName());
+            List.of(InMemoryFetchCache.class.getCanonicalName(), DiskBasedFetchCache.class.getCanonicalName());
         for (final String cacheClass : cacheNames) {
             for (final int chunkSize : List.of(1024 * 1024 - 1, 1024 * 1024 * 1024 - 1, Integer.MAX_VALUE / 2)) {
                 for (final boolean compression : List.of(true, false)) {
@@ -196,22 +198,19 @@ class RemoteStorageManagerTest extends RsaKeyAwareTest {
         final var cacheDir = tmpDir.resolve("cache");
         Files.createDirectories(cacheDir);
         final Map<String, String> config = new HashMap<>();
-        config.putAll(Map.of(
-            "chunk.size", Integer.toString(chunkSize),
-            // TODO: make tests with different fetch part size
-            "fetch.part.size", Integer.toString(chunkSize + 1),
-            "storage.backend.class", "io.aiven.kafka.tieredstorage.storage.filesystem.FileSystemStorage",
-            "key.prefix", "test/",
-            "storage.root", targetDir.toString(),
-            "compression.enabled", Boolean.toString(compression),
-            "encryption.enabled", Boolean.toString(encryption),
-            "custom.metadata.fields.include", "REMOTE_SIZE,OBJECT_PREFIX,OBJECT_KEY"
-        ));
-        config.putAll(Map.of(
-            "chunk.cache.class", cacheClass,
-            "chunk.cache.path", cacheDir.toString(),
-            "chunk.cache.size", Integer.toString(100 * 1024 * 1024)
-        ));
+        config.put("chunk.size", Integer.toString(chunkSize));
+        // TODO: make tests with different fetch part size
+        config.put("fetch.part.size", Integer.toString(chunkSize + 1));
+        config.put("storage.backend.class", "io.aiven.kafka.tieredstorage.storage.filesystem.FileSystemStorage");
+        config.put("key.prefix", "test/");
+        config.put("storage.root", targetDir.toString());
+        config.put("compression.enabled", Boolean.toString(compression));
+        config.put("encryption.enabled", Boolean.toString(encryption));
+        config.put("custom.metadata.fields.include", "REMOTE_SIZE,OBJECT_PREFIX,OBJECT_KEY");
+        config.put("fetch.cache.class", cacheClass);
+        config.put("fetch.cache.path", cacheDir.toString());
+        config.put("fetch.cache.size", Integer.toString(100 * 1024 * 1024));
+
         if (encryption) {
             config.put("encryption.key.pair.id", KEY_ENCRYPTION_KEY_ID);
             config.put("encryption.key.pairs", KEY_ENCRYPTION_KEY_ID);
@@ -446,18 +445,16 @@ class RemoteStorageManagerTest extends RsaKeyAwareTest {
 
         // Configure the RSM.
         final int chunkSize = 1024 * 1024;
-        final Map<String, ?> config = Map.of(
-            "chunk.size", Integer.toString(chunkSize),
-            "storage.backend.class",
-            "io.aiven.kafka.tieredstorage.storage.filesystem.FileSystemStorage",
-            "key.prefix", "test/",
-            "storage.root", targetDir.toString(),
-            "compression.enabled", "true",
-            "compression.heuristic.enabled", "true",
-            "chunk.cache.size", "10000",
-            "chunk.cache.class", InMemoryChunkCache.class.getCanonicalName(),
-            "chunk.cache.retention.ms", "10000"
-        );
+        final Map<String, String> config = new HashMap<>();
+        config.put("chunk.size", Integer.toString(chunkSize));
+        config.put("storage.backend.class", "io.aiven.kafka.tieredstorage.storage.filesystem.FileSystemStorage");
+        config.put("key.prefix", "test/");
+        config.put("storage.root", targetDir.toString());
+        config.put("compression.enabled", "true");
+        config.put("compression.heuristic.enabled", "true");
+        config.put("fetch.cache.size", "10000");
+        config.put("fetch.cache.class", InMemoryFetchCache.class.getCanonicalName());
+        config.put("fetch.cache.retention.ms", "10000");
 
         rsm.configure(config);
 
@@ -486,8 +483,8 @@ class RemoteStorageManagerTest extends RsaKeyAwareTest {
 
         // Make sure the exception is connected to the log file.
         final String expectedMessage = "Key "
-                + objectKeyFactory.key(REMOTE_LOG_METADATA, ObjectKeyFactory.Suffix.LOG)
-                + " does not exists in storage";
+            + objectKeyFactory.key(REMOTE_LOG_METADATA, ObjectKeyFactory.Suffix.LOG)
+            + " does not exists in storage";
 
         assertThatThrownBy(() -> rsm.fetchLogSegment(REMOTE_LOG_METADATA, 0))
             .isInstanceOf(RemoteResourceNotFoundException.class)

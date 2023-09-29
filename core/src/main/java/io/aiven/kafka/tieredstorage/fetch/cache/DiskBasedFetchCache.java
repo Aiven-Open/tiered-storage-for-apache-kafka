@@ -14,7 +14,7 @@
  * limitations under the License.
  */
 
-package io.aiven.kafka.tieredstorage.chunkmanager.cache;
+package io.aiven.kafka.tieredstorage.fetch.cache;
 
 import java.io.IOException;
 import java.io.InputStream;
@@ -22,8 +22,8 @@ import java.nio.file.Files;
 import java.nio.file.Path;
 import java.util.Map;
 
-import io.aiven.kafka.tieredstorage.chunkmanager.ChunkKey;
-import io.aiven.kafka.tieredstorage.chunkmanager.ChunkManager;
+import io.aiven.kafka.tieredstorage.fetch.FetchManager;
+import io.aiven.kafka.tieredstorage.fetch.FetchPartKey;
 
 import com.github.benmanes.caffeine.cache.RemovalListener;
 import com.github.benmanes.caffeine.cache.Weigher;
@@ -32,18 +32,18 @@ import org.slf4j.LoggerFactory;
 
 import static java.nio.file.StandardCopyOption.ATOMIC_MOVE;
 
-public class DiskBasedChunkCache extends ChunkCache<Path> {
+public class DiskBasedFetchCache extends FetchCache<Path> {
 
-    private static final Logger log = LoggerFactory.getLogger(DiskBasedChunkCache.class);
+    private static final Logger log = LoggerFactory.getLogger(DiskBasedFetchCache.class);
 
-    private DiskBasedChunkCacheConfig config;
+    private DiskBasedFetchCacheConfig config;
 
-    public DiskBasedChunkCache(final ChunkManager chunkManager) {
-        super(chunkManager);
+    public DiskBasedFetchCache(final FetchManager fetchManager) {
+        super(fetchManager);
     }
 
     @Override
-    public InputStream cachedChunkToInputStream(final Path cachedChunk) {
+    public InputStream readCachedPartContent(final Path cachedChunk) {
         try {
             return Files.newInputStream(cachedChunk);
         } catch (final IOException e) {
@@ -58,8 +58,8 @@ public class DiskBasedChunkCache extends ChunkCache<Path> {
      * to the actual caching directory.
      */
     @Override
-    public Path cacheChunk(final ChunkKey chunkKey, final InputStream chunk) throws IOException {
-        final var chunkKeyPath = chunkKey.path();
+    public Path cachePartContent(final FetchPartKey fetchPartKey, final InputStream chunk) throws IOException {
+        final var chunkKeyPath = fetchPartKey.path();
         final Path tempChunkPath = config.tempCachePath().resolve(chunkKeyPath);
         final Path tempCached = writeToDisk(chunk, tempChunkPath);
         log.debug("Chunk file has been stored to temporary caching directory {}", tempCached);
@@ -84,7 +84,7 @@ public class DiskBasedChunkCache extends ChunkCache<Path> {
     }
 
     @Override
-    public RemovalListener<ChunkKey, Path> removalListener() {
+    public RemovalListener<FetchPartKey, Path> removalListener() {
         return (key, path, cause) -> {
             try {
                 if (path != null) {
@@ -103,7 +103,7 @@ public class DiskBasedChunkCache extends ChunkCache<Path> {
     }
 
     @Override
-    public Weigher<ChunkKey, Path> weigher() {
+    public Weigher<FetchPartKey, Path> weigher() {
         return (key, value) -> {
             try {
                 final var fileSize = Files.size(value);
@@ -124,7 +124,7 @@ public class DiskBasedChunkCache extends ChunkCache<Path> {
 
     @Override
     public void configure(final Map<String, ?> configs) {
-        this.config = new DiskBasedChunkCacheConfig(configs);
+        this.config = new DiskBasedFetchCacheConfig(configs);
         this.cache = buildCache(config);
     }
 }

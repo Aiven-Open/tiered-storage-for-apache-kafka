@@ -14,21 +14,21 @@
  * limitations under the License.
  */
 
-package io.aiven.kafka.tieredstorage.chunkmanager;
+package io.aiven.kafka.tieredstorage.fetch;
 
 import java.util.Map;
 
 import org.apache.kafka.common.config.AbstractConfig;
 import org.apache.kafka.common.config.ConfigDef;
 
-import io.aiven.kafka.tieredstorage.chunkmanager.cache.ChunkCache;
 import io.aiven.kafka.tieredstorage.config.validators.Subclass;
+import io.aiven.kafka.tieredstorage.fetch.cache.FetchCache;
 
-public class ChunkManagerFactoryConfig extends AbstractConfig {
+public class FetchManagerFactoryConfig extends AbstractConfig {
 
-    protected static final String CHUNK_CACHE_PREFIX = "chunk.cache.";
-    public static final String CHUNK_CACHE_CONFIG = CHUNK_CACHE_PREFIX + "class";
-    private static final String CHUNK_CACHE_DOC = "The chunk cache implementation";
+    protected static final String FETCH_CACHE_PREFIX = "fetch.cache.";
+    public static final String FETCH_CACHE_CONFIG = FETCH_CACHE_PREFIX + "class";
+    private static final String FETCH_CACHE_DOC = "The fetch cache implementation";
 
     private static final ConfigDef CONFIG;
 
@@ -36,21 +36,21 @@ public class ChunkManagerFactoryConfig extends AbstractConfig {
         CONFIG = new ConfigDef();
 
         CONFIG.define(
-            CHUNK_CACHE_CONFIG,
+            FETCH_CACHE_CONFIG,
             ConfigDef.Type.CLASS,
             null,
-            Subclass.of(ChunkCache.class),
+            Subclass.of(FetchCache.class),
             ConfigDef.Importance.MEDIUM,
-            CHUNK_CACHE_DOC
+            FETCH_CACHE_DOC
         );
     }
 
-    public ChunkManagerFactoryConfig(final Map<?, ?> originals) {
+    public FetchManagerFactoryConfig(final Map<?, ?> originals) {
         super(CONFIG, originals);
     }
 
     @SuppressWarnings("unchecked")
-    public Class<ChunkCache<?>> cacheClass() {
-        return (Class<ChunkCache<?>>) getClass(CHUNK_CACHE_CONFIG);
+    public Class<FetchCache<?>> cacheClass() {
+        return (Class<FetchCache<?>>) getClass(FETCH_CACHE_CONFIG);
     }
 }

@@ -14,19 +14,18 @@
  * limitations under the License.
  */
 
-package io.aiven.kafka.tieredstorage.chunkmanager;
+package io.aiven.kafka.tieredstorage.fetch;
 
 import java.io.IOException;
 import java.io.InputStream;
 
-import io.aiven.kafka.tieredstorage.FetchPart;
 import io.aiven.kafka.tieredstorage.manifest.SegmentManifest;
 import io.aiven.kafka.tieredstorage.storage.ObjectKey;
 import io.aiven.kafka.tieredstorage.storage.StorageBackendException;
 
-public interface ChunkManager {
-    InputStream partChunks(final ObjectKey objectKey,
-                           final SegmentManifest manifest,
-                           final FetchPart part)
+public interface FetchManager {
+    InputStream partContent(final ObjectKey objectKey,
+                            final SegmentManifest manifest,
+                            final FetchPart part)
         throws StorageBackendException, IOException;
 }

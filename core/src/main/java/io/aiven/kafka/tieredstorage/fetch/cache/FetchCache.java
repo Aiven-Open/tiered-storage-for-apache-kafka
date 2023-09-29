@@ -14,7 +14,7 @@
  * limitations under the License.
  */
 
-package io.aiven.kafka.tieredstorage.chunkmanager.cache;
+package io.aiven.kafka.tieredstorage.fetch.cache;
 
 import java.io.IOException;
 import java.io.InputStream;
@@ -29,9 +29,9 @@ import java.util.concurrent.atomic.AtomicReference;
 
 import org.apache.kafka.common.Configurable;
 
-import io.aiven.kafka.tieredstorage.FetchPart;
-import io.aiven.kafka.tieredstorage.chunkmanager.ChunkKey;
-import io.aiven.kafka.tieredstorage.chunkmanager.ChunkManager;
+import io.aiven.kafka.tieredstorage.fetch.FetchManager;
+import io.aiven.kafka.tieredstorage.fetch.FetchPart;
+import io.aiven.kafka.tieredstorage.fetch.FetchPartKey;
 import io.aiven.kafka.tieredstorage.manifest.SegmentManifest;
 import io.aiven.kafka.tieredstorage.metrics.CaffeineStatsCounter;
 import io.aiven.kafka.tieredstorage.storage.ObjectKey;
@@ -43,19 +43,19 @@ import com.github.benmanes.caffeine.cache.RemovalListener;
 import com.github.benmanes.caffeine.cache.Scheduler;
 import com.github.benmanes.caffeine.cache.Weigher;
 
-public abstract class ChunkCache<T> implements ChunkManager, Configurable {
+public abstract class FetchCache<T> implements FetchManager, Configurable {
     private static final long GET_TIMEOUT_SEC = 10;
-    private static final String METRIC_GROUP = "chunk-cache";
+    private static final String METRIC_GROUP = "fetch-cache";
 
-    private final ChunkManager chunkManager;
+    private final FetchManager fetchManager;
     private final Executor executor = new ForkJoinPool();
 
     final CaffeineStatsCounter statsCounter;
 
-    protected AsyncCache<ChunkKey, T> cache;
+    protected AsyncCache<FetchPartKey, T> cache;
 
-    protected ChunkCache(final ChunkManager chunkManager) {
-        this.chunkManager = chunkManager;
+    protected FetchCache(final FetchManager fetchManager) {
+        this.fetchManager = fetchManager;
         this.statsCounter = new CaffeineStatsCounter(METRIC_GROUP);
     }
 
@@ -68,20 +68,20 @@ public abstract class ChunkCache<T> implements ChunkManager, Configurable {
      * the InputStream will still contain the data.
      */
     @Override
-    public InputStream partChunks(final ObjectKey objectKey,
-                                  final SegmentManifest manifest,
-                                  final FetchPart part) throws StorageBackendException, IOException {
-        final ChunkKey chunkKey = new ChunkKey(objectKey.value(), part.firstChunkId);
+    public InputStream partContent(final ObjectKey objectKey,
+                                   final SegmentManifest manifest,
+                                   final FetchPart part) throws StorageBackendException, IOException {
+        final FetchPartKey fetchPartKey = new FetchPartKey(objectKey.value(), part.range);
         final AtomicReference<InputStream> result = new AtomicReference<>();
         try {
             return cache.asMap()
-                .compute(chunkKey, (key, val) -> CompletableFuture.supplyAsync(() -> {
+                .compute(fetchPartKey, (key, val) -> CompletableFuture.supplyAsync(() -> {
                     if (val == null) {
                         statsCounter.recordMiss();
                         try {
-                            final InputStream chunk = chunkManager.partChunks(objectKey, manifest, part);
-                            final T t = this.cacheChunk(chunkKey, chunk);
-                            result.getAndSet(cachedChunkToInputStream(t));
+                            final InputStream partContent = fetchManager.partContent(objectKey, manifest, part);
+                            final T t = this.cachePartContent(fetchPartKey, partContent);
+                            result.getAndSet(readCachedPartContent(t));
                             return t;
                         } catch (final StorageBackendException | IOException e) {
                             throw new CompletionException(e);
@@ -90,7 +90,7 @@ public abstract class ChunkCache<T> implements ChunkManager, Configurable {
                         statsCounter.recordHit();
                         try {
                             final T cachedChunk = val.get();
-                            result.getAndSet(cachedChunkToInputStream(cachedChunk));
+                            result.getAndSet(readCachedPartContent(cachedChunk));
                             return cachedChunk;
                         } catch (final InterruptedException | ExecutionException e) {
                             throw new CompletionException(e);
@@ -120,15 +120,15 @@ public abstract class ChunkCache<T> implements ChunkManager, Configurable {
         }
     }
 
-    public abstract InputStream cachedChunkToInputStream(final T cachedChunk);
+    public abstract InputStream readCachedPartContent(final T cachedChunk);
 
-    public abstract T cacheChunk(final ChunkKey chunkKey, final InputStream chunk) throws IOException;
+    public abstract T cachePartContent(final FetchPartKey fetchPartKey, final InputStream chunk) throws IOException;
 
-    public abstract RemovalListener<ChunkKey, T> removalListener();
+    public abstract RemovalListener<FetchPartKey, T> removalListener();
 
-    public abstract Weigher<ChunkKey, T> weigher();
+    public abstract Weigher<FetchPartKey, T> weigher();
 
-    protected AsyncCache<ChunkKey, T> buildCache(final ChunkCacheConfig config) {
+    protected AsyncCache<FetchPartKey, T> buildCache(final FetchCacheConfig config) {
         final Caffeine<Object, Object> cacheBuilder = Caffeine.newBuilder();
         config.cacheSize().ifPresent(maximumWeight -> cacheBuilder.maximumWeight(maximumWeight).weigher(weigher()));
         config.cacheRetention().ifPresent(cacheBuilder::expireAfterAccess);

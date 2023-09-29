@@ -14,7 +14,7 @@
  * limitations under the License.
  */
 
-package io.aiven.kafka.tieredstorage.chunkmanager.cache;
+package io.aiven.kafka.tieredstorage.fetch.cache;
 
 import java.time.Duration;
 import java.util.Map;
@@ -27,11 +27,11 @@ import org.junit.jupiter.api.Test;
 import static org.assertj.core.api.Assertions.assertThat;
 import static org.assertj.core.api.Assertions.assertThatThrownBy;
 
-class ChunkCacheConfigTest {
+class FetchCacheConfigTest {
 
     @Test
     void defaults() {
-        final ChunkCacheConfig config = new ChunkCacheConfig(
+        final FetchCacheConfig config = new FetchCacheConfig(
                 new ConfigDef(),
                 Map.of("size", "-1")
         );
@@ -41,7 +41,7 @@ class ChunkCacheConfigTest {
 
     @Test
     void cacheSizeUnbounded() {
-        final ChunkCacheConfig config = new ChunkCacheConfig(
+        final FetchCacheConfig config = new FetchCacheConfig(
                 new ConfigDef(),
                 Map.of("size", "-1")
         );
@@ -50,7 +50,7 @@ class ChunkCacheConfigTest {
 
     @Test
     void cacheSizeBounded() {
-        final ChunkCacheConfig config = new ChunkCacheConfig(
+        final FetchCacheConfig config = new FetchCacheConfig(
                 new ConfigDef(),
                 Map.of("size", "1024")
         );
@@ -59,7 +59,7 @@ class ChunkCacheConfigTest {
 
     @Test
     void invalidCacheSize() {
-        assertThatThrownBy(() -> new ChunkCacheConfig(
+        assertThatThrownBy(() -> new FetchCacheConfig(
                 new ConfigDef(),
                 Map.of("size", "-2")
         )).isInstanceOf(ConfigException.class)
@@ -68,7 +68,7 @@ class ChunkCacheConfigTest {
 
     @Test
     void cacheSizeUnspecified() {
-        assertThatThrownBy(() -> new ChunkCacheConfig(
+        assertThatThrownBy(() -> new FetchCacheConfig(
                 new ConfigDef(),
                 Map.of()
         )).isInstanceOf(ConfigException.class)
@@ -77,7 +77,7 @@ class ChunkCacheConfigTest {
 
     @Test
     void cacheRetentionForever() {
-        final ChunkCacheConfig config = new ChunkCacheConfig(
+        final FetchCacheConfig config = new FetchCacheConfig(
                 new ConfigDef(),
                 Map.of(
                         "retention.ms", "-1",
@@ -89,7 +89,7 @@ class ChunkCacheConfigTest {
 
     @Test
     void cacheRetentionLimited() {
-        final ChunkCacheConfig config = new ChunkCacheConfig(
+        final FetchCacheConfig config = new FetchCacheConfig(
                 new ConfigDef(),
                 Map.of(
                         "retention.ms", "60000",
@@ -101,7 +101,7 @@ class ChunkCacheConfigTest {
 
     @Test
     void invalidRetention() {
-        assertThatThrownBy(() -> new ChunkCacheConfig(
+        assertThatThrownBy(() -> new FetchCacheConfig(
                 new ConfigDef(),
                 Map.of(
                         "retention.ms", "-2",

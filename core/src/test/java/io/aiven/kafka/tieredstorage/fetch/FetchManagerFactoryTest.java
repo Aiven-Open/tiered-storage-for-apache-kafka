@@ -14,15 +14,15 @@
  * limitations under the License.
  */
 
-package io.aiven.kafka.tieredstorage.chunkmanager;
+package io.aiven.kafka.tieredstorage.fetch;
 
 import java.lang.reflect.InvocationTargetException;
 import java.util.Map;
 import java.util.stream.Stream;
 
-import io.aiven.kafka.tieredstorage.chunkmanager.cache.ChunkCache;
-import io.aiven.kafka.tieredstorage.chunkmanager.cache.DiskBasedChunkCache;
-import io.aiven.kafka.tieredstorage.chunkmanager.cache.InMemoryChunkCache;
+import io.aiven.kafka.tieredstorage.fetch.cache.DiskBasedFetchCache;
+import io.aiven.kafka.tieredstorage.fetch.cache.FetchCache;
+import io.aiven.kafka.tieredstorage.fetch.cache.InMemoryFetchCache;
 
 import org.junit.jupiter.api.Test;
 import org.junit.jupiter.api.extension.ExtendWith;
@@ -39,38 +39,38 @@ import static org.mockito.Mockito.mockConstruction;
 import static org.mockito.Mockito.verify;
 
 @ExtendWith(MockitoExtension.class)
-class ChunkManagerFactoryTest {
+class FetchManagerFactoryTest {
 
-    ChunkManagerFactory chunkManagerFactory = new ChunkManagerFactory();
+    FetchManagerFactory fetchManagerFactory = new FetchManagerFactory();
 
     public static Stream<Arguments> cachingChunkManagers() {
         return Stream.of(
-            arguments(InMemoryChunkCache.class),
-            arguments(DiskBasedChunkCache.class)
+            arguments(InMemoryFetchCache.class),
+            arguments(DiskBasedFetchCache.class)
         );
     }
 
     @Test
     void defaultChunkManager() {
-        chunkManagerFactory.configure(Map.of());
-        final ChunkManager chunkManager = chunkManagerFactory.initChunkManager(null, null);
-        assertThat(chunkManager).isInstanceOf(DefaultChunkManager.class);
+        fetchManagerFactory.configure(Map.of());
+        final FetchManager fetchManager = fetchManagerFactory.initChunkManager(null, null);
+        assertThat(fetchManager).isInstanceOf(DefaultFetchManager.class);
     }
 
     @ParameterizedTest
     @MethodSource("cachingChunkManagers")
-    void cachingChunkManagers(final Class<ChunkCache<?>> cls) {
-        chunkManagerFactory.configure(Map.of(
-                "chunk.cache.class", cls,
-                "chunk.cache.size", 10,
-                "chunk.cache.retention.ms", 10,
+    void cachingChunkManagers(final Class<FetchCache<?>> cls) {
+        fetchManagerFactory.configure(Map.of(
+                "fetch.cache.class", cls,
+                "fetch.cache.size", 10,
+                "fetch.cache.retention.ms", 10,
                 "other.config.x", 10
             )
         );
         try (final MockedConstruction<?> ignored = mockConstruction(cls)) {
-            final ChunkManager chunkManager = chunkManagerFactory.initChunkManager(null, null);
-            assertThat(chunkManager).isInstanceOf(cls);
-            verify((ChunkCache<?>) chunkManager).configure(Map.of(
+            final FetchManager fetchManager = fetchManagerFactory.initChunkManager(null, null);
+            assertThat(fetchManager).isInstanceOf(cls);
+            verify((FetchCache<?>) fetchManager).configure(Map.of(
                 "class", cls,
                 "size", 10,
                 "retention.ms", 10
@@ -80,12 +80,12 @@ class ChunkManagerFactoryTest {
 
     @Test
     void failedInitialization() {
-        chunkManagerFactory.configure(Map.of("chunk.cache.class", InMemoryChunkCache.class));
-        try (final MockedConstruction<?> ignored = mockConstruction(InMemoryChunkCache.class,
+        fetchManagerFactory.configure(Map.of("fetch.cache.class", InMemoryFetchCache.class));
+        try (final MockedConstruction<?> ignored = mockConstruction(InMemoryFetchCache.class,
             (cachingChunkManager, context) -> {
                 throw new InvocationTargetException(null);
             })) {
-            assertThatThrownBy(() -> chunkManagerFactory.initChunkManager(null, null))
+            assertThatThrownBy(() -> fetchManagerFactory.initChunkManager(null, null))
                 .isInstanceOf(RuntimeException.class)
                 .hasCauseInstanceOf(ReflectiveOperationException.class);
         }

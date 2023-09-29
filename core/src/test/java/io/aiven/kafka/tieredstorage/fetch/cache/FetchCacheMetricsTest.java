@@ -14,7 +14,7 @@
  * limitations under the License.
  */
 
-package io.aiven.kafka.tieredstorage.chunkmanager.cache;
+package io.aiven.kafka.tieredstorage.fetch.cache;
 
 import javax.management.MBeanServer;
 import javax.management.ObjectName;
@@ -22,12 +22,15 @@ import javax.management.ObjectName;
 import java.io.ByteArrayInputStream;
 import java.lang.management.ManagementFactory;
 import java.nio.file.Path;
+import java.util.List;
 import java.util.Map;
 import java.util.stream.Stream;
 
-import io.aiven.kafka.tieredstorage.FetchPart;
-import io.aiven.kafka.tieredstorage.chunkmanager.ChunkManager;
+import io.aiven.kafka.tieredstorage.Chunk;
+import io.aiven.kafka.tieredstorage.fetch.FetchManager;
+import io.aiven.kafka.tieredstorage.fetch.FetchPart;
 import io.aiven.kafka.tieredstorage.manifest.SegmentManifest;
+import io.aiven.kafka.tieredstorage.manifest.index.ChunkIndex;
 import io.aiven.kafka.tieredstorage.storage.ObjectKey;
 
 import org.junit.jupiter.api.extension.ExtendWith;
@@ -47,7 +50,7 @@ import static org.mockito.Mockito.when;
  * Tests metrics gathering on Chunk Cache implementations
  */
 @ExtendWith(MockitoExtension.class)
-class ChunkCacheMetricsTest {
+class FetchCacheMetricsTest {
     static final MBeanServer MBEAN_SERVER = ManagementFactory.getPlatformMBeanServer();
 
     public static final ObjectKey OBJECT_KEY_PATH = () -> "topic/segment";
@@ -56,16 +59,17 @@ class ChunkCacheMetricsTest {
     static Path baseCachePath;
 
     @Mock
-    ChunkManager chunkManager;
+    FetchManager fetchManager;
     @Mock
     SegmentManifest segmentManifest;
     @Mock
-    FetchPart firstPart;
+    ChunkIndex chunkIndex;
+
 
     private static Stream<Arguments> caches() {
         return Stream.of(
             Arguments.of(
-                DiskBasedChunkCache.class,
+                DiskBasedFetchCache.class,
                 Map.of(
                     "retention.ms", "-1",
                     "size", "-1",
@@ -73,7 +77,7 @@ class ChunkCacheMetricsTest {
                 )
             ),
             Arguments.of(
-                InMemoryChunkCache.class,
+                InMemoryFetchCache.class,
                 Map.of(
                     "retention.ms", "-1",
                     "size", "-1"
@@ -83,25 +87,28 @@ class ChunkCacheMetricsTest {
 
     @ParameterizedTest(name = "Cache {0}")
     @MethodSource("caches")
-    void shouldRecordMetrics(final Class<ChunkCache<?>> chunkCacheClass, final Map<String, ?> config)
+    void shouldRecordMetrics(final Class<FetchCache<?>> fetchCacheClass, final Map<String, ?> config)
         throws Exception {
-        // Given a chunk cache implementation
-        when(chunkManager.partChunks(any(), any(), any()))
+        // Given a fetch cache implementation
+        when(fetchManager.partContent(any(), any(), any()))
             .thenReturn(new ByteArrayInputStream("test".getBytes()));
+        final var chunk = new Chunk(0, 0, 10, 0, 10);
+        when(chunkIndex.chunks()).thenReturn(List.of(chunk));
+        final FetchPart firstPart = new FetchPart(chunkIndex, chunk, 1);
 
-        final var chunkCache = chunkCacheClass.getDeclaredConstructor(ChunkManager.class).newInstance(chunkManager);
-        chunkCache.configure(config);
+        final var fetchCache = fetchCacheClass.getDeclaredConstructor(FetchManager.class).newInstance(fetchManager);
+        fetchCache.configure(config);
 
-        final var objectName = new ObjectName("aiven.kafka.server.tieredstorage.cache:type=chunk-cache");
+        final var objectName = new ObjectName("aiven.kafka.server.tieredstorage.cache:type=fetch-cache");
 
-        // When getting a existing chunk from cache
-        chunkCache.partChunks(OBJECT_KEY_PATH, segmentManifest, firstPart);
+        // When getting a existing part from cache
+        fetchCache.partContent(OBJECT_KEY_PATH, segmentManifest, firstPart);
 
         // check cache size increases after first miss
         assertThat(MBEAN_SERVER.getAttribute(objectName, "cache-size-total"))
             .isEqualTo(1.0);
 
-        chunkCache.partChunks(OBJECT_KEY_PATH, segmentManifest, firstPart);
+        fetchCache.partContent(OBJECT_KEY_PATH, segmentManifest, firstPart);
 
         // Then the following metrics should be available
         assertThat(MBEAN_SERVER.getAttribute(objectName, "cache-hits-total"))

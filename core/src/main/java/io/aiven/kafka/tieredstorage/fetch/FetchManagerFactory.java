@@ -14,40 +14,40 @@
  * limitations under the License.
  */
 
-package io.aiven.kafka.tieredstorage.chunkmanager;
+package io.aiven.kafka.tieredstorage.fetch;
 
 import java.util.Map;
 
 import org.apache.kafka.common.Configurable;
 
-import io.aiven.kafka.tieredstorage.chunkmanager.cache.ChunkCache;
+import io.aiven.kafka.tieredstorage.fetch.cache.FetchCache;
 import io.aiven.kafka.tieredstorage.security.AesEncryptionProvider;
 import io.aiven.kafka.tieredstorage.storage.ObjectFetcher;
 
-public class ChunkManagerFactory implements Configurable {
-    private ChunkManagerFactoryConfig config;
+public class FetchManagerFactory implements Configurable {
+    private FetchManagerFactoryConfig config;
 
     @Override
     public void configure(final Map<String, ?> configs) {
-        this.config = new ChunkManagerFactoryConfig(configs);
+        this.config = new FetchManagerFactoryConfig(configs);
     }
 
-    public ChunkManager initChunkManager(final ObjectFetcher fileFetcher,
+    public FetchManager initChunkManager(final ObjectFetcher fileFetcher,
                                          final AesEncryptionProvider aesEncryptionProvider) {
-        final DefaultChunkManager defaultChunkManager = new DefaultChunkManager(fileFetcher, aesEncryptionProvider);
+        final DefaultFetchManager defaultFetchManager = new DefaultFetchManager(fileFetcher, aesEncryptionProvider);
         if (config.cacheClass() != null) {
             try {
-                final ChunkCache<?> chunkCache = config
+                final FetchCache<?> fetchCache = config
                     .cacheClass()
-                    .getDeclaredConstructor(ChunkManager.class)
-                    .newInstance(defaultChunkManager);
-                chunkCache.configure(config.originalsWithPrefix(ChunkManagerFactoryConfig.CHUNK_CACHE_PREFIX));
-                return chunkCache;
+                    .getDeclaredConstructor(FetchManager.class)
+                    .newInstance(defaultFetchManager);
+                fetchCache.configure(config.originalsWithPrefix(FetchManagerFactoryConfig.FETCH_CACHE_PREFIX));
+                return fetchCache;
             } catch (final ReflectiveOperationException e) {
                 throw new RuntimeException(e);
             }
         } else {
-            return defaultChunkManager;
+            return defaultFetchManager;
         }
     }
 }

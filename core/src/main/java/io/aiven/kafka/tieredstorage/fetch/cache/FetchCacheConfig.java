@@ -14,7 +14,7 @@
  * limitations under the License.
  */
 
-package io.aiven.kafka.tieredstorage.chunkmanager.cache;
+package io.aiven.kafka.tieredstorage.fetch.cache;
 
 import java.time.Duration;
 import java.util.Map;
@@ -25,7 +25,7 @@ import org.apache.kafka.common.config.ConfigDef;
 
 import static org.apache.kafka.common.config.ConfigDef.NO_DEFAULT_VALUE;
 
-public class ChunkCacheConfig extends AbstractConfig {
+public class FetchCacheConfig extends AbstractConfig {
     private static final String CACHE_SIZE_CONFIG = "size";
     private static final String CACHE_SIZE_DOC = "Cache size in bytes, where \"-1\" represents unbounded cache";
     private static final String CACHE_RETENTION_CONFIG = "retention.ms";
@@ -53,7 +53,7 @@ public class ChunkCacheConfig extends AbstractConfig {
         return configDef;
     }
 
-    public ChunkCacheConfig(final ConfigDef configDef, final Map<String, ?> props) {
+    public FetchCacheConfig(final ConfigDef configDef, final Map<String, ?> props) {
         super(addCacheConfigs(configDef), props);
     }
 

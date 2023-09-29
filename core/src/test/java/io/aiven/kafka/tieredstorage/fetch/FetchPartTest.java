@@ -14,10 +14,11 @@
  * limitations under the License.
  */
 
-package io.aiven.kafka.tieredstorage;
+package io.aiven.kafka.tieredstorage.fetch;
 
 import java.util.List;
 
+import io.aiven.kafka.tieredstorage.Chunk;
 import io.aiven.kafka.tieredstorage.manifest.index.ChunkIndex;
 import io.aiven.kafka.tieredstorage.storage.BytesRange;
 
@@ -55,6 +56,11 @@ class FetchPartTest {
         assertThatThrownBy(() -> new FetchPart(chunkIndex, chunk, 0))
             .isInstanceOf(IllegalArgumentException.class)
             .hasMessage("Part size must be higher than zero.");
+
+        final var chunkOutsideIndex = new Chunk(10, 10, 10, 10, 10);
+        assertThatThrownBy(() -> new FetchPart(chunkIndex, chunkOutsideIndex, 5))
+            .isInstanceOf(IllegalArgumentException.class)
+            .hasMessage("Chunk does not belong to this segment, chunk id 10 is larger than final chunk id: 0");
     }
 
     @Test
@@ -74,7 +80,21 @@ class FetchPartTest {
     }
 
     @Test
-    void firstAndLastChunkBoundToFinalChunk() {
+    void partContainFirstChunkOnIndex() {
+        final var first = new Chunk(0, 0, 9, 0, 9);
+        final var last = new Chunk(1, 10, 19, 10, 19);
+        final var chunkIndex = mock(ChunkIndex.class);
+        when(chunkIndex.chunks()).thenReturn(List.of(first, last));
+
+        final var part = new FetchPart(chunkIndex, last, 10);
+
+        assertThat(part.firstChunkId)
+            .isNotEqualTo(1)
+            .isEqualTo(0);
+    }
+
+    @Test
+    void lastChunkBoundToFinalChunk() {
         final var first = new Chunk(0, 0, 9, 0, 9);
         final var last = new Chunk(1, 10, 19, 10, 19);
         final var chunkIndex = mock(ChunkIndex.class);
@@ -82,8 +102,9 @@ class FetchPartTest {
 
         final var part = new FetchPart(chunkIndex, first, 10);
 
-        assertThat(part.firstChunkId).isEqualTo(0);
-        assertThat(part.lastChunkId).isEqualTo(1);
+        assertThat(part.lastChunkId)
+            .isNotEqualTo(10)
+            .isEqualTo(1);
     }
 
     @Test
@@ -100,15 +121,15 @@ class FetchPartTest {
     }
 
     @Test
-    void lastPartIsEmpty() {
+    void partAfterLastIsEmpty() {
         final var first = new Chunk(0, 0, 9, 0, 9);
         final var last = new Chunk(1, 10, 19, 10, 19);
         final var chunkIndex = mock(ChunkIndex.class);
         when(chunkIndex.chunks()).thenReturn(List.of(first, last));
 
-        final var part = new FetchPart(chunkIndex, first, 2);
+        final var lastPart = new FetchPart(chunkIndex, last, 1);
 
-        assertThat(part.next()).isEmpty();
+        assertThat(lastPart.next()).isEmpty();
     }
 
 

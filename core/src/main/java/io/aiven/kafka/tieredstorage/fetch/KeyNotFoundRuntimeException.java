@@ -14,7 +14,7 @@
  * limitations under the License.
  */
 
-package io.aiven.kafka.tieredstorage.transform;
+package io.aiven.kafka.tieredstorage.fetch;
 
 import io.aiven.kafka.tieredstorage.storage.KeyNotFoundException;
 

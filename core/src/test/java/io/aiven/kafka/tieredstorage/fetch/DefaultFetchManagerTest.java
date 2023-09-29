@@ -14,7 +14,7 @@
  * limitations under the License.
  */
 
-package io.aiven.kafka.tieredstorage.chunkmanager;
+package io.aiven.kafka.tieredstorage.fetch;
 
 import javax.crypto.Cipher;
 
@@ -23,7 +23,6 @@ import java.io.ByteArrayInputStream;
 import org.apache.kafka.server.log.remote.storage.RemoteStorageManager.IndexType;
 
 import io.aiven.kafka.tieredstorage.AesKeyAwareTest;
-import io.aiven.kafka.tieredstorage.FetchPart;
 import io.aiven.kafka.tieredstorage.manifest.SegmentEncryptionMetadataV1;
 import io.aiven.kafka.tieredstorage.manifest.SegmentIndexesV1;
 import io.aiven.kafka.tieredstorage.manifest.SegmentManifest;
@@ -45,7 +44,7 @@ import static org.mockito.Mockito.verify;
 import static org.mockito.Mockito.when;
 
 @ExtendWith(MockitoExtension.class)
-class DefaultChunkManagerTest extends AesKeyAwareTest {
+class DefaultFetchManagerTest extends AesKeyAwareTest {
 
     static final ObjectKey OBJECT_KEY = () -> "topic/segment.log";
     static final byte[] TEST_CHUNK_CONTENT = "0123456789".getBytes();
@@ -60,21 +59,21 @@ class DefaultChunkManagerTest extends AesKeyAwareTest {
     private StorageBackend storage;
 
     @Test
-    void testGetChunk() throws Exception {
+    void testGetPartContent() throws Exception {
         final FixedSizeChunkIndex chunkIndex = new FixedSizeChunkIndex(10, 10, 10, 10);
 
         final SegmentManifest manifest = new SegmentManifestV1(chunkIndex, SEGMENT_INDEXES, false, null);
-        final ChunkManager chunkManager = new DefaultChunkManager(storage, null);
+        final FetchManager fetchManager = new DefaultFetchManager(storage, null);
         when(storage.fetch(OBJECT_KEY, chunkIndex.chunks().get(0).range()))
             .thenReturn(new ByteArrayInputStream("0123456789".getBytes()));
 
         final var part = new FetchPart(chunkIndex, chunkIndex.chunks().get(0), 1);
-        assertThat(chunkManager.partChunks(OBJECT_KEY, manifest, part)).hasContent("0123456789");
+        assertThat(fetchManager.partContent(OBJECT_KEY, manifest, part)).hasContent("0123456789");
         verify(storage).fetch(OBJECT_KEY, chunkIndex.chunks().get(0).range());
     }
 
     @Test
-    void testGetChunkWithEncryption() throws Exception {
+    void testGetPartContentWithEncryption() throws Exception {
         final AesEncryptionProvider aesEncryptionProvider = new AesEncryptionProvider();
 
         final DataKeyAndAAD dataKeyAndAAD = aesEncryptionProvider.createDataKeyAndAAD();
@@ -93,14 +92,14 @@ class DefaultChunkManagerTest extends AesKeyAwareTest {
 
         final var encryption = new SegmentEncryptionMetadataV1(dataKeyAndAAD.dataKey, dataKeyAndAAD.aad);
         final var manifest = new SegmentManifestV1(chunkIndex, SEGMENT_INDEXES, false, encryption);
-        final ChunkManager chunkManager = new DefaultChunkManager(storage, aesEncryptionProvider);
+        final FetchManager fetchManager = new DefaultFetchManager(storage, aesEncryptionProvider);
 
-        assertThat(chunkManager.partChunks(OBJECT_KEY, manifest, part)).hasBinaryContent(TEST_CHUNK_CONTENT);
+        assertThat(fetchManager.partContent(OBJECT_KEY, manifest, part)).hasBinaryContent(TEST_CHUNK_CONTENT);
         verify(storage).fetch(OBJECT_KEY, chunkIndex.chunks().get(0).range());
     }
 
     @Test
-    void testGetChunkWithCompression() throws Exception {
+    void testGetPartContentWithCompression() throws Exception {
 
         final byte[] compressed;
         try (final ZstdCompressCtx compressCtx = new ZstdCompressCtx()) {
@@ -115,9 +114,9 @@ class DefaultChunkManagerTest extends AesKeyAwareTest {
             .thenReturn(new ByteArrayInputStream(compressed));
 
         final var manifest = new SegmentManifestV1(chunkIndex, SEGMENT_INDEXES, true, null);
-        final ChunkManager chunkManager = new DefaultChunkManager(storage, null);
+        final FetchManager fetchManager = new DefaultFetchManager(storage, null);
 
-        assertThat(chunkManager.partChunks(OBJECT_KEY, manifest, part)).hasBinaryContent(TEST_CHUNK_CONTENT);
+        assertThat(fetchManager.partContent(OBJECT_KEY, manifest, part)).hasBinaryContent(TEST_CHUNK_CONTENT);
         verify(storage).fetch(OBJECT_KEY, chunkIndex.chunks().get(0).range());
     }
 }

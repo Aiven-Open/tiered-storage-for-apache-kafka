@@ -14,7 +14,7 @@
  * limitations under the License.
  */
 
-package io.aiven.kafka.tieredstorage.chunkmanager.cache;
+package io.aiven.kafka.tieredstorage.fetch.cache;
 
 import java.io.IOException;
 import java.nio.file.Files;
@@ -26,7 +26,7 @@ import org.apache.kafka.common.config.ConfigException;
 
 import org.apache.commons.io.FileUtils;
 
-public class DiskBasedChunkCacheConfig extends ChunkCacheConfig {
+public class DiskBasedFetchCacheConfig extends FetchCacheConfig {
     private static final String CACHE_PATH_CONFIG = "path";
     private static final String CACHE_PATH_DOC = "Cache base directory. "
         + "It is required to exist and be writable prior to the execution of the plugin.";
@@ -46,7 +46,7 @@ public class DiskBasedChunkCacheConfig extends ChunkCacheConfig {
         return configDef;
     }
 
-    public DiskBasedChunkCacheConfig(final Map<String, ?> props) {
+    public DiskBasedFetchCacheConfig(final Map<String, ?> props) {
         super(configDef(), props);
         final var baseCachePath = baseCachePath();
         if (!Files.isDirectory(baseCachePath) || !Files.isWritable(baseCachePath)) {

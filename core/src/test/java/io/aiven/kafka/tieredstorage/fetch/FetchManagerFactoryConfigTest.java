@@ -14,13 +14,13 @@
  * limitations under the License.
  */
 
-package io.aiven.kafka.tieredstorage.chunkmanager;
+package io.aiven.kafka.tieredstorage.fetch;
 
 import java.util.Map;
 
 import org.apache.kafka.common.config.ConfigException;
 
-import io.aiven.kafka.tieredstorage.chunkmanager.cache.ChunkCache;
+import io.aiven.kafka.tieredstorage.fetch.cache.FetchCache;
 
 import org.junit.jupiter.api.Test;
 import org.junit.jupiter.params.ParameterizedTest;
@@ -29,30 +29,30 @@ import org.junit.jupiter.params.provider.ValueSource;
 import static org.assertj.core.api.Assertions.assertThat;
 import static org.assertj.core.api.Assertions.assertThatThrownBy;
 
-class ChunkManagerFactoryConfigTest {
+class FetchManagerFactoryConfigTest {
 
     @Test
     void invalidCacheClass() {
-        assertThatThrownBy(() -> new ChunkManagerFactoryConfig(Map.of("chunk.cache.class", "java.lang.Object")))
+        assertThatThrownBy(() -> new FetchManagerFactoryConfig(Map.of("fetch.cache.class", "java.lang.Object")))
                 .isInstanceOf(ConfigException.class)
-                .hasMessage("chunk.cache.class should be a subclass of " + ChunkCache.class.getCanonicalName());
+                .hasMessage("fetch.cache.class should be a subclass of " + FetchCache.class.getCanonicalName());
     }
 
     @ParameterizedTest
     @ValueSource(strings = {
-        "io.aiven.kafka.tieredstorage.chunkmanager.cache.InMemoryChunkCache",
-        "io.aiven.kafka.tieredstorage.chunkmanager.cache.DiskBasedChunkCache"
+        "io.aiven.kafka.tieredstorage.fetch.cache.InMemoryFetchCache",
+        "io.aiven.kafka.tieredstorage.fetch.cache.DiskBasedFetchCache"
     })
     void validCacheClass(final String cacheClass) {
-        final ChunkManagerFactoryConfig config = new ChunkManagerFactoryConfig(
-                Map.of("chunk.cache.class", cacheClass)
+        final FetchManagerFactoryConfig config = new FetchManagerFactoryConfig(
+                Map.of("fetch.cache.class", cacheClass)
         );
         assertThat(config.cacheClass().getCanonicalName()).isEqualTo(cacheClass);
     }
 
     @Test
     void defaultConfig() {
-        final ChunkManagerFactoryConfig config = new ChunkManagerFactoryConfig(Map.of());
+        final FetchManagerFactoryConfig config = new FetchManagerFactoryConfig(Map.of());
         assertThat(config.cacheClass()).isNull();
     }
 }

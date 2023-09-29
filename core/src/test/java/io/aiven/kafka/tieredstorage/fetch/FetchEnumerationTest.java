@@ -14,7 +14,7 @@
  * limitations under the License.
  */
 
-package io.aiven.kafka.tieredstorage.transform;
+package io.aiven.kafka.tieredstorage.fetch;
 
 import java.io.ByteArrayInputStream;
 import java.util.NoSuchElementException;
@@ -22,7 +22,6 @@ import java.util.NoSuchElementException;
 import org.apache.kafka.server.log.remote.storage.RemoteStorageManager.IndexType;
 
 import io.aiven.kafka.tieredstorage.FetchPart;
-import io.aiven.kafka.tieredstorage.chunkmanager.DefaultChunkManager;
 import io.aiven.kafka.tieredstorage.manifest.SegmentIndexesV1;
 import io.aiven.kafka.tieredstorage.manifest.SegmentManifest;
 import io.aiven.kafka.tieredstorage.manifest.SegmentManifestV1;
@@ -44,9 +43,9 @@ import static org.mockito.ArgumentMatchers.eq;
 import static org.mockito.Mockito.when;
 
 @ExtendWith(MockitoExtension.class)
-class FetchChunkEnumerationTest {
+class FetchEnumerationTest {
     @Mock
-    DefaultChunkManager chunkManager;
+    DefaultFetchManager chunkManager;
 
     final FixedSizeChunkIndex chunkIndex = new FixedSizeChunkIndex(10, 100, 10, 100);
 
@@ -74,7 +73,7 @@ class FetchChunkEnumerationTest {
         final int to = from + 1;
         // Then
         assertThatThrownBy(
-            () -> new FetchChunkEnumeration(chunkManager, SEGMENT_KEY, manifest, BytesRange.of(from, to), 1))
+            () -> new FetchEnumeration(chunkManager, SEGMENT_KEY, manifest, BytesRange.of(from, to), 1))
             .hasMessage("Invalid start position " + from + " in segment path topic/segment");
     }
 
@@ -86,10 +85,10 @@ class FetchChunkEnumerationTest {
         final int from = 0;
         final int to = 80;
         // Then
-        final FetchChunkEnumeration fetchChunk =
-            new FetchChunkEnumeration(chunkManager, SEGMENT_KEY, manifest, BytesRange.of(from, to), 1);
-        assertThat(fetchChunk.firstChunk.id).isEqualTo(0);
-        assertThat(fetchChunk.lastChunk.id).isEqualTo(8);
+        final FetchEnumeration fetchEnumeration =
+            new FetchEnumeration(chunkManager, SEGMENT_KEY, manifest, BytesRange.of(from, to), 1);
+        assertThat(fetchEnumeration.firstChunk.id).isEqualTo(0);
+        assertThat(fetchEnumeration.lastChunk.id).isEqualTo(8);
     }
 
     //   - End position outside index
@@ -99,11 +98,11 @@ class FetchChunkEnumerationTest {
         // When
         final int from = 0;
         final int to = 110;
-        final FetchChunkEnumeration fetchChunk =
-            new FetchChunkEnumeration(chunkManager, SEGMENT_KEY, manifest, BytesRange.of(from, to), 1);
+        final FetchEnumeration fetchEnumeration =
+            new FetchEnumeration(chunkManager, SEGMENT_KEY, manifest, BytesRange.of(from, to), 1);
         // Then
-        assertThat(fetchChunk.firstChunk.id).isEqualTo(0);
-        assertThat(fetchChunk.lastChunk.id).isEqualTo(9);
+        assertThat(fetchEnumeration.firstChunk.id).isEqualTo(0);
+        assertThat(fetchEnumeration.lastChunk.id).isEqualTo(9);
     }
 
     // - Single chunk
@@ -113,42 +112,42 @@ class FetchChunkEnumerationTest {
         // When
         final int from = 32;
         final int to = 34;
-        final FetchChunkEnumeration fetchChunk =
-            new FetchChunkEnumeration(chunkManager, SEGMENT_KEY, manifest, BytesRange.of(from, to), 1);
-        when(chunkManager.partChunks(eq(SEGMENT_KEY), eq(manifest), any()))
+        final FetchEnumeration fetchEnumeration =
+            new FetchEnumeration(chunkManager, SEGMENT_KEY, manifest, BytesRange.of(from, to), 1);
+        when(chunkManager.partContent(eq(SEGMENT_KEY), eq(manifest), any()))
             .thenReturn(new ByteArrayInputStream(CHUNK_CONTENT));
         // Then
-        assertThat(fetchChunk.firstChunk.id).isEqualTo(fetchChunk.lastChunk.id);
-        assertThat(fetchChunk.nextElement()).hasContent("234");
-        assertThat(fetchChunk.hasMoreElements()).isFalse();
-        assertThatThrownBy(fetchChunk::nextElement).isInstanceOf(NoSuchElementException.class);
+        assertThat(fetchEnumeration.firstChunk.id).isEqualTo(fetchEnumeration.lastChunk.id);
+        assertThat(fetchEnumeration.nextElement()).hasContent("234");
+        assertThat(fetchEnumeration.hasMoreElements()).isFalse();
+        assertThatThrownBy(fetchEnumeration::nextElement).isInstanceOf(NoSuchElementException.class);
     }
 
     // - Multiple chunks
     @Test
-    void shouldReturnRangeFromMultipleChunks() throws StorageBackendException {
+    void shouldReturnRangeFromMultipleParts() throws StorageBackendException {
         // Given a set of 10 chunks with 10 bytes each
         // When
         final int from = 15;
         final int to = 34;
-        final FetchChunkEnumeration fetchChunk =
-            new FetchChunkEnumeration(chunkManager, SEGMENT_KEY, manifest, BytesRange.of(from, to), 1);
-        final var first = new FetchPart(chunkIndex, chunkIndex.chunks().get(0), 1);
-        final var part1 = first.next().get();
-        when(chunkManager.partChunks(SEGMENT_KEY, manifest, part1))
+        final FetchEnumeration fetchEnumeration =
+            new FetchEnumeration(chunkManager, SEGMENT_KEY, manifest, BytesRange.of(from, to), 1);
+        final var part0 = new FetchPart(chunkIndex, chunkIndex.chunks().get(0), 1);
+        final var part1 = part0.next().get();
+        when(chunkManager.partContent(SEGMENT_KEY, manifest, part1))
             .thenReturn(new ByteArrayInputStream(CHUNK_CONTENT));
         final var part2 = part1.next().get();
-        when(chunkManager.partChunks(SEGMENT_KEY, manifest, part2))
+        when(chunkManager.partContent(SEGMENT_KEY, manifest, part2))
             .thenReturn(new ByteArrayInputStream(CHUNK_CONTENT));
         final var part3 = part2.next().get();
-        when(chunkManager.partChunks(SEGMENT_KEY, manifest, part3))
+        when(chunkManager.partContent(SEGMENT_KEY, manifest, part3))
             .thenReturn(new ByteArrayInputStream(CHUNK_CONTENT));
         // Then
-        assertThat(fetchChunk.firstChunk.id).isNotEqualTo(fetchChunk.lastChunk.id);
-        assertThat(fetchChunk.nextElement()).hasContent("56789");
-        assertThat(fetchChunk.nextElement()).hasContent("0123456789");
-        assertThat(fetchChunk.nextElement()).hasContent("01234");
-        assertThat(fetchChunk.hasMoreElements()).isFalse();
-        assertThatThrownBy(fetchChunk::nextElement).isInstanceOf(NoSuchElementException.class);
+        assertThat(fetchEnumeration.firstChunk.id).isNotEqualTo(fetchEnumeration.lastChunk.id);
+        assertThat(fetchEnumeration.nextElement()).hasContent("56789");
+        assertThat(fetchEnumeration.nextElement()).hasContent("0123456789");
+        assertThat(fetchEnumeration.nextElement()).hasContent("01234");
+        assertThat(fetchEnumeration.hasMoreElements()).isFalse();
+        assertThatThrownBy(fetchEnumeration::nextElement).isInstanceOf(NoSuchElementException.class);
     }
 }

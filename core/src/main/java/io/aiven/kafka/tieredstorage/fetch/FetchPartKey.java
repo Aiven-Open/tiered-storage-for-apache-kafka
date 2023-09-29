@@ -14,20 +14,22 @@
  * limitations under the License.
  */
 
-package io.aiven.kafka.tieredstorage.chunkmanager;
+package io.aiven.kafka.tieredstorage.fetch;
 
 import java.nio.file.Path;
 import java.util.Objects;
 
-public class ChunkKey {
-    public final String segmentFileName;
-    public final int chunkId;
+import io.aiven.kafka.tieredstorage.storage.BytesRange;
 
-    public ChunkKey(final String objectKeyPath, final int chunkId) {
+public class FetchPartKey {
+    public final String segmentFileName;
+    public final BytesRange range;
+
+    public FetchPartKey(final String objectKeyPath, final BytesRange range) {
         Objects.requireNonNull(objectKeyPath, "objectKeyPath cannot be null");
         // get last part of segment path + chunk id, as it's used for creating file names
         this.segmentFileName = Path.of(objectKeyPath).getFileName().toString();
-        this.chunkId = chunkId;
+        this.range = Objects.requireNonNull(range, "range cannot be null");
     }
 
     @Override
@@ -38,31 +40,24 @@ public class ChunkKey {
         if (o == null || getClass() != o.getClass()) {
             return false;
         }
-
-        final ChunkKey chunkKey = (ChunkKey) o;
-
-        if (chunkId != chunkKey.chunkId) {
-            return false;
-        }
-        return Objects.equals(segmentFileName, chunkKey.segmentFileName);
+        final FetchPartKey that = (FetchPartKey) o;
+        return Objects.equals(segmentFileName, that.segmentFileName) && Objects.equals(range, that.range);
     }
 
     @Override
     public int hashCode() {
-        int result = segmentFileName.hashCode();
-        result = 31 * result + chunkId;
-        return result;
+        return Objects.hash(segmentFileName, range);
     }
 
     @Override
     public String toString() {
-        return "ChunkKey("
+        return "FetchPartKey("
             + "segmentFileName=" + segmentFileName
-            + ", chunkId=" + chunkId
+            + ", range=" + range
             + ")";
     }
 
     public String path() {
-        return segmentFileName + "-" + chunkId;
+        return segmentFileName + "-" + range.from + "-" + range.to;
     }
 }

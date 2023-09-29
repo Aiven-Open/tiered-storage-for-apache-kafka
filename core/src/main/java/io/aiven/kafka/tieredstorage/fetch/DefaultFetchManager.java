@@ -14,12 +14,11 @@
  * limitations under the License.
  */
 
-package io.aiven.kafka.tieredstorage.chunkmanager;
+package io.aiven.kafka.tieredstorage.fetch;
 
 import java.io.InputStream;
 import java.util.Optional;
 
-import io.aiven.kafka.tieredstorage.FetchPart;
 import io.aiven.kafka.tieredstorage.manifest.SegmentEncryptionMetadata;
 import io.aiven.kafka.tieredstorage.manifest.SegmentManifest;
 import io.aiven.kafka.tieredstorage.security.AesEncryptionProvider;
@@ -32,27 +31,27 @@ import io.aiven.kafka.tieredstorage.transform.DecryptionChunkEnumeration;
 import io.aiven.kafka.tieredstorage.transform.DetransformChunkEnumeration;
 import io.aiven.kafka.tieredstorage.transform.DetransformFinisher;
 
-public class DefaultChunkManager implements ChunkManager {
+public class DefaultFetchManager implements FetchManager {
     private final ObjectFetcher fetcher;
     private final AesEncryptionProvider aesEncryptionProvider;
 
-    public DefaultChunkManager(final ObjectFetcher fetcher, final AesEncryptionProvider aesEncryptionProvider) {
+    public DefaultFetchManager(final ObjectFetcher fetcher, final AesEncryptionProvider aesEncryptionProvider) {
         this.fetcher = fetcher;
         this.aesEncryptionProvider = aesEncryptionProvider;
     }
 
     /**
-     * Gets a chunk of a segment.
+     * Gets a part of a segment.
      *
-     * @return an {@link InputStream} of the chunk, plain text (i.e., decrypted and decompressed).
+     * @return an {@link InputStream} of the fetch part, plain text (i.e., decrypted and decompressed).
      */
     @Override
-    public InputStream partChunks(final ObjectKey objectKey,
-                                  final SegmentManifest manifest,
-                                  final FetchPart part) throws StorageBackendException {
-        final InputStream chunkContent = fetcher.fetch(objectKey, part.range);
+    public InputStream partContent(final ObjectKey objectKey,
+                                   final SegmentManifest manifest,
+                                   final FetchPart part) throws StorageBackendException {
+        final InputStream partContent = fetcher.fetch(objectKey, part.range);
 
-        DetransformChunkEnumeration detransformEnum = new BaseDetransformChunkEnumeration(chunkContent, part.chunks);
+        DetransformChunkEnumeration detransformEnum = new BaseDetransformChunkEnumeration(partContent, part.chunks);
         final Optional<SegmentEncryptionMetadata> encryptionMetadata = manifest.encryption();
         if (encryptionMetadata.isPresent()) {
             detransformEnum = new DecryptionChunkEnumeration(
