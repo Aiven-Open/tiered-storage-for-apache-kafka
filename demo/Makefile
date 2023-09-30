@@ -107,11 +107,16 @@ run_s3_aws:
 run_s3_minio:
 	docker compose -f compose-s3-minio.yml up
 
+.PHONY: run_gcs_fake_gcs_server
+run_gcs_fake_gcs_server:
+	docker compose -f compose-gcs-fake-gcs-server.yml up
+
 .PHONY: clean
 clean:
 	docker compose -f compose-local-fs.yml down
 	docker compose -f compose-s3-aws.yml down
 	docker compose -f compose-s3-minio.yml down
+	docker compose -f compose-gcs-fake-gcs-server.yml down
 
 .PHONY: show_local_data
 show_local_data:
@@ -131,6 +136,10 @@ show_remote_data_s3_aws:
 show_remote_data_s3_minio:
 	docker run --rm --network=host --entrypoint /usr/bin/bash quay.io/minio/mc \
 		-c "mc alias set mycloud http://localhost:9000 minioadmin minioadmin && mc ls --recursive mycloud/test-bucket | grep $(topic)"
+
+.PHONY: show_remote_data_gcs_fake_gcs_server
+show_remote_data_gcs_fake_gcs_server:
+	curl http://localhost:4443/storage/v1/b/test-bucket/o | jq -r '.items | map(.name) | .[]'
 
 offset = 0
 consume = 10

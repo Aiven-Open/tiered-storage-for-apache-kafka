@@ -10,6 +10,7 @@ To run the demos, you need:
 - Docker Compose
 - `make`
 - AWS S3 command line tool (optional)
+- `jq` (optional)
 
 ## Running
 
@@ -126,6 +127,37 @@ make consume
 ```
 
 You can also see the remote data in http://localhost:9090/browser/test-bucket (login: `minioadmin`, password: `minioadmin`).
+
+### fake-gcs-server as remote storage: `compose-gcs-fake-gcs-server.yml`
+
+This scenario uses `GcsStorage` with [fake-gcs-server](https://github.com/fsouza/fake-gcs-server) as the remote storage.
+
+```bash
+# Start the compose
+make run_gcs_fake_gcs_server
+
+# Create the topic with any variation
+make create_topic_by_size_ts
+# or
+# make create_topic_by_time_ts
+# or with TS disabled
+# make create_topic_*_no_ts
+
+# Fill the topic
+make fill_topic
+
+# See that segments are uploaded to the remote storage
+# (this may take several seconds)
+make show_remote_data_gcs_fake_gcs_server
+
+# Check that early segments are deleted
+# (completely or renamed with `.deleted` suffix)
+# from the local storage (this may take several seconds)
+make show_local_data
+
+# Check the data is consumable
+make consume
+```
 
 ## Additional features
 
