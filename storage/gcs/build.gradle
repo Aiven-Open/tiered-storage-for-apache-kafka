@@ -32,5 +32,5 @@ dependencies {
 
     testImplementation "org.testcontainers:junit-jupiter:$testcontainersVersion"
 
-    testImplementation "io.aiven:testcontainers-fake-gcs-server:0.1.0"
+    testImplementation "io.aiven:testcontainers-fake-gcs-server:0.2.0"
 }
