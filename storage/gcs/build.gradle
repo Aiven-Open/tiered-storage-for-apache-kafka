@@ -19,7 +19,7 @@ archivesBaseName = "storage-gcs"
 ext {
     // Keep empty lines between versions to avoid conflicts on mass update (e.g. Dependabot).
 
-    gcpSdkVersion = "2.26.1"
+    gcpSdkVersion = "2.27.1"
 }
 
 dependencies {
