@@ -26,6 +26,7 @@ import java.security.KeyPair;
 import java.util.ArrayList;
 import java.util.Collections;
 import java.util.HashMap;
+import java.util.LinkedHashSet;
 import java.util.List;
 import java.util.Map;
 import java.util.Objects;
@@ -49,7 +50,9 @@ import io.aiven.kafka.tieredstorage.config.RemoteStorageManagerConfig;
 import io.aiven.kafka.tieredstorage.fetch.FetchEnumeration;
 import io.aiven.kafka.tieredstorage.fetch.FetchManager;
 import io.aiven.kafka.tieredstorage.fetch.FetchManagerFactory;
+import io.aiven.kafka.tieredstorage.fetch.FetchPart;
 import io.aiven.kafka.tieredstorage.fetch.KeyNotFoundRuntimeException;
+import io.aiven.kafka.tieredstorage.fetch.cache.FetchCache;
 import io.aiven.kafka.tieredstorage.manifest.SegmentEncryptionMetadata;
 import io.aiven.kafka.tieredstorage.manifest.SegmentEncryptionMetadataV1;
 import io.aiven.kafka.tieredstorage.manifest.SegmentIndexesV1;
@@ -432,11 +435,34 @@ public class RemoteStorageManager implements org.apache.kafka.server.log.remote.
             final var segmentManifest = fetchSegmentManifest(remoteLogSegmentMetadata);
             final var key = objectKey(remoteLogSegmentMetadata, ObjectKeyFactory.Suffix.LOG);
             final var fetchEnumeration = new FetchEnumeration(fetchManager, key, segmentManifest, range, partSize);
+            maybePreFetch(key, segmentManifest, fetchEnumeration);
             return fetchEnumeration.toInputStream();
         } catch (final KeyNotFoundException | KeyNotFoundRuntimeException e) {
             throw new RemoteResourceNotFoundException(e);
         } catch (final Exception e) {
             throw new RemoteStorageException(e);
+        }
+    }
+
+    private void maybePreFetch(final ObjectKey key,
+                               final SegmentManifest segmentManifest,
+                               final FetchEnumeration fetchEnumeration) {
+        if (fetchManager instanceof FetchCache) {
+            // when cache is available, prepare beforehand to avoid retries to fail on remote tiered fetch
+            // this also impacts latency as all fetches happen async without waiting for consumption to progress
+            final var nextParts = new LinkedHashSet<FetchPart>(2);
+            final var parts = fetchEnumeration.parts().iterator();
+            // Prefetch current and next part.
+            // Otherwise, whole segment would be pre-fetched with broker fetch request that includes start offset only.
+            // This is assuming parts are larger than fetch max bytes per partition on the consumer side,
+            // so when a consumer read finishes, and next batches are requested, the part is already prefetched.
+            int maxPartsToPrefetch = 2;
+            while (parts.hasNext() && maxPartsToPrefetch > 0) {
+                nextParts.add(parts.next());
+                maxPartsToPrefetch--;
+            }
+            // only fetches parts not in cache already. non-blocking
+            ((FetchCache<?>) fetchManager).prepareParts(key, segmentManifest, nextParts);
         }
     }
 

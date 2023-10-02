@@ -20,10 +20,12 @@ import java.io.IOException;
 import java.io.InputStream;
 import java.io.SequenceInputStream;
 import java.util.Enumeration;
+import java.util.LinkedHashSet;
 import java.util.List;
 import java.util.NoSuchElementException;
 import java.util.Objects;
 import java.util.Optional;
+import java.util.Set;
 
 import io.aiven.kafka.tieredstorage.Chunk;
 import io.aiven.kafka.tieredstorage.manifest.SegmentManifest;
@@ -100,6 +102,22 @@ public class FetchEnumeration implements Enumeration<InputStream> {
         } else {
             return chunkForOriginalOffset;
         }
+    }
+
+    public Set<FetchPart> parts() {
+        final var parts = new LinkedHashSet<FetchPart>();
+        var current = firstPart;
+        while (!current.equals(lastPart)) {
+            parts.add(current);
+            final var maybeNext = current.next();
+            if (maybeNext.isPresent()) {
+                current = maybeNext.get();
+            } else {
+                break;
+            }
+        }
+        parts.add(current);
+        return parts;
     }
 
     @Override

@@ -18,6 +18,7 @@ package io.aiven.kafka.tieredstorage.fetch.cache;
 
 import java.io.IOException;
 import java.io.InputStream;
+import java.util.Set;
 import java.util.concurrent.CompletableFuture;
 import java.util.concurrent.CompletionException;
 import java.util.concurrent.ExecutionException;
@@ -117,6 +118,25 @@ public abstract class FetchCache<T> implements FetchManager, Configurable {
             throw new RuntimeException(e);
         } catch (final InterruptedException | TimeoutException e) {
             throw new RuntimeException(e);
+        }
+    }
+
+
+    public void prepareParts(final ObjectKey objectKey,
+                             final SegmentManifest manifest,
+                             final Set<FetchPart> parts) {
+        for (final var part : parts) {
+            final FetchPartKey fetchPartKey = new FetchPartKey(objectKey.value(), part.range);
+            cache.asMap()
+                .computeIfAbsent(fetchPartKey, key -> CompletableFuture.supplyAsync(() -> {
+                    statsCounter.recordMiss();
+                    try {
+                        final InputStream partContent = fetchManager.fetchPartContent(objectKey, manifest, part);
+                        return this.cachePartContent(fetchPartKey, partContent);
+                    } catch (final StorageBackendException | IOException e) {
+                        throw new CompletionException(e);
+                    }
+                }, executor));
         }
     }
 

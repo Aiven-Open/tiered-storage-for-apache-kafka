@@ -21,6 +21,7 @@ import java.io.IOException;
 import java.io.InputStream;
 import java.time.Duration;
 import java.util.Map;
+import java.util.Set;
 import java.util.concurrent.ExecutionException;
 
 import org.apache.kafka.server.log.remote.storage.RemoteStorageManager.IndexType;
@@ -210,6 +211,48 @@ class FetchCacheTest {
             verify(fetchManager, times(3)).fetchPartContent(eq(SEGMENT_OBJECT_KEY), eq(SEGMENT_MANIFEST), any());
         }
 
+        @Test
+        void preparingParts() throws Exception {
+            fetchCache.configure(Map.of(
+                "retention.ms", "-1",
+                "size", "-1"
+            ));
+            fetchCache.prepareParts(SEGMENT_OBJECT_KEY, SEGMENT_MANIFEST, Set.of(firstPart, nextPart));
+            await().pollInterval(Duration.ofMillis(5)).until(() -> fetchCache.statsCounter.snapshot().loadCount() == 2);
+            verify(fetchManager, times(2)).fetchPartContent(eq(SEGMENT_OBJECT_KEY), eq(SEGMENT_MANIFEST), any());
+
+            final InputStream cachedPart0 =
+                fetchCache.fetchPartContent(SEGMENT_OBJECT_KEY, SEGMENT_MANIFEST, firstPart);
+            assertThat(cachedPart0).hasBinaryContent(CHUNK_0);
+            verifyNoMoreInteractions(fetchManager);
+
+            final InputStream cachedPart1 =
+                fetchCache.fetchPartContent(SEGMENT_OBJECT_KEY, SEGMENT_MANIFEST, nextPart);
+            assertThat(cachedPart1).hasBinaryContent(CHUNK_1);
+            verifyNoMoreInteractions(fetchManager);
+        }
+
+        @Test
+        void preparingFirstPart() throws Exception {
+            fetchCache.configure(Map.of(
+                "retention.ms", "-1",
+                "size", "-1"
+            ));
+            fetchCache.prepareParts(SEGMENT_OBJECT_KEY, SEGMENT_MANIFEST, Set.of(firstPart));
+            await().pollInterval(Duration.ofMillis(5))
+                .until(() -> fetchCache.statsCounter.snapshot().loadCount() == 1);
+            verify(fetchManager).fetchPartContent(SEGMENT_OBJECT_KEY, SEGMENT_MANIFEST, firstPart);
+
+            final InputStream cachedPart0 =
+                fetchCache.fetchPartContent(SEGMENT_OBJECT_KEY, SEGMENT_MANIFEST, firstPart);
+            assertThat(cachedPart0).hasBinaryContent(CHUNK_0);
+            verifyNoMoreInteractions(fetchManager);
+
+            final InputStream cachedPart1 =
+                fetchCache.fetchPartContent(SEGMENT_OBJECT_KEY, SEGMENT_MANIFEST, nextPart);
+            assertThat(cachedPart1).hasBinaryContent(CHUNK_1);
+            verify(fetchManager).fetchPartContent(SEGMENT_OBJECT_KEY, SEGMENT_MANIFEST, nextPart);
+        }
     }
 
     @Nested

@@ -108,14 +108,19 @@ class FetchEnumerationTest {
     @Test
     void shouldReturnRangeFromSingleChunk() throws StorageBackendException {
         // Given a set of 10 chunks with 10 bytes each
-        // When
         final int from = 32;
         final int to = 34;
+        final var part0 = new FetchPart(chunkIndex, chunkIndex.chunks().get(0), 1);
+        final var part1 = part0.next().get();
+        final var part2 = part1.next().get();
+        final var part3 = part2.next().get();
+        // When
         final FetchEnumeration fetchEnumeration =
             new FetchEnumeration(chunkManager, SEGMENT_KEY, manifest, BytesRange.of(from, to), 1);
         when(chunkManager.fetchPartContent(eq(SEGMENT_KEY), eq(manifest), any()))
             .thenReturn(new ByteArrayInputStream(CHUNK_CONTENT));
         // Then
+        assertThat(fetchEnumeration.parts()).containsExactly(part3);
         assertThat(fetchEnumeration.firstChunk.id).isEqualTo(fetchEnumeration.lastChunk.id);
         assertThat(fetchEnumeration.nextElement()).hasContent("234");
         assertThat(fetchEnumeration.hasMoreElements()).isFalse();
@@ -126,22 +131,24 @@ class FetchEnumerationTest {
     @Test
     void shouldReturnRangeFromMultipleParts() throws StorageBackendException {
         // Given a set of 10 chunks with 10 bytes each
-        // When
         final int from = 15;
         final int to = 34;
-        final FetchEnumeration fetchEnumeration =
-            new FetchEnumeration(chunkManager, SEGMENT_KEY, manifest, BytesRange.of(from, to), 1);
         final var part0 = new FetchPart(chunkIndex, chunkIndex.chunks().get(0), 1);
         final var part1 = part0.next().get();
+        final var part2 = part1.next().get();
+        final var part3 = part2.next().get();
+        // When
+        final FetchEnumeration fetchEnumeration =
+            new FetchEnumeration(chunkManager, SEGMENT_KEY, manifest, BytesRange.of(from, to), 1);
+
         when(chunkManager.fetchPartContent(SEGMENT_KEY, manifest, part1))
             .thenReturn(new ByteArrayInputStream(CHUNK_CONTENT));
-        final var part2 = part1.next().get();
         when(chunkManager.fetchPartContent(SEGMENT_KEY, manifest, part2))
             .thenReturn(new ByteArrayInputStream(CHUNK_CONTENT));
-        final var part3 = part2.next().get();
         when(chunkManager.fetchPartContent(SEGMENT_KEY, manifest, part3))
             .thenReturn(new ByteArrayInputStream(CHUNK_CONTENT));
         // Then
+        assertThat(fetchEnumeration.parts()).containsExactly(part1, part2, part3);
         assertThat(fetchEnumeration.firstChunk.id).isNotEqualTo(fetchEnumeration.lastChunk.id);
         assertThat(fetchEnumeration.nextElement()).hasContent("56789");
         assertThat(fetchEnumeration.nextElement()).hasContent("0123456789");
