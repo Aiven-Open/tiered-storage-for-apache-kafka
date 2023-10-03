@@ -118,7 +118,11 @@ subprojects {
 
         awsSdkVersion = "2.20.140"
 
+        gcpSdkVersion = "2.26.1"
+
         testcontainersVersion = "1.19.0"
+
+        testcontainersFakeGcsServerVersion = "0.2.0"
     }
 
     dependencies {

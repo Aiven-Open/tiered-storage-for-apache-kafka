@@ -16,12 +16,6 @@
 
 archivesBaseName = "storage-gcs"
 
-ext {
-    // Keep empty lines between versions to avoid conflicts on mass update (e.g. Dependabot).
-
-    gcpSdkVersion = "2.27.1"
-}
-
 dependencies {
     implementation project(":storage:core")
 
@@ -32,5 +26,5 @@ dependencies {
 
     testImplementation "org.testcontainers:junit-jupiter:$testcontainersVersion"
 
-    testImplementation "io.aiven:testcontainers-fake-gcs-server:0.2.0"
+    testImplementation "io.aiven:testcontainers-fake-gcs-server:$testcontainersFakeGcsServerVersion"
 }
