@@ -76,10 +76,10 @@ class S3StorageMetricsTest {
                         LOCALSTACK.getSecretKey()
                     )
                 )
-            )
-            .build();
-        final S3Client s3Client = clientBuilder.build();
-        s3Client.createBucket(CreateBucketRequest.builder().bucket(BUCKET_NAME).build());
+            );
+        try (final S3Client s3Client = clientBuilder.build()) {
+            s3Client.createBucket(CreateBucketRequest.builder().bucket(BUCKET_NAME).build());
+        }
     }
 
     @BeforeEach
@@ -125,40 +125,80 @@ class S3StorageMetricsTest {
             .isGreaterThan(0.0);
         assertThat(MBEAN_SERVER.getAttribute(segmentCopyPerSecName, "get-object-requests-total"))
             .isEqualTo(2.0);
+        assertThat(MBEAN_SERVER.getAttribute(segmentCopyPerSecName, "get-object-time-avg"))
+            .asInstanceOf(DOUBLE)
+            .isGreaterThan(0.0);
+        assertThat(MBEAN_SERVER.getAttribute(segmentCopyPerSecName, "get-object-time-max"))
+            .asInstanceOf(DOUBLE)
+            .isGreaterThan(0.0);
 
         assertThat(MBEAN_SERVER.getAttribute(segmentCopyPerSecName, "put-object-requests-rate"))
             .isEqualTo(0.0);
         assertThat(MBEAN_SERVER.getAttribute(segmentCopyPerSecName, "put-object-requests-total"))
             .isEqualTo(0.0);
+        assertThat(MBEAN_SERVER.getAttribute(segmentCopyPerSecName, "put-object-time-avg"))
+            .isEqualTo(Double.NaN);
+        assertThat(MBEAN_SERVER.getAttribute(segmentCopyPerSecName, "put-object-time-max"))
+            .isEqualTo(Double.NaN);
 
         assertThat(MBEAN_SERVER.getAttribute(segmentCopyPerSecName, "delete-object-requests-rate"))
             .asInstanceOf(DOUBLE)
             .isGreaterThan(0.0);
         assertThat(MBEAN_SERVER.getAttribute(segmentCopyPerSecName, "delete-object-requests-total"))
             .isEqualTo(1.0);
+        assertThat(MBEAN_SERVER.getAttribute(segmentCopyPerSecName, "delete-object-time-avg"))
+            .asInstanceOf(DOUBLE)
+            .isGreaterThan(0.0);
+        assertThat(MBEAN_SERVER.getAttribute(segmentCopyPerSecName, "delete-object-time-max"))
+            .asInstanceOf(DOUBLE)
+            .isGreaterThan(0.0);
 
         assertThat(MBEAN_SERVER.getAttribute(segmentCopyPerSecName, "create-multipart-upload-requests-rate"))
             .asInstanceOf(DOUBLE)
             .isGreaterThan(0.0);
         assertThat(MBEAN_SERVER.getAttribute(segmentCopyPerSecName, "create-multipart-upload-requests-total"))
             .isEqualTo(2.0);
+        assertThat(MBEAN_SERVER.getAttribute(segmentCopyPerSecName, "create-multipart-upload-time-avg"))
+            .asInstanceOf(DOUBLE)
+            .isGreaterThan(0.0);
+        assertThat(MBEAN_SERVER.getAttribute(segmentCopyPerSecName, "create-multipart-upload-time-max"))
+            .asInstanceOf(DOUBLE)
+            .isGreaterThan(0.0);
 
         assertThat(MBEAN_SERVER.getAttribute(segmentCopyPerSecName, "upload-part-requests-rate"))
             .asInstanceOf(DOUBLE)
             .isGreaterThan(0.0);
         assertThat(MBEAN_SERVER.getAttribute(segmentCopyPerSecName, "upload-part-requests-total"))
             .isEqualTo(2.0);
+        assertThat(MBEAN_SERVER.getAttribute(segmentCopyPerSecName, "upload-part-time-avg"))
+            .asInstanceOf(DOUBLE)
+            .isGreaterThan(0.0);
+        assertThat(MBEAN_SERVER.getAttribute(segmentCopyPerSecName, "upload-part-time-max"))
+            .asInstanceOf(DOUBLE)
+            .isGreaterThan(0.0);
 
         assertThat(MBEAN_SERVER.getAttribute(segmentCopyPerSecName, "complete-multipart-upload-requests-rate"))
             .asInstanceOf(DOUBLE)
             .isGreaterThan(0.0);
         assertThat(MBEAN_SERVER.getAttribute(segmentCopyPerSecName, "complete-multipart-upload-requests-total"))
             .isEqualTo(1.0);
+        assertThat(MBEAN_SERVER.getAttribute(segmentCopyPerSecName, "complete-multipart-upload-time-avg"))
+            .asInstanceOf(DOUBLE)
+            .isGreaterThan(0.0);
+        assertThat(MBEAN_SERVER.getAttribute(segmentCopyPerSecName, "complete-multipart-upload-time-max"))
+            .asInstanceOf(DOUBLE)
+            .isGreaterThan(0.0);
 
         assertThat(MBEAN_SERVER.getAttribute(segmentCopyPerSecName, "abort-multipart-upload-requests-rate"))
             .asInstanceOf(DOUBLE)
             .isGreaterThan(0.0);
         assertThat(MBEAN_SERVER.getAttribute(segmentCopyPerSecName, "abort-multipart-upload-requests-total"))
             .isEqualTo(1.0);
+        assertThat(MBEAN_SERVER.getAttribute(segmentCopyPerSecName, "abort-multipart-upload-time-avg"))
+            .asInstanceOf(DOUBLE)
+            .isGreaterThan(0.0);
+        assertThat(MBEAN_SERVER.getAttribute(segmentCopyPerSecName, "abort-multipart-upload-time-max"))
+            .asInstanceOf(DOUBLE)
+            .isGreaterThan(0.0);
     }
 }
