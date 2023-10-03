@@ -49,6 +49,6 @@ jobs:
 
       - name: Run E2E tests
         timeout-minutes: 30
-        run: E2E_TEST=${{ matrix.test }} make e2e_test
+        run: make E2E_TEST=${{ matrix.test }} e2e_test
 
       # TODO: publish docker image
