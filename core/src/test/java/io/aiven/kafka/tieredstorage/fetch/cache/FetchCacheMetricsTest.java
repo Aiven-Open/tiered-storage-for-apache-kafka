@@ -90,7 +90,7 @@ class FetchCacheMetricsTest {
     void shouldRecordMetrics(final Class<FetchCache<?>> fetchCacheClass, final Map<String, ?> config)
         throws Exception {
         // Given a fetch cache implementation
-        when(fetchManager.partContent(any(), any(), any()))
+        when(fetchManager.fetchPartContent(any(), any(), any()))
             .thenReturn(new ByteArrayInputStream("test".getBytes()));
         final var chunk = new Chunk(0, 0, 10, 0, 10);
         when(chunkIndex.chunks()).thenReturn(List.of(chunk));
@@ -102,13 +102,13 @@ class FetchCacheMetricsTest {
         final var objectName = new ObjectName("aiven.kafka.server.tieredstorage.cache:type=fetch-cache");
 
         // When getting a existing part from cache
-        fetchCache.partContent(OBJECT_KEY_PATH, segmentManifest, firstPart);
+        fetchCache.fetchPartContent(OBJECT_KEY_PATH, segmentManifest, firstPart);
 
         // check cache size increases after first miss
         assertThat(MBEAN_SERVER.getAttribute(objectName, "cache-size-total"))
             .isEqualTo(1.0);
 
-        fetchCache.partContent(OBJECT_KEY_PATH, segmentManifest, firstPart);
+        fetchCache.fetchPartContent(OBJECT_KEY_PATH, segmentManifest, firstPart);
 
         // Then the following metrics should be available
         assertThat(MBEAN_SERVER.getAttribute(objectName, "cache-hits-total"))

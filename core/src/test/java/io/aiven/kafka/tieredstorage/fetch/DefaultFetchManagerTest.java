@@ -68,7 +68,7 @@ class DefaultFetchManagerTest extends AesKeyAwareTest {
             .thenReturn(new ByteArrayInputStream("0123456789".getBytes()));
 
         final var part = new FetchPart(chunkIndex, chunkIndex.chunks().get(0), 1);
-        assertThat(fetchManager.partContent(OBJECT_KEY, manifest, part)).hasContent("0123456789");
+        assertThat(fetchManager.fetchPartContent(OBJECT_KEY, manifest, part)).hasContent("0123456789");
         verify(storage).fetch(OBJECT_KEY, chunkIndex.chunks().get(0).range());
     }
 
@@ -94,7 +94,7 @@ class DefaultFetchManagerTest extends AesKeyAwareTest {
         final var manifest = new SegmentManifestV1(chunkIndex, SEGMENT_INDEXES, false, encryption);
         final FetchManager fetchManager = new DefaultFetchManager(storage, aesEncryptionProvider);
 
-        assertThat(fetchManager.partContent(OBJECT_KEY, manifest, part)).hasBinaryContent(TEST_CHUNK_CONTENT);
+        assertThat(fetchManager.fetchPartContent(OBJECT_KEY, manifest, part)).hasBinaryContent(TEST_CHUNK_CONTENT);
         verify(storage).fetch(OBJECT_KEY, chunkIndex.chunks().get(0).range());
     }
 
@@ -116,7 +116,7 @@ class DefaultFetchManagerTest extends AesKeyAwareTest {
         final var manifest = new SegmentManifestV1(chunkIndex, SEGMENT_INDEXES, true, null);
         final FetchManager fetchManager = new DefaultFetchManager(storage, null);
 
-        assertThat(fetchManager.partContent(OBJECT_KEY, manifest, part)).hasBinaryContent(TEST_CHUNK_CONTENT);
+        assertThat(fetchManager.fetchPartContent(OBJECT_KEY, manifest, part)).hasBinaryContent(TEST_CHUNK_CONTENT);
         verify(storage).fetch(OBJECT_KEY, chunkIndex.chunks().get(0).range());
     }
 }

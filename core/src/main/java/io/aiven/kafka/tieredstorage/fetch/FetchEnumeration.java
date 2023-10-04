@@ -160,7 +160,7 @@ public class FetchEnumeration implements Enumeration<InputStream> {
 
     private InputStream partChunks(final FetchPart part) {
         try {
-            return fetchManager.partContent(objectKey, manifest, part);
+            return fetchManager.fetchPartContent(objectKey, manifest, part);
         } catch (final KeyNotFoundException e) {
             throw new KeyNotFoundRuntimeException(e);
         } catch (final StorageBackendException | IOException e) {

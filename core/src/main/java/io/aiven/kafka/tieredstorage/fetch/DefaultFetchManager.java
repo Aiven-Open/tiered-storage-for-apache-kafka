@@ -46,9 +46,9 @@ public class DefaultFetchManager implements FetchManager {
      * @return an {@link InputStream} of the fetch part, plain text (i.e., decrypted and decompressed).
      */
     @Override
-    public InputStream partContent(final ObjectKey objectKey,
-                                   final SegmentManifest manifest,
-                                   final FetchPart part) throws StorageBackendException {
+    public InputStream fetchPartContent(final ObjectKey objectKey,
+                                        final SegmentManifest manifest,
+                                        final FetchPart part) throws StorageBackendException {
         final InputStream partContent = fetcher.fetch(objectKey, part.range);
 
         DetransformChunkEnumeration detransformEnum = new BaseDetransformChunkEnumeration(partContent, part.chunks);

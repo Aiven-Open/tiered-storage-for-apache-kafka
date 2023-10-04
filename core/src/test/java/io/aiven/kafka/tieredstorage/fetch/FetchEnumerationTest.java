@@ -114,7 +114,7 @@ class FetchEnumerationTest {
         final int to = 34;
         final FetchEnumeration fetchEnumeration =
             new FetchEnumeration(chunkManager, SEGMENT_KEY, manifest, BytesRange.of(from, to), 1);
-        when(chunkManager.partContent(eq(SEGMENT_KEY), eq(manifest), any()))
+        when(chunkManager.fetchPartContent(eq(SEGMENT_KEY), eq(manifest), any()))
             .thenReturn(new ByteArrayInputStream(CHUNK_CONTENT));
         // Then
         assertThat(fetchEnumeration.firstChunk.id).isEqualTo(fetchEnumeration.lastChunk.id);
@@ -134,13 +134,13 @@ class FetchEnumerationTest {
             new FetchEnumeration(chunkManager, SEGMENT_KEY, manifest, BytesRange.of(from, to), 1);
         final var part0 = new FetchPart(chunkIndex, chunkIndex.chunks().get(0), 1);
         final var part1 = part0.next().get();
-        when(chunkManager.partContent(SEGMENT_KEY, manifest, part1))
+        when(chunkManager.fetchPartContent(SEGMENT_KEY, manifest, part1))
             .thenReturn(new ByteArrayInputStream(CHUNK_CONTENT));
         final var part2 = part1.next().get();
-        when(chunkManager.partContent(SEGMENT_KEY, manifest, part2))
+        when(chunkManager.fetchPartContent(SEGMENT_KEY, manifest, part2))
             .thenReturn(new ByteArrayInputStream(CHUNK_CONTENT));
         final var part3 = part2.next().get();
-        when(chunkManager.partContent(SEGMENT_KEY, manifest, part3))
+        when(chunkManager.fetchPartContent(SEGMENT_KEY, manifest, part3))
             .thenReturn(new ByteArrayInputStream(CHUNK_CONTENT));
         // Then
         assertThat(fetchEnumeration.firstChunk.id).isNotEqualTo(fetchEnumeration.lastChunk.id);

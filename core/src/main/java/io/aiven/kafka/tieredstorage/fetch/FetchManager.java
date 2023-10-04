@@ -24,8 +24,8 @@ import io.aiven.kafka.tieredstorage.storage.ObjectKey;
 import io.aiven.kafka.tieredstorage.storage.StorageBackendException;
 
 public interface FetchManager {
-    InputStream partContent(final ObjectKey objectKey,
-                            final SegmentManifest manifest,
-                            final FetchPart part)
+    InputStream fetchPartContent(final ObjectKey objectKey,
+                                 final SegmentManifest manifest,
+                                 final FetchPart part)
         throws StorageBackendException, IOException;
 }

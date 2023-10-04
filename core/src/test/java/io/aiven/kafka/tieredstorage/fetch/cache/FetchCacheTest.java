@@ -109,10 +109,10 @@ class FetchCacheTest {
             doAnswer(invocation -> removalListener).when(fetchCache).removalListener();
             final var chunkIndex = SEGMENT_MANIFEST.chunkIndex();
             firstPart = new FetchPart(chunkIndex, chunkIndex.chunks().get(0), 1);
-            when(fetchManager.partContent(SEGMENT_OBJECT_KEY, SEGMENT_MANIFEST, firstPart))
+            when(fetchManager.fetchPartContent(SEGMENT_OBJECT_KEY, SEGMENT_MANIFEST, firstPart))
                 .thenAnswer(invocation -> new ByteArrayInputStream(CHUNK_0));
             nextPart = firstPart.next().get();
-            when(fetchManager.partContent(SEGMENT_OBJECT_KEY, SEGMENT_MANIFEST, nextPart))
+            when(fetchManager.fetchPartContent(SEGMENT_OBJECT_KEY, SEGMENT_MANIFEST, nextPart))
                 .thenAnswer(invocation -> new ByteArrayInputStream(CHUNK_1));
         }
 
@@ -123,17 +123,19 @@ class FetchCacheTest {
                 "size", "-1"
             ));
 
-            final InputStream part0 = fetchCache.partContent(SEGMENT_OBJECT_KEY, SEGMENT_MANIFEST, firstPart);
+            final InputStream part0 = fetchCache.fetchPartContent(SEGMENT_OBJECT_KEY, SEGMENT_MANIFEST, firstPart);
             assertThat(part0).hasBinaryContent(CHUNK_0);
-            verify(fetchManager).partContent(SEGMENT_OBJECT_KEY, SEGMENT_MANIFEST, firstPart);
-            final InputStream cachedPart0 = fetchCache.partContent(SEGMENT_OBJECT_KEY, SEGMENT_MANIFEST, firstPart);
+            verify(fetchManager).fetchPartContent(SEGMENT_OBJECT_KEY, SEGMENT_MANIFEST, firstPart);
+            final InputStream cachedPart0 =
+                fetchCache.fetchPartContent(SEGMENT_OBJECT_KEY, SEGMENT_MANIFEST, firstPart);
             assertThat(cachedPart0).hasBinaryContent(CHUNK_0);
             verifyNoMoreInteractions(fetchManager);
 
-            final InputStream part1 = fetchCache.partContent(SEGMENT_OBJECT_KEY, SEGMENT_MANIFEST, nextPart);
+            final InputStream part1 = fetchCache.fetchPartContent(SEGMENT_OBJECT_KEY, SEGMENT_MANIFEST, nextPart);
             assertThat(part1).hasBinaryContent(CHUNK_1);
-            verify(fetchManager).partContent(SEGMENT_OBJECT_KEY, SEGMENT_MANIFEST, nextPart);
-            final InputStream cachedPart1 = fetchCache.partContent(SEGMENT_OBJECT_KEY, SEGMENT_MANIFEST, nextPart);
+            verify(fetchManager).fetchPartContent(SEGMENT_OBJECT_KEY, SEGMENT_MANIFEST, nextPart);
+            final InputStream cachedPart1 =
+                fetchCache.fetchPartContent(SEGMENT_OBJECT_KEY, SEGMENT_MANIFEST, nextPart);
             assertThat(cachedPart1).hasBinaryContent(CHUNK_1);
             verifyNoMoreInteractions(fetchManager);
 
@@ -147,19 +149,19 @@ class FetchCacheTest {
                 "size", "-1"
             ));
 
-            assertThat(fetchCache.partContent(SEGMENT_OBJECT_KEY, SEGMENT_MANIFEST, firstPart))
+            assertThat(fetchCache.fetchPartContent(SEGMENT_OBJECT_KEY, SEGMENT_MANIFEST, firstPart))
                 .hasBinaryContent(CHUNK_0);
-            verify(fetchManager).partContent(SEGMENT_OBJECT_KEY, SEGMENT_MANIFEST, firstPart);
-            assertThat(fetchCache.partContent(SEGMENT_OBJECT_KEY, SEGMENT_MANIFEST, firstPart))
+            verify(fetchManager).fetchPartContent(SEGMENT_OBJECT_KEY, SEGMENT_MANIFEST, firstPart);
+            assertThat(fetchCache.fetchPartContent(SEGMENT_OBJECT_KEY, SEGMENT_MANIFEST, firstPart))
                 .hasBinaryContent(CHUNK_0);
             verifyNoMoreInteractions(fetchManager);
 
             Thread.sleep(100);
 
-            assertThat(fetchCache.partContent(SEGMENT_OBJECT_KEY, SEGMENT_MANIFEST, nextPart))
+            assertThat(fetchCache.fetchPartContent(SEGMENT_OBJECT_KEY, SEGMENT_MANIFEST, nextPart))
                 .hasBinaryContent(CHUNK_1);
-            verify(fetchManager).partContent(SEGMENT_OBJECT_KEY, SEGMENT_MANIFEST, nextPart);
-            assertThat(fetchCache.partContent(SEGMENT_OBJECT_KEY, SEGMENT_MANIFEST, nextPart))
+            verify(fetchManager).fetchPartContent(SEGMENT_OBJECT_KEY, SEGMENT_MANIFEST, nextPart);
+            assertThat(fetchCache.fetchPartContent(SEGMENT_OBJECT_KEY, SEGMENT_MANIFEST, nextPart))
                 .hasBinaryContent(CHUNK_1);
             verifyNoMoreInteractions(fetchManager);
 
@@ -172,9 +174,9 @@ class FetchCacheTest {
                     any(),
                     eq(RemovalCause.EXPIRED));
 
-            assertThat(fetchCache.partContent(SEGMENT_OBJECT_KEY, SEGMENT_MANIFEST, firstPart))
+            assertThat(fetchCache.fetchPartContent(SEGMENT_OBJECT_KEY, SEGMENT_MANIFEST, firstPart))
                 .hasBinaryContent(CHUNK_0);
-            verify(fetchManager, times(2)).partContent(SEGMENT_OBJECT_KEY, SEGMENT_MANIFEST, firstPart);
+            verify(fetchManager, times(2)).fetchPartContent(SEGMENT_OBJECT_KEY, SEGMENT_MANIFEST, firstPart);
         }
 
         @Test
@@ -184,16 +186,16 @@ class FetchCacheTest {
                 "size", "18"
             ));
 
-            assertThat(fetchCache.partContent(SEGMENT_OBJECT_KEY, SEGMENT_MANIFEST, firstPart))
+            assertThat(fetchCache.fetchPartContent(SEGMENT_OBJECT_KEY, SEGMENT_MANIFEST, firstPart))
                 .hasBinaryContent(CHUNK_0);
-            verify(fetchManager).partContent(SEGMENT_OBJECT_KEY, SEGMENT_MANIFEST, firstPart);
-            assertThat(fetchCache.partContent(SEGMENT_OBJECT_KEY, SEGMENT_MANIFEST, firstPart))
+            verify(fetchManager).fetchPartContent(SEGMENT_OBJECT_KEY, SEGMENT_MANIFEST, firstPart);
+            assertThat(fetchCache.fetchPartContent(SEGMENT_OBJECT_KEY, SEGMENT_MANIFEST, firstPart))
                 .hasBinaryContent(CHUNK_0);
             verifyNoMoreInteractions(fetchManager);
 
-            assertThat(fetchCache.partContent(SEGMENT_OBJECT_KEY, SEGMENT_MANIFEST, nextPart))
+            assertThat(fetchCache.fetchPartContent(SEGMENT_OBJECT_KEY, SEGMENT_MANIFEST, nextPart))
                 .hasBinaryContent(CHUNK_1);
-            verify(fetchManager).partContent(SEGMENT_OBJECT_KEY, SEGMENT_MANIFEST, nextPart);
+            verify(fetchManager).fetchPartContent(SEGMENT_OBJECT_KEY, SEGMENT_MANIFEST, nextPart);
 
             await().atMost(Duration.ofMillis(5000))
                 .pollDelay(Duration.ofSeconds(2))
@@ -202,11 +204,11 @@ class FetchCacheTest {
 
             verify(removalListener).onRemoval(any(FetchPartKey.class), any(), eq(RemovalCause.SIZE));
 
-            assertThat(fetchCache.partContent(SEGMENT_OBJECT_KEY, SEGMENT_MANIFEST, firstPart))
+            assertThat(fetchCache.fetchPartContent(SEGMENT_OBJECT_KEY, SEGMENT_MANIFEST, firstPart))
                 .hasBinaryContent(CHUNK_0);
-            assertThat(fetchCache.partContent(SEGMENT_OBJECT_KEY, SEGMENT_MANIFEST, nextPart))
+            assertThat(fetchCache.fetchPartContent(SEGMENT_OBJECT_KEY, SEGMENT_MANIFEST, nextPart))
                 .hasBinaryContent(CHUNK_1);
-            verify(fetchManager, times(3)).partContent(eq(SEGMENT_OBJECT_KEY), eq(SEGMENT_MANIFEST), any());
+            verify(fetchManager, times(3)).fetchPartContent(eq(SEGMENT_OBJECT_KEY), eq(SEGMENT_MANIFEST), any());
         }
 
     }
@@ -231,29 +233,29 @@ class FetchCacheTest {
 
         @Test
         void failedFetching() throws Exception {
-            when(fetchManager.partContent(eq(SEGMENT_OBJECT_KEY), eq(SEGMENT_MANIFEST), any()))
+            when(fetchManager.fetchPartContent(eq(SEGMENT_OBJECT_KEY), eq(SEGMENT_MANIFEST), any()))
                 .thenThrow(new StorageBackendException(TEST_EXCEPTION_MESSAGE))
                 .thenThrow(new IOException(TEST_EXCEPTION_MESSAGE));
 
-            assertThatThrownBy(() -> fetchCache.partContent(SEGMENT_OBJECT_KEY, SEGMENT_MANIFEST, firstPart))
+            assertThatThrownBy(() -> fetchCache.fetchPartContent(SEGMENT_OBJECT_KEY, SEGMENT_MANIFEST, firstPart))
                 .isInstanceOf(StorageBackendException.class)
                 .hasMessage(TEST_EXCEPTION_MESSAGE);
-            assertThatThrownBy(() -> fetchCache.partContent(SEGMENT_OBJECT_KEY, SEGMENT_MANIFEST, nextPart))
+            assertThatThrownBy(() -> fetchCache.fetchPartContent(SEGMENT_OBJECT_KEY, SEGMENT_MANIFEST, nextPart))
                 .isInstanceOf(IOException.class)
                 .hasMessage(TEST_EXCEPTION_MESSAGE);
         }
 
         @Test
         void failedReadingCachedValueWithInterruptedException() throws Exception {
-            when(fetchManager.partContent(SEGMENT_OBJECT_KEY, SEGMENT_MANIFEST, firstPart))
+            when(fetchManager.fetchPartContent(SEGMENT_OBJECT_KEY, SEGMENT_MANIFEST, firstPart))
                 .thenReturn(new ByteArrayInputStream(CHUNK_0));
 
             doCallRealMethod().doAnswer(invocation -> {
                 throw new InterruptedException(TEST_EXCEPTION_MESSAGE);
             }).when(fetchCache).readCachedPartContent(any());
 
-            fetchCache.partContent(SEGMENT_OBJECT_KEY, SEGMENT_MANIFEST, firstPart);
-            assertThatThrownBy(() -> fetchCache.partContent(SEGMENT_OBJECT_KEY, SEGMENT_MANIFEST, firstPart))
+            fetchCache.fetchPartContent(SEGMENT_OBJECT_KEY, SEGMENT_MANIFEST, firstPart);
+            assertThatThrownBy(() -> fetchCache.fetchPartContent(SEGMENT_OBJECT_KEY, SEGMENT_MANIFEST, firstPart))
                 .isInstanceOf(RuntimeException.class)
                 .hasCauseInstanceOf(ExecutionException.class)
                 .hasRootCauseInstanceOf(InterruptedException.class)
@@ -262,14 +264,14 @@ class FetchCacheTest {
 
         @Test
         void failedReadingCachedValueWithExecutionException() throws Exception {
-            when(fetchManager.partContent(SEGMENT_OBJECT_KEY, SEGMENT_MANIFEST, firstPart)).thenReturn(
+            when(fetchManager.fetchPartContent(SEGMENT_OBJECT_KEY, SEGMENT_MANIFEST, firstPart)).thenReturn(
                 new ByteArrayInputStream(CHUNK_0));
             doCallRealMethod().doAnswer(invocation -> {
                 throw new ExecutionException(new RuntimeException(TEST_EXCEPTION_MESSAGE));
             }).when(fetchCache).readCachedPartContent(any());
 
-            fetchCache.partContent(SEGMENT_OBJECT_KEY, SEGMENT_MANIFEST, firstPart);
-            assertThatThrownBy(() -> fetchCache.partContent(SEGMENT_OBJECT_KEY, SEGMENT_MANIFEST, firstPart))
+            fetchCache.fetchPartContent(SEGMENT_OBJECT_KEY, SEGMENT_MANIFEST, firstPart);
+            assertThatThrownBy(() -> fetchCache.fetchPartContent(SEGMENT_OBJECT_KEY, SEGMENT_MANIFEST, firstPart))
                 .isInstanceOf(RuntimeException.class)
                 .hasCauseInstanceOf(ExecutionException.class)
                 .hasRootCauseInstanceOf(RuntimeException.class)

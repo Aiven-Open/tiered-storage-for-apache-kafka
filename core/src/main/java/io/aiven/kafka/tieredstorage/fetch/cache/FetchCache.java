@@ -68,9 +68,9 @@ public abstract class FetchCache<T> implements FetchManager, Configurable {
      * the InputStream will still contain the data.
      */
     @Override
-    public InputStream partContent(final ObjectKey objectKey,
-                                   final SegmentManifest manifest,
-                                   final FetchPart part) throws StorageBackendException, IOException {
+    public InputStream fetchPartContent(final ObjectKey objectKey,
+                                        final SegmentManifest manifest,
+                                        final FetchPart part) throws StorageBackendException, IOException {
         final FetchPartKey fetchPartKey = new FetchPartKey(objectKey.value(), part.range);
         final AtomicReference<InputStream> result = new AtomicReference<>();
         try {
@@ -79,7 +79,7 @@ public abstract class FetchCache<T> implements FetchManager, Configurable {
                     if (val == null) {
                         statsCounter.recordMiss();
                         try {
-                            final InputStream partContent = fetchManager.partContent(objectKey, manifest, part);
+                            final InputStream partContent = fetchManager.fetchPartContent(objectKey, manifest, part);
                             final T t = this.cachePartContent(fetchPartKey, partContent);
                             result.getAndSet(readCachedPartContent(t));
                             return t;
