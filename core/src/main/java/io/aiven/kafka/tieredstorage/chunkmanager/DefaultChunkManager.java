@@ -16,14 +16,20 @@
 
 package io.aiven.kafka.tieredstorage.chunkmanager;
 
+import java.io.IOException;
 import java.io.InputStream;
+import java.util.ArrayList;
+import java.util.Iterator;
 import java.util.List;
 import java.util.Optional;
+import java.util.stream.Collectors;
+import java.util.stream.IntStream;
 
 import io.aiven.kafka.tieredstorage.Chunk;
 import io.aiven.kafka.tieredstorage.manifest.SegmentEncryptionMetadata;
 import io.aiven.kafka.tieredstorage.manifest.SegmentManifest;
 import io.aiven.kafka.tieredstorage.security.AesEncryptionProvider;
+import io.aiven.kafka.tieredstorage.storage.BytesRange;
 import io.aiven.kafka.tieredstorage.storage.ObjectFetcher;
 import io.aiven.kafka.tieredstorage.storage.ObjectKey;
 import io.aiven.kafka.tieredstorage.storage.StorageBackendException;
@@ -67,5 +73,36 @@ public class DefaultChunkManager implements ChunkManager {
         }
         final DetransformFinisher detransformFinisher = new DetransformFinisher(detransformEnum);
         return detransformFinisher.toInputStream();
+    }
+
+    @Override
+    public Iterator<InputStream> getChunks(final ObjectKey objectKey,
+                                           final SegmentManifest manifest,
+                                           final int chunkIdFrom,
+                                           final int chunkIdTo) throws StorageBackendException, IOException {
+        final Chunk chunkFrom = manifest.chunkIndex().chunks().get(chunkIdFrom);
+        final Chunk chunkTo = manifest.chunkIndex().chunks().get(chunkIdTo);
+
+        final BytesRange range = new BytesRange(chunkFrom.range().from, chunkTo.range().to);
+        final InputStream chunksContent = fetcher.fetch(objectKey, range);
+
+        // Same detransform as for a single chunk, but for multiple.
+        final List<Chunk> chunks = IntStream.range(chunkIdFrom, chunkIdTo + 1)
+            .mapToObj(manifest.chunkIndex().chunks()::get)
+            .collect(Collectors.toList());
+        DetransformChunkEnumeration detransformEnum = new BaseDetransformChunkEnumeration(chunksContent, chunks);
+        final Optional<SegmentEncryptionMetadata> encryptionMetadata = manifest.encryption();
+        if (encryptionMetadata.isPresent()) {
+            detransformEnum = new DecryptionChunkEnumeration(
+                detransformEnum,
+                encryptionMetadata.get().ivSize(),
+                encryptedChunk -> aesEncryptionProvider.decryptionCipher(encryptedChunk, encryptionMetadata.get())
+            );
+        }
+        if (manifest.compression()) {
+            detransformEnum = new DecompressionChunkEnumeration(detransformEnum);
+        }
+        final DetransformFinisher detransformFinisher = new DetransformFinisher(detransformEnum);
+        return detransformFinisher.asIterator();
     }
 }

@@ -20,10 +20,15 @@ import java.io.IOException;
 import java.io.InputStream;
 import java.nio.file.Files;
 import java.nio.file.Path;
+import java.util.Iterator;
+import java.util.List;
 import java.util.Map;
 
 import io.aiven.kafka.tieredstorage.chunkmanager.ChunkKey;
 import io.aiven.kafka.tieredstorage.chunkmanager.ChunkManager;
+import io.aiven.kafka.tieredstorage.manifest.SegmentManifest;
+import io.aiven.kafka.tieredstorage.storage.ObjectKey;
+import io.aiven.kafka.tieredstorage.storage.StorageBackendException;
 
 import com.github.benmanes.caffeine.cache.RemovalListener;
 import com.github.benmanes.caffeine.cache.Weigher;
@@ -100,6 +105,11 @@ public class DiskBasedChunkCache extends ChunkCache<Path> {
                               + " The reason of the deletion is {}", key, path, cause, e);
             }
         };
+    }
+
+    @Override
+    public Iterator<InputStream> getChunks(ObjectKey objectKey, SegmentManifest manifest, int chunkIdFrom, int chunkIdTo) throws StorageBackendException, IOException {
+        return null;  // not relevant for poc
     }
 
     @Override

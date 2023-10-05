@@ -19,12 +19,17 @@ package io.aiven.kafka.tieredstorage.chunkmanager.cache;
 import java.io.ByteArrayInputStream;
 import java.io.IOException;
 import java.io.InputStream;
+import java.util.Iterator;
+import java.util.List;
 import java.util.Map;
 
 import org.apache.kafka.common.config.ConfigDef;
 
 import io.aiven.kafka.tieredstorage.chunkmanager.ChunkKey;
 import io.aiven.kafka.tieredstorage.chunkmanager.ChunkManager;
+import io.aiven.kafka.tieredstorage.manifest.SegmentManifest;
+import io.aiven.kafka.tieredstorage.storage.ObjectKey;
+import io.aiven.kafka.tieredstorage.storage.StorageBackendException;
 
 import com.github.benmanes.caffeine.cache.RemovalListener;
 import com.github.benmanes.caffeine.cache.Weigher;
@@ -54,6 +59,11 @@ public class InMemoryChunkCache extends ChunkCache<byte[]> {
     public RemovalListener<ChunkKey, byte[]> removalListener() {
         return (key, content, cause) -> log.debug("Deleted cached value for key {} from cache."
                 + " The reason of the deletion is {}", key, cause);
+    }
+
+    @Override
+    public Iterator<InputStream> getChunks(ObjectKey objectKey, SegmentManifest manifest, int chunkIdFrom, int chunkIdTo) throws StorageBackendException, IOException {
+        return null;  // not relevant for poc
     }
 
     @Override

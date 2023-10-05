@@ -18,17 +18,22 @@ package io.aiven.kafka.tieredstorage.chunkmanager.cache;
 
 import java.io.IOException;
 import java.io.InputStream;
+import java.util.Iterator;
+import java.util.List;
 import java.util.concurrent.CompletableFuture;
 import java.util.concurrent.CompletionException;
 import java.util.concurrent.ExecutionException;
-import java.util.concurrent.Executor;
+import java.util.concurrent.ExecutorService;
 import java.util.concurrent.ForkJoinPool;
 import java.util.concurrent.TimeUnit;
 import java.util.concurrent.TimeoutException;
 import java.util.concurrent.atomic.AtomicReference;
+import java.util.stream.Collectors;
+import java.util.stream.IntStream;
 
 import org.apache.kafka.common.Configurable;
 
+import io.aiven.kafka.tieredstorage.Chunk;
 import io.aiven.kafka.tieredstorage.chunkmanager.ChunkKey;
 import io.aiven.kafka.tieredstorage.chunkmanager.ChunkManager;
 import io.aiven.kafka.tieredstorage.manifest.SegmentManifest;
@@ -47,7 +52,7 @@ public abstract class ChunkCache<T> implements ChunkManager, Configurable {
     private static final String METRIC_GROUP = "chunk-cache";
 
     private final ChunkManager chunkManager;
-    private final Executor executor = new ForkJoinPool();
+    private final ExecutorService executor = new ForkJoinPool();
 
     final CaffeineStatsCounter statsCounter;
 
@@ -56,6 +61,55 @@ public abstract class ChunkCache<T> implements ChunkManager, Configurable {
     protected ChunkCache(final ChunkManager chunkManager) {
         this.chunkManager = chunkManager;
         this.statsCounter = new CaffeineStatsCounter(METRIC_GROUP);
+    }
+
+    private void prefetch(final ObjectKey objectKey,
+                          final SegmentManifest manifest,
+                          final int chunkId) {
+        final int prefetchLimit = 16 * 1024 * 1024;
+
+        int prefetchSize = 0;
+
+        int chunkIdFrom = -1;
+        int chunkIdTo = -1;
+        for (int i = chunkId + 1; i < manifest.chunkIndex().chunks().size() && prefetchSize < prefetchLimit; i++) {
+            final Chunk chunk = manifest.chunkIndex().chunks().get(i);
+            // Look over the next chunks to see whether they are in the cache.
+            // The first not in the cache, becomes the beginning of our prefetching.
+            // But if they are in the cache, we skip them, but still count their sizes.
+            prefetchSize += chunk.transformedSize;
+            if (chunkIdFrom == -1) {
+                final ChunkKey chunkKey = new ChunkKey(objectKey.value(), i);
+                if (!cache.asMap().containsKey(chunkKey)) {
+                    chunkIdFrom = i;
+                }
+            } else {
+                chunkIdTo = i;
+            }
+        }
+
+        final List<CompletableFuture<T>> futures = IntStream.range(chunkIdFrom, chunkIdTo + 1)
+            .mapToObj(i -> {
+                final CompletableFuture<T> f = new CompletableFuture<>();
+                final ChunkKey chunkKey = new ChunkKey(objectKey.value(), i);
+                this.cache.put(chunkKey, f);
+                return f;
+            })
+            .collect(Collectors.toList());
+
+        try {
+            final Iterator<InputStream> chunks = chunkManager.getChunks(objectKey, manifest, chunkIdFrom, chunkIdTo);
+            int i = chunkIdFrom - 1;
+            while (chunks.hasNext()) {
+                final InputStream chunkContent = chunks.next();
+                i += 1;
+                final ChunkKey chunkKey = new ChunkKey(objectKey.value(), i);
+                final T value = cacheChunk(chunkKey, chunkContent);
+                futures.get(i).complete(value);
+            }
+        } catch (final Exception e) {
+            throw new RuntimeException(e);
+        }
     }
 
     /**
@@ -69,6 +123,9 @@ public abstract class ChunkCache<T> implements ChunkManager, Configurable {
     public InputStream getChunk(final ObjectKey objectKey,
                                 final SegmentManifest manifest,
                                 final int chunkId) throws StorageBackendException, IOException {
+        // Initiate prefetching.
+        executor.submit(() -> this.prefetch(objectKey, manifest, chunkId));
+
         final ChunkKey chunkKey = new ChunkKey(objectKey.value(), chunkId);
         final AtomicReference<InputStream> result = new AtomicReference<>();
         try {

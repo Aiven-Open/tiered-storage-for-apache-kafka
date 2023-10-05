@@ -24,7 +24,7 @@ public class BytesRange {
     public final int from;
     public final int to;
 
-    BytesRange(final int from, final int to) {
+    public BytesRange(final int from, final int to) {
         if (from < 0) {
             throw new IllegalArgumentException("from cannot be negative, " + from + " given");
         }
