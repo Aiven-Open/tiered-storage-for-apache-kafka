@@ -227,7 +227,7 @@ class RemoteStorageManagerTest extends RsaKeyAwareTest {
             rsm.copyLogSegmentData(REMOTE_LOG_METADATA, logSegmentData);
 
         checkCustomMetadata(customMetadata);
-        checkFilesInTargetDirectory(hasTxnIndex);
+        checkFilesInTargetDirectory();
         checkManifest(chunkSize, compression, encryption);
         if (encryption) {
             checkEncryption(compression);
@@ -252,17 +252,12 @@ class RemoteStorageManagerTest extends RsaKeyAwareTest {
             .isNotEmpty();
     }
 
-    private void checkFilesInTargetDirectory(final boolean hasTxnIndex) {
+    private void checkFilesInTargetDirectory() {
         final List<String> expectedFiles = new ArrayList<>(List.of(
             TARGET_LOG_FILE,
-            "topic-AAAAAAAAAAAAAAAAAAAAAQ/7/00000000000000000023-AAAAAAAAAAAAAAAAAAAAAA.timeindex",
-            "topic-AAAAAAAAAAAAAAAAAAAAAQ/7/00000000000000000023-AAAAAAAAAAAAAAAAAAAAAA.snapshot",
-            "topic-AAAAAAAAAAAAAAAAAAAAAQ/7/00000000000000000023-AAAAAAAAAAAAAAAAAAAAAA.leader-epoch-checkpoint",
+            "topic-AAAAAAAAAAAAAAAAAAAAAQ/7/00000000000000000023-AAAAAAAAAAAAAAAAAAAAAA.indexes",
             TARGET_MANIFEST_FILE
         ));
-        if (hasTxnIndex) {
-            expectedFiles.add("topic-AAAAAAAAAAAAAAAAAAAAAQ/7/00000000000000000023-AAAAAAAAAAAAAAAAAAAAAA.txnindex");
-        }
         expectedFiles.forEach(s ->
             assertThat(targetDir).isDirectoryRecursivelyContaining(path -> path.toString().endsWith(s)));
     }
@@ -542,7 +537,7 @@ class RemoteStorageManagerTest extends RsaKeyAwareTest {
 
         // Make sure the exception is connected to the index file.
         final String expectedMessage = "Key "
-            + objectKeyFactory.key(REMOTE_LOG_METADATA, ObjectKeyFactory.Suffix.fromIndexType(indexType))
+            + objectKeyFactory.key(REMOTE_LOG_METADATA, ObjectKeyFactory.Suffix.INDEXES)
             + " does not exists in storage";
 
         assertThatThrownBy(() -> rsm.fetchIndex(REMOTE_LOG_METADATA, indexType))

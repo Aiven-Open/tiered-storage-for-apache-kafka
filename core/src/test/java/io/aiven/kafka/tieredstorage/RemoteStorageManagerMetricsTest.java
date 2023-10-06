@@ -134,43 +134,27 @@ class RemoteStorageManagerMetricsTest {
             .isEqualTo(0.0);
 
         assertThat(MBEAN_SERVER.getAttribute(metricName, "object-upload-total"))
-            .isEqualTo(18.0);
+            .isEqualTo(9.0);
         assertThat(MBEAN_SERVER.getAttribute(metricName, "object-upload-rate"))
-            .isEqualTo(18.0 / METRIC_TIME_WINDOW_SEC);
+            .isEqualTo(9.0 / METRIC_TIME_WINDOW_SEC);
 
         assertThat(MBEAN_SERVER.getAttribute(metricName, "object-upload-bytes-total"))
-            .isEqualTo(1575.0);
+            .isEqualTo(1603.0);
         assertThat(MBEAN_SERVER.getAttribute(metricName, "object-upload-bytes-rate"))
-            .isEqualTo(1575.0 / METRIC_TIME_WINDOW_SEC);
+            .isEqualTo(1603.0 / METRIC_TIME_WINDOW_SEC);
 
         for (final var suffix : ObjectKeyFactory.Suffix.values()) {
             final ObjectName storageMetricsName = ObjectName.getInstance(objectName + ",object-type=" + suffix.value);
-            switch (suffix) {
-                case TXN_INDEX:
-                    break;
-                case MANIFEST:
-                    assertThat(MBEAN_SERVER.getAttribute(storageMetricsName, "object-upload-rate"))
-                        .isEqualTo(3.0 / METRIC_TIME_WINDOW_SEC);
-                    assertThat(MBEAN_SERVER.getAttribute(storageMetricsName, "object-upload-total"))
-                        .isEqualTo(3.0);
-                    assertThat(MBEAN_SERVER.getAttribute(storageMetricsName, "object-upload-bytes-rate"))
-                        .asInstanceOf(DOUBLE)
-                        .isGreaterThan(0.0);
-                    assertThat(MBEAN_SERVER.getAttribute(storageMetricsName, "object-upload-bytes-total"))
-                        .asInstanceOf(DOUBLE)
-                        .isGreaterThan(0.0);
-                    break;
-                default:
-                    assertThat(MBEAN_SERVER.getAttribute(storageMetricsName, "object-upload-rate"))
-                        .isEqualTo(3.0 / METRIC_TIME_WINDOW_SEC);
-                    assertThat(MBEAN_SERVER.getAttribute(storageMetricsName, "object-upload-total"))
-                        .isEqualTo(3.0);
-                    assertThat(MBEAN_SERVER.getAttribute(storageMetricsName, "object-upload-bytes-rate"))
-                        .isEqualTo(30.0 / METRIC_TIME_WINDOW_SEC);
-                    assertThat(MBEAN_SERVER.getAttribute(storageMetricsName, "object-upload-bytes-total"))
-                        .isEqualTo(30.0);
-                    break;
-            }
+            assertThat(MBEAN_SERVER.getAttribute(storageMetricsName, "object-upload-rate"))
+                .isEqualTo(3.0 / METRIC_TIME_WINDOW_SEC);
+            assertThat(MBEAN_SERVER.getAttribute(storageMetricsName, "object-upload-total"))
+                .isEqualTo(3.0);
+            assertThat(MBEAN_SERVER.getAttribute(storageMetricsName, "object-upload-bytes-rate"))
+                .asInstanceOf(DOUBLE)
+                .isGreaterThan(0.0);
+            assertThat(MBEAN_SERVER.getAttribute(storageMetricsName, "object-upload-bytes-total"))
+                .asInstanceOf(DOUBLE)
+                .isGreaterThan(0.0);
         }
 
         // fetch related metrics

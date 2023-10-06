@@ -65,6 +65,22 @@ public class RemoteStorageManagerConfig extends AbstractConfig {
         "The retention time for the segment manifest cache. "
             + "Use -1 for \"forever\". The default is 3_600_000 (1 hour).";
 
+
+    private static final String SEGMENT_INDEXES_CACHE_PREFIX = "segment.indexes.cache.";
+    private static final String SEGMENT_INDEXES_CACHE_SIZE_CONFIG = SEGMENT_INDEXES_CACHE_PREFIX + "size";
+    private static final Long SEGMENT_INDEXES_CACHE_SIZE_DEFAULT = 1000L;  // TODO consider a better default
+    private static final String SEGMENT_INDEXES_CACHE_SIZE_DOC =
+        "The size in items of the segment manifest cache. "
+            + "Use -1 for \"unbounded\". The default is 1000.";
+
+    public static final String SEGMENT_INDEXES_CACHE_RETENTION_MS_CONFIG = SEGMENT_INDEXES_CACHE_PREFIX
+        + "retention.ms";
+    public static final long SEGMENT_INDEXES_CACHE_RETENTION_MS_DEFAULT = 3_600_000;  // 1 hour
+    private static final String SEGMENT_INDEXES_CACHE_RETENTION_MS_DOC =
+        "The retention time for the segment manifest cache. "
+            + "Use -1 for \"forever\". The default is 3_600_000 (1 hour).";
+
+
     private static final String CHUNK_SIZE_CONFIG = "chunk.size";
     private static final String CHUNK_SIZE_DOC = "The chunk size of log files";
 
@@ -141,6 +157,23 @@ public class RemoteStorageManagerConfig extends AbstractConfig {
             ConfigDef.Range.atLeast(-1L),
             ConfigDef.Importance.LOW,
             SEGMENT_MANIFEST_CACHE_RETENTION_MS_DOC
+        );
+
+        CONFIG.define(
+            SEGMENT_INDEXES_CACHE_SIZE_CONFIG,
+            ConfigDef.Type.LONG,
+            SEGMENT_INDEXES_CACHE_SIZE_DEFAULT,
+            ConfigDef.Range.atLeast(-1L),
+            ConfigDef.Importance.LOW,
+            SEGMENT_INDEXES_CACHE_SIZE_DOC
+        );
+        CONFIG.define(
+            SEGMENT_INDEXES_CACHE_RETENTION_MS_CONFIG,
+            ConfigDef.Type.LONG,
+            SEGMENT_INDEXES_CACHE_RETENTION_MS_DEFAULT,
+            ConfigDef.Range.atLeast(-1L),
+            ConfigDef.Importance.LOW,
+            SEGMENT_INDEXES_CACHE_RETENTION_MS_DOC
         );
 
         CONFIG.define(
@@ -336,6 +369,22 @@ public class RemoteStorageManagerConfig extends AbstractConfig {
 
     public Optional<Duration> segmentManifestCacheRetention() {
         final long rawValue = getLong(SEGMENT_MANIFEST_CACHE_RETENTION_MS_CONFIG);
+        if (rawValue == -1) {
+            return Optional.empty();
+        }
+        return Optional.of(Duration.ofMillis(rawValue));
+    }
+
+    public Optional<Long> segmentIndexesCacheSize() {
+        final long rawValue = getLong(SEGMENT_INDEXES_CACHE_SIZE_CONFIG);
+        if (rawValue == -1) {
+            return Optional.empty();
+        }
+        return Optional.of(rawValue);
+    }
+
+    public Optional<Duration> segmentIndexesCacheRetention() {
+        final long rawValue = getLong(SEGMENT_INDEXES_CACHE_RETENTION_MS_CONFIG);
         if (rawValue == -1) {
             return Optional.empty();
         }
