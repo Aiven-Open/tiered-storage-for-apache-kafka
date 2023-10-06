@@ -60,7 +60,7 @@ public class SegmentCustomMetadataBuilder {
      */
     public NavigableMap<Integer, Object> build() {
         final TreeMap<Integer, Object> taggedFields = new TreeMap<>();
-        fields.forEach(field -> taggedFields.put(field.ordinal(), field.valueProvider.apply(this)));
+        fields.forEach(field -> taggedFields.put(field.index(), field.valueProvider.apply(this)));
         return taggedFields;
     }
 }
