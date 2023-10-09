@@ -24,10 +24,13 @@ import java.util.ArrayList;
 import java.util.List;
 import java.util.Map;
 
+import org.apache.kafka.server.log.remote.storage.RemoteStorageManager.IndexType;
+
 import io.aiven.kafka.tieredstorage.chunkmanager.ChunkManager;
 import io.aiven.kafka.tieredstorage.chunkmanager.ChunkManagerFactory;
 import io.aiven.kafka.tieredstorage.chunkmanager.cache.DiskBasedChunkCache;
 import io.aiven.kafka.tieredstorage.chunkmanager.cache.InMemoryChunkCache;
+import io.aiven.kafka.tieredstorage.manifest.SegmentIndexesV1;
 import io.aiven.kafka.tieredstorage.manifest.SegmentManifest;
 import io.aiven.kafka.tieredstorage.manifest.SegmentManifestV1;
 import io.aiven.kafka.tieredstorage.manifest.index.FixedSizeChunkIndex;
@@ -62,8 +65,15 @@ class FetchChunkEnumerationSourceInputStreamClosingTest {
 
     static final FixedSizeChunkIndex CHUNK_INDEX = new FixedSizeChunkIndex(
         CHUNK_SIZE, CHUNK_SIZE * 3, CHUNK_SIZE, CHUNK_SIZE);
+    static final SegmentIndexesV1 SEGMENT_INDEXES = SegmentIndexesV1.builder()
+        .add(IndexType.OFFSET, 1)
+        .add(IndexType.TIMESTAMP, 1)
+        .add(IndexType.PRODUCER_SNAPSHOT, 1)
+        .add(IndexType.LEADER_EPOCH, 1)
+        .add(IndexType.TRANSACTION, 1)
+        .build();
     static final SegmentManifest SEGMENT_MANIFEST = new SegmentManifestV1(
-        CHUNK_INDEX, false, null, null);
+        CHUNK_INDEX, SEGMENT_INDEXES, false, null, null);
 
     TestObjectFetcher fetcher;
 

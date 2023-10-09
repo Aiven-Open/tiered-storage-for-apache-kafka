@@ -19,7 +19,10 @@ package io.aiven.kafka.tieredstorage.transform;
 import java.io.ByteArrayInputStream;
 import java.util.NoSuchElementException;
 
+import org.apache.kafka.server.log.remote.storage.RemoteStorageManager.IndexType;
+
 import io.aiven.kafka.tieredstorage.chunkmanager.DefaultChunkManager;
+import io.aiven.kafka.tieredstorage.manifest.SegmentIndexesV1;
 import io.aiven.kafka.tieredstorage.manifest.SegmentManifest;
 import io.aiven.kafka.tieredstorage.manifest.SegmentManifestV1;
 import io.aiven.kafka.tieredstorage.manifest.index.FixedSizeChunkIndex;
@@ -43,7 +46,15 @@ class FetchChunkEnumerationTest {
     DefaultChunkManager chunkManager;
 
     final FixedSizeChunkIndex chunkIndex = new FixedSizeChunkIndex(10, 100, 10, 100);
-    final SegmentManifest manifest = new SegmentManifestV1(chunkIndex, false, null, null);
+
+    final SegmentIndexesV1 segmentIndexesV1 = SegmentIndexesV1.builder()
+        .add(IndexType.OFFSET, 1)
+        .add(IndexType.TIMESTAMP, 1)
+        .add(IndexType.PRODUCER_SNAPSHOT, 1)
+        .add(IndexType.LEADER_EPOCH, 1)
+        .add(IndexType.TRANSACTION, 1)
+        .build();
+    final SegmentManifest manifest = new SegmentManifestV1(chunkIndex, segmentIndexesV1, false, null, null);
 
     static final byte[] CHUNK_CONTENT = "0123456789".getBytes();
     static final ObjectKey SEGMENT_KEY = new TestObjectKey("topic/segment");
@@ -54,7 +65,7 @@ class FetchChunkEnumerationTest {
     @Test
     void failsWhenLargerStartPosition() {
         // Given
-        final SegmentManifest manifest = new SegmentManifestV1(chunkIndex, false, null, null);
+        final SegmentManifest manifest = new SegmentManifestV1(chunkIndex, segmentIndexesV1, false, null, null);
         // When
         final int from = 1000;
         final int to = from + 1;

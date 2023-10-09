@@ -26,6 +26,7 @@ import org.apache.kafka.common.TopicIdPartition;
 import org.apache.kafka.common.Uuid;
 import org.apache.kafka.server.log.remote.storage.RemoteLogSegmentId;
 import org.apache.kafka.server.log.remote.storage.RemoteLogSegmentMetadata;
+import org.apache.kafka.server.log.remote.storage.RemoteStorageManager.IndexType;
 
 import io.aiven.kafka.tieredstorage.RsaKeyAwareTest;
 import io.aiven.kafka.tieredstorage.manifest.index.FixedSizeChunkIndex;
@@ -46,7 +47,7 @@ import static org.assertj.core.api.Assertions.assertThat;
 class SegmentManifestV1SerdeTest extends RsaKeyAwareTest {
     static final FixedSizeChunkIndex INDEX =
         new FixedSizeChunkIndex(100, 1000, 110, 110);
-    static final SecretKey DATA_KEY = new SecretKeySpec(new byte[]{0, 1, 2, 3, 4, 5, 6, 7, 8, 9}, "AES");
+    static final SecretKey DATA_KEY = new SecretKeySpec(new byte[] {0, 1, 2, 3, 4, 5, 6, 7, 8, 9}, "AES");
     static final byte[] AAD = {10, 11, 12, 13};
 
     static final RemoteLogSegmentMetadata REMOTE_LOG_SEGMENT_METADATA = new RemoteLogSegmentMetadata(
@@ -63,6 +64,21 @@ class SegmentManifestV1SerdeTest extends RsaKeyAwareTest {
         Map.of(0, 100L, 1, 200L, 2, 300L)
     );
 
+    static final SegmentIndexesV1 SEGMENT_INDEXES = SegmentIndexesV1.builder()
+        .add(IndexType.OFFSET, 1)
+        .add(IndexType.TIMESTAMP, 1)
+        .add(IndexType.PRODUCER_SNAPSHOT, 1)
+        .add(IndexType.LEADER_EPOCH, 1)
+        .add(IndexType.TRANSACTION, 1)
+        .build();
+
+    static final SegmentIndexesV1 SEGMENT_INDEXES_WITHOUT_TXN_INDEX = SegmentIndexesV1.builder()
+        .add(IndexType.OFFSET, 1)
+        .add(IndexType.TIMESTAMP, 1)
+        .add(IndexType.PRODUCER_SNAPSHOT, 1)
+        .add(IndexType.LEADER_EPOCH, 1)
+        .build();
+
     static final String REMOTE_LOG_SEGMENT_METADATA_JSON = "{"
         + "\"remoteLogSegmentId\":{"
         + "\"topicIdPartition\":{\"topicId\":\"lZ6vvmajTWKDBUTV6SQAtQ\",\"topicPartition\":"
@@ -76,6 +92,13 @@ class SegmentManifestV1SerdeTest extends RsaKeyAwareTest {
         "{\"version\":\"1\","
             + "\"chunkIndex\":{\"type\":\"fixed\",\"originalChunkSize\":100,"
             + "\"originalFileSize\":1000,\"transformedChunkSize\":110,\"finalTransformedChunkSize\":110},"
+            + "\"segmentIndexes\":{"
+            + "\"offset\":{\"position\":0,\"size\":1},"
+            + "\"timestamp\":{\"position\":1,\"size\":1},"
+            + "\"producerSnapshot\":{\"position\":2,\"size\":1},"
+            + "\"leaderEpoch\":{\"position\":3,\"size\":1},"
+            + "\"transaction\":{\"position\":4,\"size\":1}"
+            + "},"
             + "\"compression\":false,\"encryption\":{\"aad\":\"CgsMDQ==\"},\"remoteLogSegmentMetadata\":"
             + REMOTE_LOG_SEGMENT_METADATA_JSON
             + "}";
@@ -83,6 +106,28 @@ class SegmentManifestV1SerdeTest extends RsaKeyAwareTest {
         "{\"version\":\"1\","
             + "\"chunkIndex\":{\"type\":\"fixed\",\"originalChunkSize\":100,"
             + "\"originalFileSize\":1000,\"transformedChunkSize\":110,\"finalTransformedChunkSize\":110},"
+            + "\"segmentIndexes\":{"
+            + "\"offset\":{\"position\":0,\"size\":1},"
+            + "\"timestamp\":{\"position\":1,\"size\":1},"
+            + "\"producerSnapshot\":{\"position\":2,\"size\":1},"
+            + "\"leaderEpoch\":{\"position\":3,\"size\":1},"
+            + "\"transaction\":{\"position\":4,\"size\":1}"
+            + "},"
+            + "\"compression\":false,\"remoteLogSegmentMetadata\":"
+            + REMOTE_LOG_SEGMENT_METADATA_JSON
+            + "}";
+
+    static final String WITHOUT_ENCRYPTION_WITHOUT_TXN_INDEX_JSON =
+        "{\"version\":\"1\","
+            + "\"chunkIndex\":{\"type\":\"fixed\",\"originalChunkSize\":100,"
+            + "\"originalFileSize\":1000,\"transformedChunkSize\":110,\"finalTransformedChunkSize\":110},"
+            + "\"segmentIndexes\":{"
+            + "\"offset\":{\"position\":0,\"size\":1},"
+            + "\"timestamp\":{\"position\":1,\"size\":1},"
+            + "\"producerSnapshot\":{\"position\":2,\"size\":1},"
+            + "\"leaderEpoch\":{\"position\":3,\"size\":1},"
+            + "\"transaction\":null"
+            + "},"
             + "\"compression\":false,\"remoteLogSegmentMetadata\":"
             + REMOTE_LOG_SEGMENT_METADATA_JSON
             + "}";
@@ -102,7 +147,7 @@ class SegmentManifestV1SerdeTest extends RsaKeyAwareTest {
 
     @Test
     void withEncryption() throws JsonProcessingException {
-        final SegmentManifest manifest = new SegmentManifestV1(INDEX, false,
+        final SegmentManifest manifest = new SegmentManifestV1(INDEX, SEGMENT_INDEXES, false,
             new SegmentEncryptionMetadataV1(DATA_KEY, AAD), REMOTE_LOG_SEGMENT_METADATA);
 
         final String jsonStr = mapper.writeValueAsString(manifest);
@@ -129,12 +174,27 @@ class SegmentManifestV1SerdeTest extends RsaKeyAwareTest {
 
     @Test
     void withoutEncryption() throws JsonProcessingException {
-        final SegmentManifest manifest = new SegmentManifestV1(INDEX, false, null, REMOTE_LOG_SEGMENT_METADATA);
+        final var manifest = new SegmentManifestV1(INDEX, SEGMENT_INDEXES, false, null, REMOTE_LOG_SEGMENT_METADATA);
 
         final String jsonStr = mapper.writeValueAsString(manifest);
 
         // Compare the JSON representation.
         assertThat(jsonStr).isEqualTo(WITHOUT_ENCRYPTION_JSON);
+
+        // Check deserialization.
+        final SegmentManifest deserializedManifest = mapper.readValue(jsonStr, SegmentManifest.class);
+        assertThat(deserializedManifest).isEqualTo(manifest);
+    }
+
+    @Test
+    void withoutTxnIndex() throws JsonProcessingException {
+        final var manifest = new SegmentManifestV1(INDEX, SEGMENT_INDEXES_WITHOUT_TXN_INDEX,
+            false, null, REMOTE_LOG_SEGMENT_METADATA);
+
+        final String jsonStr = mapper.writeValueAsString(manifest);
+
+        // Compare the JSON representation.
+        assertThat(jsonStr).isEqualTo(WITHOUT_ENCRYPTION_WITHOUT_TXN_INDEX_JSON);
 
         // Check deserialization.
         final SegmentManifest deserializedManifest = mapper.readValue(jsonStr, SegmentManifest.class);

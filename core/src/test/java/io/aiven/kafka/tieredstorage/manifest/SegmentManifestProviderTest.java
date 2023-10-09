@@ -23,6 +23,8 @@ import java.time.Duration;
 import java.util.Optional;
 import java.util.concurrent.ForkJoinPool;
 
+import org.apache.kafka.server.log.remote.storage.RemoteStorageManager.IndexType;
+
 import io.aiven.kafka.tieredstorage.manifest.index.FixedSizeChunkIndex;
 import io.aiven.kafka.tieredstorage.manifest.serde.KafkaTypeSerdeModule;
 import io.aiven.kafka.tieredstorage.storage.ObjectKey;
@@ -60,7 +62,22 @@ class SegmentManifestProviderTest {
         "{\"version\":\"1\","
             + "\"chunkIndex\":{\"type\":\"fixed\",\"originalChunkSize\":100,"
             + "\"originalFileSize\":1000,\"transformedChunkSize\":110,\"finalTransformedChunkSize\":110},"
+            + "\"segmentIndexes\":{"
+            + "\"offset\":{\"position\":0,\"size\":1},"
+            + "\"timestamp\":{\"position\":1,\"size\":1},"
+            + "\"producerSnapshot\":{\"position\":2,\"size\":1},"
+            + "\"leaderEpoch\":{\"position\":3,\"size\":1},"
+            + "\"transaction\":{\"position\":4,\"size\":1}"
+            + "},"
             + "\"compression\":false}";
+
+    static final SegmentIndexesV1 SEGMENT_INDEXES = SegmentIndexesV1.builder()
+        .add(IndexType.OFFSET, 1)
+        .add(IndexType.TIMESTAMP, 1)
+        .add(IndexType.PRODUCER_SNAPSHOT, 1)
+        .add(IndexType.LEADER_EPOCH, 1)
+        .add(IndexType.TRANSACTION, 1)
+        .build();
 
     @Mock
     StorageBackend storage;
@@ -96,10 +113,8 @@ class SegmentManifestProviderTest {
             () -> "topic-AAAAAAAAAAAAAAAAAAAAAQ/7/00000000000000000023-AAAAAAAAAAAAAAAAAAAAAA.rsm-manifest";
         when(storage.fetch(key))
             .thenReturn(new ByteArrayInputStream(MANIFEST.getBytes()));
-        final SegmentManifestV1 expectedManifest = new SegmentManifestV1(
-            new FixedSizeChunkIndex(100, 1000, 110, 110),
-            false, null, null
-        );
+        final var chunkIndex = new FixedSizeChunkIndex(100, 1000, 110, 110);
+        final var expectedManifest = new SegmentManifestV1(chunkIndex, SEGMENT_INDEXES, false, null, null);
         assertThat(provider.get(key)).isEqualTo(expectedManifest);
         verify(storage).fetch(key);
         assertThat(provider.get(key)).isEqualTo(expectedManifest);

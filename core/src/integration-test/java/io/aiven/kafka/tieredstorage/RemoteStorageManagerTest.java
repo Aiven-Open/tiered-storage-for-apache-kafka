@@ -65,7 +65,6 @@ import io.aiven.kafka.tieredstorage.security.DataKeyAndAAD;
 import io.aiven.kafka.tieredstorage.security.EncryptedDataKey;
 import io.aiven.kafka.tieredstorage.security.RsaEncryptionProvider;
 import io.aiven.kafka.tieredstorage.storage.KeyNotFoundException;
-import io.aiven.kafka.tieredstorage.storage.StorageBackendException;
 import io.aiven.kafka.tieredstorage.transform.KeyNotFoundRuntimeException;
 
 import com.fasterxml.jackson.databind.JsonNode;
@@ -227,7 +226,7 @@ class RemoteStorageManagerTest extends RsaKeyAwareTest {
             rsm.copyLogSegmentData(REMOTE_LOG_METADATA, logSegmentData);
 
         checkCustomMetadata(customMetadata);
-        checkFilesInTargetDirectory(hasTxnIndex);
+        checkFilesInTargetDirectory();
         checkManifest(chunkSize, compression, encryption);
         if (encryption) {
             checkEncryption(compression);
@@ -252,17 +251,12 @@ class RemoteStorageManagerTest extends RsaKeyAwareTest {
             .isNotEmpty();
     }
 
-    private void checkFilesInTargetDirectory(final boolean hasTxnIndex) {
+    private void checkFilesInTargetDirectory() {
         final List<String> expectedFiles = new ArrayList<>(List.of(
             TARGET_LOG_FILE,
-            "topic-AAAAAAAAAAAAAAAAAAAAAQ/7/00000000000000000023-AAAAAAAAAAAAAAAAAAAAAA.timeindex",
-            "topic-AAAAAAAAAAAAAAAAAAAAAQ/7/00000000000000000023-AAAAAAAAAAAAAAAAAAAAAA.snapshot",
-            "topic-AAAAAAAAAAAAAAAAAAAAAQ/7/00000000000000000023-AAAAAAAAAAAAAAAAAAAAAA.leader-epoch-checkpoint",
+            "topic-AAAAAAAAAAAAAAAAAAAAAQ/7/00000000000000000023-AAAAAAAAAAAAAAAAAAAAAA.indexes",
             TARGET_MANIFEST_FILE
         ));
-        if (hasTxnIndex) {
-            expectedFiles.add("topic-AAAAAAAAAAAAAAAAAAAAAQ/7/00000000000000000023-AAAAAAAAAAAAAAAAAAAAAA.txnindex");
-        }
         expectedFiles.forEach(s ->
             assertThat(targetDir).isDirectoryRecursivelyContaining(path -> path.toString().endsWith(s)));
     }
@@ -542,7 +536,7 @@ class RemoteStorageManagerTest extends RsaKeyAwareTest {
 
         // Make sure the exception is connected to the index file.
         final String expectedMessage = "Key "
-            + objectKeyFactory.key(REMOTE_LOG_METADATA, ObjectKeyFactory.Suffix.fromIndexType(indexType))
+            + objectKeyFactory.key(REMOTE_LOG_METADATA, ObjectKeyFactory.Suffix.INDEXES)
             + " does not exists in storage";
 
         assertThatThrownBy(() -> rsm.fetchIndex(REMOTE_LOG_METADATA, indexType))
@@ -553,7 +547,7 @@ class RemoteStorageManagerTest extends RsaKeyAwareTest {
 
     @ParameterizedTest
     @EnumSource(IndexType.class)
-    void testFetchingIndexManifestNotFound(final IndexType indexType) throws StorageBackendException, IOException {
+    void testFetchingIndexManifestNotFound(final IndexType indexType) {
         final var config = Map.of(
             "chunk.size", "1",
             "storage.backend.class", "io.aiven.kafka.tieredstorage.storage.filesystem.FileSystemStorage",
@@ -579,6 +573,13 @@ class RemoteStorageManagerTest extends RsaKeyAwareTest {
             "{\"version\":\"1\","
                 + "\"chunkIndex\":{\"type\":\"fixed\",\"originalChunkSize\":100,"
                 + "\"originalFileSize\":1000,\"transformedChunkSize\":110,\"finalTransformedChunkSize\":110},"
+                + "\"segmentIndexes\":{"
+                + "\"offset\":{\"position\":0,\"size\":1},"
+                + "\"timestamp\":{\"position\":1,\"size\":1},"
+                + "\"producerSnapshot\":{\"position\":2,\"size\":1},"
+                + "\"leaderEpoch\":{\"position\":3,\"size\":1},"
+                + "\"transaction\":{\"position\":4,\"size\":1}"
+                + "},"
                 + "\"compression\":false}";
         final Path manifestPath = targetDir.resolve(
             objectKeyFactory.key(REMOTE_LOG_METADATA, ObjectKeyFactory.Suffix.MANIFEST).value());

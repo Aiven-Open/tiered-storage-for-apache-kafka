@@ -37,6 +37,8 @@ import com.fasterxml.jackson.annotation.JsonTypeInfo;
 public interface SegmentManifest {
     ChunkIndex chunkIndex();
 
+    SegmentIndexes segmentIndexes();
+
     boolean compression();
 
     Optional<SegmentEncryptionMetadata> encryption();
