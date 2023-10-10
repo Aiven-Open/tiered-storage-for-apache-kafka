@@ -25,7 +25,6 @@ import java.util.concurrent.ExecutionException;
 
 import org.apache.kafka.server.log.remote.storage.RemoteStorageManager.IndexType;
 
-import io.aiven.kafka.tieredstorage.FetchPart;
 import io.aiven.kafka.tieredstorage.fetch.FetchManager;
 import io.aiven.kafka.tieredstorage.fetch.FetchPart;
 import io.aiven.kafka.tieredstorage.fetch.FetchPartKey;

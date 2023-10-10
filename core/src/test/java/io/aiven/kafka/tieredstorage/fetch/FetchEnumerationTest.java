@@ -21,7 +21,6 @@ import java.util.NoSuchElementException;
 
 import org.apache.kafka.server.log.remote.storage.RemoteStorageManager.IndexType;
 
-import io.aiven.kafka.tieredstorage.FetchPart;
 import io.aiven.kafka.tieredstorage.manifest.SegmentIndexesV1;
 import io.aiven.kafka.tieredstorage.manifest.SegmentManifest;
 import io.aiven.kafka.tieredstorage.manifest.SegmentManifestV1;
