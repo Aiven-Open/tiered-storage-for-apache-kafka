@@ -105,8 +105,7 @@ subprojects {
 
         slf4jVersion = "1.7.36"
 
-        // TODO: Use latest snapshot to include latest APIs. Expected to land on version 3.6.0
-        kafkaVersion = "3.6.0-SNAPSHOT"
+        kafkaVersion = "3.6.0"
 
         assertJVersion = "3.24.2"
 
@@ -126,8 +125,8 @@ subprojects {
     }
 
     dependencies {
-        compileOnly name: "kafka-clients-$kafkaVersion"
-        compileOnly name: "kafka-storage-api-$kafkaVersion"
+        compileOnly "org.apache.kafka:kafka-clients:$kafkaVersion"
+        compileOnly "org.apache.kafka:kafka-storage-api:$kafkaVersion"
 
         compileOnly "org.slf4j:slf4j-api:$slf4jVersion"
 

@@ -15,10 +15,10 @@
  */
 
 dependencies {
-    testImplementation name: "kafka-clients-$kafkaVersion"
-    testImplementation name: "kafka-server-common-$kafkaVersion"
-    testImplementation name: "kafka-storage-$kafkaVersion"
-    testImplementation name: "kafka-storage-api-$kafkaVersion"
+    testImplementation "org.apache.kafka:kafka-clients:$kafkaVersion"
+    testImplementation "org.apache.kafka:kafka-server-common:$kafkaVersion"
+    testImplementation "org.apache.kafka:kafka-storage:$kafkaVersion"
+    testImplementation "org.apache.kafka:kafka-storage-api:$kafkaVersion"
 
     testImplementation "commons-io:commons-io:$apacheCommonsIOVersion"
     testImplementation("software.amazon.awssdk:s3:$awsSdkVersion") {
