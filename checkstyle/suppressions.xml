@@ -29,6 +29,7 @@
     <suppress checks="ClassDataAbstractionCoupling" files="Metrics.java"/>
     <suppress checks="ClassDataAbstractionCoupling" files="MetricCollector.java"/>
     <suppress checks="CyclomaticComplexity" files="MetricCollector.java"/>
+    <suppress checks="CyclomaticComplexity" files="SegmentIndexesV1Builder.java"/>
     <suppress checks="CyclomaticComplexity" files="SingleBrokerTest.java"/>
     <suppress checks="NPathComplexity" files="SingleBrokerTest.java"/>
     <suppress checks="JavaNCSSCheck" files="MetricsRegistry.java"/>

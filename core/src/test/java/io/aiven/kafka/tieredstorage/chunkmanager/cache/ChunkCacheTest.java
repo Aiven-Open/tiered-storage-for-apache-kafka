@@ -23,8 +23,11 @@ import java.time.Duration;
 import java.util.Map;
 import java.util.concurrent.ExecutionException;
 
+import org.apache.kafka.server.log.remote.storage.RemoteStorageManager.IndexType;
+
 import io.aiven.kafka.tieredstorage.chunkmanager.ChunkKey;
 import io.aiven.kafka.tieredstorage.chunkmanager.ChunkManager;
+import io.aiven.kafka.tieredstorage.manifest.SegmentIndexesV1;
 import io.aiven.kafka.tieredstorage.manifest.SegmentManifest;
 import io.aiven.kafka.tieredstorage.manifest.SegmentManifestV1;
 import io.aiven.kafka.tieredstorage.manifest.index.FixedSizeChunkIndex;
@@ -65,8 +68,16 @@ class ChunkCacheTest {
     private static final byte[] CHUNK_0 = "0123456789".getBytes();
     private static final byte[] CHUNK_1 = "1011121314".getBytes();
     private static final FixedSizeChunkIndex FIXED_SIZE_CHUNK_INDEX = new FixedSizeChunkIndex(10, 10, 10, 10);
+    private static final SegmentIndexesV1 SEGMENT_INDEXES = SegmentIndexesV1.builder()
+        .add(IndexType.OFFSET, 1)
+        .add(IndexType.TIMESTAMP, 1)
+        .add(IndexType.PRODUCER_SNAPSHOT, 1)
+        .add(IndexType.LEADER_EPOCH, 1)
+        .add(IndexType.TRANSACTION, 1)
+        .build();
+
     private static final SegmentManifest SEGMENT_MANIFEST =
-        new SegmentManifestV1(FIXED_SIZE_CHUNK_INDEX, false, null, null);
+        new SegmentManifestV1(FIXED_SIZE_CHUNK_INDEX, SEGMENT_INDEXES, false, null, null);
     private static final String TEST_EXCEPTION_MESSAGE = "test_message";
     private static final String SEGMENT_KEY = "topic/segment";
     private static final ObjectKey SEGMENT_OBJECT_KEY = () -> SEGMENT_KEY;

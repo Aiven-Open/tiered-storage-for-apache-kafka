@@ -250,8 +250,7 @@ abstract class SingleBrokerTest {
                 assertThat(segmentFiles).containsKey(key);
                 assertThat(segmentFiles.get(key).stream()
                     .map(SingleBrokerTest::extractSuffix))
-                    .containsExactlyInAnyOrder(
-                        "index", "leader-epoch-checkpoint", "log", "rsm-manifest", "snapshot", "timeindex");
+                    .containsExactlyInAnyOrder("indexes", "log", "rsm-manifest");
             }
         }
 

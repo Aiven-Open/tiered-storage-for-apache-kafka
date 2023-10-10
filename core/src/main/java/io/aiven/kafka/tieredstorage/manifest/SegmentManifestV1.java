@@ -29,6 +29,7 @@ import com.fasterxml.jackson.annotation.JsonProperty;
 
 public class SegmentManifestV1 implements SegmentManifest {
     private final ChunkIndex chunkIndex;
+    private final SegmentIndexesV1 segmentIndexes;
     private final boolean compression;
     private final SegmentEncryptionMetadataV1 encryption;
     private final RemoteLogSegmentMetadata remoteLogSegmentMetadata;
@@ -36,20 +37,24 @@ public class SegmentManifestV1 implements SegmentManifest {
     @JsonCreator
     public SegmentManifestV1(@JsonProperty(value = "chunkIndex", required = true)
                              final ChunkIndex chunkIndex,
+                             @JsonProperty(value = "segmentIndexes", required = true)
+                             final SegmentIndexesV1 segmentIndexes,
                              @JsonProperty(value = "compression", required = true)
                              final boolean compression,
                              @JsonProperty("encryption")
                              final SegmentEncryptionMetadataV1 encryption) {
-        this(chunkIndex, compression, encryption, null);
+        this(chunkIndex, segmentIndexes, compression, encryption, null);
     }
 
     public SegmentManifestV1(final ChunkIndex chunkIndex,
+                             final SegmentIndexesV1 segmentIndexes,
                              final boolean compression,
                              final SegmentEncryptionMetadataV1 encryption,
                              final RemoteLogSegmentMetadata remoteLogSegmentMetadata) {
         this.chunkIndex = Objects.requireNonNull(chunkIndex, "chunkIndex cannot be null");
-        this.compression = compression;
+        this.segmentIndexes = Objects.requireNonNull(segmentIndexes, "segmentIndexes cannot be null");
 
+        this.compression = compression;
         this.encryption = encryption;
 
         this.remoteLogSegmentMetadata = remoteLogSegmentMetadata;
@@ -59,6 +64,12 @@ public class SegmentManifestV1 implements SegmentManifest {
     @JsonProperty("chunkIndex")
     public ChunkIndex chunkIndex() {
         return chunkIndex;
+    }
+
+    @Override
+    @JsonProperty("segmentIndexes")
+    public SegmentIndexes segmentIndexes() {
+        return segmentIndexes;
     }
 
     @Override
@@ -115,6 +126,7 @@ public class SegmentManifestV1 implements SegmentManifest {
     public String toString() {
         return "SegmentManifestV1("
             + "chunkIndex=" + chunkIndex
+            + ", segmentIndexes=" + segmentIndexes
             + ", compression=" + compression
             + ", encryption=" + encryption
             + ")";

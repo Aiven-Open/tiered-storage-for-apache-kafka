@@ -24,7 +24,6 @@ import java.util.function.BiFunction;
 import org.apache.kafka.common.TopicIdPartition;
 import org.apache.kafka.server.log.remote.storage.RemoteLogSegmentId;
 import org.apache.kafka.server.log.remote.storage.RemoteLogSegmentMetadata;
-import org.apache.kafka.server.log.remote.storage.RemoteStorageManager;
 
 import io.aiven.kafka.tieredstorage.storage.ObjectKey;
 
@@ -43,29 +42,13 @@ public final class ObjectKeyFactory {
      */
     public enum Suffix {
         LOG("log"),
-        OFFSET_INDEX("index"),
-        TIME_INDEX("timeindex"),
-        PRODUCER_SNAPSHOT("snapshot"),
-        TXN_INDEX("txnindex"),
-        LEADER_EPOCH_CHECKPOINT("leader-epoch-checkpoint"),
+        INDEXES("indexes"),
         MANIFEST("rsm-manifest");
 
         public final String value;
 
         Suffix(final String value) {
             this.value = value;
-        }
-
-        static Suffix fromIndexType(final RemoteStorageManager.IndexType indexType) {
-            switch (indexType) {
-                case OFFSET: return OFFSET_INDEX;
-                case TIMESTAMP: return TIME_INDEX;
-                case PRODUCER_SNAPSHOT: return PRODUCER_SNAPSHOT;
-                case TRANSACTION: return TXN_INDEX;
-                case LEADER_EPOCH: return LEADER_EPOCH_CHECKPOINT;
-                default:
-                    throw new IllegalArgumentException("Unknown index type " + indexType);
-            }
         }
     }
 
