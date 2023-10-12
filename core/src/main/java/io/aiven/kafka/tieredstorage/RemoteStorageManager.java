@@ -430,12 +430,9 @@ public class RemoteStorageManager implements org.apache.kafka.server.log.remote.
                 range.size());
 
             final var segmentManifest = fetchSegmentManifest(remoteLogSegmentMetadata);
-
-            final var suffix = ObjectKeyFactory.Suffix.LOG;
-            final var segmentKey = objectKey(remoteLogSegmentMetadata, suffix);
-
-            return new FetchEnumeration(fetchManager, segmentKey, segmentManifest, range, partSize)
-                .toInputStream();
+            final var key = objectKey(remoteLogSegmentMetadata, ObjectKeyFactory.Suffix.LOG);
+            final var fetchEnumeration = new FetchEnumeration(fetchManager, key, segmentManifest, range, partSize);
+            return fetchEnumeration.toInputStream();
         } catch (final KeyNotFoundException | KeyNotFoundRuntimeException e) {
             throw new RemoteResourceNotFoundException(e);
         } catch (final Exception e) {
