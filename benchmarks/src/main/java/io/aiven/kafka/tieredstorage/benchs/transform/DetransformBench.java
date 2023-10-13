@@ -22,7 +22,6 @@ import java.io.SequenceInputStream;
 import java.nio.file.Files;
 import java.nio.file.Path;
 import java.security.SecureRandom;
-import java.util.List;
 import java.util.concurrent.TimeUnit;
 
 import io.aiven.kafka.tieredstorage.manifest.index.ChunkIndex;
@@ -57,16 +56,16 @@ import org.openjdk.jmh.runner.options.OptionsBuilder;
 
 @State(Scope.Benchmark)
 @Fork(value = 1)
-@Warmup(iterations = 5)
-@Measurement(iterations = 10)
+@Warmup(iterations = 4)
+@Measurement(iterations = 16)
 @BenchmarkMode({Mode.Throughput, Mode.SampleTime})
 @OutputTimeUnit(TimeUnit.MILLISECONDS)
 public class DetransformBench extends AesKeyAware {
     static Path segmentPath;
-    @Param({"52428800"})
-    public int contentLength; // 500MiB
-    @Param({"102400", "1048576", "5242880", "10485760"})
-    public int chunkSize; // 100KiB, 1MiB, 5MiB, 10MiB
+    @Param({"5242880", "10485760", "52428800"})
+    public int contentLength; // 5MiB, 10MiB, 50MiB
+    @Param({"10240", "102400", "524288", "1048576", "5242880", "10485760"})
+    public int chunkSize; // 10KiB, 100KiB, 512KiB, 1MiB, 5MiB, 10MiB
     @Param({"false"})
     public boolean compression;
     @Param({"false", "true"})
@@ -114,7 +113,7 @@ public class DetransformBench extends AesKeyAware {
     public int test() throws IOException {
         // Detransform.
         DetransformChunkEnumeration detransformEnum = new BaseDetransformChunkEnumeration(
-            new ByteArrayInputStream(uploadedData), List.of(chunkIndex.chunks().iterator().next()));
+            new ByteArrayInputStream(uploadedData), chunkIndex.chunks());
         if (encryption) {
             detransformEnum = new DecryptionChunkEnumeration(
                 detransformEnum, ivSize, AesKeyAware::decryptionCipherSupplier);
