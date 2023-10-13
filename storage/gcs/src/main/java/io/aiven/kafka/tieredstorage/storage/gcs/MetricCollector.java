@@ -45,24 +45,24 @@ class MetricCollector {
      *
      * <p>That is, {@literal "/storage/v1/b/<bucket>/o/<object>"}.
      */
-    private static final Pattern OBJECT_METADATA_PATH_PATTERN =
-        Pattern.compile("^/storage/v1/b/\\w+/o/\\w+/?$");
+    static final Pattern OBJECT_METADATA_PATH_PATTERN =
+        Pattern.compile("^/storage/v1/b/([^/]+)/o/([^/]+)/?$");
 
     /**
      * The pattern for object download paths.
      *
      * <p>That is, {@literal "/download/storage/v1/b/<bucket>/o/<object>"}.
      */
-    private static final Pattern OBJECT_DOWNLOAD_PATH_PATTERN =
-        Pattern.compile("^/download/storage/v1/b/\\w+/o/\\w+/?$");
+    static final Pattern OBJECT_DOWNLOAD_PATH_PATTERN =
+        Pattern.compile("^/download/storage/v1/b/([^/]+)/o/([^/]+)/?$");
 
     /**
      * The pattern for object upload paths.
      *
      * <p>That is, {@literal "/upload/storage/v1/b/<bucket>/o"}.
      */
-    private static final Pattern OBJECT_UPLOAD_PATH_PATTERN =
-        Pattern.compile("^/upload/storage/v1/b/\\w+/o/?$");
+    static final Pattern OBJECT_UPLOAD_PATH_PATTERN =
+        Pattern.compile("^/upload/storage/v1/b/([^/]+)/o/?$");
 
     private static final String METRIC_GROUP = "gcs-metrics";
 

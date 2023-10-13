@@ -36,8 +36,6 @@ import com.google.cloud.storage.StorageException;
 import com.google.cloud.storage.StorageOptions;
 
 public class GcsStorage implements StorageBackend {
-    private final MetricCollector metricCollector = new MetricCollector();
-
     private Storage storage;
     private String bucketName;
     private Integer resumableUploadChunkSize;
@@ -48,7 +46,7 @@ public class GcsStorage implements StorageBackend {
         this.bucketName = config.bucketName();
         final StorageOptions.Builder builder = StorageOptions.newBuilder()
             .setCredentials(config.credentials())
-            .setTransportOptions(metricCollector.httpTransportOptions());
+            .setTransportOptions(new MetricCollector().httpTransportOptions());
         if (config.endpointUrl() != null) {
             builder.setHost(config.endpointUrl());
         }
