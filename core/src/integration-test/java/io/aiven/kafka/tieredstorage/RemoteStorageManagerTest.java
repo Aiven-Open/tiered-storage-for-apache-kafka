@@ -120,10 +120,17 @@ class RemoteStorageManagerTest extends RsaKeyAwareTest {
 
     private static List<Arguments> provideEndToEnd() {
         final List<Arguments> result = new ArrayList<>();
-        final var cacheNames =
-            List.of(InMemoryChunkCache.class.getCanonicalName(), DiskBasedChunkCache.class.getCanonicalName());
+        final var cacheNames = List.of(
+            InMemoryChunkCache.class.getCanonicalName(),
+            DiskBasedChunkCache.class.getCanonicalName()
+        );
+        final var chunkSizes = List.of(
+            1024 * 1024 - 1,
+            512 * 1024 * 1024 - 1,
+            Integer.MAX_VALUE / 2
+        );
         for (final String cacheClass : cacheNames) {
-            for (final int chunkSize : List.of(1024 * 1024 - 1, 1024 * 1024 * 1024 - 1, Integer.MAX_VALUE / 2)) {
+            for (final int chunkSize : chunkSizes) {
                 for (final boolean compression : List.of(true, false)) {
                     for (final boolean encryption : List.of(true, false)) {
                         for (final boolean hasTxnIndex : List.of(true, false)) {

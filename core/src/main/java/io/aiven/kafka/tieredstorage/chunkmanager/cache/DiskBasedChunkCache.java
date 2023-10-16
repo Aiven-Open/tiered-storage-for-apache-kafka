@@ -17,13 +17,16 @@
 package io.aiven.kafka.tieredstorage.chunkmanager.cache;
 
 import java.io.IOException;
+import java.io.RandomAccessFile;
 import java.nio.ByteBuffer;
+import java.nio.channels.FileChannel;
 import java.nio.file.Files;
 import java.nio.file.Path;
 import java.util.Map;
 
 import io.aiven.kafka.tieredstorage.chunkmanager.ChunkKey;
 import io.aiven.kafka.tieredstorage.chunkmanager.ChunkManager;
+import io.aiven.kafka.tieredstorage.storage.BytesRange;
 
 import com.github.benmanes.caffeine.cache.RemovalListener;
 import com.github.benmanes.caffeine.cache.Weigher;
@@ -43,9 +46,11 @@ public class DiskBasedChunkCache extends ChunkCache<Path> {
     }
 
     @Override
-    public ByteBuffer cachedChunkToInputStream(final Path cachedChunk) {
-        try {
-            return ByteBuffer.wrap(Files.readAllBytes(cachedChunk));
+    public ByteBuffer cachedChunkToInputStream(final Path cachedChunk, final BytesRange range) {
+        try (final var channel = FileChannel.open(cachedChunk)) {
+            final var dest = channel.map(FileChannel.MapMode.READ_ONLY, range.from, range.size());
+            dest.rewind();
+            return dest;
         } catch (final IOException e) {
             throw new RuntimeException(e);
         }
@@ -77,8 +82,15 @@ public class DiskBasedChunkCache extends ChunkCache<Path> {
         }
     }
 
-    private static Path writeToDisk(final ByteBuffer chunk, final Path tempChunkPath) throws IOException {
-        return Files.write(tempChunkPath, chunk.array());
+    private static Path writeToDisk(final ByteBuffer chunk, final Path path) throws IOException {
+        try (RandomAccessFile randomAccessFile = new RandomAccessFile(path.toFile(), "rw")) {
+            randomAccessFile.setLength(chunk.remaining());
+            try (final var channel = randomAccessFile.getChannel()) {
+                log.info("Writing to {} bytes: {}", path, chunk.capacity());
+                channel.write(chunk);
+            }
+        }
+        return path;
     }
 
     @Override
@@ -95,7 +107,7 @@ public class DiskBasedChunkCache extends ChunkCache<Path> {
                 }
             } catch (final IOException e) {
                 log.error("Failed to delete cached file for key {} with path {} from cache directory."
-                              + " The reason of the deletion is {}", key, path, cause, e);
+                    + " The reason of the deletion is {}", key, path, cause, e);
             }
         };
     }
@@ -109,9 +121,9 @@ public class DiskBasedChunkCache extends ChunkCache<Path> {
                     return (int) fileSize;
                 } else {
                     log.warn(
-                            "Cache size calculation have been inaccurate "
-                                    + "because size of a cached file was bigger than Integer.MAX_VALUE. "
-                                    + "This should never happen.");
+                        "Cache size calculation have been inaccurate "
+                            + "because size of a cached file was bigger than Integer.MAX_VALUE. "
+                            + "This should never happen.");
                     return Integer.MAX_VALUE;
                 }
             } catch (final IOException e) {

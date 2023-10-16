@@ -30,6 +30,7 @@ import io.aiven.kafka.tieredstorage.manifest.SegmentManifestV1;
 import io.aiven.kafka.tieredstorage.manifest.index.FixedSizeChunkIndex;
 import io.aiven.kafka.tieredstorage.security.AesEncryptionProvider;
 import io.aiven.kafka.tieredstorage.security.DataKeyAndAAD;
+import io.aiven.kafka.tieredstorage.storage.BytesRange;
 import io.aiven.kafka.tieredstorage.storage.ObjectKey;
 import io.aiven.kafka.tieredstorage.storage.StorageBackend;
 
@@ -48,6 +49,7 @@ class DefaultChunkManagerTest extends AesKeyAwareTest {
 
     static final ObjectKey OBJECT_KEY = () -> "topic/segment.log";
     static final byte[] TEST_CHUNK_CONTENT = "0123456789".getBytes();
+    static final BytesRange RANGE = BytesRange.ofFromPositionAndSize(0, 10);
     static final SegmentIndexesV1 SEGMENT_INDEXES = SegmentIndexesV1.builder()
         .add(IndexType.OFFSET, 1)
         .add(IndexType.TIMESTAMP, 1)
@@ -67,7 +69,7 @@ class DefaultChunkManagerTest extends AesKeyAwareTest {
         when(storage.fetch(OBJECT_KEY, chunkIndex.chunks().get(0).range()))
             .thenReturn(new ByteArrayInputStream("0123456789".getBytes()));
 
-        assertThat(chunkManager.getChunk(OBJECT_KEY, manifest, 0).array()).isEqualTo("0123456789".getBytes());
+        assertThat(chunkManager.getChunk(OBJECT_KEY, manifest, 0, RANGE).array()).isEqualTo("0123456789".getBytes());
         verify(storage).fetch(OBJECT_KEY, chunkIndex.chunks().get(0).range());
     }
 
@@ -91,7 +93,7 @@ class DefaultChunkManagerTest extends AesKeyAwareTest {
         final var manifest = new SegmentManifestV1(chunkIndex, SEGMENT_INDEXES, false, encryption, null);
         final ChunkManager chunkManager = new DefaultChunkManager(storage, aesEncryptionProvider);
 
-        assertThat(chunkManager.getChunk(OBJECT_KEY, manifest, 0).array()).isEqualTo(TEST_CHUNK_CONTENT);
+        assertThat(chunkManager.getChunk(OBJECT_KEY, manifest, 0, RANGE).array()).isEqualTo(TEST_CHUNK_CONTENT);
         verify(storage).fetch(OBJECT_KEY, chunkIndex.chunks().get(0).range());
     }
 
@@ -111,7 +113,7 @@ class DefaultChunkManagerTest extends AesKeyAwareTest {
         final var manifest = new SegmentManifestV1(chunkIndex, SEGMENT_INDEXES, true, null, null);
         final ChunkManager chunkManager = new DefaultChunkManager(storage, null);
 
-        assertThat(chunkManager.getChunk(OBJECT_KEY, manifest, 0).array()).isEqualTo(TEST_CHUNK_CONTENT);
+        assertThat(chunkManager.getChunk(OBJECT_KEY, manifest, 0, RANGE).array()).isEqualTo(TEST_CHUNK_CONTENT);
         verify(storage).fetch(OBJECT_KEY, chunkIndex.chunks().get(0).range());
     }
 }

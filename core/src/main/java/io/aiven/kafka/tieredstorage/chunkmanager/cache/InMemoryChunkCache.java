@@ -24,6 +24,7 @@ import org.apache.kafka.common.config.ConfigDef;
 
 import io.aiven.kafka.tieredstorage.chunkmanager.ChunkKey;
 import io.aiven.kafka.tieredstorage.chunkmanager.ChunkManager;
+import io.aiven.kafka.tieredstorage.storage.BytesRange;
 
 import com.github.benmanes.caffeine.cache.RemovalListener;
 import com.github.benmanes.caffeine.cache.Weigher;
@@ -38,19 +39,30 @@ public class InMemoryChunkCache extends ChunkCache<byte[]> {
     }
 
     @Override
-    public ByteBuffer cachedChunkToInputStream(final byte[] cachedChunk) {
-        return ByteBuffer.wrap(cachedChunk);
+    public ByteBuffer cachedChunkToInputStream(final byte[] cachedChunk, final BytesRange range) {
+        final var wrap = ByteBuffer.wrap(cachedChunk);
+        if (range.size() == cachedChunk.length) {
+            return wrap;
+        }
+        wrap.position(range.from);
+        final var limit = range.from + range.size();
+        if (limit < cachedChunk.length) {
+            wrap.limit(limit);
+        }
+        return wrap.slice();
     }
 
     @Override
     public byte[] cacheChunk(final ChunkKey chunkKey, final ByteBuffer chunk) throws IOException {
-        return chunk.array();
+        final var bytes = new byte[chunk.remaining()];
+        chunk.get(bytes);
+        return bytes;
     }
 
     @Override
     public RemovalListener<ChunkKey, byte[]> removalListener() {
         return (key, content, cause) -> log.debug("Deleted cached value for key {} from cache."
-                + " The reason of the deletion is {}", key, cause);
+            + " The reason of the deletion is {}", key, cause);
     }
 
     @Override

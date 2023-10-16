@@ -26,6 +26,7 @@ import io.aiven.kafka.tieredstorage.Chunk;
 import io.aiven.kafka.tieredstorage.manifest.SegmentEncryptionMetadata;
 import io.aiven.kafka.tieredstorage.manifest.SegmentManifest;
 import io.aiven.kafka.tieredstorage.security.AesEncryptionProvider;
+import io.aiven.kafka.tieredstorage.storage.BytesRange;
 import io.aiven.kafka.tieredstorage.storage.ObjectFetcher;
 import io.aiven.kafka.tieredstorage.storage.ObjectKey;
 import io.aiven.kafka.tieredstorage.storage.StorageBackendException;
@@ -49,9 +50,12 @@ public class DefaultChunkManager implements ChunkManager {
      *
      * @return an {@link InputStream} of the chunk, plain text (i.e., decrypted and decompressed).
      */
+    // TODO consider separate interfaces, as range is not needed here.
     public ByteBuffer getChunk(final ObjectKey objectKey,
                                final SegmentManifest manifest,
-                               final int chunkId) throws StorageBackendException, IOException {
+                               final int chunkId,
+                               final BytesRange range)
+        throws StorageBackendException, IOException {
         final Chunk chunk = manifest.chunkIndex().chunks().get(chunkId);
 
         final InputStream chunkContent = fetcher.fetch(objectKey, chunk.range());
@@ -60,9 +64,9 @@ public class DefaultChunkManager implements ChunkManager {
         final Optional<SegmentEncryptionMetadata> encryptionMetadata = manifest.encryption();
         if (encryptionMetadata.isPresent()) {
             detransformEnum = new DecryptionChunkEnumeration(
-                    detransformEnum,
-                    encryptionMetadata.get().ivSize(),
-                    encryptedChunk -> aesEncryptionProvider.decryptionCipher(encryptedChunk, encryptionMetadata.get())
+                detransformEnum,
+                encryptionMetadata.get().ivSize(),
+                encryptedChunk -> aesEncryptionProvider.decryptionCipher(encryptedChunk, encryptionMetadata.get())
             );
         }
         if (manifest.compression()) {

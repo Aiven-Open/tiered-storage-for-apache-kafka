@@ -33,6 +33,7 @@ import io.aiven.kafka.tieredstorage.chunkmanager.ChunkKey;
 import io.aiven.kafka.tieredstorage.chunkmanager.ChunkManager;
 import io.aiven.kafka.tieredstorage.manifest.SegmentManifest;
 import io.aiven.kafka.tieredstorage.metrics.CaffeineStatsCounter;
+import io.aiven.kafka.tieredstorage.storage.BytesRange;
 import io.aiven.kafka.tieredstorage.storage.ObjectKey;
 import io.aiven.kafka.tieredstorage.storage.StorageBackendException;
 
@@ -68,7 +69,8 @@ public abstract class ChunkCache<T> implements ChunkManager, Configurable {
      */
     public ByteBuffer getChunk(final ObjectKey objectKey,
                                final SegmentManifest manifest,
-                               final int chunkId) throws StorageBackendException, IOException {
+                               final int chunkId,
+                               final BytesRange range) throws StorageBackendException, IOException {
         final ChunkKey chunkKey = new ChunkKey(objectKey.value(), chunkId);
         final AtomicReference<ByteBuffer> result = new AtomicReference<>();
         try {
@@ -77,8 +79,9 @@ public abstract class ChunkCache<T> implements ChunkManager, Configurable {
                     if (val == null) {
                         statsCounter.recordMiss();
                         try {
-                            final var chunk = chunkManager.getChunk(objectKey, manifest, chunkId);
+                            final var chunk = chunkManager.getChunk(objectKey, manifest, chunkId, range);
                             final T t = this.cacheChunk(chunkKey, chunk);
+                            chunk.rewind();
                             result.getAndSet(chunk);
                             return t;
                         } catch (final StorageBackendException | IOException e) {
@@ -88,7 +91,7 @@ public abstract class ChunkCache<T> implements ChunkManager, Configurable {
                         statsCounter.recordHit();
                         try {
                             final T cachedChunk = val.get();
-                            result.getAndSet(cachedChunkToInputStream(cachedChunk));
+                            result.getAndSet(cachedChunkToInputStream(cachedChunk, range));
                             return cachedChunk;
                         } catch (final InterruptedException | ExecutionException e) {
                             throw new CompletionException(e);
@@ -118,7 +121,7 @@ public abstract class ChunkCache<T> implements ChunkManager, Configurable {
         }
     }
 
-    public abstract ByteBuffer cachedChunkToInputStream(final T cachedChunk);
+    public abstract ByteBuffer cachedChunkToInputStream(final T cachedChunk, final BytesRange range);
 
     public abstract T cacheChunk(final ChunkKey chunkKey, final ByteBuffer chunk) throws IOException;
 

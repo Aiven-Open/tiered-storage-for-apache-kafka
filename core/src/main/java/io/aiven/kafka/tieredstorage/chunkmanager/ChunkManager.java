@@ -20,6 +20,7 @@ import java.io.IOException;
 import java.nio.ByteBuffer;
 
 import io.aiven.kafka.tieredstorage.manifest.SegmentManifest;
+import io.aiven.kafka.tieredstorage.storage.BytesRange;
 import io.aiven.kafka.tieredstorage.storage.ObjectKey;
 import io.aiven.kafka.tieredstorage.storage.StorageBackendException;
 
@@ -27,5 +28,6 @@ public interface ChunkManager {
 
     ByteBuffer getChunk(final ObjectKey objectKey,
                         final SegmentManifest manifest,
-                        final int chunkId) throws StorageBackendException, IOException;
+                        final int chunkId,
+                        final BytesRange range) throws StorageBackendException, IOException;
 }

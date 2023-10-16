@@ -24,6 +24,7 @@ import java.util.Map;
 
 import io.aiven.kafka.tieredstorage.chunkmanager.ChunkKey;
 import io.aiven.kafka.tieredstorage.chunkmanager.ChunkManager;
+import io.aiven.kafka.tieredstorage.storage.BytesRange;
 
 import com.github.benmanes.caffeine.cache.RemovalCause;
 import com.github.benmanes.caffeine.cache.RemovalListener;
@@ -53,6 +54,7 @@ class DiskBasedChunkCacheTest {
     public static final String SEGMENT_ID = "topic/segment";
     private static final byte[] CHUNK_0 = "0123456789".getBytes();
     private static final byte[] CHUNK_1 = "1011121314".getBytes();
+    private static final BytesRange RANGE = BytesRange.ofFromPositionAndSize(0, 10);
     private static final String TEST_EXCEPTION_MESSAGE = "test_message";
     @Mock
     ChunkManager chunkManager;
@@ -116,13 +118,13 @@ class DiskBasedChunkCacheTest {
         final Path cachedChunkPath1 = diskBasedChunkCache.cacheChunk(chunkKey1, chunkStream1);
 
         assertThat(cachedChunkPath0).exists();
-        assertThat(diskBasedChunkCache.cachedChunkToInputStream(cachedChunkPath0).array()).isEqualTo(CHUNK_0);
+        assertThat(diskBasedChunkCache.cachedChunkToInputStream(cachedChunkPath0, RANGE).array()).isEqualTo(CHUNK_0);
 
         assertThat(tempCachePath)
                 .isDirectoryNotContaining(path -> path.endsWith(SEGMENT_ID + "-" + chunkKey0.chunkId));
 
         assertThat(cachedChunkPath1).exists();
-        assertThat(diskBasedChunkCache.cachedChunkToInputStream(cachedChunkPath1).array()).isEqualTo(CHUNK_1);
+        assertThat(diskBasedChunkCache.cachedChunkToInputStream(cachedChunkPath1, RANGE).array()).isEqualTo(CHUNK_1);
 
         assertThat(tempCachePath)
                 .isDirectoryNotContaining(path -> path.endsWith(SEGMENT_ID + "-" + chunkKey1.chunkId));
@@ -130,7 +132,7 @@ class DiskBasedChunkCacheTest {
 
     @Test
     void failsToReadFile() {
-        assertThatThrownBy(() -> diskBasedChunkCache.cachedChunkToInputStream(Path.of("does_not_exists")))
+        assertThatThrownBy(() -> diskBasedChunkCache.cachedChunkToInputStream(Path.of("does_not_exists"), RANGE))
                 .isInstanceOf(RuntimeException.class)
                 .hasCauseInstanceOf(IOException.class);
     }

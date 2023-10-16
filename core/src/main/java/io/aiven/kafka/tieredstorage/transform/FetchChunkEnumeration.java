@@ -36,8 +36,6 @@ import io.aiven.kafka.tieredstorage.storage.KeyNotFoundException;
 import io.aiven.kafka.tieredstorage.storage.ObjectKey;
 import io.aiven.kafka.tieredstorage.storage.StorageBackendException;
 
-import org.apache.commons.io.input.BoundedInputStream;
-
 public class FetchChunkEnumeration implements Enumeration<InputStream> {
     private final ChunkManager chunkManager;
     private final ObjectKey objectKey;
@@ -104,45 +102,40 @@ public class FetchChunkEnumeration implements Enumeration<InputStream> {
             throw new NoSuchElementException();
         }
 
-        // TODO push down the range seeks
-        InputStream chunkContent = new ByteBufferInputStream(getChunkContent(currentChunkId));
-
         final Chunk currentChunk = chunkIndex.chunks().get(currentChunkId);
         final int chunkStartPosition = currentChunk.originalPosition;
         final boolean isAtFirstChunk = currentChunkId == startChunkId;
         final boolean isAtLastChunk = currentChunkId == lastChunkId;
         final boolean isSingleChunk = isAtFirstChunk && isAtLastChunk;
-        if (isSingleChunk) {
-            final int toSkip = range.from - chunkStartPosition;
-            try {
-                chunkContent.skip(toSkip);
-                final int chunkSize = range.size();
-                chunkContent = new BoundedInputStream(chunkContent, chunkSize);
-            } catch (final IOException e) {
-                throw new RuntimeException(e);
-            }
-        } else {
-            if (isAtFirstChunk) {
-                final int toSkip = range.from - chunkStartPosition;
-                try {
-                    chunkContent.skip(toSkip);
-                } catch (final IOException e) {
-                    throw new RuntimeException(e);
-                }
-            }
-            if (isAtLastChunk) {
-                final int chunkSize = range.to - chunkStartPosition + 1;
-                chunkContent = new BoundedInputStream(chunkContent, chunkSize);
-            }
-        }
 
-        currentChunkId += 1;
-        return chunkContent;
+        try {
+            if (isSingleChunk) {
+                final int toSkip = range.from - chunkStartPosition;
+                final var range1 = BytesRange.of(toSkip, toSkip + range.size() - 1);
+                return new ByteBufferInputStream(getChunkContent(currentChunkId, range1));
+            } else {
+                if (isAtFirstChunk) {
+                    final int toSkip = range.from - chunkStartPosition;
+                    final var range1 = BytesRange.of(toSkip, currentChunk.originalSize - 1);
+                    return new ByteBufferInputStream(getChunkContent(currentChunkId, range1));
+                }
+                if (isAtLastChunk) {
+                    final int chunkSize = range.to - chunkStartPosition + 1;
+                    final var range1 = BytesRange.of(0, chunkSize - 1);
+                    return new ByteBufferInputStream(getChunkContent(currentChunkId, range1));
+                }
+                final var range1 = BytesRange.of(0, currentChunk.originalSize - 1);
+                return new ByteBufferInputStream(getChunkContent(currentChunkId, range1));
+            }
+        } finally {
+            currentChunkId += 1;
+        }
     }
 
-    private ByteBuffer getChunkContent(final int chunkId) {
+    private ByteBuffer getChunkContent(final int chunkId, final BytesRange range) {
         try {
-            return chunkManager.getChunk(objectKey, manifest, chunkId);
+            final var chunk = chunkManager.getChunk(objectKey, manifest, chunkId, range);
+            return chunk;
         } catch (final KeyNotFoundException e) {
             throw new KeyNotFoundRuntimeException(e);
         } catch (final StorageBackendException | IOException e) {
