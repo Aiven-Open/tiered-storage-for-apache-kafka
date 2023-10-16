@@ -17,7 +17,7 @@
 package io.aiven.kafka.tieredstorage.chunkmanager.cache;
 
 import java.io.IOException;
-import java.io.InputStream;
+import java.nio.ByteBuffer;
 import java.nio.file.Files;
 import java.nio.file.Path;
 import java.util.Map;
@@ -43,9 +43,9 @@ public class DiskBasedChunkCache extends ChunkCache<Path> {
     }
 
     @Override
-    public InputStream cachedChunkToInputStream(final Path cachedChunk) {
+    public ByteBuffer cachedChunkToInputStream(final Path cachedChunk) {
         try {
-            return Files.newInputStream(cachedChunk);
+            return ByteBuffer.wrap(Files.readAllBytes(cachedChunk));
         } catch (final IOException e) {
             throw new RuntimeException(e);
         }
@@ -58,7 +58,7 @@ public class DiskBasedChunkCache extends ChunkCache<Path> {
      * to the actual caching directory.
      */
     @Override
-    public Path cacheChunk(final ChunkKey chunkKey, final InputStream chunk) throws IOException {
+    public Path cacheChunk(final ChunkKey chunkKey, final ByteBuffer chunk) throws IOException {
         final var chunkKeyPath = chunkKey.path();
         final Path tempChunkPath = config.tempCachePath().resolve(chunkKeyPath);
         final Path tempCached = writeToDisk(chunk, tempChunkPath);
@@ -77,10 +77,8 @@ public class DiskBasedChunkCache extends ChunkCache<Path> {
         }
     }
 
-    private static Path writeToDisk(final InputStream chunk, final Path tempChunkPath) throws IOException {
-        try (chunk) {
-            return Files.write(tempChunkPath, chunk.readAllBytes());
-        }
+    private static Path writeToDisk(final ByteBuffer chunk, final Path tempChunkPath) throws IOException {
+        return Files.write(tempChunkPath, chunk.array());
     }
 
     @Override

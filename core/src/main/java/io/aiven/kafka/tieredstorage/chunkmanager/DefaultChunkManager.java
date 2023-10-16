@@ -16,7 +16,9 @@
 
 package io.aiven.kafka.tieredstorage.chunkmanager;
 
+import java.io.IOException;
 import java.io.InputStream;
+import java.nio.ByteBuffer;
 import java.util.List;
 import java.util.Optional;
 
@@ -47,8 +49,9 @@ public class DefaultChunkManager implements ChunkManager {
      *
      * @return an {@link InputStream} of the chunk, plain text (i.e., decrypted and decompressed).
      */
-    public InputStream getChunk(final ObjectKey objectKey, final SegmentManifest manifest,
-                                final int chunkId) throws StorageBackendException {
+    public ByteBuffer getChunk(final ObjectKey objectKey,
+                               final SegmentManifest manifest,
+                               final int chunkId) throws StorageBackendException, IOException {
         final Chunk chunk = manifest.chunkIndex().chunks().get(chunkId);
 
         final InputStream chunkContent = fetcher.fetch(objectKey, chunk.range());
@@ -66,6 +69,9 @@ public class DefaultChunkManager implements ChunkManager {
             detransformEnum = new DecompressionChunkEnumeration(detransformEnum);
         }
         final DetransformFinisher detransformFinisher = new DetransformFinisher(detransformEnum);
-        return detransformFinisher.toInputStream();
+        try (final var content = detransformFinisher.toInputStream()) {
+            final var bytes = content.readAllBytes();
+            return ByteBuffer.wrap(bytes);
+        }
     }
 }

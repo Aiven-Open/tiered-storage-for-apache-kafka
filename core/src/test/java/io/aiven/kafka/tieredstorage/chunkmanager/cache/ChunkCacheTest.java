@@ -16,9 +16,8 @@
 
 package io.aiven.kafka.tieredstorage.chunkmanager.cache;
 
-import java.io.ByteArrayInputStream;
 import java.io.IOException;
-import java.io.InputStream;
+import java.nio.ByteBuffer;
 import java.time.Duration;
 import java.util.Map;
 import java.util.concurrent.ExecutionException;
@@ -51,7 +50,6 @@ import static org.mockito.Mockito.any;
 import static org.mockito.Mockito.anyInt;
 import static org.mockito.Mockito.argThat;
 import static org.mockito.Mockito.doAnswer;
-import static org.mockito.Mockito.doCallRealMethod;
 import static org.mockito.Mockito.eq;
 import static org.mockito.Mockito.mockingDetails;
 import static org.mockito.Mockito.reset;
@@ -105,9 +103,9 @@ class ChunkCacheTest {
         void setUp() throws Exception {
             doAnswer(invocation -> removalListener).when(chunkCache).removalListener();
             when(chunkManager.getChunk(SEGMENT_OBJECT_KEY, SEGMENT_MANIFEST, 0))
-                    .thenAnswer(invocation -> new ByteArrayInputStream(CHUNK_0));
+                    .thenAnswer(invocation -> ByteBuffer.wrap(CHUNK_0));
             when(chunkManager.getChunk(SEGMENT_OBJECT_KEY, SEGMENT_MANIFEST, 1))
-                    .thenAnswer(invocation -> new ByteArrayInputStream(CHUNK_1));
+                    .thenAnswer(invocation -> ByteBuffer.wrap(CHUNK_1));
         }
 
         @Test
@@ -117,18 +115,18 @@ class ChunkCacheTest {
                     "size", "-1"
             ));
 
-            final InputStream chunk0 = chunkCache.getChunk(SEGMENT_OBJECT_KEY, SEGMENT_MANIFEST, 0);
-            assertThat(chunk0).hasBinaryContent(CHUNK_0);
+            final var chunk0 = chunkCache.getChunk(SEGMENT_OBJECT_KEY, SEGMENT_MANIFEST, 0);
+            assertThat(chunk0.array()).isEqualTo(CHUNK_0);
             verify(chunkManager).getChunk(SEGMENT_OBJECT_KEY, SEGMENT_MANIFEST, 0);
-            final InputStream cachedChunk0 = chunkCache.getChunk(SEGMENT_OBJECT_KEY, SEGMENT_MANIFEST, 0);
-            assertThat(cachedChunk0).hasBinaryContent(CHUNK_0);
+            final var cachedChunk0 = chunkCache.getChunk(SEGMENT_OBJECT_KEY, SEGMENT_MANIFEST, 0);
+            assertThat(cachedChunk0.array()).isEqualTo(CHUNK_0);
             verifyNoMoreInteractions(chunkManager);
 
-            final InputStream chunk1 = chunkCache.getChunk(SEGMENT_OBJECT_KEY, SEGMENT_MANIFEST, 1);
-            assertThat(chunk1).hasBinaryContent(CHUNK_1);
+            final var chunk1 = chunkCache.getChunk(SEGMENT_OBJECT_KEY, SEGMENT_MANIFEST, 1);
+            assertThat(chunk1.array()).isEqualTo(CHUNK_1);
             verify(chunkManager).getChunk(SEGMENT_OBJECT_KEY, SEGMENT_MANIFEST, 1);
-            final InputStream cachedChunk1 = chunkCache.getChunk(SEGMENT_OBJECT_KEY, SEGMENT_MANIFEST, 1);
-            assertThat(cachedChunk1).hasBinaryContent(CHUNK_1);
+            final var cachedChunk1 = chunkCache.getChunk(SEGMENT_OBJECT_KEY, SEGMENT_MANIFEST, 1);
+            assertThat(cachedChunk1.array()).isEqualTo(CHUNK_1);
             verifyNoMoreInteractions(chunkManager);
 
             verifyNoInteractions(removalListener);
@@ -141,20 +139,16 @@ class ChunkCacheTest {
                     "size", "-1"
             ));
 
-            assertThat(chunkCache.getChunk(SEGMENT_OBJECT_KEY, SEGMENT_MANIFEST, 0))
-                    .hasBinaryContent(CHUNK_0);
+            assertThat(chunkCache.getChunk(SEGMENT_OBJECT_KEY, SEGMENT_MANIFEST, 0).array()).isEqualTo(CHUNK_0);
             verify(chunkManager).getChunk(SEGMENT_OBJECT_KEY, SEGMENT_MANIFEST, 0);
-            assertThat(chunkCache.getChunk(SEGMENT_OBJECT_KEY, SEGMENT_MANIFEST, 0))
-                    .hasBinaryContent(CHUNK_0);
+            assertThat(chunkCache.getChunk(SEGMENT_OBJECT_KEY, SEGMENT_MANIFEST, 0).array()).isEqualTo(CHUNK_0);
             verifyNoMoreInteractions(chunkManager);
 
             Thread.sleep(100);
 
-            assertThat(chunkCache.getChunk(SEGMENT_OBJECT_KEY, SEGMENT_MANIFEST, 1))
-                    .hasBinaryContent(CHUNK_1);
+            assertThat(chunkCache.getChunk(SEGMENT_OBJECT_KEY, SEGMENT_MANIFEST, 1).array()).isEqualTo(CHUNK_1);
             verify(chunkManager).getChunk(SEGMENT_OBJECT_KEY, SEGMENT_MANIFEST, 1);
-            assertThat(chunkCache.getChunk(SEGMENT_OBJECT_KEY, SEGMENT_MANIFEST, 1))
-                    .hasBinaryContent(CHUNK_1);
+            assertThat(chunkCache.getChunk(SEGMENT_OBJECT_KEY, SEGMENT_MANIFEST, 1).array()).isEqualTo(CHUNK_1);
             verifyNoMoreInteractions(chunkManager);
 
             await().atMost(Duration.ofMillis(5000)).pollInterval(Duration.ofMillis(100))
@@ -166,8 +160,7 @@ class ChunkCacheTest {
                             any(),
                             eq(RemovalCause.EXPIRED));
 
-            assertThat(chunkCache.getChunk(SEGMENT_OBJECT_KEY, SEGMENT_MANIFEST, 0))
-                    .hasBinaryContent(CHUNK_0);
+            assertThat(chunkCache.getChunk(SEGMENT_OBJECT_KEY, SEGMENT_MANIFEST, 0).array()).isEqualTo(CHUNK_0);
             verify(chunkManager, times(2)).getChunk(SEGMENT_OBJECT_KEY, SEGMENT_MANIFEST, 0);
         }
 
@@ -178,15 +171,12 @@ class ChunkCacheTest {
                     "size", "18"
             ));
 
-            assertThat(chunkCache.getChunk(SEGMENT_OBJECT_KEY, SEGMENT_MANIFEST, 0))
-                    .hasBinaryContent(CHUNK_0);
+            assertThat(chunkCache.getChunk(SEGMENT_OBJECT_KEY, SEGMENT_MANIFEST, 0).array()).isEqualTo(CHUNK_0);
             verify(chunkManager).getChunk(SEGMENT_OBJECT_KEY, SEGMENT_MANIFEST, 0);
-            assertThat(chunkCache.getChunk(SEGMENT_OBJECT_KEY, SEGMENT_MANIFEST, 0))
-                    .hasBinaryContent(CHUNK_0);
+            assertThat(chunkCache.getChunk(SEGMENT_OBJECT_KEY, SEGMENT_MANIFEST, 0).array()).isEqualTo(CHUNK_0);
             verifyNoMoreInteractions(chunkManager);
 
-            assertThat(chunkCache.getChunk(SEGMENT_OBJECT_KEY, SEGMENT_MANIFEST, 1))
-                    .hasBinaryContent(CHUNK_1);
+            assertThat(chunkCache.getChunk(SEGMENT_OBJECT_KEY, SEGMENT_MANIFEST, 1).array()).isEqualTo(CHUNK_1);
             verify(chunkManager).getChunk(SEGMENT_OBJECT_KEY, SEGMENT_MANIFEST, 1);
 
             await().atMost(Duration.ofMillis(5000))
@@ -196,10 +186,8 @@ class ChunkCacheTest {
 
             verify(removalListener).onRemoval(any(ChunkKey.class), any(), eq(RemovalCause.SIZE));
 
-            assertThat(chunkCache.getChunk(SEGMENT_OBJECT_KEY, SEGMENT_MANIFEST, 0))
-                    .hasBinaryContent(CHUNK_0);
-            assertThat(chunkCache.getChunk(SEGMENT_OBJECT_KEY, SEGMENT_MANIFEST, 1))
-                    .hasBinaryContent(CHUNK_1);
+            assertThat(chunkCache.getChunk(SEGMENT_OBJECT_KEY, SEGMENT_MANIFEST, 0).array()).isEqualTo(CHUNK_0);
+            assertThat(chunkCache.getChunk(SEGMENT_OBJECT_KEY, SEGMENT_MANIFEST, 1).array()).isEqualTo(CHUNK_1);
             verify(chunkManager, times(3)).getChunk(eq(SEGMENT_OBJECT_KEY), eq(SEGMENT_MANIFEST), anyInt());
         }
 
@@ -236,15 +224,14 @@ class ChunkCacheTest {
         @Test
         void failedReadingCachedValueWithInterruptedException() throws Exception {
             when(chunkManager.getChunk(SEGMENT_OBJECT_KEY, SEGMENT_MANIFEST, 0))
-                    .thenReturn(new ByteArrayInputStream(CHUNK_0));
+                .thenReturn(ByteBuffer.wrap(CHUNK_0));
 
-            doCallRealMethod().doAnswer(invocation -> {
+            doAnswer(invocation -> {
                 throw new InterruptedException(TEST_EXCEPTION_MESSAGE);
             }).when(chunkCache).cachedChunkToInputStream(any());
 
             chunkCache.getChunk(SEGMENT_OBJECT_KEY, SEGMENT_MANIFEST, 0);
-            assertThatThrownBy(() -> chunkCache
-                    .getChunk(SEGMENT_OBJECT_KEY, SEGMENT_MANIFEST, 0))
+            assertThatThrownBy(() -> chunkCache.getChunk(SEGMENT_OBJECT_KEY, SEGMENT_MANIFEST, 0))
                     .isInstanceOf(RuntimeException.class)
                     .hasCauseInstanceOf(ExecutionException.class)
                     .hasRootCauseInstanceOf(InterruptedException.class)
@@ -253,15 +240,14 @@ class ChunkCacheTest {
 
         @Test
         void failedReadingCachedValueWithExecutionException() throws Exception {
-            when(chunkManager.getChunk(SEGMENT_OBJECT_KEY, SEGMENT_MANIFEST, 0)).thenReturn(
-                    new ByteArrayInputStream(CHUNK_0));
-            doCallRealMethod().doAnswer(invocation -> {
+            when(chunkManager.getChunk(SEGMENT_OBJECT_KEY, SEGMENT_MANIFEST, 0))
+                .thenReturn(ByteBuffer.wrap(CHUNK_0));
+            doAnswer(invocation -> {
                 throw new ExecutionException(new RuntimeException(TEST_EXCEPTION_MESSAGE));
             }).when(chunkCache).cachedChunkToInputStream(any());
 
             chunkCache.getChunk(SEGMENT_OBJECT_KEY, SEGMENT_MANIFEST, 0);
-            assertThatThrownBy(() -> chunkCache
-                    .getChunk(SEGMENT_OBJECT_KEY, SEGMENT_MANIFEST, 0))
+            assertThatThrownBy(() -> chunkCache.getChunk(SEGMENT_OBJECT_KEY, SEGMENT_MANIFEST, 0))
                     .isInstanceOf(RuntimeException.class)
                     .hasCauseInstanceOf(ExecutionException.class)
                     .hasRootCauseInstanceOf(RuntimeException.class)

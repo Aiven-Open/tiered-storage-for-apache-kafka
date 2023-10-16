@@ -17,7 +17,7 @@
 package io.aiven.kafka.tieredstorage.chunkmanager.cache;
 
 import java.io.IOException;
-import java.io.InputStream;
+import java.nio.ByteBuffer;
 import java.util.concurrent.CompletableFuture;
 import java.util.concurrent.CompletionException;
 import java.util.concurrent.ExecutionException;
@@ -66,21 +66,20 @@ public abstract class ChunkCache<T> implements ChunkManager, Configurable {
      * opened right when fetching from cache happens even if the actual value is removed from the cache,
      * the InputStream will still contain the data.
      */
-    public InputStream getChunk(final ObjectKey objectKey,
-                                final SegmentManifest manifest,
-                                final int chunkId) throws StorageBackendException, IOException {
+    public ByteBuffer getChunk(final ObjectKey objectKey,
+                               final SegmentManifest manifest,
+                               final int chunkId) throws StorageBackendException, IOException {
         final ChunkKey chunkKey = new ChunkKey(objectKey.value(), chunkId);
-        final AtomicReference<InputStream> result = new AtomicReference<>();
+        final AtomicReference<ByteBuffer> result = new AtomicReference<>();
         try {
             return cache.asMap()
                 .compute(chunkKey, (key, val) -> CompletableFuture.supplyAsync(() -> {
                     if (val == null) {
                         statsCounter.recordMiss();
                         try {
-                            final InputStream chunk =
-                                chunkManager.getChunk(objectKey, manifest, chunkId);
+                            final var chunk = chunkManager.getChunk(objectKey, manifest, chunkId);
                             final T t = this.cacheChunk(chunkKey, chunk);
-                            result.getAndSet(cachedChunkToInputStream(t));
+                            result.getAndSet(chunk);
                             return t;
                         } catch (final StorageBackendException | IOException e) {
                             throw new CompletionException(e);
@@ -119,9 +118,9 @@ public abstract class ChunkCache<T> implements ChunkManager, Configurable {
         }
     }
 
-    public abstract InputStream cachedChunkToInputStream(final T cachedChunk);
+    public abstract ByteBuffer cachedChunkToInputStream(final T cachedChunk);
 
-    public abstract T cacheChunk(final ChunkKey chunkKey, final InputStream chunk) throws IOException;
+    public abstract T cacheChunk(final ChunkKey chunkKey, final ByteBuffer chunk) throws IOException;
 
     public abstract RemovalListener<ChunkKey, T> removalListener();
 

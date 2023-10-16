@@ -16,7 +16,8 @@
 
 package io.aiven.kafka.tieredstorage.transform;
 
-import java.io.ByteArrayInputStream;
+import java.io.IOException;
+import java.nio.ByteBuffer;
 import java.util.NoSuchElementException;
 
 import org.apache.kafka.server.log.remote.storage.RemoteStorageManager.IndexType;
@@ -105,7 +106,7 @@ class FetchChunkEnumerationTest {
 
     // - Single chunk
     @Test
-    void shouldReturnRangeFromSingleChunk() throws StorageBackendException {
+    void shouldReturnRangeFromSingleChunk() throws StorageBackendException, IOException {
         // Given a set of 10 chunks with 10 bytes each
         // When
         final int from = 32;
@@ -113,7 +114,7 @@ class FetchChunkEnumerationTest {
         final FetchChunkEnumeration fetchChunk =
             new FetchChunkEnumeration(chunkManager, SEGMENT_KEY, manifest, BytesRange.of(from, to));
         when(chunkManager.getChunk(SEGMENT_KEY, manifest, fetchChunk.currentChunkId))
-            .thenReturn(new ByteArrayInputStream(CHUNK_CONTENT));
+            .thenReturn(ByteBuffer.wrap(CHUNK_CONTENT));
         // Then
         assertThat(fetchChunk.startChunkId).isEqualTo(fetchChunk.lastChunkId);
         assertThat(fetchChunk.nextElement()).hasContent("234");
@@ -123,7 +124,7 @@ class FetchChunkEnumerationTest {
 
     // - Multiple chunks
     @Test
-    void shouldReturnRangeFromMultipleChunks() throws StorageBackendException {
+    void shouldReturnRangeFromMultipleChunks() throws StorageBackendException, IOException {
         // Given a set of 10 chunks with 10 bytes each
         // When
         final int from = 15;
@@ -131,11 +132,11 @@ class FetchChunkEnumerationTest {
         final FetchChunkEnumeration fetchChunk =
             new FetchChunkEnumeration(chunkManager, SEGMENT_KEY, manifest, BytesRange.of(from, to));
         when(chunkManager.getChunk(SEGMENT_KEY, manifest, 1))
-            .thenReturn(new ByteArrayInputStream(CHUNK_CONTENT));
+            .thenReturn(ByteBuffer.wrap(CHUNK_CONTENT));
         when(chunkManager.getChunk(SEGMENT_KEY, manifest, 2))
-            .thenReturn(new ByteArrayInputStream(CHUNK_CONTENT));
+            .thenReturn(ByteBuffer.wrap(CHUNK_CONTENT));
         when(chunkManager.getChunk(SEGMENT_KEY, manifest, 3))
-            .thenReturn(new ByteArrayInputStream(CHUNK_CONTENT));
+            .thenReturn(ByteBuffer.wrap(CHUNK_CONTENT));
         // Then
         assertThat(fetchChunk.startChunkId).isNotEqualTo(fetchChunk.lastChunkId);
         assertThat(fetchChunk.nextElement()).hasContent("56789");

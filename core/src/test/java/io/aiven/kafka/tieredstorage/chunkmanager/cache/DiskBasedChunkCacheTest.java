@@ -16,8 +16,8 @@
 
 package io.aiven.kafka.tieredstorage.chunkmanager.cache;
 
-import java.io.ByteArrayInputStream;
 import java.io.IOException;
+import java.nio.ByteBuffer;
 import java.nio.file.Files;
 import java.nio.file.Path;
 import java.util.Map;
@@ -80,10 +80,10 @@ class DiskBasedChunkCacheTest {
             filesMockedStatic.when(() -> Files.move(any(), any(), any()))
                     .thenThrow(new IOException(TEST_EXCEPTION_MESSAGE));
 
-            final ByteArrayInputStream chunkStream0 = new ByteArrayInputStream(CHUNK_0);
-            final ByteArrayInputStream chunkStream1 = new ByteArrayInputStream(CHUNK_1);
-            final ChunkKey chunkKey0 = new ChunkKey(SEGMENT_ID, 0);
-            final ChunkKey chunkKey1 = new ChunkKey(SEGMENT_ID, 1);
+            final var chunkStream0 = ByteBuffer.wrap(CHUNK_0);
+            final var chunkStream1 = ByteBuffer.wrap(CHUNK_1);
+            final var chunkKey0 = new ChunkKey(SEGMENT_ID, 0);
+            final var chunkKey1 = new ChunkKey(SEGMENT_ID, 1);
 
             assertThatThrownBy(() -> diskBasedChunkCache.cacheChunk(chunkKey0, chunkStream0))
                     .isInstanceOf(IOException.class)
@@ -107,24 +107,22 @@ class DiskBasedChunkCacheTest {
 
     @Test
     void cacheChunks() throws IOException {
-        final ByteArrayInputStream chunkStream0 = new ByteArrayInputStream(CHUNK_0);
-        final ByteArrayInputStream chunkStream1 = new ByteArrayInputStream(CHUNK_1);
-        final ChunkKey chunkKey0 = new ChunkKey(SEGMENT_ID, 0);
-        final ChunkKey chunkKey1 = new ChunkKey(SEGMENT_ID, 1);
+        final var chunkStream0 = ByteBuffer.wrap(CHUNK_0);
+        final var chunkStream1 = ByteBuffer.wrap(CHUNK_1);
+        final var chunkKey0 = new ChunkKey(SEGMENT_ID, 0);
+        final var chunkKey1 = new ChunkKey(SEGMENT_ID, 1);
 
         final Path cachedChunkPath0 = diskBasedChunkCache.cacheChunk(chunkKey0, chunkStream0);
         final Path cachedChunkPath1 = diskBasedChunkCache.cacheChunk(chunkKey1, chunkStream1);
 
         assertThat(cachedChunkPath0).exists();
-        assertThat(diskBasedChunkCache.cachedChunkToInputStream(cachedChunkPath0))
-                .hasBinaryContent(CHUNK_0);
+        assertThat(diskBasedChunkCache.cachedChunkToInputStream(cachedChunkPath0).array()).isEqualTo(CHUNK_0);
 
         assertThat(tempCachePath)
                 .isDirectoryNotContaining(path -> path.endsWith(SEGMENT_ID + "-" + chunkKey0.chunkId));
 
         assertThat(cachedChunkPath1).exists();
-        assertThat(diskBasedChunkCache.cachedChunkToInputStream(cachedChunkPath1))
-                .hasBinaryContent(CHUNK_1);
+        assertThat(diskBasedChunkCache.cachedChunkToInputStream(cachedChunkPath1).array()).isEqualTo(CHUNK_1);
 
         assertThat(tempCachePath)
                 .isDirectoryNotContaining(path -> path.endsWith(SEGMENT_ID + "-" + chunkKey1.chunkId));
@@ -139,8 +137,8 @@ class DiskBasedChunkCacheTest {
 
     @Test
     void weighsCorrectly() throws IOException {
-        final ByteArrayInputStream chunkStream = new ByteArrayInputStream(CHUNK_0);
-        final ChunkKey chunkKey = new ChunkKey(SEGMENT_ID, 0);
+        final var chunkStream = ByteBuffer.wrap(CHUNK_0);
+        final var chunkKey = new ChunkKey(SEGMENT_ID, 0);
 
         final Path cachedChunkPath = diskBasedChunkCache.cacheChunk(chunkKey, chunkStream);
 
@@ -150,8 +148,8 @@ class DiskBasedChunkCacheTest {
 
     @Test
     void weighingTooBigFiles() throws IOException {
-        final ByteArrayInputStream chunkStream = new ByteArrayInputStream(CHUNK_0);
-        final ChunkKey chunkKey = new ChunkKey(SEGMENT_ID, 0);
+        final var chunkStream = ByteBuffer.wrap(CHUNK_0);
+        final var chunkKey = new ChunkKey(SEGMENT_ID, 0);
 
         final Path cachedChunkPath = diskBasedChunkCache.cacheChunk(chunkKey, chunkStream);
 
@@ -165,8 +163,8 @@ class DiskBasedChunkCacheTest {
 
     @Test
     void weighingFails() throws IOException {
-        final ByteArrayInputStream chunkStream = new ByteArrayInputStream(CHUNK_0);
-        final ChunkKey chunkKey = new ChunkKey(SEGMENT_ID, 0);
+        final var chunkStream = ByteBuffer.wrap(CHUNK_0);
+        final var chunkKey = new ChunkKey(SEGMENT_ID, 0);
 
         final Path cachedChunkPath = diskBasedChunkCache.cacheChunk(chunkKey, chunkStream);
         try (final MockedStatic<Files> filesMockedStatic = mockStatic(Files.class, CALLS_REAL_METHODS)) {
@@ -182,8 +180,8 @@ class DiskBasedChunkCacheTest {
 
     @Test
     void removesCorrectly() throws IOException {
-        final ByteArrayInputStream chunkStream = new ByteArrayInputStream(CHUNK_0);
-        final ChunkKey chunkKey = new ChunkKey(SEGMENT_ID, 0);
+        final var chunkStream = ByteBuffer.wrap(CHUNK_0);
+        final var chunkKey = new ChunkKey(SEGMENT_ID, 0);
 
         final Path cachedChunkPath = diskBasedChunkCache.cacheChunk(chunkKey, chunkStream);
 
@@ -194,8 +192,8 @@ class DiskBasedChunkCacheTest {
 
     @Test
     void removalFails() throws IOException {
-        final ByteArrayInputStream chunkStream = new ByteArrayInputStream(CHUNK_0);
-        final ChunkKey chunkKey = new ChunkKey(SEGMENT_ID, 0);
+        final var chunkStream = ByteBuffer.wrap(CHUNK_0);
+        final var chunkKey = new ChunkKey(SEGMENT_ID, 0);
 
         final Path cachedChunkPath = diskBasedChunkCache.cacheChunk(chunkKey, chunkStream);
 

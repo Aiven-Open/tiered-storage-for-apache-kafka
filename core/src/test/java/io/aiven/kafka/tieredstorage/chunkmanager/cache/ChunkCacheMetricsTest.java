@@ -19,8 +19,8 @@ package io.aiven.kafka.tieredstorage.chunkmanager.cache;
 import javax.management.MBeanServer;
 import javax.management.ObjectName;
 
-import java.io.ByteArrayInputStream;
 import java.lang.management.ManagementFactory;
+import java.nio.ByteBuffer;
 import java.nio.file.Path;
 import java.util.Map;
 import java.util.stream.Stream;
@@ -85,7 +85,7 @@ class ChunkCacheMetricsTest {
         throws Exception {
         // Given a chunk cache implementation
         when(chunkManager.getChunk(any(), any(), anyInt()))
-            .thenReturn(new ByteArrayInputStream("test".getBytes()));
+            .thenReturn(ByteBuffer.wrap("test".getBytes()));
 
         final var chunkCache = chunkCacheClass.getDeclaredConstructor(ChunkManager.class).newInstance(chunkManager);
         chunkCache.configure(config);

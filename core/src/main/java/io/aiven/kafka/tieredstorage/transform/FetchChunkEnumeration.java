@@ -19,10 +19,13 @@ package io.aiven.kafka.tieredstorage.transform;
 import java.io.IOException;
 import java.io.InputStream;
 import java.io.SequenceInputStream;
+import java.nio.ByteBuffer;
 import java.util.Enumeration;
 import java.util.List;
 import java.util.NoSuchElementException;
 import java.util.Objects;
+
+import org.apache.kafka.common.utils.ByteBufferInputStream;
 
 import io.aiven.kafka.tieredstorage.Chunk;
 import io.aiven.kafka.tieredstorage.chunkmanager.ChunkManager;
@@ -101,7 +104,8 @@ public class FetchChunkEnumeration implements Enumeration<InputStream> {
             throw new NoSuchElementException();
         }
 
-        InputStream chunkContent = getChunkContent(currentChunkId);
+        // TODO push down the range seeks
+        InputStream chunkContent = new ByteBufferInputStream(getChunkContent(currentChunkId));
 
         final Chunk currentChunk = chunkIndex.chunks().get(currentChunkId);
         final int chunkStartPosition = currentChunk.originalPosition;
@@ -136,7 +140,7 @@ public class FetchChunkEnumeration implements Enumeration<InputStream> {
         return chunkContent;
     }
 
-    private InputStream getChunkContent(final int chunkId) {
+    private ByteBuffer getChunkContent(final int chunkId) {
         try {
             return chunkManager.getChunk(objectKey, manifest, chunkId);
         } catch (final KeyNotFoundException e) {

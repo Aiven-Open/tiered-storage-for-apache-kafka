@@ -16,9 +16,8 @@
 
 package io.aiven.kafka.tieredstorage.chunkmanager.cache;
 
-import java.io.ByteArrayInputStream;
 import java.io.IOException;
-import java.io.InputStream;
+import java.nio.ByteBuffer;
 import java.util.Map;
 
 import org.apache.kafka.common.config.ConfigDef;
@@ -39,15 +38,13 @@ public class InMemoryChunkCache extends ChunkCache<byte[]> {
     }
 
     @Override
-    public InputStream cachedChunkToInputStream(final byte[] cachedChunk) {
-        return new ByteArrayInputStream(cachedChunk);
+    public ByteBuffer cachedChunkToInputStream(final byte[] cachedChunk) {
+        return ByteBuffer.wrap(cachedChunk);
     }
 
     @Override
-    public byte[] cacheChunk(final ChunkKey chunkKey, final InputStream chunk) throws IOException {
-        try (chunk) {
-            return chunk.readAllBytes();
-        }
+    public byte[] cacheChunk(final ChunkKey chunkKey, final ByteBuffer chunk) throws IOException {
+        return chunk.array();
     }
 
     @Override
