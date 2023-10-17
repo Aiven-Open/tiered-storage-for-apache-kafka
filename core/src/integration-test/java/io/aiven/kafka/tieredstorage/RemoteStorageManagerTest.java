@@ -20,6 +20,7 @@ import javax.crypto.Cipher;
 import javax.crypto.spec.GCMParameterSpec;
 import javax.crypto.spec.SecretKeySpec;
 
+import java.io.ByteArrayInputStream;
 import java.io.File;
 import java.io.IOException;
 import java.io.InputStream;
@@ -55,6 +56,8 @@ import org.apache.kafka.server.log.remote.storage.RemoteStorageManager.IndexType
 
 import io.aiven.kafka.tieredstorage.chunkmanager.cache.DiskBasedChunkCache;
 import io.aiven.kafka.tieredstorage.chunkmanager.cache.InMemoryChunkCache;
+import io.aiven.kafka.tieredstorage.manifest.SegmentEncryptionMetadataV1;
+import io.aiven.kafka.tieredstorage.manifest.SegmentIndexesV1Builder;
 import io.aiven.kafka.tieredstorage.manifest.index.ChunkIndex;
 import io.aiven.kafka.tieredstorage.manifest.serde.EncryptionSerdeModule;
 import io.aiven.kafka.tieredstorage.manifest.serde.KafkaTypeSerdeModule;
@@ -79,6 +82,7 @@ import org.junit.jupiter.params.provider.Arguments;
 import org.junit.jupiter.params.provider.CsvSource;
 import org.junit.jupiter.params.provider.EnumSource;
 import org.junit.jupiter.params.provider.MethodSource;
+import org.junit.jupiter.params.provider.ValueSource;
 
 import static org.assertj.core.api.Assertions.assertThat;
 import static org.assertj.core.api.Assertions.assertThatThrownBy;
@@ -463,6 +467,79 @@ class RemoteStorageManagerTest extends RsaKeyAwareTest {
 
         final boolean requires = rsm.requiresCompression(logSegmentData);
         assertThat(requires).isEqualTo(expectedResult);
+    }
+
+    @ParameterizedTest
+    @ValueSource(booleans = {true, false})
+    void testTransformingIndexes(final boolean encryption) {
+        final var config = new HashMap<>(Map.of(
+            "chunk.size", "10",
+            "storage.backend.class", "io.aiven.kafka.tieredstorage.storage.filesystem.FileSystemStorage",
+            "storage.root", targetDir.toString(),
+            "encryption.enabled", Boolean.toString(encryption)
+        ));
+        final SegmentEncryptionMetadataV1 encryptionMetadata;
+        if (encryption) {
+            config.put("encryption.key.pair.id", KEY_ENCRYPTION_KEY_ID);
+            config.put("encryption.key.pairs", KEY_ENCRYPTION_KEY_ID);
+            config.put("encryption.key.pairs." + KEY_ENCRYPTION_KEY_ID + ".public.key.file", publicKeyPem.toString());
+            config.put("encryption.key.pairs." + KEY_ENCRYPTION_KEY_ID + ".private.key.file", privateKeyPem.toString());
+            final var dataKeyAndAAD = aesEncryptionProvider.createDataKeyAndAAD();
+            encryptionMetadata = new SegmentEncryptionMetadataV1(dataKeyAndAAD.dataKey, dataKeyAndAAD.aad);
+        } else {
+            encryptionMetadata = null;
+        }
+        rsm.configure(config);
+
+        final var segmentIndexBuilder = new SegmentIndexesV1Builder();
+        final var bytes = "test".getBytes();
+        final var is = rsm.transformIndex(
+            IndexType.OFFSET,
+            new ByteArrayInputStream(bytes),
+            bytes.length,
+            encryptionMetadata,
+            segmentIndexBuilder
+        );
+        assertThat(is).isNotEmpty();
+    }
+
+    @ParameterizedTest
+    @ValueSource(booleans = {true, false})
+    void testTransformingEmptyIndexes(final boolean encryption) {
+        final var config = new HashMap<>(Map.of(
+            "chunk.size", "10",
+            "storage.backend.class", "io.aiven.kafka.tieredstorage.storage.filesystem.FileSystemStorage",
+            "storage.root", targetDir.toString(),
+            "encryption.enabled", Boolean.toString(encryption)
+        ));
+        SegmentEncryptionMetadataV1 encryptionMetadata = null;
+        if (encryption) {
+            config.put("encryption.key.pair.id", KEY_ENCRYPTION_KEY_ID);
+            config.put("encryption.key.pairs", KEY_ENCRYPTION_KEY_ID);
+            config.put("encryption.key.pairs." + KEY_ENCRYPTION_KEY_ID + ".public.key.file", publicKeyPem.toString());
+            config.put("encryption.key.pairs." + KEY_ENCRYPTION_KEY_ID + ".private.key.file", privateKeyPem.toString());
+            final var dataKeyAndAAD = aesEncryptionProvider.createDataKeyAndAAD();
+            encryptionMetadata = new SegmentEncryptionMetadataV1(dataKeyAndAAD.dataKey, dataKeyAndAAD.aad);
+        }
+        rsm.configure(config);
+
+        final var segmentIndexBuilder = new SegmentIndexesV1Builder();
+        final var is = rsm.transformIndex(
+            IndexType.OFFSET,
+            InputStream.nullInputStream(),
+            0,
+            encryptionMetadata,
+            segmentIndexBuilder
+        );
+        assertThat(is).isEmpty();
+    }
+
+    @Test
+    void testGetIndexSizeWithInvalidPaths() {
+        // non existing file
+        assertThatThrownBy(() -> RemoteStorageManager.indexSize(Path.of("non-exist")))
+            .hasMessage("Error while getting index path size")
+            .isInstanceOf(RemoteStorageException.class);
     }
 
     @Test
