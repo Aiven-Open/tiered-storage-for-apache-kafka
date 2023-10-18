@@ -159,6 +159,37 @@ make show_local_data
 make consume
 ```
 
+### Azurite as remote storage: `compose-azure-blob-azurite.yml`
+
+This scenario uses `AzureBlobStorage` with [Azurite](https://learn.microsoft.com/en-us/azure/storage/common/storage-use-azurite) as the remote storage.
+
+```bash
+# Start the compose
+make run_azure_blob_azurite
+
+# Create the topic with any variation
+make create_topic_by_size_ts
+# or
+# make create_topic_by_time_ts
+# or with TS disabled
+# make create_topic_*_no_ts
+
+# Fill the topic
+make fill_topic
+
+# See that segments are uploaded to the remote storage
+# (this may take several seconds)
+make show_remote_data_azurite
+
+# Check that early segments are deleted
+# (completely or renamed with `.deleted` suffix)
+# from the local storage (this may take several seconds)
+make show_local_data
+
+# Check the data is consumable
+make consume
+```
+
 ## Additional features
 
 ### Encryption

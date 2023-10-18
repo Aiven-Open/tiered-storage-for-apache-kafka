@@ -31,6 +31,9 @@ dependencies {
 
     testImplementation "io.aiven:testcontainers-fake-gcs-server:$testcontainersFakeGcsServerVersion"
 
+    testImplementation platform("com.azure:azure-sdk-bom:$azureSdkVersion")
+    testImplementation "com.azure:azure-storage-blob"
+
     testRuntimeOnly "org.slf4j:slf4j-log4j12:$slf4jVersion"
 }
 
