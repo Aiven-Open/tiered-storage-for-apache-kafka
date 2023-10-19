@@ -78,9 +78,10 @@ public class DiskBasedChunkCache extends ChunkCache<Path> {
     }
 
     private static Path writeToDisk(final InputStream chunk, final Path tempChunkPath) throws IOException {
-        try (chunk) {
-            return Files.write(tempChunkPath, chunk.readAllBytes());
+        try (chunk; final var out = Files.newOutputStream(tempChunkPath)) {
+            chunk.transferTo(out);
         }
+        return tempChunkPath;
     }
 
     @Override
