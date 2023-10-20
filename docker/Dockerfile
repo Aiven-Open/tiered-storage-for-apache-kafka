@@ -48,3 +48,5 @@ ENV KAFKA_OPTS="-javaagent:/opt/prometheus/jmx-exporter/jmx_prometheus_javaagent
 
 # Restore the user.
 USER appuser
+
+RUN mkdir /home/appuser/kafka-tiered-storage-cache
