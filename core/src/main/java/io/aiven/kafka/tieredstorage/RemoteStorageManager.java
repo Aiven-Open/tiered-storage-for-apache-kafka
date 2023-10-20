@@ -22,6 +22,7 @@ import java.io.IOException;
 import java.io.InputStream;
 import java.io.SequenceInputStream;
 import java.nio.file.Files;
+import java.nio.file.Path;
 import java.security.KeyPair;
 import java.util.ArrayList;
 import java.util.Collections;
@@ -247,13 +248,13 @@ public class RemoteStorageManager implements org.apache.kafka.server.log.remote.
         final LogSegmentData segmentData,
         final SegmentEncryptionMetadataV1 encryptionMeta,
         final SegmentCustomMetadataBuilder customMetadataBuilder
-    ) throws IOException, StorageBackendException {
+    ) throws IOException, RemoteStorageException, StorageBackendException {
         final List<InputStream> indexes = new ArrayList<>(IndexType.values().length);
         final SegmentIndexesV1Builder segmentIndexBuilder = new SegmentIndexesV1Builder();
         final var offsetIndex = transformIndex(
             IndexType.OFFSET,
             Files.newInputStream(segmentData.offsetIndex()),
-            (int) Files.size(segmentData.offsetIndex()),
+            indexSize(segmentData.offsetIndex()),
             encryptionMeta,
             segmentIndexBuilder
         );
@@ -261,7 +262,7 @@ public class RemoteStorageManager implements org.apache.kafka.server.log.remote.
         final var timeIndex = transformIndex(
             IndexType.TIMESTAMP,
             Files.newInputStream(segmentData.timeIndex()),
-            (int) Files.size(segmentData.timeIndex()),
+            indexSize(segmentData.timeIndex()),
             encryptionMeta,
             segmentIndexBuilder
         );
@@ -269,7 +270,7 @@ public class RemoteStorageManager implements org.apache.kafka.server.log.remote.
         final var producerSnapshotIndex = transformIndex(
             IndexType.PRODUCER_SNAPSHOT,
             Files.newInputStream(segmentData.producerSnapshotIndex()),
-            (int) Files.size(segmentData.producerSnapshotIndex()),
+            indexSize(segmentData.producerSnapshotIndex()),
             encryptionMeta,
             segmentIndexBuilder
         );
@@ -277,7 +278,7 @@ public class RemoteStorageManager implements org.apache.kafka.server.log.remote.
         final var leaderEpoch = transformIndex(
             IndexType.LEADER_EPOCH,
             new ByteBufferInputStream(segmentData.leaderEpochIndex()),
-            segmentData.leaderEpochIndex().capacity(),
+            segmentData.leaderEpochIndex().remaining(),
             encryptionMeta,
             segmentIndexBuilder
         );
@@ -286,7 +287,7 @@ public class RemoteStorageManager implements org.apache.kafka.server.log.remote.
             final var transactionIndex = transformIndex(
                 IndexType.TRANSACTION,
                 Files.newInputStream(segmentData.transactionIndex().get()),
-                (int) Files.size(segmentData.transactionIndex().get()),
+                indexSize(segmentData.transactionIndex().get()),
                 encryptionMeta,
                 segmentIndexBuilder
             );
@@ -306,6 +307,21 @@ public class RemoteStorageManager implements org.apache.kafka.server.log.remote.
             log.debug("Uploaded indexes file for {}, size: {}", remoteLogSegmentMetadata, bytes);
         }
         return segmentIndexBuilder.build();
+    }
+
+    static int indexSize(final Path indexPath) throws RemoteStorageException {
+        try {
+            final var size = Files.size(indexPath);
+            if (size > Integer.MAX_VALUE) {
+                throw new IllegalStateException(
+                    "Index at path "
+                        + indexPath
+                        + " has size larger than Integer.MAX_VALUE");
+            }
+            return (int) size;
+        } catch (final IOException e) {
+            throw new RemoteStorageException("Error while getting index path size", e);
+        }
     }
 
     private Optional<CustomMetadata> buildCustomMetadata(final SegmentCustomMetadataBuilder customMetadataBuilder) {
@@ -355,11 +371,15 @@ public class RemoteStorageManager implements org.apache.kafka.server.log.remote.
         }
     }
 
-    private InputStream transformIndex(final IndexType indexType,
-                                       final InputStream index,
-                                       final int size,
-                                       final SegmentEncryptionMetadata encryptionMetadata,
-                                       final SegmentIndexesV1Builder segmentIndexBuilder) {
+    InputStream transformIndex(final IndexType indexType,
+                               final InputStream index,
+                               final int size,
+                               final SegmentEncryptionMetadata encryptionMetadata,
+                               final SegmentIndexesV1Builder segmentIndexBuilder) {
+        log.debug("Transforming index {} with size {}", indexType, size);
+        if (size == 0) {
+            return InputStream.nullInputStream();
+        }
         TransformChunkEnumeration transformEnum = new BaseTransformChunkEnumeration(index, size);
         if (encryptionEnabled) {
             final var dataKeyAndAAD = new DataKeyAndAAD(encryptionMetadata.dataKey(), encryptionMetadata.aad());
