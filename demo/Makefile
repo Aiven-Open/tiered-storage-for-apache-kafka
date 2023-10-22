@@ -111,12 +111,17 @@ run_s3_minio:
 run_gcs_fake_gcs_server:
 	docker compose -f compose-gcs-fake-gcs-server.yml up
 
+.PHONY: run_azure_blob_azurite
+run_azure_blob_azurite:
+	docker compose -f compose-azure-blob-azurite.yml up
+
 .PHONY: clean
 clean:
 	docker compose -f compose-local-fs.yml down
 	docker compose -f compose-s3-aws.yml down
 	docker compose -f compose-s3-minio.yml down
 	docker compose -f compose-gcs-fake-gcs-server.yml down
+	docker compose -f compose-azure-blob-azurite.yml down
 
 .PHONY: show_local_data
 show_local_data:
@@ -140,6 +145,14 @@ show_remote_data_s3_minio:
 .PHONY: show_remote_data_gcs_fake_gcs_server
 show_remote_data_gcs_fake_gcs_server:
 	curl http://localhost:4443/storage/v1/b/test-bucket/o | jq -r '.items | map(.name) | .[]'
+
+.PHONY: show_remote_data_azurite
+show_remote_data_azurite:
+	docker run --rm --network=host mcr.microsoft.com/azure-cli \
+		az storage blob list --container-name test-container \
+		--account-name devstoreaccount1 \
+		--account-key Eby8vdM02xNOcqFlqUwJPLlmEtlCDXJ1OUzFT50uSRZ6IFsuFq2UVErCz4I6tq/K1SZFPTOtr/KBHBeksoGMGw== \
+		--blob-endpoint http://127.0.0.1:10000/devstoreaccount1 --output table | grep $(topic)
 
 offset = 0
 consume = 10

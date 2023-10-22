@@ -1,0 +1,90 @@
+##
+# Copyright 2023 Aiven Oy
+#
+# Licensed under the Apache License, Version 2.0 (the "License");
+# you may not use this file except in compliance with the License.
+# You may obtain a copy of the License at
+#
+# http://www.apache.org/licenses/LICENSE-2.0
+#
+# Unless required by applicable law or agreed to in writing, software
+# distributed under the License is distributed on an "AS IS" BASIS,
+# WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
+# See the License for the specific language governing permissions and
+# limitations under the License.
+##
+version: '3.8'
+services:
+  zookeeper:
+    image: "confluentinc/cp-zookeeper:7.3.3"
+    ports:
+      - "2181:2181"
+    environment:
+      ZOOKEEPER_CLIENT_PORT: 2181
+
+  kafka:
+    image: "aivenoy/kafka-with-ts-plugin"
+    container_name: "kafka-ts"
+    depends_on:
+      - zookeeper
+      - azurite
+    ports:
+      - "9092:9092"
+      - "7000:7000" #prometheus metrics
+    environment:
+      KAFKA_BROKER_ID: 0
+      KAFKA_ZOOKEEPER_CONNECT: "zookeeper:2181"
+      KAFKA_LISTENERS: "PLAINTEXT://0.0.0.0:9092,BROKER://0.0.0.0:29092"
+      KAFKA_ADVERTISED_LISTENERS: "PLAINTEXT://localhost:9092,BROKER://kafka:29092"
+      KAFKA_LISTENER_SECURITY_PROTOCOL_MAP: "PLAINTEXT:PLAINTEXT,BROKER:PLAINTEXT"
+      KAFKA_INTER_BROKER_LISTENER_NAME: "BROKER"
+      KAFKA_OFFSETS_TOPIC_REPLICATION_FACTOR: 1
+      KAFKA_OFFSETS_TOPIC_NUM_PARTITIONS: 1
+      KAFKA_TRANSACTION_STATE_LOG_REPLICATION_FACTOR: 1
+      KAFKA_TRANSACTION_STATE_LOG_MIN_ISR: 1
+      KAFKA_AUTO_CREATE_TOPICS_ENABLE: false
+      # Increase Tiered Storage log level
+      KAFKA_LOG4J_LOGGERS: "io.aiven.kafka.tieredstorage=DEBUG"
+      # Tweak retention checking
+      KAFKA_LOG_RETENTION_CHECK_INTERVAL_MS: 10000
+      # Enable Tiered Storage
+      KAFKA_REMOTE_LOG_STORAGE_SYSTEM_ENABLE: true
+      KAFKA_REMOTE_LOG_MANAGER_TASK_INTERVAL_MS: 5000
+      # Remote metadata manager
+      KAFKA_REMOTE_LOG_METADATA_MANAGER_CLASS_NAME: "org.apache.kafka.server.log.remote.metadata.storage.TopicBasedRemoteLogMetadataManager"
+      KAFKA_REMOTE_LOG_METADATA_MANAGER_IMPL_PREFIX: "rlmm.config."
+      KAFKA_REMOTE_LOG_METADATA_MANAGER_LISTENER_NAME: "BROKER"
+      KAFKA_RLMM_CONFIG_REMOTE_LOG_METADATA_TOPIC_REPLICATION_FACTOR: 1
+      # Remote storage manager
+      KAFKA_REMOTE_LOG_STORAGE_MANAGER_CLASS_PATH: "/tiered-storage-for-apache-kafka/core/*:/tiered-storage-for-apache-kafka/azure/*"
+      KAFKA_REMOTE_LOG_STORAGE_MANAGER_CLASS_NAME: "io.aiven.kafka.tieredstorage.RemoteStorageManager"
+      KAFKA_REMOTE_LOG_STORAGE_MANAGER_IMPL_PREFIX: "rsm.config."
+      KAFKA_RSM_CONFIG_CHUNK_SIZE: 5242880 # 5MiB
+      KAFKA_RSM_CONFIG_CHUNK_CACHE_CLASS: "io.aiven.kafka.tieredstorage.chunkmanager.cache.InMemoryChunkCache"
+      KAFKA_RSM_CONFIG_CHUNK_CACHE_SIZE: -1
+      KAFKA_RSM_CONFIG_CUSTOM_METADATA_FIELDS_INCLUDE: "REMOTE_SIZE"
+      # Storage backend
+      KAFKA_RSM_CONFIG_KEY_PREFIX: "tiered-storage-demo/"
+      KAFKA_RSM_CONFIG_STORAGE_BACKEND_CLASS: "io.aiven.kafka.tieredstorage.storage.azure.AzureBlobStorage"
+      KAFKA_RSM_CONFIG_STORAGE_AZURE_CONTAINER_NAME: "test-container"
+      # The well-known account Azurite name and key.
+      KAFKA_RSM_CONFIG_STORAGE_AZURE_ACCOUNT_NAME: "devstoreaccount1"
+      KAFKA_RSM_CONFIG_STORAGE_AZURE_ACCOUNT_KEY: "Eby8vdM02xNOcqFlqUwJPLlmEtlCDXJ1OUzFT50uSRZ6IFsuFq2UVErCz4I6tq/K1SZFPTOtr/KBHBeksoGMGw=="
+      KAFKA_RSM_CONFIG_STORAGE_AZURE_ENDPOINT_URL: "http://azurite:10000/devstoreaccount1"
+
+  azurite:
+    image: mcr.microsoft.com/azure-storage/azurite
+    ports:
+      - "10000:10000"
+    command: azurite-blob --blobHost 0.0.0.0
+
+  azurite-create-container:
+    image: mcr.microsoft.com/azure-cli
+    restart: "no"
+    depends_on:
+      - azurite
+    command: >
+      az storage container create --name test-container 
+        --account-name devstoreaccount1 
+        --account-key Eby8vdM02xNOcqFlqUwJPLlmEtlCDXJ1OUzFT50uSRZ6IFsuFq2UVErCz4I6tq/K1SZFPTOtr/KBHBeksoGMGw== 
+        --blob-endpoint http://azurite:10000/devstoreaccount1

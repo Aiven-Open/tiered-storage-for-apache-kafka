@@ -135,7 +135,7 @@ public abstract class BaseStorageTest {
     }
 
     @Test
-    void testFetchWithRangeOutsideFileSize() throws StorageBackendException {
+    protected void testFetchWithRangeOutsideFileSize() throws StorageBackendException {
         final String content = "ABC";
         storage().upload(new ByteArrayInputStream(content.getBytes()), TOPIC_PARTITION_SEGMENT_KEY);
 
