@@ -60,3 +60,12 @@ docker_image: build
 .PHONY: docker_push
 docker_push:
 	docker push $(IMAGE_TAG)
+
+bench_prep:
+	sudo sh -c 'echo 1 >/proc/sys/kernel/perf_event_paranoid'
+	sudo sh -c 'echo 0 >/proc/sys/kernel/kptr_restrict'
+
+BENCH=io.aiven.kafka.tieredstorage.benchs.transform.TransformBench
+
+bench_run:
+	java -XX:+UnlockDiagnosticVMOptions -XX:+DebugNonSafepoints -cp "benchmarks/build/install/benchmarks/*" $(BENCH)

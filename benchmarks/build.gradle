@@ -14,13 +14,18 @@
  * limitations under the License.
  */
 
-rootProject.name = 'tiered-storage-for-apache-kafka'
-include 'core'
-include 'storage'
-include 'storage:core'
-include 'storage:filesystem'
-include 'storage:gcs'
-include 'storage:s3'
-include 'e2e'
-include 'commons'
-include 'benchmarks'
+ext {
+    jmhVersion = "1.36"
+}
+
+dependencies {
+    implementation project(':core')
+    implementation group: "org.apache.kafka", name: "kafka-storage-api", version: kafkaVersion
+    implementation group: "org.apache.kafka", name: "kafka-clients", version: kafkaVersion
+
+    implementation "org.openjdk.jmh:jmh-core:$jmhVersion"
+    implementation "org.openjdk.jmh:jmh-core-benchmarks:$jmhVersion"
+    annotationProcessor "org.openjdk.jmh:jmh-generator-annprocess:$jmhVersion"
+
+    implementation "org.slf4j:slf4j-log4j12:1.7.36"
+}
