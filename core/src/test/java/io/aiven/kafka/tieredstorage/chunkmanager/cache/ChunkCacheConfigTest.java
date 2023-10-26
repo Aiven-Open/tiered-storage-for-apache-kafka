@@ -117,9 +117,9 @@ class ChunkCacheConfigTest {
                 new ConfigDef(),
                 Map.of(
                     "size", "-1",
-                    "prefetching.bytes", "-1"
+                    "prefetching.size", "-1"
                 )
         )).isInstanceOf(ConfigException.class)
-                .hasMessage("Invalid value -1 for configuration prefetching.bytes: Value must be at least 0");
+                .hasMessage("Invalid value -1 for configuration prefetching.size: Value must be at least 0");
     }
 }

@@ -27,8 +27,11 @@ import java.util.stream.Stream;
 
 import io.aiven.kafka.tieredstorage.chunkmanager.ChunkManager;
 import io.aiven.kafka.tieredstorage.manifest.SegmentManifest;
+import io.aiven.kafka.tieredstorage.manifest.index.ChunkIndex;
+import io.aiven.kafka.tieredstorage.manifest.index.FixedSizeChunkIndex;
 import io.aiven.kafka.tieredstorage.storage.ObjectKey;
 
+import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.extension.ExtendWith;
 import org.junit.jupiter.api.io.TempDir;
 import org.junit.jupiter.params.ParameterizedTest;
@@ -48,6 +51,7 @@ import static org.mockito.Mockito.when;
  */
 @ExtendWith(MockitoExtension.class)
 class ChunkCacheMetricsTest {
+    private static final ChunkIndex FIXED_SIZE_CHUNK_INDEX = new FixedSizeChunkIndex(10, 10, 10, 10);
     static final MBeanServer MBEAN_SERVER = ManagementFactory.getPlatformMBeanServer();
 
     public static final ObjectKey OBJECT_KEY_PATH = () -> "topic/segment";
@@ -77,6 +81,11 @@ class ChunkCacheMetricsTest {
                     "size", "-1"
                 )
             ));
+    }
+
+    @BeforeEach
+    void setUp() {
+        when(segmentManifest.chunkIndex()).thenReturn(FIXED_SIZE_CHUNK_INDEX);
     }
 
     @ParameterizedTest(name = "Cache {0}")

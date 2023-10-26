@@ -33,7 +33,6 @@ import io.aiven.kafka.tieredstorage.chunkmanager.ChunkKey;
 import io.aiven.kafka.tieredstorage.chunkmanager.ChunkManager;
 import io.aiven.kafka.tieredstorage.manifest.SegmentManifest;
 import io.aiven.kafka.tieredstorage.metrics.CaffeineStatsCounter;
-import io.aiven.kafka.tieredstorage.storage.BytesRange;
 import io.aiven.kafka.tieredstorage.storage.ObjectKey;
 import io.aiven.kafka.tieredstorage.storage.StorageBackendException;
 
@@ -72,6 +71,7 @@ public abstract class ChunkCache<T> implements ChunkManager, Configurable {
     public InputStream getChunk(final ObjectKey objectKey,
                                 final SegmentManifest manifest,
                                 final int chunkId) throws StorageBackendException, IOException {
+        startPrefetching(objectKey, manifest, chunkId);
         final ChunkKey chunkKey = new ChunkKey(objectKey.value(), chunkId);
         final AtomicReference<InputStream> result = new AtomicReference<>();
         try {
@@ -144,17 +144,15 @@ public abstract class ChunkCache<T> implements ChunkManager, Configurable {
         return cache;
     }
 
-    public void startPrefetching(final ObjectKey segmentKey,
-                                 final SegmentManifest segmentManifest,
-                                 final int startPosition) {
-        final BytesRange prefetchingRange;
-        if (Integer.MAX_VALUE - startPosition < prefetchingSize) {
-            prefetchingRange = BytesRange.of(startPosition, Integer.MAX_VALUE);
-        } else {
-            prefetchingRange = BytesRange.of(startPosition, startPosition + prefetchingSize);
-        }
-        final var chunks = segmentManifest.chunkIndex().listChunksForRange(prefetchingRange);
-        chunks.forEach(chunk -> {
+    private void startPrefetching(final ObjectKey segmentKey,
+                                  final SegmentManifest segmentManifest,
+                                  final int startChunkId) {
+        final var chunks = segmentManifest.chunkIndex().chunks();
+        final var chunksToFetch = chunks.subList(
+            Math.min(startChunkId + 1, chunks.size()),
+            Math.min(startChunkId + 1 + prefetchingSize, chunks.size())
+        );
+        chunksToFetch.forEach(chunk -> {
             final ChunkKey chunkKey = new ChunkKey(segmentKey.value(), chunk.id);
             cache.asMap()
                 .computeIfAbsent(chunkKey, key -> CompletableFuture.supplyAsync(() -> {

@@ -48,7 +48,6 @@ import org.apache.kafka.server.log.remote.storage.RemoteStorageException;
 
 import io.aiven.kafka.tieredstorage.chunkmanager.ChunkManager;
 import io.aiven.kafka.tieredstorage.chunkmanager.ChunkManagerFactory;
-import io.aiven.kafka.tieredstorage.chunkmanager.cache.ChunkCache;
 import io.aiven.kafka.tieredstorage.config.RemoteStorageManagerConfig;
 import io.aiven.kafka.tieredstorage.manifest.SegmentEncryptionMetadata;
 import io.aiven.kafka.tieredstorage.manifest.SegmentEncryptionMetadataV1;
@@ -453,9 +452,6 @@ public class RemoteStorageManager implements org.apache.kafka.server.log.remote.
 
             final var suffix = ObjectKeyFactory.Suffix.LOG;
             final var segmentKey = objectKey(remoteLogSegmentMetadata, suffix);
-            if (chunkManager instanceof ChunkCache) {
-                ((ChunkCache<?>) chunkManager).startPrefetching(segmentKey, segmentManifest, range.from);
-            }
             return new FetchChunkEnumeration(chunkManager, segmentKey, segmentManifest, range)
                 .toInputStream();
         } catch (final KeyNotFoundException | KeyNotFoundRuntimeException e) {
