@@ -55,12 +55,14 @@ public class AzureBlobStorage implements StorageBackend {
         } else {
             blobServiceClientBuilder.endpoint(endpointUrl());
 
-            if (config.accountKey() == null) {
-                blobServiceClientBuilder.credential(
-                    new DefaultAzureCredentialBuilder().build());
-            } else {
+            if (config.accountKey() != null) {
                 blobServiceClientBuilder.credential(
                     new StorageSharedKeyCredential(config.accountName(), config.accountKey()));
+            } else if (config.sasToken() != null) {
+                blobServiceClientBuilder.sasToken(config.sasToken());
+            } else {
+                blobServiceClientBuilder.credential(
+                    new DefaultAzureCredentialBuilder().build());
             }
         }
 
@@ -84,12 +86,14 @@ public class AzureBlobStorage implements StorageBackend {
         } else {
             specializedBlobClientBuilder.endpoint(endpointUrl());
 
-            if (config.accountKey() == null) {
-                specializedBlobClientBuilder.credential(
-                    new DefaultAzureCredentialBuilder().build());
-            } else {
+            if (config.accountKey() != null) {
                 specializedBlobClientBuilder.credential(
                     new StorageSharedKeyCredential(config.accountName(), config.accountKey()));
+            } else if (config.sasToken() != null) {
+                specializedBlobClientBuilder.sasToken(config.sasToken());
+            } else {
+                specializedBlobClientBuilder.credential(
+                    new DefaultAzureCredentialBuilder().build());
             }
         }
         final BlockBlobClient blockBlobClient = specializedBlobClientBuilder

@@ -34,6 +34,9 @@ public class AzureBlobStorageConfig extends AbstractConfig {
     static final String AZURE_ACCOUNT_KEY_CONFIG = "azure.account.key";
     private static final String AZURE_ACCOUNT_KEY_DOC = "Azure account key";
 
+    static final String AZURE_SAS_TOKEN_CONFIG = "azure.sas.token";
+    private static final String AZURE_SAS_TOKEN_DOC = "Azure SAS token";
+
     static final String AZURE_CONTAINER_NAME_CONFIG = "azure.container.name";
     private static final String AZURE_CONTAINER_NAME_DOC = "Azure container to store log segments";
 
@@ -62,6 +65,13 @@ public class AzureBlobStorageConfig extends AbstractConfig {
                 Null.or(new NonEmptyPassword()),
                 ConfigDef.Importance.MEDIUM,
                 AZURE_ACCOUNT_KEY_DOC)
+            .define(
+                AZURE_SAS_TOKEN_CONFIG,
+                ConfigDef.Type.PASSWORD,
+                null,
+                Null.or(new NonEmptyPassword()),
+                ConfigDef.Importance.MEDIUM,
+                AZURE_SAS_TOKEN_DOC)
             .define(
                 AZURE_CONTAINER_NAME_CONFIG,
                 ConfigDef.Type.STRING,
@@ -100,14 +110,19 @@ public class AzureBlobStorageConfig extends AbstractConfig {
                 throw new ConfigException(
                     "\"azure.connection.string\" cannot be set together with \"azure.account.key\".");
             }
+            if (sasToken() != null) {
+                throw new ConfigException(
+                    "\"azure.connection.string\" cannot be set together with \"azure.sas.token\".");
+            }
             if (endpointUrl() != null) {
                 throw new ConfigException(
                     "\"azure.connection.string\" cannot be set together with \"azure.endpoint.url\".");
             }
         } else {
-            if (accountName() == null) {
+            if (accountName() == null && sasToken() == null) {
                 throw new ConfigException(
-                    "\"azure.account.name\" must be set if \"azure.connection.string\" is not set.");
+                    "\"azure.account.name\" and/or \"azure.sas.token\" "
+                        + "must be set if \"azure.connection.string\" is not set.");
             }
         }
     }
@@ -118,6 +133,11 @@ public class AzureBlobStorageConfig extends AbstractConfig {
 
     String accountKey() {
         final Password key = getPassword(AZURE_ACCOUNT_KEY_CONFIG);
+        return key == null ? null : key.value();
+    }
+
+    String sasToken() {
+        final Password key = getPassword(AZURE_SAS_TOKEN_CONFIG);
         return key == null ? null : key.value();
     }
 
