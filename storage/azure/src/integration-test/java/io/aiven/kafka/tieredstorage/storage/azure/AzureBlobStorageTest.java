@@ -32,6 +32,7 @@ import org.testcontainers.containers.GenericContainer;
 import org.testcontainers.junit.jupiter.Container;
 import org.testcontainers.junit.jupiter.Testcontainers;
 import org.testcontainers.utility.DockerImageName;
+import org.testcontainers.utility.MountableFile;
 
 import static org.assertj.core.api.Assertions.assertThatThrownBy;
 
@@ -41,20 +42,27 @@ abstract class AzureBlobStorageTest extends BaseStorageTest {
     @Container
     static final GenericContainer<?> AZURITE_SERVER =
         new GenericContainer<>(DockerImageName.parse("mcr.microsoft.com/azure-storage/azurite"))
+            .withCopyFileToContainer(
+                MountableFile.forClasspathResource("/azurite-cert.pem"),
+                "/opt/azurite/azurite-cert.pem")
+            .withCopyFileToContainer(
+                MountableFile.forClasspathResource("/azurite-key.pem"),
+                "/opt/azurite/azurite-key.pem")
             .withExposedPorts(BLOB_STORAGE_PORT)
-            .withCommand("azurite-blob --blobHost 0.0.0.0");
+            .withCommand("azurite-blob --blobHost 0.0.0.0 "
+                + "--cert /opt/azurite/azurite-cert.pem --key /opt/azurite/azurite-key.pem");
 
     static BlobServiceClient blobServiceClient;
 
     protected String azureContainerName;
 
     protected static String endpoint() {
-        return "http://127.0.0.1:" + AZURITE_SERVER.getMappedPort(BLOB_STORAGE_PORT) + "/devstoreaccount1";
+        return "https://127.0.0.1:" + AZURITE_SERVER.getMappedPort(BLOB_STORAGE_PORT) + "/devstoreaccount1";
     }
 
     protected static String connectionString() {
         // The well-known Azurite connection string.
-        return "DefaultEndpointsProtocol=http;"
+        return "DefaultEndpointsProtocol=https;"
             + "AccountName=devstoreaccount1;"
             + "AccountKey=Eby8vdM02xNOcqFlqUwJPLlmEtlCDXJ1OUzFT50uSRZ6IFsuFq2UVErCz4I6tq/K1SZFPTOtr/KBHBeksoGMGw==;"
             + "BlobEndpoint=" + endpoint() + ";";
@@ -62,6 +70,12 @@ abstract class AzureBlobStorageTest extends BaseStorageTest {
 
     @BeforeAll
     static void setUpClass() {
+        // Generally setting JVM-wide trust store needed only for one test may be not OK,
+        // but it's not conflicting with any other test now and this is the most straightforward way
+        // to make the self-signed certificate work.
+        System.setProperty("javax.net.ssl.trustStore",
+            AzureBlobStorageTest.class.getResource("/azurite-cacerts.jks").getPath());
+        System.setProperty("javax.net.ssl.trustStorePassword", "changeit");
         blobServiceClient = new BlobServiceClientBuilder()
             .connectionString(connectionString())
             .buildClient();

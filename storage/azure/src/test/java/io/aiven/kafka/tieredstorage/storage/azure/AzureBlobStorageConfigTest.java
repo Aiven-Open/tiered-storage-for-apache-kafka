@@ -28,6 +28,7 @@ import static org.assertj.core.api.Assertions.assertThatThrownBy;
 class AzureBlobStorageConfigTest {
     private static final String ACCOUNT_NAME = "account1";
     private static final String ACCOUNT_KEY = "account_key";
+    private static final String SAS_TOKEN = "token";
     private static final String CONTAINER_NAME = "c1";
     private static final String ENDPOINT = "http://localhost:10000/";
     private static final String CONNECTION_STRING = "DefaultEndpointsProtocol=http;"
@@ -45,6 +46,7 @@ class AzureBlobStorageConfigTest {
         assertThat(config.containerName()).isEqualTo(CONTAINER_NAME);
         assertThat(config.accountName()).isEqualTo(ACCOUNT_NAME);
         assertThat(config.accountKey()).isNull();
+        assertThat(config.sasToken()).isNull();
         assertThat(config.endpointUrl()).isNull();
         assertThat(config.connectionString()).isNull();
     }
@@ -60,13 +62,14 @@ class AzureBlobStorageConfigTest {
     }
 
     @Test
-    void shouldRequireAccountNameIfNoConnectionString() {
+    void shouldRequireAccountNameOrSasTokenIfNoConnectionString() {
         final var configs = Map.of(
             "azure.container.name", CONTAINER_NAME
         );
         assertThatThrownBy(() -> new AzureBlobStorageConfig(configs))
             .isInstanceOf(ConfigException.class)
-            .hasMessage("\"azure.account.name\" must be set if \"azure.connection.string\" is not set.");
+            .hasMessage("\"azure.account.name\" and/or \"azure.sas.token\" "
+                + "must be set if \"azure.connection.string\" is not set.");
     }
 
     @Test
@@ -78,6 +81,7 @@ class AzureBlobStorageConfigTest {
         final var config = new AzureBlobStorageConfig(configs);
         assertThat(config.accountName()).isEqualTo(ACCOUNT_NAME);
         assertThat(config.accountKey()).isNull();
+        assertThat(config.sasToken()).isNull();
         assertThat(config.endpointUrl()).isNull();
         assertThat(config.connectionString()).isNull();
     }
@@ -92,6 +96,7 @@ class AzureBlobStorageConfigTest {
         final var config = new AzureBlobStorageConfig(configs);
         assertThat(config.accountName()).isEqualTo(ACCOUNT_NAME);
         assertThat(config.accountKey()).isNull();
+        assertThat(config.sasToken()).isNull();
         assertThat(config.endpointUrl()).isEqualTo(ENDPOINT);
         assertThat(config.connectionString()).isNull();
     }
@@ -106,6 +111,7 @@ class AzureBlobStorageConfigTest {
         final var config = new AzureBlobStorageConfig(configs);
         assertThat(config.accountName()).isEqualTo(ACCOUNT_NAME);
         assertThat(config.accountKey()).isEqualTo(ACCOUNT_KEY);
+        assertThat(config.sasToken()).isNull();
         assertThat(config.endpointUrl()).isNull();
         assertThat(config.connectionString()).isNull();
     }
@@ -121,7 +127,52 @@ class AzureBlobStorageConfigTest {
         final var config = new AzureBlobStorageConfig(configs);
         assertThat(config.accountName()).isEqualTo(ACCOUNT_NAME);
         assertThat(config.accountKey()).isEqualTo(ACCOUNT_KEY);
+        assertThat(config.sasToken()).isNull();
         assertThat(config.endpointUrl()).isEqualTo(ENDPOINT);
+        assertThat(config.connectionString()).isNull();
+    }
+
+    @Test
+    void authSasToken() {
+        final var configs = Map.of(
+            "azure.sas.token", SAS_TOKEN,
+            "azure.container.name", CONTAINER_NAME
+        );
+        final var config = new AzureBlobStorageConfig(configs);
+        assertThat(config.accountName()).isNull();
+        assertThat(config.accountKey()).isNull();
+        assertThat(config.sasToken()).isEqualTo(SAS_TOKEN);
+        assertThat(config.endpointUrl()).isNull();
+        assertThat(config.connectionString()).isNull();
+    }
+
+    @Test
+    void authSasTokenAndEndpoint() {
+        final var configs = Map.of(
+            "azure.sas.token", SAS_TOKEN,
+            "azure.container.name", CONTAINER_NAME,
+            "azure.endpoint.url", ENDPOINT
+        );
+        final var config = new AzureBlobStorageConfig(configs);
+        assertThat(config.accountName()).isNull();
+        assertThat(config.accountKey()).isNull();
+        assertThat(config.sasToken()).isEqualTo(SAS_TOKEN);
+        assertThat(config.endpointUrl()).isEqualTo(ENDPOINT);
+        assertThat(config.connectionString()).isNull();
+    }
+
+    @Test
+    void authSasTokenAndAccountName() {
+        final var configs = Map.of(
+            "azure.sas.token", SAS_TOKEN,
+            "azure.container.name", CONTAINER_NAME,
+            "azure.account.name", ACCOUNT_NAME
+        );
+        final var config = new AzureBlobStorageConfig(configs);
+        assertThat(config.accountName()).isEqualTo(ACCOUNT_NAME);
+        assertThat(config.accountKey()).isNull();
+        assertThat(config.sasToken()).isEqualTo(SAS_TOKEN);
+        assertThat(config.endpointUrl()).isNull();
         assertThat(config.connectionString()).isNull();
     }
 
@@ -134,6 +185,7 @@ class AzureBlobStorageConfigTest {
         final var config = new AzureBlobStorageConfig(configs);
         assertThat(config.accountName()).isNull();
         assertThat(config.accountKey()).isNull();
+        assertThat(config.sasToken()).isNull();
         assertThat(config.endpointUrl()).isNull();
         assertThat(config.connectionString()).isEqualTo(CONNECTION_STRING);
     }
@@ -160,6 +212,18 @@ class AzureBlobStorageConfigTest {
         assertThatThrownBy(() -> new AzureBlobStorageConfig(configs))
             .isInstanceOf(ConfigException.class)
             .hasMessage("\"azure.connection.string\" cannot be set together with \"azure.account.key\".");
+    }
+
+    @Test
+    void connectionStringAndSasTokenClash() {
+        final var configs = Map.of(
+            "azure.connection.string", CONNECTION_STRING,
+            "azure.container.name", CONTAINER_NAME,
+            "azure.sas.token", SAS_TOKEN
+        );
+        assertThatThrownBy(() -> new AzureBlobStorageConfig(configs))
+            .isInstanceOf(ConfigException.class)
+            .hasMessage("\"azure.connection.string\" cannot be set together with \"azure.sas.token\".");
     }
 
     @Test
