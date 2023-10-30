@@ -50,10 +50,12 @@ import static org.awaitility.Awaitility.await;
 import static org.mockito.Mockito.any;
 import static org.mockito.Mockito.anyInt;
 import static org.mockito.Mockito.argThat;
+import static org.mockito.Mockito.description;
 import static org.mockito.Mockito.doAnswer;
 import static org.mockito.Mockito.doCallRealMethod;
 import static org.mockito.Mockito.eq;
 import static org.mockito.Mockito.mockingDetails;
+import static org.mockito.Mockito.never;
 import static org.mockito.Mockito.reset;
 import static org.mockito.Mockito.spy;
 import static org.mockito.Mockito.times;
@@ -67,7 +69,8 @@ class ChunkCacheTest {
 
     private static final byte[] CHUNK_0 = "0123456789".getBytes();
     private static final byte[] CHUNK_1 = "1011121314".getBytes();
-    private static final FixedSizeChunkIndex FIXED_SIZE_CHUNK_INDEX = new FixedSizeChunkIndex(10, 10, 10, 10);
+    private static final byte[] CHUNK_2 = "1011121314".getBytes();
+    private static final FixedSizeChunkIndex FIXED_SIZE_CHUNK_INDEX = new FixedSizeChunkIndex(10, 30, 10, 10);
     private static final SegmentIndexesV1 SEGMENT_INDEXES = SegmentIndexesV1.builder()
         .add(IndexType.OFFSET, 1)
         .add(IndexType.TIMESTAMP, 1)
@@ -108,6 +111,8 @@ class ChunkCacheTest {
                     .thenAnswer(invocation -> new ByteArrayInputStream(CHUNK_0));
             when(chunkManager.getChunk(SEGMENT_OBJECT_KEY, SEGMENT_MANIFEST, 1))
                     .thenAnswer(invocation -> new ByteArrayInputStream(CHUNK_1));
+            when(chunkManager.getChunk(SEGMENT_OBJECT_KEY, SEGMENT_MANIFEST, 2))
+                .thenAnswer(invocation -> new ByteArrayInputStream(CHUNK_2));
         }
 
         @Test
@@ -203,6 +208,63 @@ class ChunkCacheTest {
             verify(chunkManager, times(3)).getChunk(eq(SEGMENT_OBJECT_KEY), eq(SEGMENT_MANIFEST), anyInt());
         }
 
+        @Test
+        void prefetchingNextChunk() throws Exception {
+            chunkCache.configure(Map.of(
+                "retention.ms", "-1",
+                "size", "-1",
+                "prefetching.size", "1"
+            ));
+            chunkCache.getChunk(SEGMENT_OBJECT_KEY, SEGMENT_MANIFEST, 0);
+            await().pollInterval(Duration.ofMillis(5)).until(() -> chunkCache.statsCounter.snapshot().loadCount() == 2);
+            verify(chunkManager, description("first chunk was fetched from remote"))
+                .getChunk(SEGMENT_OBJECT_KEY, SEGMENT_MANIFEST, 0);
+            verify(chunkManager, description("second chunk was prefetched"))
+                .getChunk(SEGMENT_OBJECT_KEY, SEGMENT_MANIFEST, 1);
+            verify(chunkManager, never().description("third chunk was not prefetched "))
+                .getChunk(SEGMENT_OBJECT_KEY, SEGMENT_MANIFEST, 2);
+
+            final InputStream cachedChunk0 = chunkCache.getChunk(SEGMENT_OBJECT_KEY, SEGMENT_MANIFEST, 0);
+            assertThat(cachedChunk0).hasBinaryContent(CHUNK_0);
+            verifyNoMoreInteractions(chunkManager);
+
+            // checking that third chunk is prefetch when fetching chunk 1 from cache
+            final InputStream cachedChunk1 = chunkCache.getChunk(SEGMENT_OBJECT_KEY, SEGMENT_MANIFEST, 1);
+            assertThat(cachedChunk1).hasBinaryContent(CHUNK_1);
+            await("waiting for prefetching to finish").pollInterval(Duration.ofMillis(5))
+                .until(() -> chunkCache.statsCounter.snapshot().loadCount() == 5);
+            verify(chunkManager, description("third chunk was prefetched"))
+                .getChunk(SEGMENT_OBJECT_KEY, SEGMENT_MANIFEST, 2);
+            verifyNoMoreInteractions(chunkManager);
+        }
+
+        @Test
+        void prefetchingWholeSegment() throws Exception {
+            chunkCache.configure(Map.of(
+                "retention.ms", "-1",
+                "size", "-1",
+                "prefetching.size", SEGMENT_MANIFEST.chunkIndex().chunks().size()
+            ));
+            chunkCache.getChunk(SEGMENT_OBJECT_KEY, SEGMENT_MANIFEST, 0);
+            await().pollInterval(Duration.ofMillis(5)).until(() -> chunkCache.statsCounter.snapshot().loadCount() == 3);
+            // verifying fetching for all 3 chunks(2 prefetched)
+            verify(chunkManager, times(3)).getChunk(any(), any(), anyInt());
+
+            // no fetching from remote since chunk 0 is cached
+            final InputStream cachedChunk0 = chunkCache.getChunk(SEGMENT_OBJECT_KEY, SEGMENT_MANIFEST, 0);
+            assertThat(cachedChunk0).hasBinaryContent(CHUNK_0);
+            verifyNoMoreInteractions(chunkManager);
+
+            // no fetching from remote since chunk 1 is cached
+            final InputStream cachedChunk1 = chunkCache.getChunk(SEGMENT_OBJECT_KEY, SEGMENT_MANIFEST, 1);
+            assertThat(cachedChunk1).hasBinaryContent(CHUNK_1);
+            verifyNoMoreInteractions(chunkManager);
+
+            // no fetching from remote since chunk 2 is cached
+            final InputStream cachedChunk2 = chunkCache.getChunk(SEGMENT_OBJECT_KEY, SEGMENT_MANIFEST, 2);
+            assertThat(cachedChunk2).hasBinaryContent(CHUNK_2);
+            verifyNoMoreInteractions(chunkManager);
+        }
     }
 
     @Nested
