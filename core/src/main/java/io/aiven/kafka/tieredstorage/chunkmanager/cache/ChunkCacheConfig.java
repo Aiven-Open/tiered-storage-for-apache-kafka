@@ -33,9 +33,10 @@ public class ChunkCacheConfig extends AbstractConfig {
             + "where \"-1\" represents infinite retention";
     private static final long DEFAULT_CACHE_RETENTION_MS = 600_000;
 
-    private static final String CACHE_PREFETCHING_SIZE_CONFIG = "prefetching.size";
-    private static final String CACHE_PREFETCHING_SIZE_DOC =
-        "The number of chunks to be eagerly prefetched and cached";
+    private static final String CACHE_PREFETCH_MAX_SIZE_CONFIG = "prefetch.max.size";
+    private static final String CACHE_PREFETCH_MAX_SIZE_DOC =
+        "The maximum expected size to pre-fetch from storage back-end. "
+            + "Depending on the chunk size on each segment, the number of chunks will be calculated to pre-fetch.";
 
     private static final int CACHE_PREFETCHING_SIZE_DEFAULT = 0; //TODO find out what it should be
 
@@ -57,12 +58,12 @@ public class ChunkCacheConfig extends AbstractConfig {
                 CACHE_RETENTION_DOC
         );
         configDef.define(
-                CACHE_PREFETCHING_SIZE_CONFIG,
+            CACHE_PREFETCH_MAX_SIZE_CONFIG,
                 ConfigDef.Type.INT,
                 CACHE_PREFETCHING_SIZE_DEFAULT,
                 ConfigDef.Range.between(0, Integer.MAX_VALUE),
                 ConfigDef.Importance.MEDIUM,
-                CACHE_PREFETCHING_SIZE_DOC
+            CACHE_PREFETCH_MAX_SIZE_DOC
         );
         return configDef;
     }
@@ -87,7 +88,7 @@ public class ChunkCacheConfig extends AbstractConfig {
         return Optional.of(Duration.ofMillis(rawValue));
     }
 
-    public int cachePrefetchingSize() {
-        return getInt(CACHE_PREFETCHING_SIZE_CONFIG);
+    public int cachePrefetchMaxSize() {
+        return getInt(CACHE_PREFETCH_MAX_SIZE_CONFIG);
     }
 }

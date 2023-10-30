@@ -18,6 +18,7 @@ package io.aiven.kafka.tieredstorage.chunkmanager.cache;
 
 import java.io.IOException;
 import java.io.InputStream;
+import java.util.ArrayList;
 import java.util.concurrent.CompletableFuture;
 import java.util.concurrent.CompletionException;
 import java.util.concurrent.ExecutionException;
@@ -29,6 +30,7 @@ import java.util.concurrent.atomic.AtomicReference;
 
 import org.apache.kafka.common.Configurable;
 
+import io.aiven.kafka.tieredstorage.Chunk;
 import io.aiven.kafka.tieredstorage.chunkmanager.ChunkKey;
 import io.aiven.kafka.tieredstorage.chunkmanager.ChunkManager;
 import io.aiven.kafka.tieredstorage.manifest.SegmentManifest;
@@ -53,7 +55,7 @@ public abstract class ChunkCache<T> implements ChunkManager, Configurable {
 
     protected AsyncCache<ChunkKey, T> cache;
 
-    private int prefetchingSize;
+    private int prefetchMaxSize;
 
     protected ChunkCache(final ChunkManager chunkManager) {
         this.chunkManager = chunkManager;
@@ -131,7 +133,7 @@ public abstract class ChunkCache<T> implements ChunkManager, Configurable {
     public abstract Weigher<ChunkKey, T> weigher();
 
     protected AsyncCache<ChunkKey, T> buildCache(final ChunkCacheConfig config) {
-        this.prefetchingSize = config.cachePrefetchingSize();
+        this.prefetchMaxSize = config.cachePrefetchMaxSize();
         final Caffeine<Object, Object> cacheBuilder = Caffeine.newBuilder();
         config.cacheSize().ifPresent(maximumWeight -> cacheBuilder.maximumWeight(maximumWeight).weigher(weigher()));
         config.cacheRetention().ifPresent(cacheBuilder::expireAfterAccess);
@@ -148,10 +150,20 @@ public abstract class ChunkCache<T> implements ChunkManager, Configurable {
                                   final SegmentManifest segmentManifest,
                                   final int startChunkId) {
         final var chunks = segmentManifest.chunkIndex().chunks();
-        final var chunksToFetch = chunks.subList(
-            Math.min(startChunkId + 1, chunks.size()),
-            Math.min(startChunkId + 1 + prefetchingSize, chunks.size())
-        );
+
+        final var lastChunkId = chunks.size() - 1;
+        final var firstChunkId = Math.min(startChunkId + 1, lastChunkId);
+        final var chunksToFetch = new ArrayList<Chunk>(lastChunkId - firstChunkId + 1);
+        int prefetchedSize = 0;
+        for (int i = firstChunkId; i <= lastChunkId; i++) {
+            final var chunk = chunks.get(i);
+            prefetchedSize += chunk.transformedSize;
+            if (prefetchedSize > prefetchMaxSize) {
+                break;
+            }
+            chunksToFetch.add(chunk);
+        }
+
         chunksToFetch.forEach(chunk -> {
             final ChunkKey chunkKey = new ChunkKey(segmentKey.value(), chunk.id);
             cache.asMap()

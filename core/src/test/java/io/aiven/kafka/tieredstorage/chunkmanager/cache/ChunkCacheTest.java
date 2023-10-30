@@ -213,7 +213,7 @@ class ChunkCacheTest {
             chunkCache.configure(Map.of(
                 "retention.ms", "-1",
                 "size", "-1",
-                "prefetching.size", "1"
+                "prefetch.max.size", CHUNK_0.length
             ));
             chunkCache.getChunk(SEGMENT_OBJECT_KEY, SEGMENT_MANIFEST, 0);
             await().pollInterval(Duration.ofMillis(5)).until(() -> chunkCache.statsCounter.snapshot().loadCount() == 2);
@@ -243,7 +243,7 @@ class ChunkCacheTest {
             chunkCache.configure(Map.of(
                 "retention.ms", "-1",
                 "size", "-1",
-                "prefetching.size", SEGMENT_MANIFEST.chunkIndex().chunks().size()
+                "prefetch.max.size", Integer.toString(Integer.MAX_VALUE)
             ));
             chunkCache.getChunk(SEGMENT_OBJECT_KEY, SEGMENT_MANIFEST, 0);
             await().pollInterval(Duration.ofMillis(5)).until(() -> chunkCache.statsCounter.snapshot().loadCount() == 3);
