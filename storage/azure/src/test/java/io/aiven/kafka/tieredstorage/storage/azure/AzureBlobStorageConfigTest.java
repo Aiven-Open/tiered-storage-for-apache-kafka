@@ -49,6 +49,7 @@ class AzureBlobStorageConfigTest {
         assertThat(config.sasToken()).isNull();
         assertThat(config.endpointUrl()).isNull();
         assertThat(config.connectionString()).isNull();
+        assertThat(config.uploadBlockSize()).isEqualTo(5 * 1024 * 1024);
     }
 
     @Test
@@ -84,6 +85,30 @@ class AzureBlobStorageConfigTest {
         assertThat(config.sasToken()).isNull();
         assertThat(config.endpointUrl()).isNull();
         assertThat(config.connectionString()).isNull();
+    }
+
+    @Test
+    void uploadBlockSize() {
+        final var size = 1024 * 1024 * 1024;
+        final var configs = Map.of(
+            "azure.account.name", ACCOUNT_NAME,
+            "azure.container.name", CONTAINER_NAME,
+            "azure.upload.block.size", Integer.toString(size)
+        );
+        final var config = new AzureBlobStorageConfig(configs);
+        assertThat(config.uploadBlockSize()).isEqualTo(size);
+    }
+
+    @Test
+    void invalidUploadBlockSize() {
+        final var configs = Map.of(
+            "azure.account.name", ACCOUNT_NAME,
+            "azure.container.name", CONTAINER_NAME,
+            "azure.upload.block.size", "100"
+        );
+        assertThatThrownBy(() -> new AzureBlobStorageConfig(configs))
+            .isInstanceOf(ConfigException.class)
+            .hasMessage("Invalid value 100 for configuration azure.upload.block.size: Value must be at least 102400");
     }
 
     @Test

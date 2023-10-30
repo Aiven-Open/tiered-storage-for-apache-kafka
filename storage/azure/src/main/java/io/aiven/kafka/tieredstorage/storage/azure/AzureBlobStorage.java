@@ -42,9 +42,6 @@ public class AzureBlobStorage implements StorageBackend {
     private AzureBlobStorageConfig config;
     private BlobContainerClient blobContainerClient;
 
-    // TODO make configurable
-    private final int blockSize = 5 * 1024 * 1024;
-
     @Override
     public void configure(final Map<String, ?> configs) {
         this.config = new AzureBlobStorageConfig(configs);
@@ -101,7 +98,8 @@ public class AzureBlobStorage implements StorageBackend {
             .blobName(key.value())
             .buildBlockBlobClient();
 
-        try (OutputStream os = new BufferedOutputStream(blockBlobClient.getBlobOutputStream(true), blockSize)) {
+        try (OutputStream os = new BufferedOutputStream(blockBlobClient.getBlobOutputStream(true),
+            config.uploadBlockSize())) {
             return inputStream.transferTo(os);
         } catch (final IOException e) {
             throw new StorageBackendException("Failed to upload " + key, e);
