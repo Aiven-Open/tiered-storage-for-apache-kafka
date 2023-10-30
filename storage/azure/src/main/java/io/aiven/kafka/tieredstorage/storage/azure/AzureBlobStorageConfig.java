@@ -46,6 +46,12 @@ public class AzureBlobStorageConfig extends AbstractConfig {
     static final String AZURE_CONNECTION_STRING_CONFIG = "azure.connection.string";
     private static final String AZURE_CONNECTION_STRING_DOC = "Azure connection string. "
         + "Cannot be used together with azure.account.name, azure.account.key, and azure.endpoint.url";
+    
+    static final String AZURE_UPLOAD_BLOCK_SIZE_CONFIG = "azure.upload.block.size";
+    private static final String AZURE_UPLOAD_BLOCK_SIZE_DOC = "Size of blocks to use when uploading objects to Azure";
+    static final int AZURE_UPLOAD_BLOCK_SIZE_DEFAULT = 5 * 1024 * 1024; // 5MiB
+    static final int AZURE_UPLOAD_BLOCK_SIZE_MIN = 100 * 1024;
+    static final int AZURE_UPLOAD_BLOCK_SIZE_MAX = Integer.MAX_VALUE;
 
     private static final ConfigDef CONFIG;
 
@@ -92,7 +98,14 @@ public class AzureBlobStorageConfig extends AbstractConfig {
                 null,
                 Null.or(new NonEmptyPassword()),
                 ConfigDef.Importance.MEDIUM,
-                AZURE_CONNECTION_STRING_DOC);
+                AZURE_CONNECTION_STRING_DOC)
+            .define(
+                AZURE_UPLOAD_BLOCK_SIZE_CONFIG,
+                ConfigDef.Type.INT,
+                AZURE_UPLOAD_BLOCK_SIZE_DEFAULT,
+                ConfigDef.Range.between(AZURE_UPLOAD_BLOCK_SIZE_MIN, AZURE_UPLOAD_BLOCK_SIZE_MAX),
+                ConfigDef.Importance.MEDIUM,
+                AZURE_UPLOAD_BLOCK_SIZE_DOC);
     }
 
     public AzureBlobStorageConfig(final Map<String, ?> props) {
@@ -152,5 +165,9 @@ public class AzureBlobStorageConfig extends AbstractConfig {
     String connectionString() {
         final Password connectionString = getPassword(AZURE_CONNECTION_STRING_CONFIG);
         return connectionString == null ? null : connectionString.value();
+    }
+
+    int uploadBlockSize() {
+        return getInt(AZURE_UPLOAD_BLOCK_SIZE_CONFIG);
     }
 }
