@@ -19,7 +19,6 @@ package io.aiven.kafka.tieredstorage.manifest.index;
 import java.util.List;
 
 import io.aiven.kafka.tieredstorage.Chunk;
-import io.aiven.kafka.tieredstorage.storage.BytesRange;
 
 import com.fasterxml.jackson.annotation.JsonSubTypes;
 import com.fasterxml.jackson.annotation.JsonTypeInfo;
@@ -50,6 +49,4 @@ public interface ChunkIndex {
      * Returns all chunks in the index.
      */
     List<Chunk> chunks();
-
-    List<Chunk> listChunksForRange(BytesRange bytesRange);
 }

@@ -37,6 +37,7 @@ class ChunkCacheConfigTest {
         );
 
         assertThat(config.cacheRetention()).hasValue(Duration.ofMinutes(10));
+        assertThat(config.cachePrefetchingSize()).isEqualTo(0);
     }
 
     @Test
