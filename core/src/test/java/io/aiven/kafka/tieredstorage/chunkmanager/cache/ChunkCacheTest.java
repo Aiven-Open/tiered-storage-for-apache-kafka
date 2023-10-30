@@ -70,7 +70,14 @@ class ChunkCacheTest {
     private static final byte[] CHUNK_0 = "0123456789".getBytes();
     private static final byte[] CHUNK_1 = "1011121314".getBytes();
     private static final byte[] CHUNK_2 = "1011121314".getBytes();
-    private static final FixedSizeChunkIndex FIXED_SIZE_CHUNK_INDEX = new FixedSizeChunkIndex(10, 30, 10, 10);
+    private static final int ORIGINAL_CHUNK_SIZE = 10;
+    private static final int ORIGINAL_FILE_SIZE = 30;
+    private static final FixedSizeChunkIndex FIXED_SIZE_CHUNK_INDEX = new FixedSizeChunkIndex(
+        ORIGINAL_CHUNK_SIZE,
+        ORIGINAL_FILE_SIZE,
+        10,
+        10
+    );
     private static final SegmentIndexesV1 SEGMENT_INDEXES = SegmentIndexesV1.builder()
         .add(IndexType.OFFSET, 1)
         .add(IndexType.TIMESTAMP, 1)
@@ -213,7 +220,7 @@ class ChunkCacheTest {
             chunkCache.configure(Map.of(
                 "retention.ms", "-1",
                 "size", "-1",
-                "prefetching.size", "1"
+                "prefetch.max.size", ORIGINAL_CHUNK_SIZE
             ));
             chunkCache.getChunk(SEGMENT_OBJECT_KEY, SEGMENT_MANIFEST, 0);
             await().pollInterval(Duration.ofMillis(5)).until(() -> chunkCache.statsCounter.snapshot().loadCount() == 2);
@@ -243,7 +250,7 @@ class ChunkCacheTest {
             chunkCache.configure(Map.of(
                 "retention.ms", "-1",
                 "size", "-1",
-                "prefetching.size", SEGMENT_MANIFEST.chunkIndex().chunks().size()
+                "prefetch.max.size", ORIGINAL_FILE_SIZE - ORIGINAL_CHUNK_SIZE
             ));
             chunkCache.getChunk(SEGMENT_OBJECT_KEY, SEGMENT_MANIFEST, 0);
             await().pollInterval(Duration.ofMillis(5)).until(() -> chunkCache.statsCounter.snapshot().loadCount() == 3);
