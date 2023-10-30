@@ -43,6 +43,7 @@ import com.azure.storage.common.StorageSharedKeyCredential;
 public class AzureBlobStorage implements StorageBackend {
     private AzureBlobStorageConfig config;
     private BlobContainerClient blobContainerClient;
+    private MetricCollector metricsPolicy;
 
     @Override
     public void configure(final Map<String, ?> configs) {
@@ -65,7 +66,11 @@ public class AzureBlobStorage implements StorageBackend {
             }
         }
 
-        blobContainerClient = blobServiceClientBuilder.buildClient()
+        metricsPolicy = new MetricCollector(config);
+
+        blobContainerClient = blobServiceClientBuilder
+            .addPolicy(metricsPolicy.policy())
+            .buildClient()
             .getBlobContainerClient(config.containerName());
     }
 
@@ -96,6 +101,7 @@ public class AzureBlobStorage implements StorageBackend {
             }
         }
         final BlockBlobClient blockBlobClient = specializedBlobClientBuilder
+            .addPolicy(metricsPolicy.policy())
             .containerName(config.containerName())
             .blobName(key.value())
             .buildBlockBlobClient();
@@ -108,6 +114,9 @@ public class AzureBlobStorage implements StorageBackend {
         parallelTransferOptions.setMaxSingleUploadSizeLong(blockSizeLong);
         final BlockBlobOutputStreamOptions options = new BlockBlobOutputStreamOptions()
             .setParallelTransferOptions(parallelTransferOptions);
+        // Be aware that metrics instrumentation is based on PutBlob (single upload), PutBlock (upload part),
+        // and PutBlockList (complete upload) used by this call.
+        // If upload changes, change metrics instrumentation accordingly.
         try (OutputStream os = new BufferedOutputStream(
             blockBlobClient.getBlobOutputStream(options), config.uploadBlockSize())) {
             return inputStream.transferTo(os);
@@ -119,7 +128,8 @@ public class AzureBlobStorage implements StorageBackend {
     @Override
     public InputStream fetch(final ObjectKey key) throws StorageBackendException {
         try {
-            return blobContainerClient.getBlobClient(key.value()).openInputStream();
+            return blobContainerClient.getBlobClient(key.value())
+                .openInputStream();
         } catch (final BlobStorageException e) {
             if (e.getStatusCode() == 404) {
                 throw new KeyNotFoundException(this, key, e);
