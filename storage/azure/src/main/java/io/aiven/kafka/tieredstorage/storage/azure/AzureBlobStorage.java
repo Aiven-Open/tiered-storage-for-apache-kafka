@@ -34,6 +34,8 @@ import com.azure.storage.blob.BlobContainerClient;
 import com.azure.storage.blob.BlobServiceClientBuilder;
 import com.azure.storage.blob.models.BlobRange;
 import com.azure.storage.blob.models.BlobStorageException;
+import com.azure.storage.blob.models.ParallelTransferOptions;
+import com.azure.storage.blob.options.BlockBlobOutputStreamOptions;
 import com.azure.storage.blob.specialized.BlockBlobClient;
 import com.azure.storage.blob.specialized.SpecializedBlobClientBuilder;
 import com.azure.storage.common.StorageSharedKeyCredential;
@@ -98,8 +100,16 @@ public class AzureBlobStorage implements StorageBackend {
             .blobName(key.value())
             .buildBlockBlobClient();
 
-        try (OutputStream os = new BufferedOutputStream(blockBlobClient.getBlobOutputStream(true),
-            config.uploadBlockSize())) {
+        final long blockSizeLong = config.uploadBlockSize();
+        final ParallelTransferOptions parallelTransferOptions = new ParallelTransferOptions()
+            .setBlockSizeLong(blockSizeLong);
+        // Setting this is important, because otherwise if the size is below 256 MiB,
+        // block upload won't be used and up to 256 MiB may be cached in memory.
+        parallelTransferOptions.setMaxSingleUploadSizeLong(blockSizeLong);
+        final BlockBlobOutputStreamOptions options = new BlockBlobOutputStreamOptions()
+            .setParallelTransferOptions(parallelTransferOptions);
+        try (OutputStream os = new BufferedOutputStream(
+            blockBlobClient.getBlobOutputStream(options), config.uploadBlockSize())) {
             return inputStream.transferTo(os);
         } catch (final IOException e) {
             throw new StorageBackendException("Failed to upload " + key, e);
