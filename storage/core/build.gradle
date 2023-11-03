@@ -31,3 +31,7 @@ dependencies {
 
     testFixturesImplementation "org.apache.kafka:kafka-clients:$kafkaVersion"
 }
+
+components.java.withVariantsFromConfiguration(configurations.testFixturesApiElements) { skip() }
+components.java.withVariantsFromConfiguration(configurations.testFixturesRuntimeElements) { skip() }
+
