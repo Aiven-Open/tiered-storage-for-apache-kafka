@@ -236,6 +236,7 @@ class RemoteStorageManagerTest extends RsaKeyAwareTest {
             checkEncryption(compression);
         }
         checkIndexContents(hasTxnIndex);
+        checkIndexContentsV2(hasTxnIndex);
         checkFetching(chunkSize);
         checkDeletion();
     }
@@ -294,7 +295,31 @@ class RemoteStorageManagerTest extends RsaKeyAwareTest {
         }
     }
 
+    private void checkIndexContentsV2(final boolean hasTxnIndex) throws IOException, RemoteStorageException {
+        final var now = System.currentTimeMillis();
+        final var indexes = rsm.fetchAllIndexes(REMOTE_LOG_METADATA);
+        try (final var inputStream = indexes.get(IndexType.OFFSET)) {
+            assertThat(inputStream.readAllBytes()).isEqualTo(Files.readAllBytes(offsetIndexFilePath));
+        }
+        try (final var inputStream = indexes.get(IndexType.TIMESTAMP)) {
+            assertThat(inputStream.readAllBytes()).isEqualTo(Files.readAllBytes(timeIndexFilePath));
+        }
+        try (final var inputStream = indexes.get(IndexType.PRODUCER_SNAPSHOT)) {
+            assertThat(inputStream.readAllBytes()).isEqualTo(Files.readAllBytes(producerSnapshotFilePath));
+        }
+        try (final var inputStream = indexes.get(IndexType.LEADER_EPOCH)) {
+            assertThat(inputStream.readAllBytes()).isEqualTo(LEADER_EPOCH_INDEX_BYTES);
+        }
+        if (hasTxnIndex) {
+            try (final var inputStream = indexes.get(IndexType.TRANSACTION)) {
+                assertThat(inputStream.readAllBytes()).isEqualTo(Files.readAllBytes(txnIndexFilePath));
+            }
+        }
+        System.out.println("Check index V2: " + (System.currentTimeMillis() - now));
+    }
+
     private void checkIndexContents(final boolean hasTxnIndex) throws IOException, RemoteStorageException {
+        final var now = System.currentTimeMillis();
         try (final var inputStream = rsm.fetchIndex(REMOTE_LOG_METADATA,
             org.apache.kafka.server.log.remote.storage.RemoteStorageManager.IndexType.OFFSET)) {
             assertThat(inputStream.readAllBytes())
@@ -322,6 +347,7 @@ class RemoteStorageManagerTest extends RsaKeyAwareTest {
                     .isEqualTo(Files.readAllBytes(txnIndexFilePath));
             }
         }
+        System.out.println("Check index V1: " + (System.currentTimeMillis() - now));
     }
 
     private void checkEncryption(final boolean compression) throws IOException {

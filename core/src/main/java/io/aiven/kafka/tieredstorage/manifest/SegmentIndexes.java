@@ -16,9 +16,18 @@
 
 package io.aiven.kafka.tieredstorage.manifest;
 
+import java.util.List;
+
 import org.apache.kafka.server.log.remote.storage.RemoteStorageManager;
 
 public interface SegmentIndexes {
+    List<RemoteStorageManager.IndexType> INDEX_TYPES = List.of(
+        RemoteStorageManager.IndexType.OFFSET,
+        RemoteStorageManager.IndexType.TIMESTAMP,
+        RemoteStorageManager.IndexType.PRODUCER_SNAPSHOT,
+        RemoteStorageManager.IndexType.LEADER_EPOCH,
+        RemoteStorageManager.IndexType.TRANSACTION);
+
     SegmentIndex offset();
 
     SegmentIndex timestamp();
