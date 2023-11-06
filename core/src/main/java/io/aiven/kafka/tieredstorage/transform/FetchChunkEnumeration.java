@@ -23,6 +23,8 @@ import java.util.Enumeration;
 import java.util.List;
 import java.util.NoSuchElementException;
 import java.util.Objects;
+import java.util.Optional;
+import java.util.function.Supplier;
 
 import io.aiven.kafka.tieredstorage.Chunk;
 import io.aiven.kafka.tieredstorage.chunkmanager.ChunkManager;
@@ -40,6 +42,9 @@ public class FetchChunkEnumeration implements Enumeration<InputStream> {
     private final ObjectKey objectKey;
     private final SegmentManifest manifest;
     private final BytesRange range;
+    private final int endOfFile;
+    private final Optional<ObjectKey> maybeNextSegmentKey;
+    private final Optional<Supplier<SegmentManifest>> maybeNextSegmentManifestSupplier;
     final int startChunkId;
     final int lastChunkId;
     private final ChunkIndex chunkIndex;
@@ -47,20 +52,25 @@ public class FetchChunkEnumeration implements Enumeration<InputStream> {
     public boolean closed;
 
     /**
-     *
      * @param chunkManager provides chunk input to fetch from
-     * @param objectKey required by chunkManager
-     * @param manifest provides to index to build response from
-     * @param range original offset range start/end position
+     * @param objectKey    required by chunkManager
+     * @param manifest     provides to index to build response from
+     * @param range        original offset range start/end position
      */
     public FetchChunkEnumeration(final ChunkManager chunkManager,
                                  final ObjectKey objectKey,
                                  final SegmentManifest manifest,
-                                 final BytesRange range) {
+                                 final BytesRange range,
+                                 final int endOfFile,
+                                 final Optional<ObjectKey> maybeNextSegmentKey,
+                                 final Optional<Supplier<SegmentManifest>> maybeNextSegmentManifestSupplier) {
         this.chunkManager = Objects.requireNonNull(chunkManager, "chunkManager cannot be null");
         this.objectKey = Objects.requireNonNull(objectKey, "objectKey cannot be null");
         this.manifest = Objects.requireNonNull(manifest, "manifest cannot be null");
         this.range = Objects.requireNonNull(range, "range cannot be null");
+        this.endOfFile = endOfFile;
+        this.maybeNextSegmentKey = maybeNextSegmentKey;
+        this.maybeNextSegmentManifestSupplier = maybeNextSegmentManifestSupplier;
 
         this.chunkIndex = manifest.chunkIndex();
 
@@ -138,7 +148,14 @@ public class FetchChunkEnumeration implements Enumeration<InputStream> {
 
     private InputStream getChunkContent(final int chunkId) {
         try {
-            return chunkManager.getChunk(objectKey, manifest, chunkId);
+            return chunkManager.getChunk(
+                objectKey,
+                manifest,
+                chunkId,
+                endOfFile,
+                maybeNextSegmentKey,
+                maybeNextSegmentManifestSupplier
+            );
         } catch (final KeyNotFoundException e) {
             throw new KeyNotFoundRuntimeException(e);
         } catch (final StorageBackendException | IOException e) {

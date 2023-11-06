@@ -428,6 +428,18 @@ public class RemoteStorageManager implements org.apache.kafka.server.log.remote.
                                        final int startPosition) throws RemoteStorageException {
         return this.fetchLogSegment(
             remoteLogSegmentMetadata,
+            Optional.empty(),
+            startPosition
+        );
+    }
+
+    @Override
+    public InputStream fetchLogSegment(final RemoteLogSegmentMetadata remoteLogSegmentMetadata,
+                                       final Optional<RemoteLogSegmentMetadata> nextRemoteLogSegmentMetadata,
+                                       final int startPosition) throws RemoteStorageException {
+        return this.fetchLogSegment(
+            remoteLogSegmentMetadata,
+            nextRemoteLogSegmentMetadata,
             startPosition,
             remoteLogSegmentMetadata.segmentSizeInBytes() - 1
         );
@@ -437,11 +449,23 @@ public class RemoteStorageManager implements org.apache.kafka.server.log.remote.
     public InputStream fetchLogSegment(final RemoteLogSegmentMetadata remoteLogSegmentMetadata,
                                        final int startPosition,
                                        final int endPosition) throws RemoteStorageException {
+        return this.fetchLogSegment(
+            remoteLogSegmentMetadata,
+            Optional.empty(),
+            startPosition,
+            endPosition
+        );
+    }
+
+    @Override
+    public InputStream fetchLogSegment(final RemoteLogSegmentMetadata remoteLogSegmentMetadata,
+                                       final Optional<RemoteLogSegmentMetadata> nextRemoteLogSegmentMetadata,
+                                       final int startPosition,
+                                       final int endPosition) throws RemoteStorageException {
         try {
-            final BytesRange range = BytesRange.of(
-                startPosition,
-                Math.min(endPosition, remoteLogSegmentMetadata.segmentSizeInBytes() - 1)
-            );
+            final var endOfFile = remoteLogSegmentMetadata.segmentSizeInBytes() - 1;
+            final var actualEndPosition = Math.min(endPosition, endOfFile);
+            final BytesRange range = BytesRange.of(startPosition, actualEndPosition);
 
             log.trace("Fetching log segment {} with range: {}", remoteLogSegmentMetadata, range);
 
@@ -451,10 +475,23 @@ public class RemoteStorageManager implements org.apache.kafka.server.log.remote.
 
             final var segmentManifest = fetchSegmentManifest(remoteLogSegmentMetadata);
 
-            final var suffix = ObjectKeyFactory.Suffix.LOG;
-            final var segmentKey = objectKey(remoteLogSegmentMetadata, suffix);
-            return new FetchChunkEnumeration(chunkManager, segmentKey, segmentManifest, range)
-                .toInputStream();
+            final var segmentKey = objectKey(remoteLogSegmentMetadata, ObjectKeyFactory.Suffix.LOG);
+            final var fetchChunkEnumeration = new FetchChunkEnumeration(
+                chunkManager,
+                segmentKey,
+                segmentManifest,
+                range,
+                endOfFile,
+                nextRemoteLogSegmentMetadata.map(next -> objectKey(next, ObjectKeyFactory.Suffix.LOG)),
+                nextRemoteLogSegmentMetadata.map(next -> () -> {
+                    try {
+                        return fetchSegmentManifest(next);
+                    } catch (StorageBackendException | IOException e) {
+                        // ignore the error and let fetch of next segment to deal with it
+                        return null;
+                    }
+                }));
+            return fetchChunkEnumeration.toInputStream();
         } catch (final KeyNotFoundException | KeyNotFoundRuntimeException e) {
             throw new RemoteResourceNotFoundException(e);
         } catch (final Exception e) {
