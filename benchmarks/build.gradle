@@ -29,6 +29,9 @@ ext {
 
 dependencies {
     implementation project(':core')
+    implementation project(':storage:s3')
+    implementation project(':storage:gcs')
+    implementation project(':storage:azure')
     implementation group: "org.apache.kafka", name: "kafka-storage-api", version: kafkaVersion
     implementation group: "org.apache.kafka", name: "kafka-clients", version: kafkaVersion
 
