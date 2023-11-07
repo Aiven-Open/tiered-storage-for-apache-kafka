@@ -24,6 +24,8 @@ import io.aiven.kafka.tieredstorage.storage.StorageBackend;
 import com.azure.storage.blob.sas.BlobContainerSasPermission;
 import com.azure.storage.blob.sas.BlobServiceSasSignatureValues;
 
+import static io.aiven.kafka.tieredstorage.storage.azure.AzuriteBlobStorageUtils.endpoint;
+
 class AzureBlobStorageSasTokenTest extends AzureBlobStorageTest {
     @Override
     protected StorageBackend storage() {
@@ -42,7 +44,7 @@ class AzureBlobStorageSasTokenTest extends AzureBlobStorageTest {
         final Map<String, Object> configs = Map.of(
             "azure.container.name", azureContainerName,
             "azure.sas.token", sasToken,
-            "azure.endpoint.url", endpoint()
+            "azure.endpoint.url", endpoint(AZURITE_SERVER, BLOB_STORAGE_PORT)
         );
         azureBlobStorage.configure(configs);
         return azureBlobStorage;

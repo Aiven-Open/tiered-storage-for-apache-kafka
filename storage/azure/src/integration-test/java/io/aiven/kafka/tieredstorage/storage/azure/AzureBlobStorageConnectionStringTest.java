@@ -20,13 +20,15 @@ import java.util.Map;
 
 import io.aiven.kafka.tieredstorage.storage.StorageBackend;
 
+import static io.aiven.kafka.tieredstorage.storage.azure.AzuriteBlobStorageUtils.connectionString;
+
 class AzureBlobStorageConnectionStringTest extends AzureBlobStorageTest {
     @Override
     protected StorageBackend storage() {
         final AzureBlobStorage azureBlobStorage = new AzureBlobStorage();
         final Map<String, Object> configs = Map.of(
             "azure.container.name", azureContainerName,
-            "azure.connection.string", connectionString()
+            "azure.connection.string", connectionString(AZURITE_SERVER, BLOB_STORAGE_PORT)
         );
         azureBlobStorage.configure(configs);
         return azureBlobStorage;

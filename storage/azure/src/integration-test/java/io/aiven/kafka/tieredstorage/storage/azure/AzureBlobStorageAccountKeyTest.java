@@ -20,6 +20,8 @@ import java.util.Map;
 
 import io.aiven.kafka.tieredstorage.storage.StorageBackend;
 
+import static io.aiven.kafka.tieredstorage.storage.azure.AzuriteBlobStorageUtils.endpoint;
+
 class AzureBlobStorageAccountKeyTest extends AzureBlobStorageTest {
     @Override
     protected StorageBackend storage() {
@@ -32,7 +34,7 @@ class AzureBlobStorageAccountKeyTest extends AzureBlobStorageTest {
             "azure.container.name", azureContainerName,
             "azure.account.name", accountName,
             "azure.account.key", accountKey,
-            "azure.endpoint.url", endpoint()
+            "azure.endpoint.url", endpoint(AZURITE_SERVER, BLOB_STORAGE_PORT)
         );
         azureBlobStorage.configure(configs);
         return azureBlobStorage;
