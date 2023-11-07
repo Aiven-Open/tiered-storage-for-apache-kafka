@@ -25,4 +25,5 @@ include 'storage:s3'
 include 'e2e'
 include 'commons'
 include 'docs'
+include 'benchmarks'
 
