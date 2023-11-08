@@ -117,6 +117,31 @@ public class GcsStorage implements StorageBackend {
         }
     }
 
+    @Override
+    public InputStream getContinuousStream(final ObjectKey key, final int from) throws StorageBackendException {
+        try {
+            final Blob blob = getBlob(key);
+
+            if (from >= blob.getSize()) {
+                throw new InvalidRangeException("Range start position " + from
+                    + " is outside file content. file size = " + blob.getSize());
+            }
+
+            final ReadChannel reader = blob.reader();
+            reader.seek(from);
+            return Channels.newInputStream(reader);
+        } catch (final IOException e) {
+            throw new StorageBackendException("Failed to fetch " + key, e);
+        } catch (final StorageException e) {
+            // https://cloud.google.com/storage/docs/json_api/v1/status-codes#416_Requested_Range_Not_Satisfiable
+            if (e.getCode() == 416) {
+                throw new InvalidRangeException("Invalid from TODO " + from, e);
+            }
+
+            throw new StorageBackendException("Failed to fetch " + key, e);
+        }
+    }
+
     private Blob getBlob(final ObjectKey key) throws KeyNotFoundException {
         // Unfortunately, it seems Google will do two a separate (HEAD-like) call to get blob metadata.
         // Since the blobs are immutable in tiered storage, we can consider caching them locally

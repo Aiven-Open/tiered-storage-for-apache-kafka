@@ -33,8 +33,10 @@ public class ChunkManagerFactory implements Configurable {
     }
 
     public ChunkManager initChunkManager(final ObjectFetcher fileFetcher,
-                                         final AesEncryptionProvider aesEncryptionProvider) {
-        final DefaultChunkManager defaultChunkManager = new DefaultChunkManager(fileFetcher, aesEncryptionProvider);
+                                         final AesEncryptionProvider aesEncryptionProvider,
+                                         final boolean useNewMode) {
+        final DefaultChunkManager defaultChunkManager =
+            new DefaultChunkManager(fileFetcher, aesEncryptionProvider, useNewMode);
         if (config.cacheClass() != null) {
             try {
                 final ChunkCache<?> chunkCache = config

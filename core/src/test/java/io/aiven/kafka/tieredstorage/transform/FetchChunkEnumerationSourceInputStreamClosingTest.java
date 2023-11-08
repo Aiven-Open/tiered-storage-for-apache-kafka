@@ -89,7 +89,7 @@ class FetchChunkEnumerationSourceInputStreamClosingTest {
               final BytesRange range) throws StorageBackendException, IOException {
         final ChunkManagerFactory chunkManagerFactory = new ChunkManagerFactory();
         chunkManagerFactory.configure(config);
-        final ChunkManager chunkManager = chunkManagerFactory.initChunkManager(fetcher, null);
+        final ChunkManager chunkManager = chunkManagerFactory.initChunkManager(fetcher, null, false);
         final var is = new FetchChunkEnumeration(chunkManager, OBJECT_KEY, SEGMENT_MANIFEST, range)
             .toInputStream();
         if (readFully) {

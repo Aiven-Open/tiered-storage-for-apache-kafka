@@ -153,7 +153,7 @@ public class RemoteStorageManager implements org.apache.kafka.server.log.remote.
         }
         final ChunkManagerFactory chunkManagerFactory = new ChunkManagerFactory();
         chunkManagerFactory.configure(configs);
-        chunkManager = chunkManagerFactory.initChunkManager(fetcher, aesEncryptionProvider);
+        chunkManager = chunkManagerFactory.initChunkManager(fetcher, aesEncryptionProvider, config.useNewMode());
         chunkSize = config.chunkSize();
         compressionEnabled = config.compressionEnabled();
         compressionHeuristic = config.compressionHeuristicEnabled();
