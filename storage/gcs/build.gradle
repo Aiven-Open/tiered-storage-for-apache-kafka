@@ -19,7 +19,11 @@ archivesBaseName = "storage-gcs"
 dependencies {
     implementation project(":storage:core")
 
-    implementation "com.google.cloud:google-cloud-storage:$gcpSdkVersion"
+    implementation ("com.google.cloud:google-cloud-storage:$gcpSdkVersion") {
+        exclude group: "com.google.errorprone"
+        exclude group: "org.checkerframework"
+    }
+
     implementation project(":commons")
 
     testImplementation(testFixtures(project(":storage:core")))
