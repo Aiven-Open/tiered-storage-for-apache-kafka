@@ -22,7 +22,8 @@
     <suppress checks="ClassDataAbstractionCoupling" files=".*Test\.java"/>
     <suppress checks="ClassFanOutComplexity" files=".*Test\.java"/>
     <suppress checks="ClassFanOutComplexity" files="RemoteStorageManager.java"/>
-    <suppress checks="ClassFanOutComplexity" files="ChunkCache.java"/>
+    <suppress checks="ClassFanOutComplexity" files="AbstractChunkCache.java"/>
+    <suppress checks="ClassFanOutComplexity" files="DefaultChunkManager.java"/>
     <suppress checks="ClassFanOutComplexity" files="AzureBlobStorage.java"/>
     <suppress checks="ClassDataAbstractionCoupling" files="CaffeineStatsCounter.java"/>
     <suppress checks="ClassDataAbstractionCoupling" files="S3StorageConfig.java"/>

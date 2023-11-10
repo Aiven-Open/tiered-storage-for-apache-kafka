@@ -23,7 +23,6 @@ import java.nio.file.Path;
 import java.util.Map;
 
 import io.aiven.kafka.tieredstorage.chunkmanager.ChunkKey;
-import io.aiven.kafka.tieredstorage.chunkmanager.ChunkManager;
 
 import com.github.benmanes.caffeine.cache.RemovalListener;
 import com.github.benmanes.caffeine.cache.Weigher;
@@ -32,15 +31,11 @@ import org.slf4j.LoggerFactory;
 
 import static java.nio.file.StandardCopyOption.ATOMIC_MOVE;
 
-public class DiskBasedChunkCache extends ChunkCache<Path> {
+public class DiskBasedChunkCache extends AbstractChunkCache<Path> {
 
     private static final Logger log = LoggerFactory.getLogger(DiskBasedChunkCache.class);
 
     private DiskBasedChunkCacheConfig config;
-
-    public DiskBasedChunkCache(final ChunkManager chunkManager) {
-        super(chunkManager);
-    }
 
     @Override
     public InputStream cachedChunkToInputStream(final Path cachedChunk) {

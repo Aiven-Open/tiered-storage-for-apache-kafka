@@ -16,21 +16,30 @@
 
 package io.aiven.kafka.tieredstorage.chunkmanager.cache;
 
-import java.io.IOException;
 import java.io.InputStream;
+import java.util.Map;
 import java.util.concurrent.CompletableFuture;
+import java.util.concurrent.ExecutionException;
+import java.util.concurrent.TimeoutException;
 import java.util.function.Supplier;
 
-import org.apache.kafka.common.Configurable;
-
 import io.aiven.kafka.tieredstorage.chunkmanager.ChunkKey;
-import io.aiven.kafka.tieredstorage.storage.StorageBackendException;
 
-public interface ChunkCache<T> extends Configurable {
-    InputStream getChunk(final ChunkKey chunkKey,
-                         final Supplier<CompletableFuture<InputStream>> chunkSupplier)
-        throws StorageBackendException, IOException;
+public class NoOpChunkCache extends BaseChunkCache<Void> {
+    @Override
+    public void configure(final Map<String, ?> configs) {
+        // no-op
+    }
 
-    void supplyIfAbsent(final ChunkKey chunkKey,
-                        final Supplier<CompletableFuture<InputStream>> chunkSupplier);
+    @Override
+    protected InputStream getChunk0(final ChunkKey chunkKey,
+                                    final Supplier<CompletableFuture<InputStream>> chunkSupplier
+    ) throws ExecutionException, InterruptedException, TimeoutException {
+        return chunkSupplier.get().get();
+    }
+
+    @Override
+    public void supplyIfAbsent(final ChunkKey chunkKey, final Supplier<CompletableFuture<InputStream>> chunkSupplier) {
+        // no-op
+    }
 }

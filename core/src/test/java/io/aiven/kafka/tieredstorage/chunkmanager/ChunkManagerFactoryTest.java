@@ -68,9 +68,9 @@ class ChunkManagerFactoryTest {
             )
         );
         try (final MockedConstruction<?> ignored = mockConstruction(cls)) {
-            final ChunkManager chunkManager = chunkManagerFactory.initChunkManager(null, null);
-            assertThat(chunkManager).isInstanceOf(cls);
-            verify((ChunkCache<?>) chunkManager).configure(Map.of(
+            final var chunkManager = (DefaultChunkManager)
+                chunkManagerFactory.initChunkManager(null, null);
+            verify(cls.cast(chunkManager.chunkCache)).configure(Map.of(
                 "class", cls,
                 "size", 10,
                 "retention.ms", 10

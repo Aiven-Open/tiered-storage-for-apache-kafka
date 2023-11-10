@@ -23,7 +23,6 @@ import java.nio.file.Path;
 import java.util.Map;
 
 import io.aiven.kafka.tieredstorage.chunkmanager.ChunkKey;
-import io.aiven.kafka.tieredstorage.chunkmanager.ChunkManager;
 
 import com.github.benmanes.caffeine.cache.RemovalCause;
 import com.github.benmanes.caffeine.cache.RemovalListener;
@@ -32,7 +31,6 @@ import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.Test;
 import org.junit.jupiter.api.extension.ExtendWith;
 import org.junit.jupiter.api.io.TempDir;
-import org.mockito.Mock;
 import org.mockito.MockedStatic;
 import org.mockito.junit.jupiter.MockitoExtension;
 
@@ -43,7 +41,6 @@ import static org.assertj.core.api.Assertions.assertThatNoException;
 import static org.assertj.core.api.Assertions.assertThatThrownBy;
 import static org.mockito.ArgumentMatchers.any;
 import static org.mockito.Mockito.CALLS_REAL_METHODS;
-import static org.mockito.Mockito.mock;
 import static org.mockito.Mockito.mockStatic;
 import static org.mockito.Mockito.spy;
 import static org.mockito.Mockito.verify;
@@ -54,12 +51,10 @@ class DiskBasedChunkCacheTest {
     private static final byte[] CHUNK_0 = "0123456789".getBytes();
     private static final byte[] CHUNK_1 = "1011121314".getBytes();
     private static final String TEST_EXCEPTION_MESSAGE = "test_message";
-    @Mock
-    ChunkManager chunkManager;
     @TempDir
     Path baseCachePath;
 
-    DiskBasedChunkCache diskBasedChunkCache = new DiskBasedChunkCache(chunkManager);
+    DiskBasedChunkCache diskBasedChunkCache = new DiskBasedChunkCache();
     private Path cachePath;
     private Path tempCachePath;
 
@@ -212,9 +207,7 @@ class DiskBasedChunkCacheTest {
 
     @Test
     void cacheInitialized() {
-        final DiskBasedChunkCache spy = spy(
-                new DiskBasedChunkCache(mock(ChunkManager.class))
-        );
+        final DiskBasedChunkCache spy = spy(new DiskBasedChunkCache());
         final Map<String, String> configs = Map.of(
                 "retention.ms", "-1",
                 "size", "-1",

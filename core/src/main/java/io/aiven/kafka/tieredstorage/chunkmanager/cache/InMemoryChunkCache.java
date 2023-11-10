@@ -24,19 +24,14 @@ import java.util.Map;
 import org.apache.kafka.common.config.ConfigDef;
 
 import io.aiven.kafka.tieredstorage.chunkmanager.ChunkKey;
-import io.aiven.kafka.tieredstorage.chunkmanager.ChunkManager;
 
 import com.github.benmanes.caffeine.cache.RemovalListener;
 import com.github.benmanes.caffeine.cache.Weigher;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
-public class InMemoryChunkCache extends ChunkCache<byte[]> {
+public class InMemoryChunkCache extends AbstractChunkCache<byte[]> {
     private static final Logger log = LoggerFactory.getLogger(InMemoryChunkCache.class);
-
-    public InMemoryChunkCache(final ChunkManager chunkManager) {
-        super(chunkManager);
-    }
 
     @Override
     public InputStream cachedChunkToInputStream(final byte[] cachedChunk) {
