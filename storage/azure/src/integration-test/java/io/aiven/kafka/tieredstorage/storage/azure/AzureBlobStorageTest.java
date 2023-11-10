@@ -31,42 +31,20 @@ import org.junit.jupiter.api.TestInfo;
 import org.testcontainers.containers.GenericContainer;
 import org.testcontainers.junit.jupiter.Container;
 import org.testcontainers.junit.jupiter.Testcontainers;
-import org.testcontainers.utility.DockerImageName;
-import org.testcontainers.utility.MountableFile;
 
+import static io.aiven.kafka.tieredstorage.storage.azure.AzuriteBlobStorageUtils.azuriteContainer;
+import static io.aiven.kafka.tieredstorage.storage.azure.AzuriteBlobStorageUtils.connectionString;
 import static org.assertj.core.api.Assertions.assertThatThrownBy;
 
 @Testcontainers
 abstract class AzureBlobStorageTest extends BaseStorageTest {
-    private static final int BLOB_STORAGE_PORT = 10000;
+    static final int BLOB_STORAGE_PORT = 10000;
     @Container
-    static final GenericContainer<?> AZURITE_SERVER =
-        new GenericContainer<>(DockerImageName.parse("mcr.microsoft.com/azure-storage/azurite"))
-            .withCopyFileToContainer(
-                MountableFile.forClasspathResource("/azurite-cert.pem"),
-                "/opt/azurite/azurite-cert.pem")
-            .withCopyFileToContainer(
-                MountableFile.forClasspathResource("/azurite-key.pem"),
-                "/opt/azurite/azurite-key.pem")
-            .withExposedPorts(BLOB_STORAGE_PORT)
-            .withCommand("azurite-blob --blobHost 0.0.0.0 "
-                + "--cert /opt/azurite/azurite-cert.pem --key /opt/azurite/azurite-key.pem");
+    static final GenericContainer<?> AZURITE_SERVER = azuriteContainer(BLOB_STORAGE_PORT);
 
     static BlobServiceClient blobServiceClient;
 
     protected String azureContainerName;
-
-    protected static String endpoint() {
-        return "https://127.0.0.1:" + AZURITE_SERVER.getMappedPort(BLOB_STORAGE_PORT) + "/devstoreaccount1";
-    }
-
-    protected static String connectionString() {
-        // The well-known Azurite connection string.
-        return "DefaultEndpointsProtocol=https;"
-            + "AccountName=devstoreaccount1;"
-            + "AccountKey=Eby8vdM02xNOcqFlqUwJPLlmEtlCDXJ1OUzFT50uSRZ6IFsuFq2UVErCz4I6tq/K1SZFPTOtr/KBHBeksoGMGw==;"
-            + "BlobEndpoint=" + endpoint() + ";";
-    }
 
     @BeforeAll
     static void setUpClass() {
@@ -77,7 +55,7 @@ abstract class AzureBlobStorageTest extends BaseStorageTest {
             AzureBlobStorageTest.class.getResource("/azurite-cacerts.jks").getPath());
         System.setProperty("javax.net.ssl.trustStorePassword", "changeit");
         blobServiceClient = new BlobServiceClientBuilder()
-            .connectionString(connectionString())
+            .connectionString(connectionString(AZURITE_SERVER, BLOB_STORAGE_PORT))
             .buildClient();
     }
 
