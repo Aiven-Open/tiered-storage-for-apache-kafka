@@ -22,6 +22,7 @@ import org.apache.kafka.common.config.AbstractConfig;
 import org.apache.kafka.common.config.ConfigDef;
 
 import io.aiven.kafka.tieredstorage.chunkmanager.cache.ChunkCache;
+import io.aiven.kafka.tieredstorage.chunkmanager.cache.NoOpChunkCache;
 import io.aiven.kafka.tieredstorage.config.validators.Subclass;
 
 public class ChunkManagerFactoryConfig extends AbstractConfig {
@@ -29,6 +30,11 @@ public class ChunkManagerFactoryConfig extends AbstractConfig {
     protected static final String CHUNK_CACHE_PREFIX = "chunk.cache.";
     public static final String CHUNK_CACHE_CONFIG = CHUNK_CACHE_PREFIX + "class";
     private static final String CHUNK_CACHE_DOC = "The chunk cache implementation";
+
+    private static final String CACHE_PREFETCH_MAX_SIZE_CONFIG = CHUNK_CACHE_PREFIX + "prefetch.max.size";
+    private static final String CACHE_PREFETCH_MAX_SIZE_DOC =
+        "The amount of data that should be eagerly prefetched and cached";
+    private static final int CACHE_PREFETCHING_SIZE_DEFAULT = 0; //TODO find out what it should be
 
     private static final ConfigDef CONFIG;
 
@@ -38,10 +44,18 @@ public class ChunkManagerFactoryConfig extends AbstractConfig {
         CONFIG.define(
             CHUNK_CACHE_CONFIG,
             ConfigDef.Type.CLASS,
-            null,
+            NoOpChunkCache.class,
             Subclass.of(ChunkCache.class),
             ConfigDef.Importance.MEDIUM,
             CHUNK_CACHE_DOC
+        );
+        CONFIG.define(
+            CACHE_PREFETCH_MAX_SIZE_CONFIG,
+            ConfigDef.Type.INT,
+            CACHE_PREFETCHING_SIZE_DEFAULT,
+            ConfigDef.Range.between(0, Integer.MAX_VALUE),
+            ConfigDef.Importance.MEDIUM,
+            CACHE_PREFETCH_MAX_SIZE_DOC
         );
     }
 
@@ -52,5 +66,9 @@ public class ChunkManagerFactoryConfig extends AbstractConfig {
     @SuppressWarnings("unchecked")
     public Class<ChunkCache<?>> cacheClass() {
         return (Class<ChunkCache<?>>) getClass(CHUNK_CACHE_CONFIG);
+    }
+
+    public int cachePrefetchingSize() {
+        return getInt(CACHE_PREFETCH_MAX_SIZE_CONFIG);
     }
 }

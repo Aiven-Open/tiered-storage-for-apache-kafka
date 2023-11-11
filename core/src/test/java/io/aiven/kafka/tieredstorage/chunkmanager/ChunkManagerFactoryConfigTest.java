@@ -21,6 +21,7 @@ import java.util.Map;
 import org.apache.kafka.common.config.ConfigException;
 
 import io.aiven.kafka.tieredstorage.chunkmanager.cache.ChunkCache;
+import io.aiven.kafka.tieredstorage.chunkmanager.cache.NoOpChunkCache;
 
 import org.junit.jupiter.api.Test;
 import org.junit.jupiter.params.ParameterizedTest;
@@ -53,6 +54,18 @@ class ChunkManagerFactoryConfigTest {
     @Test
     void defaultConfig() {
         final ChunkManagerFactoryConfig config = new ChunkManagerFactoryConfig(Map.of());
-        assertThat(config.cacheClass()).isNull();
+        assertThat(config.cacheClass()).isSameAs(NoOpChunkCache.class);
+        assertThat(config.cachePrefetchingSize()).isEqualTo(0);
+    }
+
+    @Test
+    void invalidPrefetchingSize() {
+        assertThatThrownBy(() -> new ChunkManagerFactoryConfig(
+            Map.of(
+                "chunk.cache.class", "io.aiven.kafka.tieredstorage.chunkmanager.cache.InMemoryChunkCache",
+                "chunk.cache.prefetch.max.size", "-1"
+            )
+        )).isInstanceOf(ConfigException.class)
+            .hasMessage("Invalid value -1 for configuration chunk.cache.prefetch.max.size: Value must be at least 0");
     }
 }

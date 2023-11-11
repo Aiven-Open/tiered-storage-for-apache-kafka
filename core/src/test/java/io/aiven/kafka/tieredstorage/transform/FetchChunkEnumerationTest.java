@@ -17,6 +17,7 @@
 package io.aiven.kafka.tieredstorage.transform;
 
 import java.io.ByteArrayInputStream;
+import java.io.IOException;
 import java.util.NoSuchElementException;
 
 import org.apache.kafka.server.log.remote.storage.RemoteStorageManager.IndexType;
@@ -105,7 +106,7 @@ class FetchChunkEnumerationTest {
 
     // - Single chunk
     @Test
-    void shouldReturnRangeFromSingleChunk() throws StorageBackendException {
+    void shouldReturnRangeFromSingleChunk() throws StorageBackendException, IOException {
         // Given a set of 10 chunks with 10 bytes each
         // When
         final int from = 32;
@@ -123,7 +124,7 @@ class FetchChunkEnumerationTest {
 
     // - Multiple chunks
     @Test
-    void shouldReturnRangeFromMultipleChunks() throws StorageBackendException {
+    void shouldReturnRangeFromMultipleChunks() throws StorageBackendException, IOException {
         // Given a set of 10 chunks with 10 bytes each
         // When
         final int from = 15;

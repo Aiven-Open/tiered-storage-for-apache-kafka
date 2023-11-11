@@ -34,20 +34,13 @@ public class ChunkManagerFactory implements Configurable {
 
     public ChunkManager initChunkManager(final ObjectFetcher fileFetcher,
                                          final AesEncryptionProvider aesEncryptionProvider) {
-        final DefaultChunkManager defaultChunkManager = new DefaultChunkManager(fileFetcher, aesEncryptionProvider);
-        if (config.cacheClass() != null) {
-            try {
-                final ChunkCache<?> chunkCache = config
-                    .cacheClass()
-                    .getDeclaredConstructor(ChunkManager.class)
-                    .newInstance(defaultChunkManager);
-                chunkCache.configure(config.originalsWithPrefix(ChunkManagerFactoryConfig.CHUNK_CACHE_PREFIX));
-                return chunkCache;
-            } catch (final ReflectiveOperationException e) {
-                throw new RuntimeException(e);
-            }
-        } else {
-            return defaultChunkManager;
+        final ChunkCache<?> chunkCache;
+        try {
+            chunkCache = config.cacheClass().getDeclaredConstructor().newInstance();
+        } catch (final ReflectiveOperationException e) {
+            throw new RuntimeException(e);
         }
+        chunkCache.configure(config.originalsWithPrefix(ChunkManagerFactoryConfig.CHUNK_CACHE_PREFIX));
+        return new DefaultChunkManager(fileFetcher, aesEncryptionProvider, chunkCache, config.cachePrefetchingSize());
     }
 }
