@@ -22,6 +22,8 @@ import java.nio.file.Files;
 import java.nio.file.Path;
 import java.util.Map;
 
+import org.apache.kafka.common.utils.Time;
+
 import io.aiven.kafka.tieredstorage.chunkmanager.ChunkKey;
 import io.aiven.kafka.tieredstorage.chunkmanager.ChunkManager;
 
@@ -33,13 +35,19 @@ import org.slf4j.LoggerFactory;
 import static java.nio.file.StandardCopyOption.ATOMIC_MOVE;
 
 public class DiskBasedChunkCache extends ChunkCache<Path> {
-
     private static final Logger log = LoggerFactory.getLogger(DiskBasedChunkCache.class);
+
+    private final DiskBasedChunkCacheMetrics metrics;
 
     private DiskBasedChunkCacheConfig config;
 
     public DiskBasedChunkCache(final ChunkManager chunkManager) {
+        this(chunkManager, Time.SYSTEM);
+    }
+
+    DiskBasedChunkCache(final ChunkManager chunkManager, final Time time) {
         super(chunkManager);
+        metrics = new DiskBasedChunkCacheMetrics(time);
     }
 
     @Override
@@ -77,9 +85,10 @@ public class DiskBasedChunkCache extends ChunkCache<Path> {
         }
     }
 
-    private static Path writeToDisk(final InputStream chunk, final Path tempChunkPath) throws IOException {
+    private Path writeToDisk(final InputStream chunk, final Path tempChunkPath) throws IOException {
         try (chunk; final var out = Files.newOutputStream(tempChunkPath)) {
-            chunk.transferTo(out);
+            final long bytesTransferred = chunk.transferTo(out);
+            metrics.chunkWritten(bytesTransferred);
         }
         return tempChunkPath;
     }
