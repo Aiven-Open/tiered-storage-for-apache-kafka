@@ -34,6 +34,8 @@ class DiskBasedChunkCacheMetrics {
 
     private final Sensor writes;
     private final Sensor writeBytes;
+    private final Sensor deletes;
+    private final Sensor deleteBytes;
 
     DiskBasedChunkCacheMetrics(final Time time) {
         final JmxReporter reporter = new JmxReporter();
@@ -45,6 +47,8 @@ class DiskBasedChunkCacheMetrics {
 
         writes = createSensor("write");
         writeBytes = createSensor("write-bytes");
+        deletes = createSensor("delete");
+        deleteBytes = createSensor("delete-bytes");
     }
 
     private Sensor createSensor(final String name) {
@@ -57,5 +61,10 @@ class DiskBasedChunkCacheMetrics {
     void chunkWritten(final long bytesWritten) {
         this.writes.record(1);
         this.writeBytes.record(bytesWritten);
+    }
+
+    void chunkDeleted(final long chunkSize) {
+        this.deletes.record(1);
+        this.deleteBytes.record(chunkSize);
     }
 }

@@ -98,7 +98,9 @@ public class DiskBasedChunkCache extends ChunkCache<Path> {
         return (key, path, cause) -> {
             try {
                 if (path != null) {
+                    final long fileSize = Files.size(path);
                     Files.delete(path);
+                    metrics.chunkDeleted(fileSize);
                     log.debug("Deleted cached file for key {} with path {} from cache directory."
                         + " The reason of the deletion is {}", key, path, cause);
                 } else {
