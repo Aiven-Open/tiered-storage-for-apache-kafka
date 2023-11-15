@@ -18,6 +18,7 @@ package io.aiven.kafka.tieredstorage.chunkmanager.cache;
 
 import java.io.IOException;
 import java.io.InputStream;
+import java.util.Optional;
 import java.util.concurrent.CompletableFuture;
 import java.util.concurrent.CompletionException;
 import java.util.concurrent.ExecutionException;
@@ -26,6 +27,7 @@ import java.util.concurrent.ForkJoinPool;
 import java.util.concurrent.TimeUnit;
 import java.util.concurrent.TimeoutException;
 import java.util.concurrent.atomic.AtomicReference;
+import java.util.function.Supplier;
 
 import org.apache.kafka.common.Configurable;
 
@@ -69,11 +71,23 @@ public abstract class ChunkCache<T> implements ChunkManager, Configurable {
      * opened right when fetching from cache happens even if the actual value is removed from the cache,
      * the InputStream will still contain the data.
      */
-    public InputStream getChunk(final ObjectKey objectKey,
-                                final SegmentManifest manifest,
-                                final int chunkId) throws StorageBackendException, IOException {
+    public InputStream getChunk(
+        final ObjectKey objectKey,
+        final SegmentManifest manifest,
+        final int chunkId,
+        final int endOfFile,
+        final Optional<ObjectKey> maybeNextSegmentKey,
+        final Optional<Supplier<SegmentManifest>> maybeNextSegmentManifestSupplier
+    ) throws StorageBackendException, IOException {
         final var currentChunk = manifest.chunkIndex().chunks().get(chunkId);
-        startPrefetching(objectKey, manifest, currentChunk.originalPosition + currentChunk.originalSize);
+        startPrefetching(
+            objectKey,
+            manifest,
+            currentChunk.originalPosition + currentChunk.originalSize,
+            endOfFile,
+            maybeNextSegmentKey,
+            maybeNextSegmentManifestSupplier
+        );
         final ChunkKey chunkKey = new ChunkKey(objectKey.value(), chunkId);
         final AtomicReference<InputStream> result = new AtomicReference<>();
         try {
@@ -83,7 +97,8 @@ public abstract class ChunkCache<T> implements ChunkManager, Configurable {
                         statsCounter.recordMiss();
                         try {
                             final InputStream chunk =
-                                chunkManager.getChunk(objectKey, manifest, chunkId);
+                                chunkManager.getChunk(objectKey, manifest, chunkId, endOfFile,
+                                    maybeNextSegmentKey, maybeNextSegmentManifestSupplier);
                             final T t = this.cacheChunk(chunkKey, chunk);
                             result.getAndSet(cachedChunkToInputStream(t));
                             return t;
@@ -147,8 +162,11 @@ public abstract class ChunkCache<T> implements ChunkManager, Configurable {
     }
 
     private void startPrefetching(final ObjectKey segmentKey,
-                                 final SegmentManifest segmentManifest,
-                                 final int startPosition) {
+                                  final SegmentManifest segmentManifest,
+                                  final int startPosition,
+                                  final int endOfFile,
+                                  final Optional<ObjectKey> maybeNextSegmentKey,
+                                  final Optional<Supplier<SegmentManifest>> maybeNextSegmentManifestSupplier) {
         if (prefetchingSize > 0) {
             final BytesRange prefetchingRange;
             if (Integer.MAX_VALUE - startPosition < prefetchingSize) {
@@ -162,14 +180,41 @@ public abstract class ChunkCache<T> implements ChunkManager, Configurable {
                 cache.asMap()
                     .computeIfAbsent(chunkKey, key -> CompletableFuture.supplyAsync(() -> {
                         try {
-                            final InputStream chunkStream =
-                                chunkManager.getChunk(segmentKey, segmentManifest, chunk.id);
+                            final InputStream chunkStream = chunkManager.getChunk(
+                                segmentKey,
+                                segmentManifest,
+                                chunk.id,
+                                endOfFile,
+                                maybeNextSegmentKey,
+                                maybeNextSegmentManifestSupplier
+                            );
                             return this.cacheChunk(chunkKey, chunkStream);
                         } catch (final StorageBackendException | IOException e) {
                             throw new CompletionException(e);
                         }
                     }, executor));
             });
+            if (maybeNextSegmentKey.isPresent()
+                && maybeNextSegmentManifestSupplier.isPresent()
+                && endOfFile - startPosition < prefetchingSize) {
+                final ChunkKey chunkKey = new ChunkKey(maybeNextSegmentKey.get().value(), 0);
+                cache.asMap()
+                    .computeIfAbsent(chunkKey, key -> CompletableFuture.supplyAsync(() -> {
+                        try {
+                            final InputStream chunkStream = chunkManager.getChunk(
+                                maybeNextSegmentKey.get(),
+                                maybeNextSegmentManifestSupplier.get().get(),
+                                0,
+                                endOfFile,
+                                Optional.empty(),
+                                Optional.empty()
+                            );
+                            return this.cacheChunk(chunkKey, chunkStream);
+                        } catch (final StorageBackendException | IOException e) {
+                            throw new CompletionException(e);
+                        }
+                    }, executor));
+            }
         }
     }
 }

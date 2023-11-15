@@ -23,6 +23,7 @@ import java.io.ByteArrayInputStream;
 import java.lang.management.ManagementFactory;
 import java.nio.file.Path;
 import java.util.Map;
+import java.util.Optional;
 import java.util.stream.Stream;
 
 import io.aiven.kafka.tieredstorage.chunkmanager.ChunkManager;
@@ -93,7 +94,7 @@ class ChunkCacheMetricsTest {
     void shouldRecordMetrics(final Class<ChunkCache<?>> chunkCacheClass, final Map<String, ?> config)
         throws Exception {
         // Given a chunk cache implementation
-        when(chunkManager.getChunk(any(), any(), anyInt()))
+        when(chunkManager.getChunk(any(), any(), anyInt(), anyInt(), any(), any()))
             .thenReturn(new ByteArrayInputStream("test".getBytes()));
 
         final var chunkCache = chunkCacheClass.getDeclaredConstructor(ChunkManager.class).newInstance(chunkManager);
@@ -102,13 +103,13 @@ class ChunkCacheMetricsTest {
         final var objectName = new ObjectName("aiven.kafka.server.tieredstorage.cache:type=chunk-cache");
 
         // When getting a existing chunk from cache
-        chunkCache.getChunk(OBJECT_KEY_PATH, segmentManifest, 0);
+        chunkCache.getChunk(OBJECT_KEY_PATH, segmentManifest, 0, -1, Optional.empty(), Optional.empty());
 
         // check cache size increases after first miss
         assertThat(MBEAN_SERVER.getAttribute(objectName, "cache-size-total"))
             .isEqualTo(1.0);
 
-        chunkCache.getChunk(OBJECT_KEY_PATH, segmentManifest, 0);
+        chunkCache.getChunk(OBJECT_KEY_PATH, segmentManifest, 0, -1, Optional.empty(), Optional.empty());
 
         // Then the following metrics should be available
         assertThat(MBEAN_SERVER.getAttribute(objectName, "cache-hits-total"))

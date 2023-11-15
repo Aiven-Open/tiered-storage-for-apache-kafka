@@ -51,6 +51,7 @@ import io.aiven.kafka.tieredstorage.chunkmanager.ChunkManagerFactory;
 import io.aiven.kafka.tieredstorage.config.RemoteStorageManagerConfig;
 import io.aiven.kafka.tieredstorage.manifest.SegmentEncryptionMetadata;
 import io.aiven.kafka.tieredstorage.manifest.SegmentEncryptionMetadataV1;
+import io.aiven.kafka.tieredstorage.manifest.SegmentIndexes;
 import io.aiven.kafka.tieredstorage.manifest.SegmentIndexesV1;
 import io.aiven.kafka.tieredstorage.manifest.SegmentIndexesV1Builder;
 import io.aiven.kafka.tieredstorage.manifest.SegmentManifest;
@@ -427,6 +428,18 @@ public class RemoteStorageManager implements org.apache.kafka.server.log.remote.
                                        final int startPosition) throws RemoteStorageException {
         return this.fetchLogSegment(
             remoteLogSegmentMetadata,
+            Optional.empty(),
+            startPosition
+        );
+    }
+
+    @Override
+    public InputStream fetchLogSegment(final RemoteLogSegmentMetadata remoteLogSegmentMetadata,
+                                       final Optional<RemoteLogSegmentMetadata> nextRemoteLogSegmentMetadata,
+                                       final int startPosition) throws RemoteStorageException {
+        return this.fetchLogSegment(
+            remoteLogSegmentMetadata,
+            nextRemoteLogSegmentMetadata,
             startPosition,
             remoteLogSegmentMetadata.segmentSizeInBytes() - 1
         );
@@ -436,11 +449,23 @@ public class RemoteStorageManager implements org.apache.kafka.server.log.remote.
     public InputStream fetchLogSegment(final RemoteLogSegmentMetadata remoteLogSegmentMetadata,
                                        final int startPosition,
                                        final int endPosition) throws RemoteStorageException {
+        return this.fetchLogSegment(
+            remoteLogSegmentMetadata,
+            Optional.empty(),
+            startPosition,
+            endPosition
+        );
+    }
+
+    @Override
+    public InputStream fetchLogSegment(final RemoteLogSegmentMetadata remoteLogSegmentMetadata,
+                                       final Optional<RemoteLogSegmentMetadata> nextRemoteLogSegmentMetadata,
+                                       final int startPosition,
+                                       final int endPosition) throws RemoteStorageException {
         try {
-            final BytesRange range = BytesRange.of(
-                startPosition,
-                Math.min(endPosition, remoteLogSegmentMetadata.segmentSizeInBytes() - 1)
-            );
+            final var endOfFile = remoteLogSegmentMetadata.segmentSizeInBytes() - 1;
+            final var actualEndPosition = Math.min(endPosition, endOfFile);
+            final BytesRange range = BytesRange.of(startPosition, actualEndPosition);
 
             log.trace("Fetching log segment {} with range: {}", remoteLogSegmentMetadata, range);
 
@@ -450,10 +475,23 @@ public class RemoteStorageManager implements org.apache.kafka.server.log.remote.
 
             final var segmentManifest = fetchSegmentManifest(remoteLogSegmentMetadata);
 
-            final var suffix = ObjectKeyFactory.Suffix.LOG;
-            final var segmentKey = objectKey(remoteLogSegmentMetadata, suffix);
-            return new FetchChunkEnumeration(chunkManager, segmentKey, segmentManifest, range)
-                .toInputStream();
+            final var segmentKey = objectKey(remoteLogSegmentMetadata, ObjectKeyFactory.Suffix.LOG);
+            final var fetchChunkEnumeration = new FetchChunkEnumeration(
+                chunkManager,
+                segmentKey,
+                segmentManifest,
+                range,
+                endOfFile,
+                nextRemoteLogSegmentMetadata.map(next -> objectKey(next, ObjectKeyFactory.Suffix.LOG)),
+                nextRemoteLogSegmentMetadata.map(next -> () -> {
+                    try {
+                        return fetchSegmentManifest(next);
+                    } catch (StorageBackendException | IOException e) {
+                        // ignore the error and let fetch of next segment to deal with it
+                        return null;
+                    }
+                }));
+            return fetchChunkEnumeration.toInputStream();
         } catch (final KeyNotFoundException | KeyNotFoundRuntimeException e) {
             throw new RemoteResourceNotFoundException(e);
         } catch (final Exception e) {
@@ -489,6 +527,67 @@ public class RemoteStorageManager implements org.apache.kafka.server.log.remote.
             return detransformFinisher.toInputStream();
         } catch (final RemoteResourceNotFoundException e) {
             throw e;
+        } catch (final KeyNotFoundException e) {
+            throw new RemoteResourceNotFoundException(e);
+        } catch (final Exception e) {
+            throw new RemoteStorageException(e);
+        }
+    }
+
+    @Override
+    public Map<IndexType, InputStream> fetchIndexes(final RemoteLogSegmentMetadata remoteLogSegmentMetadata,
+                                                    final Set<IndexType> indexTypes) throws RemoteStorageException {
+        final var indexes = fetchAllIndexes(remoteLogSegmentMetadata);
+        for (final var indexType: SegmentIndexes.INDEX_TYPES) {
+            if (!indexTypes.contains(indexType)) {
+                try {
+                    final var in = indexes.remove(indexType);
+                    in.close();
+                } catch (final IOException e) {
+                    throw new RemoteStorageException(e);
+                }
+            }
+        }
+        return indexes;
+    }
+
+    @Override
+    public Map<IndexType, InputStream> fetchAllIndexes(final RemoteLogSegmentMetadata remoteLogSegmentMetadata)
+        throws RemoteStorageException {
+        try {
+            log.trace("Fetching all indexes for {}", remoteLogSegmentMetadata);
+
+            final var segmentManifest = fetchSegmentManifest(remoteLogSegmentMetadata);
+
+            final var key = objectKey(remoteLogSegmentMetadata, ObjectKeyFactory.Suffix.INDEXES);
+            try (final var all = fetcher.fetch(key)) {
+                final var indexes = new HashMap<IndexType, InputStream>();
+
+                for (final var indexType : SegmentIndexes.INDEX_TYPES) {
+                    final var segmentIndex = segmentManifest.segmentIndexes().segmentIndex(indexType);
+                    if (segmentIndex != null) {
+                        final var bytes = all.readNBytes(segmentIndex.range().size());
+                        final var in = new ByteArrayInputStream(bytes);
+
+                        DetransformChunkEnumeration detransformEnum = new BaseDetransformChunkEnumeration(in);
+                        final Optional<SegmentEncryptionMetadata> encryptionMetadata = segmentManifest.encryption();
+                        if (encryptionMetadata.isPresent()) {
+                            detransformEnum = new DecryptionChunkEnumeration(
+                                detransformEnum,
+                                encryptionMetadata.get().ivSize(),
+                                encryptedChunk ->
+                                    aesEncryptionProvider.decryptionCipher(encryptedChunk, encryptionMetadata.get())
+                            );
+                        }
+                        final DetransformFinisher detransformFinisher = new DetransformFinisher(detransformEnum);
+                        final var index = detransformFinisher.toInputStream();
+
+                        indexes.put(indexType, index);
+                    }
+                }
+
+                return indexes;
+            }
         } catch (final KeyNotFoundException e) {
             throw new RemoteResourceNotFoundException(e);
         } catch (final Exception e) {

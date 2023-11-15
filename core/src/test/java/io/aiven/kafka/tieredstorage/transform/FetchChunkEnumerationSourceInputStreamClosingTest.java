@@ -23,6 +23,7 @@ import java.nio.file.Files;
 import java.util.ArrayList;
 import java.util.List;
 import java.util.Map;
+import java.util.Optional;
 
 import org.apache.kafka.server.log.remote.storage.RemoteStorageManager.IndexType;
 
@@ -90,8 +91,15 @@ class FetchChunkEnumerationSourceInputStreamClosingTest {
         final ChunkManagerFactory chunkManagerFactory = new ChunkManagerFactory();
         chunkManagerFactory.configure(config);
         final ChunkManager chunkManager = chunkManagerFactory.initChunkManager(fetcher, null);
-        final var is = new FetchChunkEnumeration(chunkManager, OBJECT_KEY, SEGMENT_MANIFEST, range)
-            .toInputStream();
+        final var is = new FetchChunkEnumeration(
+            chunkManager,
+            OBJECT_KEY,
+            SEGMENT_MANIFEST,
+            range,
+            -1,
+            Optional.empty(),
+            Optional.empty()
+        ).toInputStream();
         if (readFully) {
             is.readAllBytes();
         } else {

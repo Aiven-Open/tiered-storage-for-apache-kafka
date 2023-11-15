@@ -19,6 +19,7 @@ package io.aiven.kafka.tieredstorage.chunkmanager;
 import javax.crypto.Cipher;
 
 import java.io.ByteArrayInputStream;
+import java.util.Optional;
 
 import org.apache.kafka.server.log.remote.storage.RemoteStorageManager.IndexType;
 
@@ -67,7 +68,8 @@ class DefaultChunkManagerTest extends AesKeyAwareTest {
         when(storage.fetch(OBJECT_KEY, chunkIndex.chunks().get(0).range()))
             .thenReturn(new ByteArrayInputStream("0123456789".getBytes()));
 
-        assertThat(chunkManager.getChunk(OBJECT_KEY, manifest, 0)).hasContent("0123456789");
+        assertThat(chunkManager.getChunk(OBJECT_KEY, manifest, 0,
+            -1, Optional.empty(), Optional.empty())).hasContent("0123456789");
         verify(storage).fetch(OBJECT_KEY, chunkIndex.chunks().get(0).range());
     }
 
@@ -91,7 +93,8 @@ class DefaultChunkManagerTest extends AesKeyAwareTest {
         final var manifest = new SegmentManifestV1(chunkIndex, SEGMENT_INDEXES, false, encryption, null);
         final ChunkManager chunkManager = new DefaultChunkManager(storage, aesEncryptionProvider);
 
-        assertThat(chunkManager.getChunk(OBJECT_KEY, manifest, 0)).hasBinaryContent(TEST_CHUNK_CONTENT);
+        assertThat(chunkManager.getChunk(OBJECT_KEY, manifest, 0,
+            -1, Optional.empty(), Optional.empty())).hasBinaryContent(TEST_CHUNK_CONTENT);
         verify(storage).fetch(OBJECT_KEY, chunkIndex.chunks().get(0).range());
     }
 
@@ -111,7 +114,8 @@ class DefaultChunkManagerTest extends AesKeyAwareTest {
         final var manifest = new SegmentManifestV1(chunkIndex, SEGMENT_INDEXES, true, null, null);
         final ChunkManager chunkManager = new DefaultChunkManager(storage, null);
 
-        assertThat(chunkManager.getChunk(OBJECT_KEY, manifest, 0)).hasBinaryContent(TEST_CHUNK_CONTENT);
+        assertThat(chunkManager.getChunk(OBJECT_KEY, manifest, 0,
+            -1, Optional.empty(), Optional.empty())).hasBinaryContent(TEST_CHUNK_CONTENT);
         verify(storage).fetch(OBJECT_KEY, chunkIndex.chunks().get(0).range());
     }
 }
