@@ -106,6 +106,30 @@ public class S3Storage implements StorageBackend {
     }
 
     @Override
+    public InputStream getContinuousStream(final ObjectKey key, final int from) throws StorageBackendException {
+        try {
+            final GetObjectRequest getRequest = GetObjectRequest.builder()
+                .bucket(bucketName)
+                .key(key.value())
+                .build();
+            final var result = s3Client.getObject(getRequest);
+            final long skipped = result.skip(from);
+            if (skipped != from) {
+                throw new StorageBackendException("Failed to seek to position " + from + " in " + key);
+            }
+            return result;
+        } catch (final AwsServiceException e) {
+            if (e.statusCode() == 404) {
+                throw new KeyNotFoundException(this, key, e);
+            }
+
+            throw new StorageBackendException("Failed to fetch " + key, e);
+        } catch (final IOException e) {
+            throw new StorageBackendException("Failed to fetch " + key, e);
+        }
+    }
+
+    @Override
     public String toString() {
         return "S3Storage{"
             + "bucketName='" + bucketName + '\''

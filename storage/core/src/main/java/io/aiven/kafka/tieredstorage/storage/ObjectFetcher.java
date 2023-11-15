@@ -31,4 +31,8 @@ public interface ObjectFetcher {
      * @param range range with inclusive start/end positions
      */
     InputStream fetch(ObjectKey key, BytesRange range) throws StorageBackendException;
+
+    default InputStream getContinuousStream(ObjectKey key, int from) throws StorageBackendException {
+        throw new IllegalStateException("not implemented");
+    }
 }

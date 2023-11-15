@@ -53,7 +53,8 @@ class ChunkManagerFactoryTest {
     @Test
     void defaultChunkManager() {
         chunkManagerFactory.configure(Map.of());
-        final ChunkManager chunkManager = chunkManagerFactory.initChunkManager(null, null);
+        final ChunkManager chunkManager =
+            chunkManagerFactory.initChunkManager(null, null, false);
         assertThat(chunkManager).isInstanceOf(DefaultChunkManager.class);
     }
 
@@ -68,7 +69,8 @@ class ChunkManagerFactoryTest {
             )
         );
         try (final MockedConstruction<?> ignored = mockConstruction(cls)) {
-            final ChunkManager chunkManager = chunkManagerFactory.initChunkManager(null, null);
+            final ChunkManager chunkManager =
+                chunkManagerFactory.initChunkManager(null, null, false);
             assertThat(chunkManager).isInstanceOf(cls);
             verify((ChunkCache<?>) chunkManager).configure(Map.of(
                 "class", cls,
@@ -85,9 +87,10 @@ class ChunkManagerFactoryTest {
             (cachingChunkManager, context) -> {
                 throw new InvocationTargetException(null);
             })) {
-            assertThatThrownBy(() -> chunkManagerFactory.initChunkManager(null, null))
-                .isInstanceOf(RuntimeException.class)
-                .hasCauseInstanceOf(ReflectiveOperationException.class);
+            assertThatThrownBy(() ->
+                chunkManagerFactory.initChunkManager(null, null, false))
+                    .isInstanceOf(RuntimeException.class)
+                    .hasCauseInstanceOf(ReflectiveOperationException.class);
         }
     }
 }

@@ -42,6 +42,8 @@ import static org.apache.kafka.common.config.ConfigDef.ValidString.in;
 public class RemoteStorageManagerConfig extends AbstractConfig {
     private static final String STORAGE_PREFIX = "storage.";
 
+    private static final String STORAGE_USE_NEW_MODE_CONFIG = STORAGE_PREFIX + "use.new.mode";
+
     private static final String STORAGE_BACKEND_CLASS_CONFIG = STORAGE_PREFIX + "backend.class";
     private static final String STORAGE_BACKEND_CLASS_DOC = "The storage backend implementation class";
 
@@ -100,6 +102,14 @@ public class RemoteStorageManagerConfig extends AbstractConfig {
         CONFIG = new ConfigDef();
 
         // TODO checkers
+
+        CONFIG.define(
+            STORAGE_USE_NEW_MODE_CONFIG,
+            ConfigDef.Type.BOOLEAN,
+            false,
+            ConfigDef.Importance.LOW,
+            ""
+        );
 
         CONFIG.define(
             STORAGE_BACKEND_CLASS_CONFIG,
@@ -206,6 +216,10 @@ public class RemoteStorageManagerConfig extends AbstractConfig {
             ConfigDef.ValidList.in(SegmentCustomMetadataField.names()),
             ConfigDef.Importance.LOW,
             CUSTOM_METADATA_FIELDS_INCLUDE_DOC);
+    }
+
+    public boolean useNewMode() {
+        return getBoolean(STORAGE_USE_NEW_MODE_CONFIG);
     }
 
     /**
