@@ -22,9 +22,9 @@ bootstrap_server_host=localhost:9092
 topic=topic1
 partitions=1
 replication_factor=1
-segment=1000000 # 1MB
-retention_bytes=20000000 # 20MB
-local_retention_bytes=5000000 # 5MB
+segment=1048576 # 1 MiB
+retention_bytes=104857600 # 100 MiB
+local_retention_bytes=1
 retention_ms=360000000 # 100 hours
 local_retention_ms=1000 # 1 second
 
