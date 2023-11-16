@@ -54,7 +54,7 @@ rsm.config.storage.gcs.credentials.default=true
 
 # ----- Configure the chunk cache -----
 
-rsm.config.chunk.cache.class=io.aiven.kafka.tieredstorage.chunkmanager.cache.DiskBasedChunkCache
+rsm.config.chunk.cache.class=io.aiven.kafka.tieredstorage.fetch.cache.DiskBasedChunkCache
 rsm.config.chunk.cache.path=/cache/root/directory
 # Pick some cache size, 16 GiB here:
 rsm.config.chunk.cache.size=17179869184

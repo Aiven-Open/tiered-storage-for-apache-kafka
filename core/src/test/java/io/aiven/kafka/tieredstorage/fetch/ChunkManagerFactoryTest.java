@@ -14,15 +14,15 @@
  * limitations under the License.
  */
 
-package io.aiven.kafka.tieredstorage.chunkmanager;
+package io.aiven.kafka.tieredstorage.fetch;
 
 import java.lang.reflect.InvocationTargetException;
 import java.util.Map;
 import java.util.stream.Stream;
 
-import io.aiven.kafka.tieredstorage.chunkmanager.cache.ChunkCache;
-import io.aiven.kafka.tieredstorage.chunkmanager.cache.DiskBasedChunkCache;
-import io.aiven.kafka.tieredstorage.chunkmanager.cache.InMemoryChunkCache;
+import io.aiven.kafka.tieredstorage.fetch.cache.ChunkCache;
+import io.aiven.kafka.tieredstorage.fetch.cache.DiskBasedChunkCache;
+import io.aiven.kafka.tieredstorage.fetch.cache.InMemoryChunkCache;
 
 import org.junit.jupiter.api.Test;
 import org.junit.jupiter.api.extension.ExtendWith;

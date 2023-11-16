@@ -14,15 +14,15 @@
  * limitations under the License.
  */
 
-package io.aiven.kafka.tieredstorage.chunkmanager;
+package io.aiven.kafka.tieredstorage.fetch;
 
 import java.util.Map;
 
 import org.apache.kafka.common.config.AbstractConfig;
 import org.apache.kafka.common.config.ConfigDef;
 
-import io.aiven.kafka.tieredstorage.chunkmanager.cache.ChunkCache;
 import io.aiven.kafka.tieredstorage.config.validators.Subclass;
+import io.aiven.kafka.tieredstorage.fetch.cache.ChunkCache;
 
 public class ChunkManagerFactoryConfig extends AbstractConfig {
 

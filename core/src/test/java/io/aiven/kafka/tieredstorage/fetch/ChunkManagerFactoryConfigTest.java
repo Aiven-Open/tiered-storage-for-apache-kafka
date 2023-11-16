@@ -14,13 +14,13 @@
  * limitations under the License.
  */
 
-package io.aiven.kafka.tieredstorage.chunkmanager;
+package io.aiven.kafka.tieredstorage.fetch;
 
 import java.util.Map;
 
 import org.apache.kafka.common.config.ConfigException;
 
-import io.aiven.kafka.tieredstorage.chunkmanager.cache.ChunkCache;
+import io.aiven.kafka.tieredstorage.fetch.cache.ChunkCache;
 
 import org.junit.jupiter.api.Test;
 import org.junit.jupiter.params.ParameterizedTest;
@@ -40,8 +40,8 @@ class ChunkManagerFactoryConfigTest {
 
     @ParameterizedTest
     @ValueSource(strings = {
-        "io.aiven.kafka.tieredstorage.chunkmanager.cache.InMemoryChunkCache",
-        "io.aiven.kafka.tieredstorage.chunkmanager.cache.DiskBasedChunkCache"
+        "io.aiven.kafka.tieredstorage.fetch.cache.InMemoryChunkCache",
+        "io.aiven.kafka.tieredstorage.fetch.cache.DiskBasedChunkCache"
     })
     void validCacheClass(final String cacheClass) {
         final ChunkManagerFactoryConfig config = new ChunkManagerFactoryConfig(

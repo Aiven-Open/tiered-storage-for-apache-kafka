@@ -46,9 +46,9 @@ import org.apache.kafka.server.log.remote.storage.RemoteLogSegmentMetadata.Custo
 import org.apache.kafka.server.log.remote.storage.RemoteResourceNotFoundException;
 import org.apache.kafka.server.log.remote.storage.RemoteStorageException;
 
-import io.aiven.kafka.tieredstorage.chunkmanager.ChunkManager;
-import io.aiven.kafka.tieredstorage.chunkmanager.ChunkManagerFactory;
 import io.aiven.kafka.tieredstorage.config.RemoteStorageManagerConfig;
+import io.aiven.kafka.tieredstorage.fetch.ChunkManager;
+import io.aiven.kafka.tieredstorage.fetch.ChunkManagerFactory;
 import io.aiven.kafka.tieredstorage.manifest.SegmentEncryptionMetadata;
 import io.aiven.kafka.tieredstorage.manifest.SegmentEncryptionMetadataV1;
 import io.aiven.kafka.tieredstorage.manifest.SegmentIndexesV1;

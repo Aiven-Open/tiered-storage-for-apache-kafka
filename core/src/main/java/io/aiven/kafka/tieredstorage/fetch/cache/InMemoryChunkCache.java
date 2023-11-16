@@ -14,7 +14,7 @@
  * limitations under the License.
  */
 
-package io.aiven.kafka.tieredstorage.chunkmanager.cache;
+package io.aiven.kafka.tieredstorage.fetch.cache;
 
 import java.io.ByteArrayInputStream;
 import java.io.IOException;
@@ -23,8 +23,8 @@ import java.util.Map;
 
 import org.apache.kafka.common.config.ConfigDef;
 
-import io.aiven.kafka.tieredstorage.chunkmanager.ChunkKey;
-import io.aiven.kafka.tieredstorage.chunkmanager.ChunkManager;
+import io.aiven.kafka.tieredstorage.fetch.ChunkKey;
+import io.aiven.kafka.tieredstorage.fetch.ChunkManager;
 
 import com.github.benmanes.caffeine.cache.RemovalListener;
 import com.github.benmanes.caffeine.cache.Weigher;
