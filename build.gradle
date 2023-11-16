@@ -57,6 +57,8 @@ subprojects {
     apply plugin: "idea"
     apply plugin: 'info.solidsoft.pitest'
 
+    apply plugin: "maven-publish"
+
     repositories {
         // Use Maven Central for resolving dependencies.
         mavenCentral()
@@ -217,6 +219,18 @@ subprojects {
     tasks.distTar {
         compression = Compression.GZIP
         duplicatesStrategy DuplicatesStrategy.EXCLUDE
+    }
+
+    publishing {
+        publications {
+            mavenJava(MavenPublication) {
+                from components.java
+                afterEvaluate {
+                    groupId = "io.aiven"
+                    artifactId = "tiered-storage-for-apache-kafka-${archivesBaseName}"
+                }
+            }
+        }
     }
 }
 
