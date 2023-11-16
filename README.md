@@ -8,7 +8,80 @@ The project follows the API specifications according to the latest version of [K
 
 ## Getting started
 
-See the [demo/](demo/) directory.
+You can see the [demo/](demo/) directory for some configured setups.
+
+Here are some steps you need to make to your brokers to get started with the plugin.
+
+Step 1. Prepare the plugin.
+
+The plugin consists of the core library (`core-<version>.tgz`) and object storage-specific libraries (`azure-<version>.tgz`, `gcs-<version>.tgz`, `s3-<version>.tgz`). Extract the core library and selected storage library to the same or different directories.
+
+Step 2. Configure the brokers:
+
+```properties
+# ----- Enable tiered storage -----
+
+remote.log.storage.system.enable=true
+
+# ----- Configure the remote log manager -----
+
+# This is the default, but adding it for explicitness:
+remote.log.metadata.manager.class.name=org.apache.kafka.server.log.remote.metadata.storage.TopicBasedRemoteLogMetadataManager
+
+# Put the real listener name you'd like to you here:
+remote.log.metadata.manager.listener.name=PLAINTEXT
+
+# You may need to set this if you're experimenting with a single broker setup:
+#rlmm.config.remote.log.metadata.topic.replication.factor=1
+
+# ----- Configure the remote storage manager -----
+
+# Here you need either one or two directories depending on what you did in Step 1:
+remote.log.storage.manager.class.path=/path/to/core/*:/path/to/storage/*
+remote.log.storage.manager.class.name=io.aiven.kafka.tieredstorage.RemoteStorageManager
+
+# 4 MiB is the current recommended chunk size:
+rsm.config.chunk.size=4194304
+
+# ----- Configure the storage backend -----
+
+# Using GCS as an example:
+rsm.config.storage.backend.class=io.aiven.kafka.tieredstorage.storage.gcs.GcsStorage
+rsm.config.storage.gcs.bucket.name=my-bucket
+rsm.config.storage.gcs.credentials.default=true
+# The prefix can be skipped:
+#rsm.config.storage.key.prefix: "some/prefix/"
+
+# ----- Configure the chunk cache -----
+
+rsm.config.chunk.cache.class=io.aiven.kafka.tieredstorage.chunkmanager.cache.DiskBasedChunkCache
+rsm.config.chunk.cache.path=/cache/root/directory
+# Pick some cache size, 16 GiB here:
+rsm.config.chunk.cache.size=17179869184
+# Prefetching size, 16 MiB here:
+rsm.config.chunk.cache.prefetch.max.size=16777216
+```
+
+You may want to tweak `remote.log.manager.task.interval.ms` and `log.retention.check.interval.ms` to see the tiered storage effects faster. However, you probably don't need to change this in production setups.
+
+Step 3. Start the broker.
+
+Step 4. Create and fill the topic.
+
+```shell
+bin/kafka-topics.sh --bootstrap-server localhost:9092 \
+    --create --topic topic1 \
+    --config remote.storage.enable=true \
+    --config segment.bytes=512000 \
+    --config local.retention.bytes=1 \
+    --config retention.bytes=10000000000000
+   
+bin/kafka-producer-perf-test.sh \
+    --topic topic1 --num-records=10000 --throughput -1 --record-size 1000 \
+    --producer-props acks=1 batch.size=16384 bootstrap.servers=localhost:9092
+```
+
+Step 5. After some time, you will start seeing segments on the remote storage, and later they will be deleted locally.
 
 ## Design
 
