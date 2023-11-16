@@ -49,6 +49,8 @@ import org.apache.kafka.server.log.remote.storage.RemoteStorageException;
 import io.aiven.kafka.tieredstorage.config.RemoteStorageManagerConfig;
 import io.aiven.kafka.tieredstorage.fetch.ChunkManager;
 import io.aiven.kafka.tieredstorage.fetch.ChunkManagerFactory;
+import io.aiven.kafka.tieredstorage.fetch.FetchChunkEnumeration;
+import io.aiven.kafka.tieredstorage.fetch.KeyNotFoundRuntimeException;
 import io.aiven.kafka.tieredstorage.manifest.SegmentEncryptionMetadata;
 import io.aiven.kafka.tieredstorage.manifest.SegmentEncryptionMetadataV1;
 import io.aiven.kafka.tieredstorage.manifest.SegmentIndexesV1;
@@ -82,8 +84,6 @@ import io.aiven.kafka.tieredstorage.transform.DecryptionChunkEnumeration;
 import io.aiven.kafka.tieredstorage.transform.DetransformChunkEnumeration;
 import io.aiven.kafka.tieredstorage.transform.DetransformFinisher;
 import io.aiven.kafka.tieredstorage.transform.EncryptionChunkEnumeration;
-import io.aiven.kafka.tieredstorage.transform.FetchChunkEnumeration;
-import io.aiven.kafka.tieredstorage.transform.KeyNotFoundRuntimeException;
 import io.aiven.kafka.tieredstorage.transform.TransformChunkEnumeration;
 import io.aiven.kafka.tieredstorage.transform.TransformFinisher;
 
