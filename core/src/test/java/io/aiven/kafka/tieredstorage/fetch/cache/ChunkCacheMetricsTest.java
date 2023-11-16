@@ -92,7 +92,7 @@ class ChunkCacheMetricsTest {
     @MethodSource("caches")
     void shouldRecordMetrics(final Class<ChunkCache<?>> chunkCacheClass, final Map<String, ?> config)
         throws Exception {
-        // Given a chunk cache implementation
+        // Given a fetch chunk cache implementation
         when(chunkManager.getChunk(any(), any(), anyInt()))
             .thenReturn(new ByteArrayInputStream("test".getBytes()));
 

@@ -33,9 +33,9 @@ class ChunkManagerFactoryConfigTest {
 
     @Test
     void invalidCacheClass() {
-        assertThatThrownBy(() -> new ChunkManagerFactoryConfig(Map.of("chunk.cache.class", "java.lang.Object")))
+        assertThatThrownBy(() -> new ChunkManagerFactoryConfig(Map.of("fetch.chunk.cache.class", "java.lang.Object")))
                 .isInstanceOf(ConfigException.class)
-                .hasMessage("chunk.cache.class should be a subclass of " + ChunkCache.class.getCanonicalName());
+                .hasMessage("fetch.chunk.cache.class should be a subclass of " + ChunkCache.class.getCanonicalName());
     }
 
     @ParameterizedTest
@@ -45,7 +45,7 @@ class ChunkManagerFactoryConfigTest {
     })
     void validCacheClass(final String cacheClass) {
         final ChunkManagerFactoryConfig config = new ChunkManagerFactoryConfig(
-                Map.of("chunk.cache.class", cacheClass)
+                Map.of("fetch.chunk.cache.class", cacheClass)
         );
         assertThat(config.cacheClass().getCanonicalName()).isEqualTo(cacheClass);
     }

@@ -206,9 +206,9 @@ class RemoteStorageManagerTest extends RsaKeyAwareTest {
             "storage.root", targetDir.toString(),
             "compression.enabled", Boolean.toString(compression),
             "encryption.enabled", Boolean.toString(encryption),
-            "chunk.cache.class", cacheClass,
-            "chunk.cache.path", cacheDir.toString(),
-            "chunk.cache.size", Integer.toString(100 * 1024 * 1024),
+            "fetch.chunk.cache.class", cacheClass,
+            "fetch.chunk.cache.path", cacheDir.toString(),
+            "fetch.chunk.cache.size", Integer.toString(100 * 1024 * 1024),
             "custom.metadata.fields.include", "REMOTE_SIZE,OBJECT_PREFIX,OBJECT_KEY"
         ));
         if (encryption) {
@@ -453,9 +453,9 @@ class RemoteStorageManagerTest extends RsaKeyAwareTest {
                 put("storage.root", targetDir.toString());
                 put("compression.enabled", "true");
                 put("compression.heuristic.enabled", "true");
-                put("chunk.cache.size", 10000);
-                put("chunk.cache.class", InMemoryChunkCache.class.getCanonicalName());
-                put("chunk.cache.retention.ms", 10000);
+                put("fetch.chunk.cache.size", 10000);
+                put("fetch.chunk.cache.class", InMemoryChunkCache.class.getCanonicalName());
+                put("fetch.chunk.cache.retention.ms", 10000);
             }};
 
         rsm.configure(config);

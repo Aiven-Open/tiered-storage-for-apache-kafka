@@ -61,9 +61,9 @@ class ChunkManagerFactoryTest {
     @MethodSource("cachingChunkManagers")
     void cachingChunkManagers(final Class<ChunkCache<?>> cls) {
         chunkManagerFactory.configure(Map.of(
-                "chunk.cache.class", cls,
-                "chunk.cache.size", 10,
-                "chunk.cache.retention.ms", 10,
+                "fetch.chunk.cache.class", cls,
+                "fetch.chunk.cache.size", 10,
+                "fetch.chunk.cache.retention.ms", 10,
                 "other.config.x", 10
             )
         );
@@ -80,7 +80,7 @@ class ChunkManagerFactoryTest {
 
     @Test
     void failedInitialization() {
-        chunkManagerFactory.configure(Map.of("chunk.cache.class", InMemoryChunkCache.class));
+        chunkManagerFactory.configure(Map.of("fetch.chunk.cache.class", InMemoryChunkCache.class));
         try (final MockedConstruction<?> ignored = mockConstruction(InMemoryChunkCache.class,
             (cachingChunkManager, context) -> {
                 throw new InvocationTargetException(null);

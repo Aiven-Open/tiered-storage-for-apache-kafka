@@ -26,9 +26,9 @@ import io.aiven.kafka.tieredstorage.fetch.cache.ChunkCache;
 
 public class ChunkManagerFactoryConfig extends AbstractConfig {
 
-    protected static final String CHUNK_CACHE_PREFIX = "chunk.cache.";
-    public static final String CHUNK_CACHE_CONFIG = CHUNK_CACHE_PREFIX + "class";
-    private static final String CHUNK_CACHE_DOC = "The chunk cache implementation";
+    protected static final String FETCH_CHUNK_CACHE_PREFIX = "fetch.chunk.cache.";
+    public static final String FETCH_CHUNK_CACHE_CONFIG = FETCH_CHUNK_CACHE_PREFIX + "class";
+    private static final String FETCH_CHUNK_CACHE_DOC = "The fetch chunk cache implementation";
 
     private static final ConfigDef CONFIG;
 
@@ -36,12 +36,12 @@ public class ChunkManagerFactoryConfig extends AbstractConfig {
         CONFIG = new ConfigDef();
 
         CONFIG.define(
-            CHUNK_CACHE_CONFIG,
+            FETCH_CHUNK_CACHE_CONFIG,
             ConfigDef.Type.CLASS,
             null,
             Subclass.of(ChunkCache.class),
             ConfigDef.Importance.MEDIUM,
-            CHUNK_CACHE_DOC
+            FETCH_CHUNK_CACHE_DOC
         );
     }
 
@@ -51,6 +51,6 @@ public class ChunkManagerFactoryConfig extends AbstractConfig {
 
     @SuppressWarnings("unchecked")
     public Class<ChunkCache<?>> cacheClass() {
-        return (Class<ChunkCache<?>>) getClass(CHUNK_CACHE_CONFIG);
+        return (Class<ChunkCache<?>>) getClass(FETCH_CHUNK_CACHE_CONFIG);
     }
 }

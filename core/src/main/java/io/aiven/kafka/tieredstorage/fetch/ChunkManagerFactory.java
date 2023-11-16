@@ -41,7 +41,7 @@ public class ChunkManagerFactory implements Configurable {
                     .cacheClass()
                     .getDeclaredConstructor(ChunkManager.class)
                     .newInstance(defaultChunkManager);
-                chunkCache.configure(config.originalsWithPrefix(ChunkManagerFactoryConfig.CHUNK_CACHE_PREFIX));
+                chunkCache.configure(config.originalsWithPrefix(ChunkManagerFactoryConfig.FETCH_CHUNK_CACHE_PREFIX));
                 return chunkCache;
             } catch (final ReflectiveOperationException e) {
                 throw new RuntimeException(e);

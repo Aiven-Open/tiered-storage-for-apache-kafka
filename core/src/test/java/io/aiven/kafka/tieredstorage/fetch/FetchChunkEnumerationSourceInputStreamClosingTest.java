@@ -114,8 +114,8 @@ class FetchChunkEnumerationSourceInputStreamClosingTest {
                 result.add(Arguments.of(
                     Named.of("with in-memory cache",
                         Map.of(
-                            "chunk.cache.class", InMemoryChunkCache.class.getCanonicalName(),
-                            "chunk.cache.size", "-1"
+                            "fetch.chunk.cache.class", InMemoryChunkCache.class.getCanonicalName(),
+                            "fetch.chunk.cache.size", "-1"
                         )
                     ),
                     readFully,
@@ -124,9 +124,9 @@ class FetchChunkEnumerationSourceInputStreamClosingTest {
                 result.add(Arguments.of(
                     Named.of("with disk-based cache",
                         Map.of(
-                            "chunk.cache.class", DiskBasedChunkCache.class.getCanonicalName(),
-                            "chunk.cache.path", Files.createTempDirectory("cache").toString(),
-                            "chunk.cache.size", "-1"
+                            "fetch.chunk.cache.class", DiskBasedChunkCache.class.getCanonicalName(),
+                            "fetch.chunk.cache.path", Files.createTempDirectory("cache").toString(),
+                            "fetch.chunk.cache.size", "-1"
                         )
                     ),
                     readFully,

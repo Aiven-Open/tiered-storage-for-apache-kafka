@@ -94,9 +94,9 @@ class RemoteStorageManagerMetricsTest {
             "storage.backend.class",
             "io.aiven.kafka.tieredstorage.storage.filesystem.FileSystemStorage",
             "storage.root", target.toString(),
-            "chunk.cache.path", tmpDir.resolve("cache").toString(),
-            "chunk.cache.class", InMemoryChunkCache.class.getCanonicalName(),
-            "chunk.cache.size", 100 * 1024 * 1024,
+            "fetch.chunk.cache.path", tmpDir.resolve("cache").toString(),
+            "fetch.chunk.cache.class", InMemoryChunkCache.class.getCanonicalName(),
+            "fetch.chunk.cache.size", 100 * 1024 * 1024,
             "metrics.recording.level", "DEBUG"
         );
 
