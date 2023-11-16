@@ -52,13 +52,11 @@ services:
       KAFKA_REMOTE_LOG_MANAGER_TASK_INTERVAL_MS: 5000
       # Remote metadata manager
       KAFKA_REMOTE_LOG_METADATA_MANAGER_CLASS_NAME: "org.apache.kafka.server.log.remote.metadata.storage.TopicBasedRemoteLogMetadataManager"
-      KAFKA_REMOTE_LOG_METADATA_MANAGER_IMPL_PREFIX: "rlmm.config."
       KAFKA_REMOTE_LOG_METADATA_MANAGER_LISTENER_NAME: "BROKER"
       KAFKA_RLMM_CONFIG_REMOTE_LOG_METADATA_TOPIC_REPLICATION_FACTOR: 1
       # Remote storage manager
       KAFKA_REMOTE_LOG_STORAGE_MANAGER_CLASS_PATH: "/tiered-storage-for-apache-kafka/core/*:/tiered-storage-for-apache-kafka/gcs/*"
       KAFKA_REMOTE_LOG_STORAGE_MANAGER_CLASS_NAME: "io.aiven.kafka.tieredstorage.RemoteStorageManager"
-      KAFKA_REMOTE_LOG_STORAGE_MANAGER_IMPL_PREFIX: "rsm.config."
       KAFKA_RSM_CONFIG_CHUNK_SIZE: 4194304 # 4 MiB
       KAFKA_RSM_CONFIG_CHUNK_CACHE_CLASS: "io.aiven.kafka.tieredstorage.chunkmanager.cache.DiskBasedChunkCache"
       KAFKA_RSM_CONFIG_CHUNK_CACHE_PATH: /home/appuser/kafka-tiered-storage-cache
