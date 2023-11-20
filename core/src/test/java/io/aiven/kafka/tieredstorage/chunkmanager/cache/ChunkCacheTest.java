@@ -336,5 +336,47 @@ class ChunkCacheTest {
                     .hasRootCauseInstanceOf(RuntimeException.class)
                     .hasRootCauseMessage(TEST_EXCEPTION_MESSAGE);
         }
+
+        @Test
+        void cacheIsNotPoisonedWithFailedFuturesOnFetching() throws Exception {
+            when(chunkManager.getChunk(eq(SEGMENT_OBJECT_KEY), eq(SEGMENT_MANIFEST), eq(0)))
+                .thenThrow(new StorageBackendException(TEST_EXCEPTION_MESSAGE))
+                .thenReturn(new ByteArrayInputStream(new byte[1]));
+
+            assertThatThrownBy(() -> chunkCache
+                .getChunk(SEGMENT_OBJECT_KEY, SEGMENT_MANIFEST, 0))
+                .isInstanceOf(StorageBackendException.class)
+                .hasMessage(TEST_EXCEPTION_MESSAGE);
+
+            await().atMost(Duration.ofMillis(50))
+                .pollInterval(Duration.ofMillis(5))
+                .ignoreExceptions()
+                .until(() ->
+                    chunkCache.getChunk(SEGMENT_OBJECT_KEY, SEGMENT_MANIFEST, 0).readAllBytes().length == 1);
+        }
+
+        @Test
+        void cacheIsNotPoisonedWithFailedFuturesOnPrefetching() throws Exception {
+            when(chunkManager.getChunk(eq(SEGMENT_OBJECT_KEY), eq(SEGMENT_MANIFEST), eq(0)))
+                .thenReturn(new ByteArrayInputStream(new byte[1]));
+            when(chunkManager.getChunk(eq(SEGMENT_OBJECT_KEY), eq(SEGMENT_MANIFEST), eq(1)))
+                .thenThrow(new StorageBackendException(TEST_EXCEPTION_MESSAGE))
+                .thenReturn(new ByteArrayInputStream(new byte[1]));
+            // To avoid returning null on prefetching when we fetch 1 directly:
+            when(chunkManager.getChunk(eq(SEGMENT_OBJECT_KEY), eq(SEGMENT_MANIFEST), eq(2)))
+                .thenReturn(new ByteArrayInputStream(new byte[1]));
+
+            chunkCache.configure(Map.of(
+                "retention.ms", "-1",
+                "size", "-1",
+                "prefetch.max.size", ORIGINAL_CHUNK_SIZE
+            ));
+            chunkCache.getChunk(SEGMENT_OBJECT_KEY, SEGMENT_MANIFEST, 0);
+            await().atMost(Duration.ofMillis(500))
+                .pollInterval(Duration.ofMillis(5))
+                .ignoreExceptions()
+                .until(() ->
+                    chunkCache.getChunk(SEGMENT_OBJECT_KEY, SEGMENT_MANIFEST, 0).readAllBytes().length == 1);
+        }
     }
 }
