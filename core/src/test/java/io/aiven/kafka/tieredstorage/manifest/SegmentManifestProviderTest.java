@@ -42,6 +42,7 @@ import org.mockito.junit.jupiter.MockitoExtension;
 import static org.assertj.core.api.Assertions.assertThat;
 import static org.assertj.core.api.Assertions.assertThatNoException;
 import static org.assertj.core.api.Assertions.assertThatThrownBy;
+import static org.awaitility.Awaitility.await;
 import static org.mockito.ArgumentMatchers.any;
 import static org.mockito.Mockito.doAnswer;
 import static org.mockito.Mockito.verify;
@@ -140,5 +141,25 @@ class SegmentManifestProviderTest {
         assertThatThrownBy(() -> provider.get(MANIFEST_KEY))
             .isInstanceOf(IOException.class)
             .hasMessage("test");
+    }
+
+    @Test
+    void shouldNotPoisonCacheWithFailedFutures()
+        throws StorageBackendException {
+        when(storage.fetch(MANIFEST_KEY))
+            .thenThrow(new StorageBackendException("test"))
+            .thenReturn(new ByteArrayInputStream(MANIFEST.getBytes()));
+
+        assertThatThrownBy(() -> provider.get(MANIFEST_KEY))
+            .isInstanceOf(StorageBackendException.class)
+            .hasMessage("test");
+
+        final var chunkIndex = new FixedSizeChunkIndex(100, 1000, 110, 110);
+        final var expectedManifest = new SegmentManifestV1(chunkIndex, SEGMENT_INDEXES, false, null, null);
+
+        await().atMost(Duration.ofMillis(50))
+            .pollInterval(Duration.ofMillis(5))
+            .ignoreExceptions()
+            .until(() -> provider.get(MANIFEST_KEY).equals(expectedManifest));
     }
 }
