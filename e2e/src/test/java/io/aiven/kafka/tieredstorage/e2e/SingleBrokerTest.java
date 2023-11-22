@@ -150,10 +150,10 @@ abstract class SingleBrokerTest {
             .withEnv("KAFKA_REMOTE_LOG_STORAGE_MANAGER_CLASS_NAME",
                 "io.aiven.kafka.tieredstorage.RemoteStorageManager")
             .withEnv("KAFKA_RSM_CONFIG_CHUNK_SIZE", Integer.toString(CHUNK_SIZE))
-            .withEnv("KAFKA_RSM_CONFIG_CHUNK_CACHE_CLASS",
-                "io.aiven.kafka.tieredstorage.chunkmanager.cache.DiskBasedChunkCache")
-            .withEnv("KAFKA_RSM_CONFIG_CHUNK_CACHE_SIZE", "-1")
-            .withEnv("KAFKA_RSM_CONFIG_CHUNK_CACHE_PATH", "/home/appuser/kafka-tiered-storage-cache")
+            .withEnv("KAFKA_RSM_CONFIG_FETCH_CHUNK_CACHE_CLASS",
+                "io.aiven.kafka.tieredstorage.fetch.cache.DiskBasedChunkCache")
+            .withEnv("KAFKA_RSM_CONFIG_FETCH_CHUNK_CACHE_SIZE", "-1")
+            .withEnv("KAFKA_RSM_CONFIG_FETCH_CHUNK_CACHE_PATH", "/home/appuser/kafka-tiered-storage-cache")
             .withEnv("KAFKA_RSM_CONFIG_CUSTOM_METADATA_FIELDS_INCLUDE", "REMOTE_SIZE")
             // other tweaks
             .withEnv("KAFKA_OPTS", "") // disable JMX exporter

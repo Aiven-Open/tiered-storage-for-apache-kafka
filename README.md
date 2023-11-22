@@ -52,14 +52,14 @@ rsm.config.storage.gcs.credentials.default=true
 # The prefix can be skipped:
 #rsm.config.storage.key.prefix: "some/prefix/"
 
-# ----- Configure the chunk cache -----
+# ----- Configure the fetch chunk cache -----
 
-rsm.config.chunk.cache.class=io.aiven.kafka.tieredstorage.chunkmanager.cache.DiskBasedChunkCache
-rsm.config.chunk.cache.path=/cache/root/directory
+rsm.config.fetch.chunk.cache.class=io.aiven.kafka.tieredstorage.fetch.cache.DiskBasedChunkCache
+rsm.config.fetch.chunk.cache.path=/cache/root/directory
 # Pick some cache size, 16 GiB here:
-rsm.config.chunk.cache.size=17179869184
+rsm.config.fetch.chunk.cache.size=17179869184
 # Prefetching size, 16 MiB here:
-rsm.config.chunk.cache.prefetch.max.size=16777216
+rsm.config.fetch.chunk.cache.prefetch.max.size=16777216
 ```
 
 You may want to tweak `remote.log.manager.task.interval.ms` and `log.retention.check.interval.ms` to see the tiered storage effects faster. However, you probably don't need to change this in production setups.

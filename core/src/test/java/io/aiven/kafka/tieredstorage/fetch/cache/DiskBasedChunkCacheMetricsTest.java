@@ -14,7 +14,7 @@
  * limitations under the License.
  */
 
-package io.aiven.kafka.tieredstorage.chunkmanager.cache;
+package io.aiven.kafka.tieredstorage.fetch.cache;
 
 import javax.management.JMException;
 import javax.management.MBeanServer;
@@ -32,7 +32,7 @@ import org.apache.kafka.common.metrics.MetricConfig;
 import org.apache.kafka.common.utils.Time;
 import org.apache.kafka.server.log.remote.storage.RemoteStorageManager;
 
-import io.aiven.kafka.tieredstorage.chunkmanager.DefaultChunkManager;
+import io.aiven.kafka.tieredstorage.fetch.DefaultChunkManager;
 import io.aiven.kafka.tieredstorage.manifest.SegmentIndexesV1;
 import io.aiven.kafka.tieredstorage.manifest.SegmentManifest;
 import io.aiven.kafka.tieredstorage.manifest.SegmentManifestV1;

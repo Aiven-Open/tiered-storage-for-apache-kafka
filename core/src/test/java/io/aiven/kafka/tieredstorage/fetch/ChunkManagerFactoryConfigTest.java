@@ -14,13 +14,13 @@
  * limitations under the License.
  */
 
-package io.aiven.kafka.tieredstorage.chunkmanager;
+package io.aiven.kafka.tieredstorage.fetch;
 
 import java.util.Map;
 
 import org.apache.kafka.common.config.ConfigException;
 
-import io.aiven.kafka.tieredstorage.chunkmanager.cache.ChunkCache;
+import io.aiven.kafka.tieredstorage.fetch.cache.ChunkCache;
 
 import org.junit.jupiter.api.Test;
 import org.junit.jupiter.params.ParameterizedTest;
@@ -33,19 +33,19 @@ class ChunkManagerFactoryConfigTest {
 
     @Test
     void invalidCacheClass() {
-        assertThatThrownBy(() -> new ChunkManagerFactoryConfig(Map.of("chunk.cache.class", "java.lang.Object")))
+        assertThatThrownBy(() -> new ChunkManagerFactoryConfig(Map.of("fetch.chunk.cache.class", "java.lang.Object")))
                 .isInstanceOf(ConfigException.class)
-                .hasMessage("chunk.cache.class should be a subclass of " + ChunkCache.class.getCanonicalName());
+                .hasMessage("fetch.chunk.cache.class should be a subclass of " + ChunkCache.class.getCanonicalName());
     }
 
     @ParameterizedTest
     @ValueSource(strings = {
-        "io.aiven.kafka.tieredstorage.chunkmanager.cache.InMemoryChunkCache",
-        "io.aiven.kafka.tieredstorage.chunkmanager.cache.DiskBasedChunkCache"
+        "io.aiven.kafka.tieredstorage.fetch.cache.InMemoryChunkCache",
+        "io.aiven.kafka.tieredstorage.fetch.cache.DiskBasedChunkCache"
     })
     void validCacheClass(final String cacheClass) {
         final ChunkManagerFactoryConfig config = new ChunkManagerFactoryConfig(
-                Map.of("chunk.cache.class", cacheClass)
+                Map.of("fetch.chunk.cache.class", cacheClass)
         );
         assertThat(config.cacheClass().getCanonicalName()).isEqualTo(cacheClass);
     }

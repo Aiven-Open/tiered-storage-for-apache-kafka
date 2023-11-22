@@ -54,8 +54,9 @@ import org.apache.kafka.server.log.remote.storage.RemoteResourceNotFoundExceptio
 import org.apache.kafka.server.log.remote.storage.RemoteStorageException;
 import org.apache.kafka.server.log.remote.storage.RemoteStorageManager.IndexType;
 
-import io.aiven.kafka.tieredstorage.chunkmanager.cache.DiskBasedChunkCache;
-import io.aiven.kafka.tieredstorage.chunkmanager.cache.InMemoryChunkCache;
+import io.aiven.kafka.tieredstorage.fetch.KeyNotFoundRuntimeException;
+import io.aiven.kafka.tieredstorage.fetch.cache.DiskBasedChunkCache;
+import io.aiven.kafka.tieredstorage.fetch.cache.InMemoryChunkCache;
 import io.aiven.kafka.tieredstorage.manifest.SegmentEncryptionMetadataV1;
 import io.aiven.kafka.tieredstorage.manifest.SegmentIndexesV1Builder;
 import io.aiven.kafka.tieredstorage.manifest.index.ChunkIndex;
@@ -68,7 +69,6 @@ import io.aiven.kafka.tieredstorage.security.DataKeyAndAAD;
 import io.aiven.kafka.tieredstorage.security.EncryptedDataKey;
 import io.aiven.kafka.tieredstorage.security.RsaEncryptionProvider;
 import io.aiven.kafka.tieredstorage.storage.KeyNotFoundException;
-import io.aiven.kafka.tieredstorage.transform.KeyNotFoundRuntimeException;
 
 import com.fasterxml.jackson.databind.JsonNode;
 import com.fasterxml.jackson.databind.ObjectMapper;
@@ -206,9 +206,9 @@ class RemoteStorageManagerTest extends RsaKeyAwareTest {
             "storage.root", targetDir.toString(),
             "compression.enabled", Boolean.toString(compression),
             "encryption.enabled", Boolean.toString(encryption),
-            "chunk.cache.class", cacheClass,
-            "chunk.cache.path", cacheDir.toString(),
-            "chunk.cache.size", Integer.toString(100 * 1024 * 1024),
+            "fetch.chunk.cache.class", cacheClass,
+            "fetch.chunk.cache.path", cacheDir.toString(),
+            "fetch.chunk.cache.size", Integer.toString(100 * 1024 * 1024),
             "custom.metadata.fields.include", "REMOTE_SIZE,OBJECT_PREFIX,OBJECT_KEY"
         ));
         if (encryption) {
@@ -453,9 +453,9 @@ class RemoteStorageManagerTest extends RsaKeyAwareTest {
                 put("storage.root", targetDir.toString());
                 put("compression.enabled", "true");
                 put("compression.heuristic.enabled", "true");
-                put("chunk.cache.size", 10000);
-                put("chunk.cache.class", InMemoryChunkCache.class.getCanonicalName());
-                put("chunk.cache.retention.ms", 10000);
+                put("fetch.chunk.cache.size", 10000);
+                put("fetch.chunk.cache.class", InMemoryChunkCache.class.getCanonicalName());
+                put("fetch.chunk.cache.retention.ms", 10000);
             }};
 
         rsm.configure(config);

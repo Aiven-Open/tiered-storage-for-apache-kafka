@@ -40,7 +40,7 @@ import org.apache.kafka.server.log.remote.storage.RemoteLogSegmentId;
 import org.apache.kafka.server.log.remote.storage.RemoteLogSegmentMetadata;
 import org.apache.kafka.server.log.remote.storage.RemoteStorageException;
 
-import io.aiven.kafka.tieredstorage.chunkmanager.cache.InMemoryChunkCache;
+import io.aiven.kafka.tieredstorage.fetch.cache.InMemoryChunkCache;
 import io.aiven.kafka.tieredstorage.storage.StorageBackendException;
 import io.aiven.kafka.tieredstorage.storage.filesystem.FileSystemStorage;
 
@@ -94,9 +94,9 @@ class RemoteStorageManagerMetricsTest {
             "storage.backend.class",
             "io.aiven.kafka.tieredstorage.storage.filesystem.FileSystemStorage",
             "storage.root", target.toString(),
-            "chunk.cache.path", tmpDir.resolve("cache").toString(),
-            "chunk.cache.class", InMemoryChunkCache.class.getCanonicalName(),
-            "chunk.cache.size", 100 * 1024 * 1024,
+            "fetch.chunk.cache.path", tmpDir.resolve("cache").toString(),
+            "fetch.chunk.cache.class", InMemoryChunkCache.class.getCanonicalName(),
+            "fetch.chunk.cache.size", 100 * 1024 * 1024,
             "metrics.recording.level", "DEBUG"
         );
 

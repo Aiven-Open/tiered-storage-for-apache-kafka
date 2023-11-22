@@ -14,7 +14,7 @@
  * limitations under the License.
  */
 
-package io.aiven.kafka.tieredstorage.chunkmanager.cache;
+package io.aiven.kafka.tieredstorage.fetch.cache;
 
 import javax.management.MBeanServer;
 import javax.management.ObjectName;
@@ -25,7 +25,7 @@ import java.nio.file.Path;
 import java.util.Map;
 import java.util.stream.Stream;
 
-import io.aiven.kafka.tieredstorage.chunkmanager.ChunkManager;
+import io.aiven.kafka.tieredstorage.fetch.ChunkManager;
 import io.aiven.kafka.tieredstorage.manifest.SegmentManifest;
 import io.aiven.kafka.tieredstorage.manifest.index.ChunkIndex;
 import io.aiven.kafka.tieredstorage.manifest.index.FixedSizeChunkIndex;
@@ -92,7 +92,7 @@ class ChunkCacheMetricsTest {
     @MethodSource("caches")
     void shouldRecordMetrics(final Class<ChunkCache<?>> chunkCacheClass, final Map<String, ?> config)
         throws Exception {
-        // Given a chunk cache implementation
+        // Given a fetch chunk cache implementation
         when(chunkManager.getChunk(any(), any(), anyInt()))
             .thenReturn(new ByteArrayInputStream("test".getBytes()));
 

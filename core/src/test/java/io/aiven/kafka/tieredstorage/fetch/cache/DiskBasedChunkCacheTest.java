@@ -14,7 +14,7 @@
  * limitations under the License.
  */
 
-package io.aiven.kafka.tieredstorage.chunkmanager.cache;
+package io.aiven.kafka.tieredstorage.fetch.cache;
 
 import java.io.ByteArrayInputStream;
 import java.io.IOException;
@@ -22,8 +22,8 @@ import java.nio.file.Files;
 import java.nio.file.Path;
 import java.util.Map;
 
-import io.aiven.kafka.tieredstorage.chunkmanager.ChunkKey;
-import io.aiven.kafka.tieredstorage.chunkmanager.ChunkManager;
+import io.aiven.kafka.tieredstorage.fetch.ChunkKey;
+import io.aiven.kafka.tieredstorage.fetch.ChunkManager;
 
 import com.github.benmanes.caffeine.cache.RemovalCause;
 import com.github.benmanes.caffeine.cache.RemovalListener;
@@ -36,8 +36,8 @@ import org.mockito.Mock;
 import org.mockito.MockedStatic;
 import org.mockito.junit.jupiter.MockitoExtension;
 
-import static io.aiven.kafka.tieredstorage.chunkmanager.cache.DiskBasedChunkCacheConfig.CACHE_DIRECTORY;
-import static io.aiven.kafka.tieredstorage.chunkmanager.cache.DiskBasedChunkCacheConfig.TEMP_CACHE_DIRECTORY;
+import static io.aiven.kafka.tieredstorage.fetch.cache.DiskBasedChunkCacheConfig.CACHE_DIRECTORY;
+import static io.aiven.kafka.tieredstorage.fetch.cache.DiskBasedChunkCacheConfig.TEMP_CACHE_DIRECTORY;
 import static org.assertj.core.api.Assertions.assertThat;
 import static org.assertj.core.api.Assertions.assertThatNoException;
 import static org.assertj.core.api.Assertions.assertThatThrownBy;

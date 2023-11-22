@@ -14,13 +14,13 @@
  * limitations under the License.
  */
 
-package io.aiven.kafka.tieredstorage.chunkmanager;
+package io.aiven.kafka.tieredstorage.fetch;
 
 import java.util.Map;
 
 import org.apache.kafka.common.Configurable;
 
-import io.aiven.kafka.tieredstorage.chunkmanager.cache.ChunkCache;
+import io.aiven.kafka.tieredstorage.fetch.cache.ChunkCache;
 import io.aiven.kafka.tieredstorage.security.AesEncryptionProvider;
 import io.aiven.kafka.tieredstorage.storage.ObjectFetcher;
 
@@ -41,7 +41,7 @@ public class ChunkManagerFactory implements Configurable {
                     .cacheClass()
                     .getDeclaredConstructor(ChunkManager.class)
                     .newInstance(defaultChunkManager);
-                chunkCache.configure(config.originalsWithPrefix(ChunkManagerFactoryConfig.CHUNK_CACHE_PREFIX));
+                chunkCache.configure(config.originalsWithPrefix(ChunkManagerFactoryConfig.FETCH_CHUNK_CACHE_PREFIX));
                 return chunkCache;
             } catch (final ReflectiveOperationException e) {
                 throw new RuntimeException(e);

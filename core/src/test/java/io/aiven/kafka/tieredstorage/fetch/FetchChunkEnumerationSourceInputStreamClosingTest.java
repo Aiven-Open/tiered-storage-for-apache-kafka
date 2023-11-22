@@ -14,7 +14,7 @@
  * limitations under the License.
  */
 
-package io.aiven.kafka.tieredstorage.transform;
+package io.aiven.kafka.tieredstorage.fetch;
 
 import java.io.ByteArrayInputStream;
 import java.io.IOException;
@@ -26,10 +26,8 @@ import java.util.Map;
 
 import org.apache.kafka.server.log.remote.storage.RemoteStorageManager.IndexType;
 
-import io.aiven.kafka.tieredstorage.chunkmanager.ChunkManager;
-import io.aiven.kafka.tieredstorage.chunkmanager.ChunkManagerFactory;
-import io.aiven.kafka.tieredstorage.chunkmanager.cache.DiskBasedChunkCache;
-import io.aiven.kafka.tieredstorage.chunkmanager.cache.InMemoryChunkCache;
+import io.aiven.kafka.tieredstorage.fetch.cache.DiskBasedChunkCache;
+import io.aiven.kafka.tieredstorage.fetch.cache.InMemoryChunkCache;
 import io.aiven.kafka.tieredstorage.manifest.SegmentIndexesV1;
 import io.aiven.kafka.tieredstorage.manifest.SegmentManifest;
 import io.aiven.kafka.tieredstorage.manifest.SegmentManifestV1;
@@ -116,8 +114,8 @@ class FetchChunkEnumerationSourceInputStreamClosingTest {
                 result.add(Arguments.of(
                     Named.of("with in-memory cache",
                         Map.of(
-                            "chunk.cache.class", InMemoryChunkCache.class.getCanonicalName(),
-                            "chunk.cache.size", "-1"
+                            "fetch.chunk.cache.class", InMemoryChunkCache.class.getCanonicalName(),
+                            "fetch.chunk.cache.size", "-1"
                         )
                     ),
                     readFully,
@@ -126,9 +124,9 @@ class FetchChunkEnumerationSourceInputStreamClosingTest {
                 result.add(Arguments.of(
                     Named.of("with disk-based cache",
                         Map.of(
-                            "chunk.cache.class", DiskBasedChunkCache.class.getCanonicalName(),
-                            "chunk.cache.path", Files.createTempDirectory("cache").toString(),
-                            "chunk.cache.size", "-1"
+                            "fetch.chunk.cache.class", DiskBasedChunkCache.class.getCanonicalName(),
+                            "fetch.chunk.cache.path", Files.createTempDirectory("cache").toString(),
+                            "fetch.chunk.cache.size", "-1"
                         )
                     ),
                     readFully,
