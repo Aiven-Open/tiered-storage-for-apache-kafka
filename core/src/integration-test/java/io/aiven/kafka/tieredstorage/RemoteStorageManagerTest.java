@@ -55,7 +55,7 @@ import org.apache.kafka.server.log.remote.storage.RemoteStorageException;
 import org.apache.kafka.server.log.remote.storage.RemoteStorageManager.IndexType;
 
 import io.aiven.kafka.tieredstorage.fetch.KeyNotFoundRuntimeException;
-import io.aiven.kafka.tieredstorage.fetch.cache.DiskBasedChunkCache;
+import io.aiven.kafka.tieredstorage.fetch.cache.DiskChunkCache;
 import io.aiven.kafka.tieredstorage.fetch.cache.InMemoryChunkCache;
 import io.aiven.kafka.tieredstorage.manifest.SegmentEncryptionMetadataV1;
 import io.aiven.kafka.tieredstorage.manifest.SegmentIndexesV1Builder;
@@ -125,7 +125,7 @@ class RemoteStorageManagerTest extends RsaKeyAwareTest {
     private static List<Arguments> provideEndToEnd() {
         final List<Arguments> result = new ArrayList<>();
         final var cacheNames =
-            List.of(InMemoryChunkCache.class.getCanonicalName(), DiskBasedChunkCache.class.getCanonicalName());
+            List.of(InMemoryChunkCache.class.getCanonicalName(), DiskChunkCache.class.getCanonicalName());
         for (final String cacheClass : cacheNames) {
             for (final int chunkSize : List.of(1024 * 1024 - 1, 1024 * 1024 * 1024 - 1, Integer.MAX_VALUE / 2)) {
                 for (final boolean compression : List.of(true, false)) {

@@ -27,7 +27,7 @@ import org.apache.kafka.common.metrics.stats.CumulativeSum;
 import org.apache.kafka.common.metrics.stats.Rate;
 import org.apache.kafka.common.utils.Time;
 
-class DiskBasedChunkCacheMetrics {
+class DiskChunkCacheMetrics {
     private static final String METRIC_GROUP = "chunk-cache-disk";
 
     private final Metrics metrics;
@@ -37,7 +37,7 @@ class DiskBasedChunkCacheMetrics {
     private final Sensor deletes;
     private final Sensor deleteBytes;
 
-    DiskBasedChunkCacheMetrics(final Time time) {
+    DiskChunkCacheMetrics(final Time time) {
         final JmxReporter reporter = new JmxReporter();
 
         metrics = new org.apache.kafka.common.metrics.Metrics(

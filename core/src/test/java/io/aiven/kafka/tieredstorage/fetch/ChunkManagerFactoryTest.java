@@ -21,7 +21,7 @@ import java.util.Map;
 import java.util.stream.Stream;
 
 import io.aiven.kafka.tieredstorage.fetch.cache.ChunkCache;
-import io.aiven.kafka.tieredstorage.fetch.cache.DiskBasedChunkCache;
+import io.aiven.kafka.tieredstorage.fetch.cache.DiskChunkCache;
 import io.aiven.kafka.tieredstorage.fetch.cache.InMemoryChunkCache;
 
 import org.junit.jupiter.api.Test;
@@ -46,7 +46,7 @@ class ChunkManagerFactoryTest {
     public static Stream<Arguments> cachingChunkManagers() {
         return Stream.of(
             arguments(InMemoryChunkCache.class),
-            arguments(DiskBasedChunkCache.class)
+            arguments(DiskChunkCache.class)
         );
     }
 

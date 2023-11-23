@@ -151,7 +151,7 @@ abstract class SingleBrokerTest {
                 "io.aiven.kafka.tieredstorage.RemoteStorageManager")
             .withEnv("KAFKA_RSM_CONFIG_CHUNK_SIZE", Integer.toString(CHUNK_SIZE))
             .withEnv("KAFKA_RSM_CONFIG_FETCH_CHUNK_CACHE_CLASS",
-                "io.aiven.kafka.tieredstorage.fetch.cache.DiskBasedChunkCache")
+                "io.aiven.kafka.tieredstorage.fetch.cache.DiskChunkCache")
             .withEnv("KAFKA_RSM_CONFIG_FETCH_CHUNK_CACHE_SIZE", "-1")
             .withEnv("KAFKA_RSM_CONFIG_FETCH_CHUNK_CACHE_PATH", "/home/appuser/kafka-tiered-storage-cache")
             .withEnv("KAFKA_RSM_CONFIG_CUSTOM_METADATA_FIELDS_INCLUDE", "REMOTE_SIZE")

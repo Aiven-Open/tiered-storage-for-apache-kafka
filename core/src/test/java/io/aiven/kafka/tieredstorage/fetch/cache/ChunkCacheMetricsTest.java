@@ -67,7 +67,7 @@ class ChunkCacheMetricsTest {
     private static Stream<Arguments> caches() {
         return Stream.of(
             Arguments.of(
-                DiskBasedChunkCache.class,
+                DiskChunkCache.class,
                 Map.of(
                     "retention.ms", "-1",
                     "size", "-1",

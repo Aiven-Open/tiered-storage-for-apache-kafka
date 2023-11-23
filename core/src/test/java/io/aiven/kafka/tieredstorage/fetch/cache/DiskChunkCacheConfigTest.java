@@ -37,8 +37,8 @@ import org.junit.jupiter.params.provider.Arguments;
 import org.junit.jupiter.params.provider.MethodSource;
 import org.mockito.junit.jupiter.MockitoExtension;
 
-import static io.aiven.kafka.tieredstorage.fetch.cache.DiskBasedChunkCacheConfig.CACHE_DIRECTORY;
-import static io.aiven.kafka.tieredstorage.fetch.cache.DiskBasedChunkCacheConfig.TEMP_CACHE_DIRECTORY;
+import static io.aiven.kafka.tieredstorage.fetch.cache.DiskChunkCacheConfig.CACHE_DIRECTORY;
+import static io.aiven.kafka.tieredstorage.fetch.cache.DiskChunkCacheConfig.TEMP_CACHE_DIRECTORY;
 import static org.assertj.core.api.Assertions.assertThat;
 import static org.assertj.core.api.Assertions.assertThatThrownBy;
 import static org.junit.jupiter.params.provider.Arguments.arguments;
@@ -47,7 +47,7 @@ import static org.mockito.Mockito.CALLS_REAL_METHODS;
 import static org.mockito.Mockito.mockStatic;
 
 @ExtendWith(MockitoExtension.class)
-class DiskBasedChunkCacheConfigTest {
+class DiskChunkCacheConfigTest {
 
     @TempDir
     private Path path;
@@ -62,7 +62,7 @@ class DiskBasedChunkCacheConfigTest {
 
     @Test
     void validConfig() {
-        final var config = new DiskBasedChunkCacheConfig(
+        final var config = new DiskChunkCacheConfig(
             Map.of(
                 "size", "-1",
                 "path", path.toString()
@@ -76,7 +76,7 @@ class DiskBasedChunkCacheConfigTest {
         Files.createFile(tempCachePath.resolve("temp-file"));
         Files.createFile(cachePath.resolve("cached-file"));
 
-        final var config = new DiskBasedChunkCacheConfig(
+        final var config = new DiskChunkCacheConfig(
             Map.of(
                 "size", "-1",
                 "path", path.toString()
@@ -99,7 +99,7 @@ class DiskBasedChunkCacheConfigTest {
             filesMockedStatic.when(() -> FileUtils.cleanDirectory(eq(path.toFile())))
                 .thenThrow(new IOException("Failed to delete file " + file));
             assertThat(path).exists();
-            assertThatThrownBy(() -> new DiskBasedChunkCacheConfig(
+            assertThatThrownBy(() -> new DiskChunkCacheConfig(
                 Map.of(
                     "size", "-1",
                     "path", path.toString()
@@ -114,7 +114,7 @@ class DiskBasedChunkCacheConfigTest {
     @ParameterizedTest
     @MethodSource("invalidBaseDirs")
     void invalidBaseDir(final File baseDir) {
-        assertThatThrownBy(() -> new DiskBasedChunkCacheConfig(
+        assertThatThrownBy(() -> new DiskChunkCacheConfig(
             Map.of(
                 "size", "-1",
                 "path", baseDir.toString()
