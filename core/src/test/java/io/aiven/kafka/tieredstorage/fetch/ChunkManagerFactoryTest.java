@@ -22,7 +22,7 @@ import java.util.stream.Stream;
 
 import io.aiven.kafka.tieredstorage.fetch.cache.ChunkCache;
 import io.aiven.kafka.tieredstorage.fetch.cache.DiskChunkCache;
-import io.aiven.kafka.tieredstorage.fetch.cache.InMemoryChunkCache;
+import io.aiven.kafka.tieredstorage.fetch.cache.MemoryChunkCache;
 
 import org.junit.jupiter.api.Test;
 import org.junit.jupiter.api.extension.ExtendWith;
@@ -45,7 +45,7 @@ class ChunkManagerFactoryTest {
 
     public static Stream<Arguments> cachingChunkManagers() {
         return Stream.of(
-            arguments(InMemoryChunkCache.class),
+            arguments(MemoryChunkCache.class),
             arguments(DiskChunkCache.class)
         );
     }
@@ -80,8 +80,8 @@ class ChunkManagerFactoryTest {
 
     @Test
     void failedInitialization() {
-        chunkManagerFactory.configure(Map.of("fetch.chunk.cache.class", InMemoryChunkCache.class));
-        try (final MockedConstruction<?> ignored = mockConstruction(InMemoryChunkCache.class,
+        chunkManagerFactory.configure(Map.of("fetch.chunk.cache.class", MemoryChunkCache.class));
+        try (final MockedConstruction<?> ignored = mockConstruction(MemoryChunkCache.class,
             (cachingChunkManager, context) -> {
                 throw new InvocationTargetException(null);
             })) {

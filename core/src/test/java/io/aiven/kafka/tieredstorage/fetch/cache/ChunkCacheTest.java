@@ -98,7 +98,7 @@ class ChunkCacheTest {
 
     @BeforeEach
     void setUp() {
-        chunkCache = spy(new InMemoryChunkCache(chunkManager));
+        chunkCache = spy(new MemoryChunkCache(chunkManager));
     }
 
     @AfterEach

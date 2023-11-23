@@ -27,7 +27,7 @@ import java.util.Map;
 import org.apache.kafka.server.log.remote.storage.RemoteStorageManager.IndexType;
 
 import io.aiven.kafka.tieredstorage.fetch.cache.DiskChunkCache;
-import io.aiven.kafka.tieredstorage.fetch.cache.InMemoryChunkCache;
+import io.aiven.kafka.tieredstorage.fetch.cache.MemoryChunkCache;
 import io.aiven.kafka.tieredstorage.manifest.SegmentIndexesV1;
 import io.aiven.kafka.tieredstorage.manifest.SegmentManifest;
 import io.aiven.kafka.tieredstorage.manifest.SegmentManifestV1;
@@ -114,7 +114,7 @@ class FetchChunkEnumerationSourceInputStreamClosingTest {
                 result.add(Arguments.of(
                     Named.of("with in-memory cache",
                         Map.of(
-                            "fetch.chunk.cache.class", InMemoryChunkCache.class.getCanonicalName(),
+                            "fetch.chunk.cache.class", MemoryChunkCache.class.getCanonicalName(),
                             "fetch.chunk.cache.size", "-1"
                         )
                     ),

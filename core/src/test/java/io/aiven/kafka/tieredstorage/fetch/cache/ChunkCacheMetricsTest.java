@@ -75,7 +75,7 @@ class ChunkCacheMetricsTest {
                 )
             ),
             Arguments.of(
-                InMemoryChunkCache.class,
+                MemoryChunkCache.class,
                 Map.of(
                     "retention.ms", "-1",
                     "size", "-1"

@@ -31,10 +31,10 @@ import com.github.benmanes.caffeine.cache.Weigher;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
-public class InMemoryChunkCache extends ChunkCache<byte[]> {
-    private static final Logger log = LoggerFactory.getLogger(InMemoryChunkCache.class);
+public class MemoryChunkCache extends ChunkCache<byte[]> {
+    private static final Logger log = LoggerFactory.getLogger(MemoryChunkCache.class);
 
-    public InMemoryChunkCache(final ChunkManager chunkManager) {
+    public MemoryChunkCache(final ChunkManager chunkManager) {
         super(chunkManager);
     }
 
