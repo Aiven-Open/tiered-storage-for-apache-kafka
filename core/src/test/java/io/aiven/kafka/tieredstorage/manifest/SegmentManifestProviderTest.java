@@ -25,6 +25,7 @@ import java.util.concurrent.ForkJoinPool;
 
 import org.apache.kafka.server.log.remote.storage.RemoteStorageManager.IndexType;
 
+import io.aiven.kafka.tieredstorage.RemoteFetchTimeoutException;
 import io.aiven.kafka.tieredstorage.manifest.index.FixedSizeChunkIndex;
 import io.aiven.kafka.tieredstorage.manifest.serde.KafkaTypeSerdeModule;
 import io.aiven.kafka.tieredstorage.storage.ObjectKey;
@@ -141,6 +142,19 @@ class SegmentManifestProviderTest {
         assertThatThrownBy(() -> provider.get(MANIFEST_KEY))
             .isInstanceOf(IOException.class)
             .hasMessage("test");
+    }
+
+    @Test
+    void shouldPropagateInterruptedAsRemoteFetchTimeout(@Mock final InputStream isMock)
+        throws StorageBackendException, IOException {
+        doAnswer(invocation -> {
+            throw new InterruptedException("test");
+        }).when(isMock).close();
+        when(storage.fetch(any()))
+            .thenReturn(isMock);
+        assertThatThrownBy(() -> provider.get(MANIFEST_KEY))
+            .isInstanceOf(RemoteFetchTimeoutException.class)
+            .hasMessage("Fetching segment manifest has been interrupted");
     }
 
     @Test

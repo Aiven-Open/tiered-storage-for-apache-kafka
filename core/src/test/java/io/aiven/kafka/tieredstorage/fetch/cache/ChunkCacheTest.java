@@ -25,6 +25,7 @@ import java.util.concurrent.ExecutionException;
 
 import org.apache.kafka.server.log.remote.storage.RemoteStorageManager.IndexType;
 
+import io.aiven.kafka.tieredstorage.RemoteFetchTimeoutException;
 import io.aiven.kafka.tieredstorage.fetch.ChunkKey;
 import io.aiven.kafka.tieredstorage.fetch.ChunkManager;
 import io.aiven.kafka.tieredstorage.manifest.SegmentIndexesV1;
@@ -335,6 +336,19 @@ class ChunkCacheTest {
                     .hasCauseInstanceOf(ExecutionException.class)
                     .hasRootCauseInstanceOf(RuntimeException.class)
                     .hasRootCauseMessage(TEST_EXCEPTION_MESSAGE);
+        }
+
+        @Test
+        void interruptedFetchIsHandledAsTimeoutException() throws Exception {
+            when(chunkManager.getChunk(eq(SEGMENT_OBJECT_KEY), eq(SEGMENT_MANIFEST), eq(0)))
+                .thenAnswer(invocation -> {
+                    throw new InterruptedException(TEST_EXCEPTION_MESSAGE);
+                });
+
+            assertThatThrownBy(() -> chunkCache
+                .getChunk(SEGMENT_OBJECT_KEY, SEGMENT_MANIFEST, 0))
+                .isInstanceOf(RemoteFetchTimeoutException.class)
+                .hasMessage("Fetching chunk has been interrupted");
         }
 
         @Test

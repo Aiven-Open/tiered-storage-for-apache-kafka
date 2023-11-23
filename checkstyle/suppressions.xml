@@ -30,6 +30,7 @@
     <suppress checks="ClassDataAbstractionCoupling" files="Metrics.java"/>
     <suppress checks="ClassDataAbstractionCoupling" files="MetricCollector.java"/>
     <suppress checks="ClassDataAbstractionCoupling" files="AzureBlobStorage.java"/>
+    <suppress checks="CyclomaticComplexity" files="ChunkCache.java"/>
     <suppress checks="CyclomaticComplexity" files="MetricCollector.java"/>
     <suppress checks="CyclomaticComplexity" files="SegmentIndexesV1Builder.java"/>
     <suppress checks="CyclomaticComplexity" files="SingleBrokerTest.java"/>

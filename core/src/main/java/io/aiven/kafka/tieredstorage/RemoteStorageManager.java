@@ -454,6 +454,9 @@ public class RemoteStorageManager implements org.apache.kafka.server.log.remote.
             final var segmentKey = objectKey(remoteLogSegmentMetadata, suffix);
             return new FetchChunkEnumeration(chunkManager, segmentKey, segmentManifest, range)
                 .toInputStream();
+        } catch (final RemoteFetchTimeoutException e) {
+            log.warn("Remote fetch has been interrupted", e);
+            return InputStream.nullInputStream();
         } catch (final KeyNotFoundException | KeyNotFoundRuntimeException e) {
             throw new RemoteResourceNotFoundException(e);
         } catch (final Exception e) {

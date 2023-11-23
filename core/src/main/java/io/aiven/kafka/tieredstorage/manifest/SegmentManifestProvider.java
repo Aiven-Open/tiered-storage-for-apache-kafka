@@ -25,6 +25,7 @@ import java.util.concurrent.Executor;
 import java.util.concurrent.TimeUnit;
 import java.util.concurrent.TimeoutException;
 
+import io.aiven.kafka.tieredstorage.RemoteFetchTimeoutException;
 import io.aiven.kafka.tieredstorage.metrics.CaffeineStatsCounter;
 import io.aiven.kafka.tieredstorage.storage.ObjectFetcher;
 import io.aiven.kafka.tieredstorage.storage.ObjectKey;
@@ -81,10 +82,13 @@ public class SegmentManifestProvider {
             if (e.getCause() instanceof IOException) {
                 throw (IOException) e.getCause();
             }
+            if (e.getCause() instanceof InterruptedException || e.getCause() instanceof TimeoutException) {
+                throw new RemoteFetchTimeoutException("Fetching segment manifest has been interrupted", e);
+            }
 
             throw new RuntimeException(e);
         } catch (final InterruptedException | TimeoutException e) {
-            throw new RuntimeException(e);
+            throw new RemoteFetchTimeoutException("Fetching segment manifest has been interrupted", e);
         }
     }
 }

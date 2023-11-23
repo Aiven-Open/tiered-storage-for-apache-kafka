@@ -29,6 +29,7 @@ import java.util.concurrent.atomic.AtomicReference;
 
 import org.apache.kafka.common.Configurable;
 
+import io.aiven.kafka.tieredstorage.RemoteFetchTimeoutException;
 import io.aiven.kafka.tieredstorage.fetch.ChunkKey;
 import io.aiven.kafka.tieredstorage.fetch.ChunkManager;
 import io.aiven.kafka.tieredstorage.manifest.SegmentManifest;
@@ -117,10 +118,13 @@ public abstract class ChunkCache<T> implements ChunkManager, Configurable {
             if (e.getCause() instanceof IOException) {
                 throw (IOException) e.getCause();
             }
+            if (e.getCause() instanceof InterruptedException || e.getCause() instanceof TimeoutException) {
+                throw new RemoteFetchTimeoutException("Fetching chunk has been interrupted", e);
+            }
 
             throw new RuntimeException(e);
         } catch (final InterruptedException | TimeoutException e) {
-            throw new RuntimeException(e);
+            throw new RemoteFetchTimeoutException("Fetching chunk has been interrupted", e);
         }
     }
 
