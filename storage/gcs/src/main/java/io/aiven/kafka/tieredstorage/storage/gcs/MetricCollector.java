@@ -64,7 +64,7 @@ class MetricCollector {
     static final Pattern OBJECT_UPLOAD_PATH_PATTERN =
         Pattern.compile("^/upload/storage/v1/b/([^/]+)/o/?$");
 
-    private static final String METRIC_GROUP = "gcs-metrics";
+    private static final String METRIC_GROUP = "gcs-client-metrics";
 
     private final Sensor getObjectMetadataRequests;
     private final Sensor deleteObjectRequests;

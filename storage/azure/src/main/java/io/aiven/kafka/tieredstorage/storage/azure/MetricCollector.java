@@ -41,7 +41,7 @@ import reactor.core.publisher.Mono;
 public class MetricCollector {
     private final org.apache.kafka.common.metrics.Metrics metrics;
 
-    private static final String METRIC_GROUP = "azure-blob-metrics";
+    private static final String METRIC_GROUP = "azure-blob-storage-client-metrics";
 
     final AzureBlobStorageConfig config;
 

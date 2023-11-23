@@ -28,7 +28,7 @@ import org.apache.kafka.common.metrics.stats.Rate;
 import org.apache.kafka.common.utils.Time;
 
 class DiskChunkCacheMetrics {
-    private static final String METRIC_GROUP = "chunk-cache-disk";
+    private static final String METRIC_GROUP = "disk-chunk-cache-metrics";
 
     private final Metrics metrics;
 

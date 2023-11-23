@@ -61,7 +61,7 @@ class S3ErrorMetricsTest {
 
     @BeforeEach
     void setUp() throws MalformedObjectNameException {
-        s3MetricsObjectName = ObjectName.getInstance("aiven.kafka.server.tieredstorage.s3:type=s3-metrics");
+        s3MetricsObjectName = ObjectName.getInstance("aiven.kafka.server.tieredstorage.s3:type=s3-client-metrics");
         storage = new S3Storage();
     }
 

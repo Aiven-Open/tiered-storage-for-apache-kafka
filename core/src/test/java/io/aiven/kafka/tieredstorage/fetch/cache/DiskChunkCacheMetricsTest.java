@@ -93,7 +93,7 @@ class DiskChunkCacheMetricsTest {
 
         diskChunkCache.getChunk(OBJECT_KEY_PATH, SEGMENT_MANIFEST, 0);
 
-        final var objectName = new ObjectName("aiven.kafka.server.tieredstorage.cache:type=chunk-cache-disk");
+        final var objectName = new ObjectName("aiven.kafka.server.tieredstorage.cache:type=disk-chunk-cache-metrics");
 
         assertThat(MBEAN_SERVER.getAttribute(objectName, "write-total"))
             .isEqualTo(1.0);

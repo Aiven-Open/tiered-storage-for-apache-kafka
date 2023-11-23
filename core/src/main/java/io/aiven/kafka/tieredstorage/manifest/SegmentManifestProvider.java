@@ -35,7 +35,7 @@ import com.github.benmanes.caffeine.cache.AsyncLoadingCache;
 import com.github.benmanes.caffeine.cache.Caffeine;
 
 public class SegmentManifestProvider {
-    private static final String SEGMENT_MANIFEST_METRIC_GROUP_NAME = "segment-manifest-cache";
+    private static final String SEGMENT_MANIFEST_METRIC_GROUP_NAME = "segment-manifest-cache-metrics";
     private static final long GET_TIMEOUT_SEC = 10;
 
     private final AsyncLoadingCache<ObjectKey, SegmentManifest> cache;

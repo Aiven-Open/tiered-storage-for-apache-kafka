@@ -159,7 +159,7 @@ class RemoteStorageManagerMetricsTest {
 
         // fetch related metrics
         final var segmentManifestCacheObjectName =
-            new ObjectName("aiven.kafka.server.tieredstorage.cache:type=segment-manifest-cache");
+            new ObjectName("aiven.kafka.server.tieredstorage.cache:type=segment-manifest-cache-metrics");
 
         rsm.fetchLogSegment(REMOTE_LOG_SEGMENT_METADATA, 0);
 

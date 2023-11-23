@@ -50,7 +50,7 @@ class MetricCollector implements MetricPublisher {
 
     private final org.apache.kafka.common.metrics.Metrics metrics;
 
-    private static final String METRIC_GROUP = "s3-metrics";
+    private static final String METRIC_GROUP = "s3-client-metrics";
     private final Map<String, Sensor> requestMetrics = new HashMap<>();
     private final Map<String, Sensor> latencyMetrics = new HashMap<>();
     private final Map<String, Sensor> errorMetrics = new HashMap<>();
