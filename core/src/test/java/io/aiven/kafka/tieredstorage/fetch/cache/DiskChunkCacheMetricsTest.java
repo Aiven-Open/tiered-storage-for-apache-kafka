@@ -48,7 +48,7 @@ import static org.awaitility.Awaitility.await;
 import static org.mockito.Mockito.mock;
 import static org.mockito.Mockito.when;
 
-class DiskBasedChunkCacheMetricsTest {
+class DiskChunkCacheMetricsTest {
     static final MBeanServer MBEAN_SERVER = ManagementFactory.getPlatformMBeanServer();
 
     static final long METRIC_TIME_WINDOW_SEC =
@@ -85,13 +85,13 @@ class DiskBasedChunkCacheMetricsTest {
         when(chunkManager.getChunk(OBJECT_KEY_PATH, SEGMENT_MANIFEST, 1))
             .thenReturn(new ByteArrayInputStream(new byte[size2]));
 
-        final DiskBasedChunkCache diskBasedChunkCache = new DiskBasedChunkCache(chunkManager, time);
-        diskBasedChunkCache.configure(Map.of(
+        final DiskChunkCache diskChunkCache = new DiskChunkCache(chunkManager, time);
+        diskChunkCache.configure(Map.of(
             "size", size1,  // enough to put the first, but not both
             "path", baseCachePath.toString()
         ));
 
-        diskBasedChunkCache.getChunk(OBJECT_KEY_PATH, SEGMENT_MANIFEST, 0);
+        diskChunkCache.getChunk(OBJECT_KEY_PATH, SEGMENT_MANIFEST, 0);
 
         final var objectName = new ObjectName("aiven.kafka.server.tieredstorage.cache:type=chunk-cache-disk");
 
@@ -105,7 +105,7 @@ class DiskBasedChunkCacheMetricsTest {
         assertThat(MBEAN_SERVER.getAttribute(objectName, "write-bytes-rate"))
             .isEqualTo(((double) size1) / METRIC_TIME_WINDOW_SEC);
 
-        diskBasedChunkCache.getChunk(OBJECT_KEY_PATH, SEGMENT_MANIFEST, 1);
+        diskChunkCache.getChunk(OBJECT_KEY_PATH, SEGMENT_MANIFEST, 1);
 
         assertThat(MBEAN_SERVER.getAttribute(objectName, "write-total"))
             .isEqualTo(2.0);

@@ -34,20 +34,20 @@ import org.slf4j.LoggerFactory;
 
 import static java.nio.file.StandardCopyOption.ATOMIC_MOVE;
 
-public class DiskBasedChunkCache extends ChunkCache<Path> {
-    private static final Logger log = LoggerFactory.getLogger(DiskBasedChunkCache.class);
+public class DiskChunkCache extends ChunkCache<Path> {
+    private static final Logger log = LoggerFactory.getLogger(DiskChunkCache.class);
 
-    private final DiskBasedChunkCacheMetrics metrics;
+    private final DiskChunkCacheMetrics metrics;
 
-    private DiskBasedChunkCacheConfig config;
+    private DiskChunkCacheConfig config;
 
-    public DiskBasedChunkCache(final ChunkManager chunkManager) {
+    public DiskChunkCache(final ChunkManager chunkManager) {
         this(chunkManager, Time.SYSTEM);
     }
 
-    DiskBasedChunkCache(final ChunkManager chunkManager, final Time time) {
+    DiskChunkCache(final ChunkManager chunkManager, final Time time) {
         super(chunkManager);
-        metrics = new DiskBasedChunkCacheMetrics(time);
+        metrics = new DiskChunkCacheMetrics(time);
     }
 
     @Override
@@ -136,7 +136,7 @@ public class DiskBasedChunkCache extends ChunkCache<Path> {
 
     @Override
     public void configure(final Map<String, ?> configs) {
-        this.config = new DiskBasedChunkCacheConfig(configs);
+        this.config = new DiskChunkCacheConfig(configs);
         this.cache = buildCache(config);
     }
 }

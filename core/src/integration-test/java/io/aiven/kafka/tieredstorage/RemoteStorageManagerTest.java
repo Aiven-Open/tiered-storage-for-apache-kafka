@@ -55,8 +55,8 @@ import org.apache.kafka.server.log.remote.storage.RemoteStorageException;
 import org.apache.kafka.server.log.remote.storage.RemoteStorageManager.IndexType;
 
 import io.aiven.kafka.tieredstorage.fetch.KeyNotFoundRuntimeException;
-import io.aiven.kafka.tieredstorage.fetch.cache.DiskBasedChunkCache;
-import io.aiven.kafka.tieredstorage.fetch.cache.InMemoryChunkCache;
+import io.aiven.kafka.tieredstorage.fetch.cache.DiskChunkCache;
+import io.aiven.kafka.tieredstorage.fetch.cache.MemoryChunkCache;
 import io.aiven.kafka.tieredstorage.manifest.SegmentEncryptionMetadataV1;
 import io.aiven.kafka.tieredstorage.manifest.SegmentIndexesV1Builder;
 import io.aiven.kafka.tieredstorage.manifest.index.ChunkIndex;
@@ -125,7 +125,7 @@ class RemoteStorageManagerTest extends RsaKeyAwareTest {
     private static List<Arguments> provideEndToEnd() {
         final List<Arguments> result = new ArrayList<>();
         final var cacheNames =
-            List.of(InMemoryChunkCache.class.getCanonicalName(), DiskBasedChunkCache.class.getCanonicalName());
+            List.of(MemoryChunkCache.class.getCanonicalName(), DiskChunkCache.class.getCanonicalName());
         for (final String cacheClass : cacheNames) {
             for (final int chunkSize : List.of(1024 * 1024 - 1, 1024 * 1024 * 1024 - 1, Integer.MAX_VALUE / 2)) {
                 for (final boolean compression : List.of(true, false)) {
@@ -454,7 +454,7 @@ class RemoteStorageManagerTest extends RsaKeyAwareTest {
                 put("compression.enabled", "true");
                 put("compression.heuristic.enabled", "true");
                 put("fetch.chunk.cache.size", 10000);
-                put("fetch.chunk.cache.class", InMemoryChunkCache.class.getCanonicalName());
+                put("fetch.chunk.cache.class", MemoryChunkCache.class.getCanonicalName());
                 put("fetch.chunk.cache.retention.ms", 10000);
             }};
 

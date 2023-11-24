@@ -57,7 +57,7 @@ services:
       KAFKA_REMOTE_LOG_STORAGE_MANAGER_CLASS_PATH: "/tiered-storage-for-apache-kafka/core/*:/tiered-storage-for-apache-kafka/s3/*"
       KAFKA_REMOTE_LOG_STORAGE_MANAGER_CLASS_NAME: "io.aiven.kafka.tieredstorage.RemoteStorageManager"
       KAFKA_RSM_CONFIG_CHUNK_SIZE: 4194304 # 4 MiB
-      KAFKA_RSM_CONFIG_CHUNK_CACHE_CLASS: "io.aiven.kafka.tieredstorage.fetch.cache.DiskBasedChunkCache"
+      KAFKA_RSM_CONFIG_CHUNK_CACHE_CLASS: "io.aiven.kafka.tieredstorage.fetch.cache.DiskChunkCache"
       KAFKA_RSM_CONFIG_CHUNK_CACHE_PATH: /home/appuser/kafka-tiered-storage-cache
       KAFKA_RSM_CONFIG_CHUNK_CACHE_SIZE: 1073741824 # 1 GiB
       KAFKA_RSM_CONFIG_CHUNK_CACHE_PREFETCH_MAX_SIZE: 16777216 # 16 MiB

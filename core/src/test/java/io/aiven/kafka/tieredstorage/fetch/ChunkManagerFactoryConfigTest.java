@@ -40,8 +40,8 @@ class ChunkManagerFactoryConfigTest {
 
     @ParameterizedTest
     @ValueSource(strings = {
-        "io.aiven.kafka.tieredstorage.fetch.cache.InMemoryChunkCache",
-        "io.aiven.kafka.tieredstorage.fetch.cache.DiskBasedChunkCache"
+        "io.aiven.kafka.tieredstorage.fetch.cache.MemoryChunkCache",
+        "io.aiven.kafka.tieredstorage.fetch.cache.DiskChunkCache"
     })
     void validCacheClass(final String cacheClass) {
         final ChunkManagerFactoryConfig config = new ChunkManagerFactoryConfig(
