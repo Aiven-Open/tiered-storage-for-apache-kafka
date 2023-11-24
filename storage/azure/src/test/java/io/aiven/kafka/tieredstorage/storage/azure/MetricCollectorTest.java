@@ -31,7 +31,7 @@ class MetricCollectorTest {
         final var props = Map.of("azure.account.name", "test-account",
             "azure.container.name", "cont1");
         final var metrics = new MetricCollector(new AzureBlobStorageConfig(props));
-        final var matcher = metrics.pathPattern().matcher("/test-account/cont1/x");
+        final var matcher = metrics.pathPattern().matcher("/test-account/cont1/test-object");
         assertThat(matcher).matches();
     }
 
@@ -40,7 +40,7 @@ class MetricCollectorTest {
         final var props = Map.of("azure.account.name", "test-account",
             "azure.container.name", "cont1");
         final var metrics = new MetricCollector(new AzureBlobStorageConfig(props));
-        final var matcher = metrics.pathPattern().matcher("/cont1/x");
+        final var matcher = metrics.pathPattern().matcher("/cont1/test-object");
         assertThat(matcher).matches();
     }
 

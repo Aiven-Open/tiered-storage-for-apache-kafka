@@ -59,7 +59,7 @@ public class MetricCollector {
     Pattern pathPattern() {
         // account is in the hostname when on azure, but included on the path when testing on Azurite
         final var maybeAccountName = "(/" + config.accountName() + ")?";
-        final var exp = "^" + maybeAccountName + "/" + config.containerName() + "/" + "([^/])";
+        final var exp = "^" + maybeAccountName + "/" + config.containerName() + "/" + "([^/]+)";
         return Pattern.compile(exp);
     }
 

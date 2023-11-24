@@ -131,7 +131,7 @@ public class AzureBlobStorageMetricsTest {
     ) throws StorageBackendException, IOException, JMException {
         final byte[] data = new byte[uploadBlockSize];
 
-        final ObjectKey key = new TestObjectKey("x");
+        final ObjectKey key = new TestObjectKey("test-object-key");
 
         final var storage = storage();
 
