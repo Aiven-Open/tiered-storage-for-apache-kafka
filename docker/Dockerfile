@@ -13,7 +13,7 @@
 # See the License for the specific language governing permissions and
 # limitations under the License.
 ##
-FROM aivenoy/kafka:kips_KIP-405_3.6-2023-09-12
+FROM docker.io/aivenoy/kafka:3.6.1-rc0-2023-11-24
 
 ARG _VERSION
 
