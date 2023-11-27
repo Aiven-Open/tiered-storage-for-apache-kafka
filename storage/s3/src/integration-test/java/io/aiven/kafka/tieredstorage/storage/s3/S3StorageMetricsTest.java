@@ -119,7 +119,7 @@ class S3StorageMetricsTest {
             .hasRootCause(exception);
 
         final ObjectName segmentCopyPerSecName = ObjectName.getInstance(
-            "aiven.kafka.server.tieredstorage.s3:type=s3-metrics");
+            "aiven.kafka.server.tieredstorage.s3:type=s3-client-metrics");
         assertThat(MBEAN_SERVER.getAttribute(segmentCopyPerSecName, "get-object-requests-rate"))
             .asInstanceOf(DOUBLE)
             .isGreaterThan(0.0);

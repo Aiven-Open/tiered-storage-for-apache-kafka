@@ -99,7 +99,7 @@ class ChunkCacheMetricsTest {
         final var chunkCache = chunkCacheClass.getDeclaredConstructor(ChunkManager.class).newInstance(chunkManager);
         chunkCache.configure(config);
 
-        final var objectName = new ObjectName("aiven.kafka.server.tieredstorage.cache:type=chunk-cache");
+        final var objectName = new ObjectName("aiven.kafka.server.tieredstorage.cache:type=chunk-cache-metrics");
 
         // When getting a existing chunk from cache
         chunkCache.getChunk(OBJECT_KEY_PATH, segmentManifest, 0);

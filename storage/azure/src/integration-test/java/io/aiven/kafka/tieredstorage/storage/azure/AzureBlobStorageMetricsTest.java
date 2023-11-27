@@ -145,7 +145,7 @@ public class AzureBlobStorageMetricsTest {
         storage.delete(key);
 
         final ObjectName objectName =
-            ObjectName.getInstance("aiven.kafka.server.tieredstorage.azure:type=azure-blob-metrics");
+            ObjectName.getInstance("aiven.kafka.server.tieredstorage.azure:type=azure-blob-storage-client-metrics");
         assertThat(MBEAN_SERVER.getAttribute(objectName, "blob-get-rate"))
             .asInstanceOf(DOUBLE)
             .isGreaterThan(0.0);

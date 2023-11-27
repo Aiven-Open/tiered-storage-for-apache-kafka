@@ -45,7 +45,7 @@ import com.github.benmanes.caffeine.cache.Weigher;
 
 public abstract class ChunkCache<T> implements ChunkManager, Configurable {
     private static final long GET_TIMEOUT_SEC = 10;
-    private static final String METRIC_GROUP = "chunk-cache";
+    private static final String METRIC_GROUP = "chunk-cache-metrics";
 
     private final ChunkManager chunkManager;
     private final Executor executor = new ForkJoinPool();

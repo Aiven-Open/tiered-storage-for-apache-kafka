@@ -108,7 +108,7 @@ public class GcsStorageMetricsTest {
         storage.delete(key);
 
         final ObjectName gcsMetricsObjectName =
-            ObjectName.getInstance("aiven.kafka.server.tieredstorage.gcs:type=gcs-metrics");
+            ObjectName.getInstance("aiven.kafka.server.tieredstorage.gcs:type=gcs-client-metrics");
         assertThat(MBEAN_SERVER.getAttribute(gcsMetricsObjectName, "object-metadata-get-rate"))
             .asInstanceOf(DOUBLE)
             .isGreaterThan(0.0);
