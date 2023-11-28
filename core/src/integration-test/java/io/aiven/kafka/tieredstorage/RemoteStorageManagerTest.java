@@ -26,6 +26,7 @@ import java.io.IOException;
 import java.io.InputStream;
 import java.io.RandomAccessFile;
 import java.nio.ByteBuffer;
+import java.nio.channels.ClosedByInterruptException;
 import java.nio.file.Files;
 import java.nio.file.Path;
 import java.security.GeneralSecurityException;
@@ -38,6 +39,7 @@ import java.util.List;
 import java.util.Map;
 import java.util.Optional;
 import java.util.Random;
+import java.util.stream.Stream;
 
 import org.apache.kafka.common.TopicIdPartition;
 import org.apache.kafka.common.TopicPartition;
@@ -54,11 +56,13 @@ import org.apache.kafka.server.log.remote.storage.RemoteResourceNotFoundExceptio
 import org.apache.kafka.server.log.remote.storage.RemoteStorageException;
 import org.apache.kafka.server.log.remote.storage.RemoteStorageManager.IndexType;
 
+import io.aiven.kafka.tieredstorage.fetch.ChunkManager;
 import io.aiven.kafka.tieredstorage.fetch.KeyNotFoundRuntimeException;
 import io.aiven.kafka.tieredstorage.fetch.cache.DiskChunkCache;
 import io.aiven.kafka.tieredstorage.fetch.cache.MemoryChunkCache;
 import io.aiven.kafka.tieredstorage.manifest.SegmentEncryptionMetadataV1;
 import io.aiven.kafka.tieredstorage.manifest.SegmentIndexesV1Builder;
+import io.aiven.kafka.tieredstorage.manifest.SegmentManifestProvider;
 import io.aiven.kafka.tieredstorage.manifest.index.ChunkIndex;
 import io.aiven.kafka.tieredstorage.manifest.serde.EncryptionSerdeModule;
 import io.aiven.kafka.tieredstorage.manifest.serde.KafkaTypeSerdeModule;
@@ -69,6 +73,7 @@ import io.aiven.kafka.tieredstorage.security.DataKeyAndAAD;
 import io.aiven.kafka.tieredstorage.security.EncryptedDataKey;
 import io.aiven.kafka.tieredstorage.security.RsaEncryptionProvider;
 import io.aiven.kafka.tieredstorage.storage.KeyNotFoundException;
+import io.aiven.kafka.tieredstorage.storage.StorageBackendException;
 
 import com.fasterxml.jackson.databind.JsonNode;
 import com.fasterxml.jackson.databind.ObjectMapper;
@@ -86,6 +91,11 @@ import org.junit.jupiter.params.provider.ValueSource;
 
 import static org.assertj.core.api.Assertions.assertThat;
 import static org.assertj.core.api.Assertions.assertThatThrownBy;
+import static org.junit.jupiter.params.provider.Arguments.arguments;
+import static org.mockito.ArgumentMatchers.any;
+import static org.mockito.ArgumentMatchers.anyInt;
+import static org.mockito.Mockito.mock;
+import static org.mockito.Mockito.when;
 
 class RemoteStorageManagerTest extends RsaKeyAwareTest {
     RemoteStorageManager rsm;
@@ -662,5 +672,75 @@ class RemoteStorageManagerTest extends RsaKeyAwareTest {
             objectKeyFactory.key(REMOTE_LOG_METADATA, ObjectKeyFactory.Suffix.MANIFEST).value());
         Files.createDirectories(manifestPath.getParent());
         Files.writeString(manifestPath, manifest);
+    }
+
+    @ParameterizedTest
+    @MethodSource("provideInterruptionExceptions")
+    void fetchSegmentInterruptionWhenGettingManifest(final Class<Exception> outerExceptionClass,
+                                                     final Class<Exception> exceptionClass) throws Exception {
+        final SegmentManifestProvider segmentManifestProvider = mock(SegmentManifestProvider.class);
+        when(segmentManifestProvider.get(any())).thenAnswer(invocation -> {
+            final Exception innerException = exceptionClass.getDeclaredConstructor().newInstance();
+            if (outerExceptionClass != null) {
+                throw outerExceptionClass.getDeclaredConstructor(String.class, Throwable.class)
+                    .newInstance("", innerException);
+            } else {
+                throw innerException;
+            }
+        });
+
+        final var config = Map.of(
+            "chunk.size", "1",
+            "storage.backend.class", "io.aiven.kafka.tieredstorage.storage.filesystem.FileSystemStorage",
+            "storage.root", targetDir.toString()
+        );
+        rsm.configure(config);
+        rsm.setSegmentManifestProvider(segmentManifestProvider);
+
+        final InputStream inputStream = rsm.fetchLogSegment(REMOTE_LOG_METADATA, 0);
+        assertThat(inputStream.readAllBytes()).isEmpty();
+    }
+
+    @ParameterizedTest
+    @MethodSource("provideInterruptionExceptions")
+    void fetchSegmentInterruptionWhenGettingSegment(final Class<Exception> outerExceptionClass,
+                                                    final Class<Exception> exceptionClass) throws Exception {
+        // Ensure the manifest exists.
+        final ObjectKeyFactory objectKeyFactory = new ObjectKeyFactory("", false);
+        writeManifest(objectKeyFactory);
+
+        final ChunkManager chunkManager = mock(ChunkManager.class);
+        when(chunkManager.getChunk(any(), any(), anyInt())).thenAnswer(invocation -> {
+            final Exception innerException = exceptionClass.getDeclaredConstructor().newInstance();
+            if (outerExceptionClass != null) {
+                throw outerExceptionClass.getDeclaredConstructor(String.class, Throwable.class)
+                    .newInstance("", innerException);
+            } else {
+                throw innerException;
+            }
+        });
+
+        final var config = Map.of(
+            "chunk.size", "1",
+            "storage.backend.class", "io.aiven.kafka.tieredstorage.storage.filesystem.FileSystemStorage",
+            "storage.root", targetDir.toString()
+        );
+        rsm.configure(config);
+        rsm.setChunkManager(chunkManager);
+
+        final InputStream inputStream = rsm.fetchLogSegment(REMOTE_LOG_METADATA, 0);
+        assertThat(inputStream.readAllBytes()).isEmpty();
+    }
+
+    static Stream<Arguments> provideInterruptionExceptions() {
+        return Stream.of(
+            // This is deliberately not tested as this cannot happen (due to the exception checking):
+            //arguments(null, InterruptedException.class),
+            arguments(null, ClosedByInterruptException.class),
+            arguments(RuntimeException.class, InterruptedException.class),
+            arguments(RuntimeException.class, ClosedByInterruptException.class),
+            arguments(StorageBackendException.class, InterruptedException.class),
+            arguments(StorageBackendException.class, ClosedByInterruptException.class)
+        );
     }
 }
