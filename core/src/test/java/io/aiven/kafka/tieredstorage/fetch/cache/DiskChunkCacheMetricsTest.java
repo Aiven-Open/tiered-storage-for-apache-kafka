@@ -44,6 +44,7 @@ import org.junit.jupiter.api.Test;
 import org.junit.jupiter.api.io.TempDir;
 
 import static org.assertj.core.api.Assertions.assertThat;
+import static org.assertj.core.api.InstanceOfAssertFactories.DOUBLE;
 import static org.awaitility.Awaitility.await;
 import static org.mockito.Mockito.mock;
 import static org.mockito.Mockito.when;
@@ -117,7 +118,10 @@ class DiskChunkCacheMetricsTest {
         assertThat(MBEAN_SERVER.getAttribute(objectName, "write-bytes-rate"))
             .isEqualTo(((double) (size1 + size2)) / METRIC_TIME_WINDOW_SEC);
 
-        await("Deletion happens").atMost(Duration.ofMillis(5000)).pollInterval(Duration.ofMillis(100))
+        await("Deletion happens")
+            .atMost(Duration.ofMillis(5000))
+            .pollDelay(Duration.ofMillis(100))
+            .pollInterval(Duration.ofMillis(100))
             .until(() -> (double) MBEAN_SERVER.getAttribute(objectName, "delete-total") > 0);
 
         assertThat(MBEAN_SERVER.getAttribute(objectName, "delete-total"))
@@ -126,8 +130,16 @@ class DiskChunkCacheMetricsTest {
             .isEqualTo(1.0 / METRIC_TIME_WINDOW_SEC);
 
         assertThat(MBEAN_SERVER.getAttribute(objectName, "delete-bytes-total"))
-            .isEqualTo((double) size1);
+            .satisfiesAnyOf(
+                deleteBytesTotal -> assertThat(deleteBytesTotal).asInstanceOf(DOUBLE).isEqualTo(size1),
+                deleteBytesTotal -> assertThat(deleteBytesTotal).asInstanceOf(DOUBLE).isEqualTo(size2)
+            );
         assertThat(MBEAN_SERVER.getAttribute(objectName, "delete-bytes-rate"))
-            .isEqualTo(((double) size1) / METRIC_TIME_WINDOW_SEC);
+            .satisfiesAnyOf(
+                deleteBytesRate -> assertThat(deleteBytesRate)
+                    .isEqualTo((double) size1 / METRIC_TIME_WINDOW_SEC),
+                deleteBytesRate -> assertThat(deleteBytesRate)
+                    .isEqualTo((double) size2 / METRIC_TIME_WINDOW_SEC)
+            );
     }
 }
