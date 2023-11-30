@@ -195,6 +195,12 @@ class ChunkCacheTest {
             verify(chunkManager).getChunk(SEGMENT_OBJECT_KEY, SEGMENT_MANIFEST, 0);
             assertThat(chunkCache.getChunk(SEGMENT_OBJECT_KEY, SEGMENT_MANIFEST, 0))
                     .hasBinaryContent(CHUNK_0);
+            // Fetching chunk 0 multiple times from the cache to guarantee that during the next fetch of not-yet-cached
+            // chunk chunk 0 will not be evicted as least frequently accessed.
+            for (int i = 0; i < 50; i++) {
+                assertThat(chunkCache.getChunk(SEGMENT_OBJECT_KEY, SEGMENT_MANIFEST, 0))
+                      .hasBinaryContent(CHUNK_0);
+            }
             verifyNoMoreInteractions(chunkManager);
 
             assertThat(chunkCache.getChunk(SEGMENT_OBJECT_KEY, SEGMENT_MANIFEST, 1))
