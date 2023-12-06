@@ -188,6 +188,39 @@ make show_local_data
 make consume
 ```
 
+### HDFS as remote storage: `compose-hdfs.yml`
+
+This scenario uses `HdfsStorage` as the remote storage.
+
+```bash
+# Start the compose
+make run_hdfs
+
+# Create the topic with any variation
+make create_topic_by_time_ts
+# or
+# make create_topic_by_size_ts
+# or with TS disabled
+# make create_topic_*_no_ts
+
+# Fill the topic
+make fill_topic
+
+# See that segments are uploaded to the remote storage
+# (this may take several seconds)
+make show_remote_data_hdfs
+
+# Check that early segments are deleted
+# (completely or renamed with `.deleted` suffix)
+# from the local storage (this may take several seconds)
+make show_local_data
+
+# Check the data is consumable
+make consume
+```
+
+You can also see the remote data in http://localhost:9870/explorer.html#/tmp/kafka/tiered-storage-demo
+
 ## Additional features
 
 ### Encryption

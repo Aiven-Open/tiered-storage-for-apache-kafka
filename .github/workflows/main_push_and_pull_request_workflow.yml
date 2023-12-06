@@ -35,7 +35,7 @@ jobs:
     strategy:
       matrix:
         java-version: [ 11 ]
-        test: [ 'LocalSystem', 'S3', 'Gcs', 'Azure' ]
+        test: [ 'LocalSystem', 'S3', 'Gcs', 'Azure', 'Hdfs' ]
     name: E2E tests for ${{ matrix.test }}  with jdk ${{ matrix.java-version }}
     runs-on: ubuntu-latest
     steps:

@@ -26,6 +26,7 @@ USER root
 RUN mkdir -p /tiered-storage-for-apache-kafka/core \
     &&  mkdir -p /tiered-storage-for-apache-kafka/s3 \
     &&  mkdir -p /tiered-storage-for-apache-kafka/gcs \
+    &&  mkdir -p /tiered-storage-for-apache-kafka/hdfs \
     &&  mkdir -p /tiered-storage-for-apache-kafka/azure
 
 COPY build/distributions/tiered-storage-for-apache-kafka-${_VERSION}.tgz /tiered-storage-for-apache-kafka/core
@@ -47,6 +48,11 @@ COPY storage/azure/build/distributions/azure-${_VERSION}.tgz /tiered-storage-for
 RUN cd /tiered-storage-for-apache-kafka/azure \
     && tar -xf azure-${_VERSION}.tgz --strip-components=1 \
     && rm azure-${_VERSION}.tgz
+
+COPY storage/hdfs/build/distributions/hdfs-${_VERSION}.tgz /tiered-storage-for-apache-kafka/hdfs
+RUN cd /tiered-storage-for-apache-kafka/hdfs \
+    && tar -xf hdfs-${_VERSION}.tgz --strip-components=1 \
+    && rm hdfs-${_VERSION}.tgz
 
 # Installing JMX exporter agent
 ARG JMX_EXPORTER_VERSION=0.18.0

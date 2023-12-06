@@ -34,6 +34,9 @@ dependencies {
     testImplementation platform("com.azure:azure-sdk-bom:$azureSdkVersion")
     testImplementation "com.azure:azure-storage-blob"
 
+    testImplementation "org.apache.hadoop:hadoop-common:$hadoopVersion"
+    testImplementation "org.apache.hadoop:hadoop-hdfs-client:$hadoopVersion"
+
     testRuntimeOnly "org.slf4j:slf4j-log4j12:$slf4jVersion"
 }
 

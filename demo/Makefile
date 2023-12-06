@@ -115,6 +115,10 @@ run_gcs_fake_gcs_server:
 run_azure_blob_azurite:
 	docker compose -f compose-azure-blob-azurite.yml up
 
+.PHONY: run_hdfs
+run_hdfs:
+	docker compose -f compose-hdfs.yml up
+
 .PHONY: clean
 clean:
 	docker compose -f compose-local-fs.yml down
@@ -122,6 +126,7 @@ clean:
 	docker compose -f compose-s3-minio.yml down
 	docker compose -f compose-gcs-fake-gcs-server.yml down
 	docker compose -f compose-azure-blob-azurite.yml down
+	docker compose -f compose-hdfs.yml down
 
 .PHONY: show_local_data
 show_local_data:
@@ -153,6 +158,12 @@ show_remote_data_azurite:
 		--account-name devstoreaccount1 \
 		--account-key Eby8vdM02xNOcqFlqUwJPLlmEtlCDXJ1OUzFT50uSRZ6IFsuFq2UVErCz4I6tq/K1SZFPTOtr/KBHBeksoGMGw== \
 		--blob-endpoint http://127.0.0.1:10000/devstoreaccount1 --output table | grep $(topic)
+
+namenode_container = hdfs_ts_namenode
+.PHONY: show_remote_data_hdfs
+show_remote_data_hdfs:
+	docker exec $(namenode_container) \
+		hdfs dfs -ls '/tmp/kafka/tiered-storage-demo/$(topic)-*/0/'
 
 offset = 0
 consume = 10

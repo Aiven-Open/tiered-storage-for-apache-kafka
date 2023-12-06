@@ -43,10 +43,10 @@ storage/azure/build/distributions/azure-$(VERSION).tgz:
 	./gradlew build :storage:azure:distTar -x test -x integrationTest -x e2e:test
 
 test: build
-	./gradlew test -x e2e:test
+	./gradlew test -x e2e:test --info
 
 integration_test: build
-	./gradlew integrationTest
+	./gradlew integrationTest --info
 
 E2E_TEST=LocalSystem
 
