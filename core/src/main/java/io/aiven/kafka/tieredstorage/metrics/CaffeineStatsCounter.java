@@ -128,10 +128,10 @@ public class CaffeineStatsCounter implements StatsCounter {
     }
 
     private void initSensor(final String sensorName,
-                                    final String metricName,
-                                    final LongAdder value,
-                                    final Supplier<Map<String, String>> tagsSupplier,
-                                    final String... tagNames) {
+                            final String metricName,
+                            final LongAdder value,
+                            final Supplier<Map<String, String>> tagsSupplier,
+                            final String... tagNames) {
         final var name = new MetricNameTemplate(metricName, groupName, "", tagNames);
         new SensorProvider(metrics, sensorName, tagsSupplier)
             .with(name, new MeasurableValue(value::sum))
@@ -222,7 +222,7 @@ public class CaffeineStatsCounter implements StatsCounter {
     /**
      * Prevents passing negative values to {@link  CacheStats} in case of long overflow.
      * Returns {@code value}, if non-negative. Otherwise, returns {@link Long#MAX_VALUE}.
-     * */
+     */
     private static long negativeToMaxValue(final long value) {
         return (value >= 0) ? value : Long.MAX_VALUE;
     }

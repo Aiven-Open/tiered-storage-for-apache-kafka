@@ -21,6 +21,7 @@ import java.util.ArrayList;
 import java.util.List;
 
 // TODO property-based testing
+
 /**
  * A binary encoder/decoder for lists of chunk sizes.
  *
@@ -186,7 +187,7 @@ class ChunkSizesBinaryCodec {
         final List<Integer> result = new ArrayList<>();
         final int base = buf.getInt();
         final byte bytesPerValue = buf.get();
-        final ByteBuffer valBuf =  ByteBuffer.allocate(FULL_VALUE_SIZE);
+        final ByteBuffer valBuf = ByteBuffer.allocate(FULL_VALUE_SIZE);
         // The buffer is big-endian.
         final int offset = FULL_VALUE_SIZE - bytesPerValue;
         for (int i = 0; i < count - 1; i++) {

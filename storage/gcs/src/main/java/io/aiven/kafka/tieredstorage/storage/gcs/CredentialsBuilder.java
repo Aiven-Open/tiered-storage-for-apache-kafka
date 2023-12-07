@@ -62,8 +62,8 @@ final class CredentialsBuilder {
      * or the no-credentials object is returned.
      *
      * @param defaultCredentials use the default credentials.
-     * @param credentialsJson the credential JSON string, can be {@code null}.
-     * @param credentialsPath the credential path, can be {@code null}.
+     * @param credentialsJson    the credential JSON string, can be {@code null}.
+     * @param credentialsPath    the credential path, can be {@code null}.
      * @return a {@link GoogleCredentials} constructed based on the input.
      * @throws IOException              if some error getting the credentials happen.
      * @throws IllegalArgumentException if a combination of parameters is invalid.

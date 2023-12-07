@@ -36,7 +36,7 @@ class AzureBlobStorageSasTokenTest extends AzureBlobStorageTest {
             .setWritePermission(true);
         final var sasSignatureValues =
             new BlobServiceSasSignatureValues(OffsetDateTime.now().plusDays(1), permissions)
-            .setStartTime(OffsetDateTime.now().minusMinutes(5));
+                .setStartTime(OffsetDateTime.now().minusMinutes(5));
         final String sasToken = blobServiceClient.getBlobContainerClient(azureContainerName)
             .generateSas(sasSignatureValues);
 

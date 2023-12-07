@@ -30,7 +30,7 @@ public class ChunkCacheConfig extends AbstractConfig {
     private static final String CACHE_SIZE_DOC = "Cache size in bytes, where \"-1\" represents unbounded cache";
     private static final String CACHE_RETENTION_CONFIG = "retention.ms";
     private static final String CACHE_RETENTION_DOC = "Cache retention time ms, "
-            + "where \"-1\" represents infinite retention";
+        + "where \"-1\" represents infinite retention";
     private static final long DEFAULT_CACHE_RETENTION_MS = 600_000;
 
     private static final String CACHE_PREFETCH_MAX_SIZE_CONFIG = "prefetch.max.size";
@@ -41,27 +41,27 @@ public class ChunkCacheConfig extends AbstractConfig {
 
     private static ConfigDef addCacheConfigs(final ConfigDef configDef) {
         configDef.define(
-                CACHE_SIZE_CONFIG,
-                ConfigDef.Type.LONG,
-                NO_DEFAULT_VALUE,
-                ConfigDef.Range.between(-1L, Long.MAX_VALUE),
-                ConfigDef.Importance.MEDIUM,
-                CACHE_SIZE_DOC
+            CACHE_SIZE_CONFIG,
+            ConfigDef.Type.LONG,
+            NO_DEFAULT_VALUE,
+            ConfigDef.Range.between(-1L, Long.MAX_VALUE),
+            ConfigDef.Importance.MEDIUM,
+            CACHE_SIZE_DOC
         );
         configDef.define(
-                CACHE_RETENTION_CONFIG,
-                ConfigDef.Type.LONG,
-                DEFAULT_CACHE_RETENTION_MS,
-                ConfigDef.Range.between(-1L, Long.MAX_VALUE),
-                ConfigDef.Importance.MEDIUM,
-                CACHE_RETENTION_DOC
+            CACHE_RETENTION_CONFIG,
+            ConfigDef.Type.LONG,
+            DEFAULT_CACHE_RETENTION_MS,
+            ConfigDef.Range.between(-1L, Long.MAX_VALUE),
+            ConfigDef.Importance.MEDIUM,
+            CACHE_RETENTION_DOC
         );
         configDef.define(
             CACHE_PREFETCH_MAX_SIZE_CONFIG,
-                ConfigDef.Type.INT,
-                CACHE_PREFETCHING_SIZE_DEFAULT,
-                ConfigDef.Range.between(0, Integer.MAX_VALUE),
-                ConfigDef.Importance.MEDIUM,
+            ConfigDef.Type.INT,
+            CACHE_PREFETCHING_SIZE_DEFAULT,
+            ConfigDef.Range.between(0, Integer.MAX_VALUE),
+            ConfigDef.Importance.MEDIUM,
             CACHE_PREFETCH_MAX_SIZE_DOC
         );
         return configDef;

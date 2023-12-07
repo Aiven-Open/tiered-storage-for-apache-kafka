@@ -558,8 +558,8 @@ class RemoteStorageManagerTest extends RsaKeyAwareTest {
 
         // Make sure the exception is connected to the log file.
         final String expectedMessage = "Key "
-                + objectKeyFactory.key(REMOTE_LOG_METADATA, ObjectKeyFactory.Suffix.LOG)
-                + " does not exists in storage";
+            + objectKeyFactory.key(REMOTE_LOG_METADATA, ObjectKeyFactory.Suffix.LOG)
+            + " does not exists in storage";
 
         assertThatThrownBy(() -> rsm.fetchLogSegment(REMOTE_LOG_METADATA, 0))
             .isInstanceOf(RemoteResourceNotFoundException.class)

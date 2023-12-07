@@ -56,7 +56,7 @@ public final class ObjectKeyFactory {
     private final BiFunction<String, String, ObjectKey> objectKeyConstructor;
 
     /**
-     * @param prefix the prefix to add to all created keys.
+     * @param prefix     the prefix to add to all created keys.
      * @param maskPrefix whether to mask the prefix in {@code toString()}.
      */
     public ObjectKeyFactory(final String prefix, final boolean maskPrefix) {

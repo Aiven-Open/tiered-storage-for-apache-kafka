@@ -60,7 +60,7 @@ public class KafkaTypeSerdeModule {
         }
     }
 
-    @JsonPropertyOrder({ "topic", "partition" })
+    @JsonPropertyOrder({"topic", "partition"})
     private abstract static class TopicPartitionSerdeMixin {
         @JsonProperty("topic")
         public abstract String topic();
@@ -69,7 +69,7 @@ public class KafkaTypeSerdeModule {
         public abstract int partition();
     }
 
-    @JsonPropertyOrder({ "topicId", "topicPartition" })
+    @JsonPropertyOrder({"topicId", "topicPartition"})
     private abstract static class TopicIdPartitionSerdeMixin {
         @JsonProperty("topicId")
         public abstract Uuid topicId();
@@ -78,7 +78,7 @@ public class KafkaTypeSerdeModule {
         public abstract TopicPartition topicPartition();
     }
 
-    @JsonPropertyOrder({ "topicIdPartition", "id" })
+    @JsonPropertyOrder({"topicIdPartition", "id"})
     private abstract static class RemoteLogSegmentIdMixin {
         @JsonProperty("topicIdPartition")
         abstract TopicIdPartition topicIdPartition();
