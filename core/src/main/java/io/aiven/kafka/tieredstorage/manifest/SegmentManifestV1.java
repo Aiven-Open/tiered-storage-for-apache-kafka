@@ -35,14 +35,12 @@ public class SegmentManifestV1 implements SegmentManifest {
     private final RemoteLogSegmentMetadata remoteLogSegmentMetadata;
 
     @JsonCreator
-    public SegmentManifestV1(@JsonProperty(value = "chunkIndex", required = true)
-                             final ChunkIndex chunkIndex,
-                             @JsonProperty(value = "segmentIndexes", required = true)
-                             final SegmentIndexesV1 segmentIndexes,
-                             @JsonProperty(value = "compression", required = true)
-                             final boolean compression,
-                             @JsonProperty("encryption")
-                             final SegmentEncryptionMetadataV1 encryption) {
+    public SegmentManifestV1(
+        @JsonProperty(value = "chunkIndex", required = true) final ChunkIndex chunkIndex,
+        @JsonProperty(value = "segmentIndexes", required = true) final SegmentIndexesV1 segmentIndexes,
+        @JsonProperty(value = "compression", required = true) final boolean compression,
+        @JsonProperty("encryption") final SegmentEncryptionMetadataV1 encryption
+    ) {
         this(chunkIndex, segmentIndexes, compression, encryption, null);
     }
 
