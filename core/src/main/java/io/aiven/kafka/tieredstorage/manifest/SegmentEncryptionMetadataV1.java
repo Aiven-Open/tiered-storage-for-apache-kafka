@@ -31,10 +31,8 @@ public class SegmentEncryptionMetadataV1 implements SegmentEncryptionMetadata {
     private final byte[] aad;
 
     @JsonCreator
-    public SegmentEncryptionMetadataV1(@JsonProperty(value = "dataKey", required = true)
-                                       final SecretKey dataKey,
-                                       @JsonProperty(value = "aad", required = true)
-                                       final byte[] aad) {
+    public SegmentEncryptionMetadataV1(@JsonProperty(value = "dataKey", required = true) final SecretKey dataKey,
+                                       @JsonProperty(value = "aad", required = true) final byte[] aad) {
         this.dataKey = Objects.requireNonNull(dataKey, "dataKey cannot be null");
         this.aad = Objects.requireNonNull(aad, "aad cannot be null");
     }

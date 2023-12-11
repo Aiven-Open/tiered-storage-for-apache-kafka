@@ -147,8 +147,8 @@ public abstract class ChunkCache<T> implements ChunkManager, Configurable {
     }
 
     private void startPrefetching(final ObjectKey segmentKey,
-                                 final SegmentManifest segmentManifest,
-                                 final int startPosition) {
+                                  final SegmentManifest segmentManifest,
+                                  final int startPosition) {
         if (prefetchingSize > 0) {
             final BytesRange prefetchingRange;
             if (Integer.MAX_VALUE - startPosition < prefetchingSize) {

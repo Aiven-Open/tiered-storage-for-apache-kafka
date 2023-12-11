@@ -53,7 +53,7 @@ public class MemoryChunkCache extends ChunkCache<byte[]> {
     @Override
     public RemovalListener<ChunkKey, byte[]> removalListener() {
         return (key, content, cause) -> log.debug("Deleted cached value for key {} from cache."
-                + " The reason of the deletion is {}", key, cause);
+            + " The reason of the deletion is {}", key, cause);
     }
 
     @Override

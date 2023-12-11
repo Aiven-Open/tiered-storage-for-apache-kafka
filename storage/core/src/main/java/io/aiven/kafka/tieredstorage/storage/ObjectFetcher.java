@@ -21,13 +21,15 @@ import java.io.InputStream;
 public interface ObjectFetcher {
     /**
      * Fetch file.
+     *
      * @param key file key.
      */
     InputStream fetch(ObjectKey key) throws StorageBackendException;
 
     /**
      * Fetch file.
-     * @param key file key.
+     *
+     * @param key   file key.
      * @param range range with inclusive start/end positions
      */
     InputStream fetch(ObjectKey key, BytesRange range) throws StorageBackendException;

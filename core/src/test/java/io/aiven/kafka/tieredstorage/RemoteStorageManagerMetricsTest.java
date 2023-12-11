@@ -82,7 +82,7 @@ class RemoteStorageManagerMetricsTest {
 
     @BeforeEach
     void setup(@TempDir final Path tmpDir,
-                      @Mock final Time time) throws IOException {
+               @Mock final Time time) throws IOException {
         when(time.milliseconds()).thenReturn(0L);
         rsm = new RemoteStorageManager(time);
 

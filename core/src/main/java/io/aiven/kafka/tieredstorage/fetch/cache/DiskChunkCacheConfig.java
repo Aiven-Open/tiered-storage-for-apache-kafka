@@ -37,11 +37,11 @@ public class DiskChunkCacheConfig extends ChunkCacheConfig {
     private static ConfigDef configDef() {
         final ConfigDef configDef = new ConfigDef();
         configDef.define(
-                CACHE_PATH_CONFIG,
-                ConfigDef.Type.STRING,
-                ConfigDef.NO_DEFAULT_VALUE,
-                ConfigDef.Importance.HIGH,
-                CACHE_PATH_DOC
+            CACHE_PATH_CONFIG,
+            ConfigDef.Type.STRING,
+            ConfigDef.NO_DEFAULT_VALUE,
+            ConfigDef.Importance.HIGH,
+            CACHE_PATH_DOC
         );
         return configDef;
     }

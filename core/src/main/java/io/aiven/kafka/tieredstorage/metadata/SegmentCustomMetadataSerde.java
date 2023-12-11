@@ -35,7 +35,7 @@ public class SegmentCustomMetadataSerde {
 
     public byte[] serialize(final NavigableMap<Integer, Object> data) {
         if (data.isEmpty()) {
-            return new byte[]{};
+            return new byte[] {};
         }
 
         final var struct = new Struct(CUSTOM_METADATA_SCHEMA);

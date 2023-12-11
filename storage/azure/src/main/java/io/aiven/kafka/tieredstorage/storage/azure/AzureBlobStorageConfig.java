@@ -46,7 +46,7 @@ public class AzureBlobStorageConfig extends AbstractConfig {
     static final String AZURE_CONNECTION_STRING_CONFIG = "azure.connection.string";
     private static final String AZURE_CONNECTION_STRING_DOC = "Azure connection string. "
         + "Cannot be used together with azure.account.name, azure.account.key, and azure.endpoint.url";
-    
+
     static final String AZURE_UPLOAD_BLOCK_SIZE_CONFIG = "azure.upload.block.size";
     private static final String AZURE_UPLOAD_BLOCK_SIZE_DOC = "Size of blocks to use when uploading objects to Azure";
     static final int AZURE_UPLOAD_BLOCK_SIZE_DEFAULT = 5 * 1024 * 1024; // 5MiB

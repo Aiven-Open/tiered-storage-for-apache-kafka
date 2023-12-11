@@ -29,7 +29,7 @@ class FixedSizeChunkIndexEqualsTest {
         assertThat(i2).isEqualTo(i1);
         assertThat(i1).hasSameHashCodeAs(i2);
     }
-    
+
     @Test
     void differentOriginalChunkSize() {
         final var i1 = new FixedSizeChunkIndex(100, 1000, 110, 10);

@@ -445,18 +445,18 @@ class RemoteStorageManagerTest extends RsaKeyAwareTest {
 
         // Configure the RSM.
         final int chunkSize = 1024 * 1024;
-        final Map<String, ?> config = new HashMap<>() {{
-                put("chunk.size", Integer.toString(chunkSize));
-                put("storage.backend.class",
-                    "io.aiven.kafka.tieredstorage.storage.filesystem.FileSystemStorage");
-                put("key.prefix", "test/");
-                put("storage.root", targetDir.toString());
-                put("compression.enabled", "true");
-                put("compression.heuristic.enabled", "true");
-                put("fetch.chunk.cache.size", 10000);
-                put("fetch.chunk.cache.class", MemoryChunkCache.class.getCanonicalName());
-                put("fetch.chunk.cache.retention.ms", 10000);
-            }};
+        final Map<String, ?> config = new HashMap<>(Map.of(
+            "chunk.size", Integer.toString(chunkSize),
+            "storage.backend.class",
+            "io.aiven.kafka.tieredstorage.storage.filesystem.FileSystemStorage",
+            "key.prefix", "test/",
+            "storage.root", targetDir.toString(),
+            "compression.enabled", "true",
+            "compression.heuristic.enabled", "true",
+            "fetch.chunk.cache.size", 10000,
+            "fetch.chunk.cache.class", MemoryChunkCache.class.getCanonicalName(),
+            "fetch.chunk.cache.retention.ms", 10000
+        ));
 
         rsm.configure(config);
 
@@ -558,8 +558,8 @@ class RemoteStorageManagerTest extends RsaKeyAwareTest {
 
         // Make sure the exception is connected to the log file.
         final String expectedMessage = "Key "
-                + objectKeyFactory.key(REMOTE_LOG_METADATA, ObjectKeyFactory.Suffix.LOG)
-                + " does not exists in storage";
+            + objectKeyFactory.key(REMOTE_LOG_METADATA, ObjectKeyFactory.Suffix.LOG)
+            + " does not exists in storage";
 
         assertThatThrownBy(() -> rsm.fetchLogSegment(REMOTE_LOG_METADATA, 0))
             .isInstanceOf(RemoteResourceNotFoundException.class)

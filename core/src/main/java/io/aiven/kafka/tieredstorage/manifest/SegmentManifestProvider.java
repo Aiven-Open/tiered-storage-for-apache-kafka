@@ -41,7 +41,7 @@ public class SegmentManifestProvider {
     private final AsyncLoadingCache<ObjectKey, SegmentManifest> cache;
 
     /**
-     * @param maxCacheSize the max cache size (in items) or empty if the cache is unbounded.
+     * @param maxCacheSize   the max cache size (in items) or empty if the cache is unbounded.
      * @param cacheRetention the retention time of items in the cache or empty if infinite retention.
      */
     public SegmentManifestProvider(final Optional<Long> maxCacheSize,

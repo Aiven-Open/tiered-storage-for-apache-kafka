@@ -46,11 +46,10 @@ public class FetchChunkEnumeration implements Enumeration<InputStream> {
     public boolean closed;
 
     /**
-     *
      * @param chunkManager provides chunk input to fetch from
-     * @param objectKey required by chunkManager
-     * @param manifest provides to index to build response from
-     * @param range original offset range start/end position
+     * @param objectKey    required by chunkManager
+     * @param manifest     provides to index to build response from
+     * @param range        original offset range start/end position
      */
     public FetchChunkEnumeration(final ChunkManager chunkManager,
                                  final ObjectKey objectKey,

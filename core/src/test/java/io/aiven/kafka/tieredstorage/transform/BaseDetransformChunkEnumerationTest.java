@@ -47,7 +47,7 @@ class BaseDetransformChunkEnumerationTest {
     @Test
     void inputStreamFewerBytesThanExpected() {
         // 1 byte in the input stream.
-        final var bais = new ByteArrayInputStream(new byte[]{0});
+        final var bais = new ByteArrayInputStream(new byte[] {0});
         // 2 chunks of 1 byte expected.
         final List<Chunk> chunks = List.of(
             new Chunk(0, 0, 1, 0, 1),

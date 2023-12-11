@@ -33,6 +33,7 @@ public abstract class AbstractChunkIndexBuilder {
 
     /**
      * Add a non-final chunk to the index.
+     *
      * @param transformedChunkSize the size of the corresponding transformed chunk.
      */
     public final void addChunk(final int transformedChunkSize) {
@@ -56,6 +57,7 @@ public abstract class AbstractChunkIndexBuilder {
 
     /**
      * Add the final chunk to the index.
+     *
      * @param finalTransformedChunkSize the size of the corresponding transformed chunk.
      */
     public final ChunkIndex finish(final int finalTransformedChunkSize) {

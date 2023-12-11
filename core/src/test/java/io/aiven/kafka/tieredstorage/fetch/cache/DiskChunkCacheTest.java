@@ -66,9 +66,9 @@ class DiskChunkCacheTest {
     @BeforeEach
     void setUp() {
         diskChunkCache.configure(Map.of(
-                "retention.ms", "-1",
-                "size", "-1",
-                "path", baseCachePath.toString()
+            "retention.ms", "-1",
+            "size", "-1",
+            "path", baseCachePath.toString()
         ));
         cachePath = baseCachePath.resolve(CACHE_DIRECTORY);
         tempCachePath = baseCachePath.resolve(TEMP_CACHE_DIRECTORY);
@@ -78,7 +78,7 @@ class DiskChunkCacheTest {
     void failedToMoveFromTempCache() {
         try (final MockedStatic<Files> filesMockedStatic = mockStatic(Files.class, CALLS_REAL_METHODS)) {
             filesMockedStatic.when(() -> Files.move(any(), any(), any()))
-                    .thenThrow(new IOException(TEST_EXCEPTION_MESSAGE));
+                .thenThrow(new IOException(TEST_EXCEPTION_MESSAGE));
 
             final ByteArrayInputStream chunkStream0 = new ByteArrayInputStream(CHUNK_0);
             final ByteArrayInputStream chunkStream1 = new ByteArrayInputStream(CHUNK_1);
@@ -86,22 +86,22 @@ class DiskChunkCacheTest {
             final ChunkKey chunkKey1 = new ChunkKey(SEGMENT_ID, 1);
 
             assertThatThrownBy(() -> diskChunkCache.cacheChunk(chunkKey0, chunkStream0))
-                    .isInstanceOf(IOException.class)
-                    .hasMessage(TEST_EXCEPTION_MESSAGE);
+                .isInstanceOf(IOException.class)
+                .hasMessage(TEST_EXCEPTION_MESSAGE);
 
             assertThatThrownBy(() -> diskChunkCache.cacheChunk(chunkKey1, chunkStream1))
-                    .isInstanceOf(IOException.class)
-                    .hasMessage(TEST_EXCEPTION_MESSAGE);
+                .isInstanceOf(IOException.class)
+                .hasMessage(TEST_EXCEPTION_MESSAGE);
 
             assertThat(cachePath)
-                    .isDirectoryNotContaining(path -> path.endsWith(SEGMENT_ID + "-" + chunkKey0.chunkId));
+                .isDirectoryNotContaining(path -> path.endsWith(SEGMENT_ID + "-" + chunkKey0.chunkId));
             assertThat(tempCachePath)
-                    .isDirectoryNotContaining(path -> path.endsWith(SEGMENT_ID + "-" + chunkKey0.chunkId));
+                .isDirectoryNotContaining(path -> path.endsWith(SEGMENT_ID + "-" + chunkKey0.chunkId));
 
             assertThat(cachePath)
-                    .isDirectoryNotContaining(path -> path.endsWith(SEGMENT_ID + "-" + chunkKey1.chunkId));
+                .isDirectoryNotContaining(path -> path.endsWith(SEGMENT_ID + "-" + chunkKey1.chunkId));
             assertThat(tempCachePath)
-                    .isDirectoryNotContaining(path -> path.endsWith(SEGMENT_ID + "-" + chunkKey1.chunkId));
+                .isDirectoryNotContaining(path -> path.endsWith(SEGMENT_ID + "-" + chunkKey1.chunkId));
         }
     }
 
@@ -117,24 +117,24 @@ class DiskChunkCacheTest {
 
         assertThat(cachedChunkPath0).exists();
         assertThat(diskChunkCache.cachedChunkToInputStream(cachedChunkPath0))
-                .hasBinaryContent(CHUNK_0);
+            .hasBinaryContent(CHUNK_0);
 
         assertThat(tempCachePath)
-                .isDirectoryNotContaining(path -> path.endsWith(SEGMENT_ID + "-" + chunkKey0.chunkId));
+            .isDirectoryNotContaining(path -> path.endsWith(SEGMENT_ID + "-" + chunkKey0.chunkId));
 
         assertThat(cachedChunkPath1).exists();
         assertThat(diskChunkCache.cachedChunkToInputStream(cachedChunkPath1))
-                .hasBinaryContent(CHUNK_1);
+            .hasBinaryContent(CHUNK_1);
 
         assertThat(tempCachePath)
-                .isDirectoryNotContaining(path -> path.endsWith(SEGMENT_ID + "-" + chunkKey1.chunkId));
+            .isDirectoryNotContaining(path -> path.endsWith(SEGMENT_ID + "-" + chunkKey1.chunkId));
     }
 
     @Test
     void failsToReadFile() {
         assertThatThrownBy(() -> diskChunkCache.cachedChunkToInputStream(Path.of("does_not_exists")))
-                .isInstanceOf(RuntimeException.class)
-                .hasCauseInstanceOf(IOException.class);
+            .isInstanceOf(RuntimeException.class)
+            .hasCauseInstanceOf(IOException.class);
     }
 
     @Test
@@ -157,7 +157,7 @@ class DiskChunkCacheTest {
 
         try (final MockedStatic<Files> filesMockedStatic = mockStatic(Files.class, CALLS_REAL_METHODS)) {
             filesMockedStatic.when(() -> Files.size(any()))
-                    .thenReturn((long) Integer.MAX_VALUE + 1);
+                .thenReturn((long) Integer.MAX_VALUE + 1);
             final Weigher<ChunkKey, Path> weigher = diskChunkCache.weigher();
             assertThat(weigher.weigh(chunkKey, cachedChunkPath)).isEqualTo(Integer.MAX_VALUE);
         }
@@ -171,12 +171,12 @@ class DiskChunkCacheTest {
         final Path cachedChunkPath = diskChunkCache.cacheChunk(chunkKey, chunkStream);
         try (final MockedStatic<Files> filesMockedStatic = mockStatic(Files.class, CALLS_REAL_METHODS)) {
             filesMockedStatic.when(() -> Files.size(any()))
-                    .thenThrow(new IOException(TEST_EXCEPTION_MESSAGE));
+                .thenThrow(new IOException(TEST_EXCEPTION_MESSAGE));
             final Weigher<ChunkKey, Path> weigher = diskChunkCache.weigher();
             assertThatThrownBy(() -> weigher.weigh(chunkKey, cachedChunkPath))
-                    .isInstanceOf(RuntimeException.class)
-                    .hasCauseInstanceOf(IOException.class)
-                    .hasRootCauseMessage(TEST_EXCEPTION_MESSAGE);
+                .isInstanceOf(RuntimeException.class)
+                .hasCauseInstanceOf(IOException.class)
+                .hasRootCauseMessage(TEST_EXCEPTION_MESSAGE);
         }
     }
 
@@ -202,10 +202,10 @@ class DiskChunkCacheTest {
         final RemovalListener<ChunkKey, Path> removalListener = diskChunkCache.removalListener();
         try (final MockedStatic<Files> filesMockedStatic = mockStatic(Files.class, CALLS_REAL_METHODS)) {
             filesMockedStatic.when(() -> Files.delete(any()))
-                    .thenThrow(new IOException(TEST_EXCEPTION_MESSAGE));
+                .thenThrow(new IOException(TEST_EXCEPTION_MESSAGE));
 
             assertThatNoException()
-                    .isThrownBy(() -> removalListener.onRemoval(chunkKey, cachedChunkPath, RemovalCause.SIZE));
+                .isThrownBy(() -> removalListener.onRemoval(chunkKey, cachedChunkPath, RemovalCause.SIZE));
             assertThat(cachedChunkPath).exists();
         }
     }
@@ -213,12 +213,12 @@ class DiskChunkCacheTest {
     @Test
     void cacheInitialized() {
         final DiskChunkCache spy = spy(
-                new DiskChunkCache(mock(ChunkManager.class))
+            new DiskChunkCache(mock(ChunkManager.class))
         );
         final Map<String, String> configs = Map.of(
-                "retention.ms", "-1",
-                "size", "-1",
-                "path", baseCachePath.toString()
+            "retention.ms", "-1",
+            "size", "-1",
+            "path", baseCachePath.toString()
         );
         spy.configure(configs);
 

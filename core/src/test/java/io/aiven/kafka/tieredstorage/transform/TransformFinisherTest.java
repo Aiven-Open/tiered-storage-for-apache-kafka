@@ -86,8 +86,8 @@ class TransformFinisherTest {
 
     static Object[][] provideForBuildIndexAndReturnCorrectInputStreams() {
         return new Object[][] {
-            new Object[]{3, FixedSizeChunkIndex.class},
-            new Object[]{null, VariableSizeChunkIndex.class},
+            new Object[] {3, FixedSizeChunkIndex.class},
+            new Object[] {null, VariableSizeChunkIndex.class},
         };
     }
 

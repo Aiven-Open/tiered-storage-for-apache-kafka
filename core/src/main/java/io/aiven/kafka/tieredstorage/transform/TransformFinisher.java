@@ -28,6 +28,7 @@ import io.aiven.kafka.tieredstorage.manifest.index.FixedSizeChunkIndexBuilder;
 import io.aiven.kafka.tieredstorage.manifest.index.VariableSizeChunkIndexBuilder;
 
 // TODO test transforms and detransforms with property-based tests
+
 /**
  * The transformation finisher.
  *

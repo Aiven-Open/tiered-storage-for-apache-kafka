@@ -35,6 +35,7 @@ public interface TransformChunkEnumeration extends Enumeration<byte[]> {
 
     /**
      * Returns a transformed chunk size if it's known.
+     *
      * @return a transformed chunk size; or {@code null} if unknown.
      */
     Integer transformedChunkSize();
