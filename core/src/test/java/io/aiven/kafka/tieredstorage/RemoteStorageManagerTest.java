@@ -29,6 +29,7 @@ import org.apache.kafka.common.TopicPartition;
 import org.apache.kafka.common.Uuid;
 import org.apache.kafka.server.log.remote.storage.RemoteLogSegmentId;
 import org.apache.kafka.server.log.remote.storage.RemoteLogSegmentMetadata;
+import org.apache.kafka.server.log.remote.storage.RemoteStorageException;
 
 import io.aiven.kafka.tieredstorage.fetch.ChunkManager;
 import io.aiven.kafka.tieredstorage.manifest.SegmentManifestProvider;
@@ -41,6 +42,7 @@ import org.junit.jupiter.params.provider.Arguments;
 import org.junit.jupiter.params.provider.MethodSource;
 
 import static org.assertj.core.api.Assertions.assertThat;
+import static org.assertj.core.api.Assertions.assertThatThrownBy;
 import static org.junit.jupiter.params.provider.Arguments.arguments;
 import static org.mockito.ArgumentMatchers.any;
 import static org.mockito.ArgumentMatchers.anyInt;
@@ -140,6 +142,93 @@ class RemoteStorageManagerTest {
             arguments(RuntimeException.class, ClosedByInterruptException.class),
             arguments(StorageBackendException.class, InterruptedException.class),
             arguments(StorageBackendException.class, ClosedByInterruptException.class)
+        );
+    }
+
+    @ParameterizedTest
+    @MethodSource("provideNonInterruptionExceptions")
+    void fetchSegmentNonInterruptionExceptionWhenGettingManifest(
+        final Class<Exception> outerExceptionClass,
+        final Class<Exception> exceptionClass
+    ) throws Exception {
+        final SegmentManifestProvider segmentManifestProvider = mock(SegmentManifestProvider.class);
+        when(segmentManifestProvider.get(any())).thenAnswer(invocation -> {
+            Exception innerException;
+            try {
+                innerException = exceptionClass.getDeclaredConstructor().newInstance();
+            } catch (final NoSuchMethodException e) {
+                innerException = exceptionClass.getDeclaredConstructor(String.class).newInstance("");
+            }
+
+            if (outerExceptionClass != null) {
+                throw outerExceptionClass.getDeclaredConstructor(String.class, Throwable.class)
+                    .newInstance("", innerException);
+            } else {
+                throw innerException;
+            }
+        });
+
+        final var config = Map.of(
+            "chunk.size", "1",
+            "storage.backend.class", "io.aiven.kafka.tieredstorage.storage.filesystem.FileSystemStorage",
+            "storage.root", targetDir.toString()
+        );
+        rsm.configure(config);
+        rsm.setSegmentManifestProvider(segmentManifestProvider);
+
+        assertThatThrownBy(() -> rsm.fetchLogSegment(REMOTE_LOG_METADATA, 0))
+            .isInstanceOf(RemoteStorageException.class)
+            .hasRootCauseInstanceOf(exceptionClass);
+    }
+
+    @ParameterizedTest
+    @MethodSource("provideNonInterruptionExceptions")
+    void fetchSegmentNonInterruptionExceptionWhenGettingSegment(
+        final Class<Exception> outerExceptionClass,
+        final Class<Exception> exceptionClass
+    ) throws Exception {
+        // Ensure the manifest exists.
+        final ObjectKeyFactory objectKeyFactory = new ObjectKeyFactory("", false);
+        writeManifest(objectKeyFactory);
+
+        final ChunkManager chunkManager = mock(ChunkManager.class);
+        when(chunkManager.getChunk(any(), any(), anyInt())).thenAnswer(invocation -> {
+            Exception innerException;
+            try {
+                innerException = exceptionClass.getDeclaredConstructor().newInstance();
+            } catch (final NoSuchMethodException e) {
+                innerException = exceptionClass.getDeclaredConstructor(String.class).newInstance("");
+            }
+
+            if (outerExceptionClass != null) {
+                throw outerExceptionClass.getDeclaredConstructor(String.class, Throwable.class)
+                    .newInstance("", innerException);
+            } else {
+                throw innerException;
+            }
+        });
+
+        final var config = Map.of(
+            "chunk.size", "1",
+            "storage.backend.class", "io.aiven.kafka.tieredstorage.storage.filesystem.FileSystemStorage",
+            "storage.root", targetDir.toString()
+        );
+        rsm.configure(config);
+        rsm.setChunkManager(chunkManager);
+
+        assertThatThrownBy(() -> rsm.fetchLogSegment(REMOTE_LOG_METADATA, 0))
+            .isInstanceOf(RemoteStorageException.class)
+            .hasRootCauseInstanceOf(exceptionClass);
+    }
+
+    static Stream<Arguments> provideNonInterruptionExceptions() {
+        return Stream.of(
+            arguments(RuntimeException.class, Exception.class),
+            arguments(RuntimeException.class, RuntimeException.class),
+            arguments(RuntimeException.class, StorageBackendException.class),
+            arguments(StorageBackendException.class, Exception.class),
+            arguments(StorageBackendException.class, RuntimeException.class),
+            arguments(StorageBackendException.class, StorageBackendException.class)
         );
     }
 
