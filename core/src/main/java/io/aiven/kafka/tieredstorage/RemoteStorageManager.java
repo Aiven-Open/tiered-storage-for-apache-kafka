@@ -388,20 +388,22 @@ public class RemoteStorageManager implements org.apache.kafka.server.log.remote.
                                final SegmentEncryptionMetadata encryptionMetadata,
                                final SegmentIndexesV1Builder segmentIndexBuilder) {
         log.debug("Transforming index {} with size {}", indexType, size);
-        if (size == 0) {
+        if (size > 0) {
+            TransformChunkEnumeration transformEnum = new BaseTransformChunkEnumeration(index, size);
+            if (encryptionEnabled) {
+                final var dataKeyAndAAD = new DataKeyAndAAD(encryptionMetadata.dataKey(), encryptionMetadata.aad());
+                transformEnum = new EncryptionChunkEnumeration(
+                    transformEnum,
+                    () -> aesEncryptionProvider.encryptionCipher(dataKeyAndAAD));
+            }
+            final var transformFinisher = new TransformFinisher(transformEnum, size);
+            final var inputStream = transformFinisher.nextElement();
+            segmentIndexBuilder.add(indexType, singleChunk(transformFinisher.chunkIndex()).range().size());
+            return inputStream;
+        } else {
+            segmentIndexBuilder.add(indexType, 0);
             return InputStream.nullInputStream();
         }
-        TransformChunkEnumeration transformEnum = new BaseTransformChunkEnumeration(index, size);
-        if (encryptionEnabled) {
-            final var dataKeyAndAAD = new DataKeyAndAAD(encryptionMetadata.dataKey(), encryptionMetadata.aad());
-            transformEnum = new EncryptionChunkEnumeration(
-                transformEnum,
-                () -> aesEncryptionProvider.encryptionCipher(dataKeyAndAAD));
-        }
-        final var transformFinisher = new TransformFinisher(transformEnum, size);
-        final var inputStream = transformFinisher.nextElement();
-        segmentIndexBuilder.add(indexType, singleChunk(transformFinisher.chunkIndex()).range().size());
-        return inputStream;
     }
 
     private Chunk singleChunk(final ChunkIndex chunkIndex) {
