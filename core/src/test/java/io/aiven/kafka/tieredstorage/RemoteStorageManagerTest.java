@@ -223,6 +223,9 @@ class RemoteStorageManagerTest {
 
     static Stream<Arguments> provideNonInterruptionExceptions() {
         return Stream.of(
+            arguments(null, Exception.class),
+            arguments(null, RuntimeException.class),
+            arguments(null, StorageBackendException.class),
             arguments(RuntimeException.class, Exception.class),
             arguments(RuntimeException.class, RuntimeException.class),
             arguments(RuntimeException.class, StorageBackendException.class),
