@@ -21,6 +21,7 @@ import java.io.File;
 import java.io.IOException;
 import java.io.InputStream;
 import java.io.SequenceInputStream;
+import java.nio.channels.ClosedByInterruptException;
 import java.nio.file.Files;
 import java.nio.file.Path;
 import java.security.KeyPair;
@@ -176,6 +177,16 @@ public class RemoteStorageManager implements org.apache.kafka.server.log.remote.
         fetcher = storage;
         uploader = storage;
         deleter = storage;
+    }
+
+    // for testing
+    void setSegmentManifestProvider(final SegmentManifestProvider segmentManifestProvider) {
+        this.segmentManifestProvider = segmentManifestProvider;
+    }
+
+    // for testing
+    void setChunkManager(final ChunkManager chunkManager) {
+        this.chunkManager = chunkManager;
     }
 
     private ObjectMapper getObjectMapper() {
@@ -436,12 +447,12 @@ public class RemoteStorageManager implements org.apache.kafka.server.log.remote.
     public InputStream fetchLogSegment(final RemoteLogSegmentMetadata remoteLogSegmentMetadata,
                                        final int startPosition,
                                        final int endPosition) throws RemoteStorageException {
-        try {
-            final BytesRange range = BytesRange.of(
-                startPosition,
-                Math.min(endPosition, remoteLogSegmentMetadata.segmentSizeInBytes() - 1)
-            );
+        final BytesRange range = BytesRange.of(
+            startPosition,
+            Math.min(endPosition, remoteLogSegmentMetadata.segmentSizeInBytes() - 1)
+        );
 
+        try {
             log.trace("Fetching log segment {} with range: {}", remoteLogSegmentMetadata, range);
 
             metrics.recordSegmentFetch(
@@ -456,8 +467,34 @@ public class RemoteStorageManager implements org.apache.kafka.server.log.remote.
                 .toInputStream();
         } catch (final KeyNotFoundException | KeyNotFoundRuntimeException e) {
             throw new RemoteResourceNotFoundException(e);
+        } catch (final ClosedByInterruptException e) {
+            log.debug("Fetching log segment {} with range {} was interrupted", remoteLogSegmentMetadata, range);
+            return InputStream.nullInputStream();
+        } catch (final RuntimeException | StorageBackendException e) {
+            final InputStream is = maybeReturnNullInputStreamIfInterrupted(e, remoteLogSegmentMetadata, range);
+            if (is != null) {
+                return is;
+            } else {
+                throw new RemoteStorageException(e);
+            }
         } catch (final Exception e) {
             throw new RemoteStorageException(e);
+        }
+    }
+
+    private static InputStream maybeReturnNullInputStreamIfInterrupted(
+        final Throwable exception,
+        final RemoteLogSegmentMetadata remoteLogSegmentMetadata,
+        final BytesRange range
+    ) {
+        if (exception.getCause() instanceof InterruptedException
+            || exception.getCause() instanceof ClosedByInterruptException) {
+            log.debug("Fetching log segment {} with range {} was interrupted", remoteLogSegmentMetadata, range);
+            return InputStream.nullInputStream();
+        } else if (exception.getCause() instanceof StorageBackendException) {
+            return maybeReturnNullInputStreamIfInterrupted(exception.getCause(), remoteLogSegmentMetadata, range);
+        } else {
+            return null;
         }
     }
 
