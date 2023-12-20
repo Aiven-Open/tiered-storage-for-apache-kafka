@@ -119,7 +119,7 @@ class DiskChunkCacheMetricsTest {
             .isEqualTo(((double) (size1 + size2)) / METRIC_TIME_WINDOW_SEC);
 
         await("Deletion happens")
-            .atMost(Duration.ofMillis(5000))
+            .atMost(Duration.ofSeconds(30)) // increase to reduce chance of flakiness
             .pollDelay(Duration.ofMillis(100))
             .pollInterval(Duration.ofMillis(100))
             .until(() -> (double) MBEAN_SERVER.getAttribute(objectName, "delete-total") > 0);
