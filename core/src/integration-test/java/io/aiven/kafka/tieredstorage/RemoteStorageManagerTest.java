@@ -501,6 +501,37 @@ class RemoteStorageManagerTest extends RsaKeyAwareTest {
             segmentIndexBuilder
         );
         assertThat(is).isNotEmpty();
+        assertThat(segmentIndexBuilder.indexes()).containsOnly(IndexType.OFFSET);
+
+
+        // adding required indexes to test builder
+        rsm.transformIndex(
+            IndexType.TIMESTAMP,
+            new ByteArrayInputStream(bytes),
+            bytes.length,
+            encryptionMetadata,
+            segmentIndexBuilder
+        );
+        rsm.transformIndex(
+            IndexType.LEADER_EPOCH,
+            new ByteArrayInputStream(bytes),
+            bytes.length,
+            encryptionMetadata,
+            segmentIndexBuilder
+        );
+        rsm.transformIndex(
+            IndexType.PRODUCER_SNAPSHOT,
+            new ByteArrayInputStream(bytes),
+            bytes.length,
+            encryptionMetadata,
+            segmentIndexBuilder
+        );
+        final var index = segmentIndexBuilder.build();
+        assertThat(index.offset().size()).isGreaterThan(0);
+        assertThat(index.timestamp().size()).isGreaterThan(0);
+        assertThat(index.leaderEpoch().size()).isGreaterThan(0);
+        assertThat(index.producerSnapshot().size()).isGreaterThan(0);
+        assertThat(index.transaction()).isNull();
     }
 
     @ParameterizedTest
@@ -532,6 +563,36 @@ class RemoteStorageManagerTest extends RsaKeyAwareTest {
             segmentIndexBuilder
         );
         assertThat(is).isEmpty();
+        assertThat(segmentIndexBuilder.indexes()).containsOnly(IndexType.OFFSET);
+
+        // adding required indexes to test builder
+        rsm.transformIndex(
+            IndexType.TIMESTAMP,
+            InputStream.nullInputStream(),
+            0,
+            encryptionMetadata,
+            segmentIndexBuilder
+        );
+        rsm.transformIndex(
+            IndexType.LEADER_EPOCH,
+            InputStream.nullInputStream(),
+            0,
+            encryptionMetadata,
+            segmentIndexBuilder
+        );
+        rsm.transformIndex(
+            IndexType.PRODUCER_SNAPSHOT,
+            InputStream.nullInputStream(),
+            0,
+            encryptionMetadata,
+            segmentIndexBuilder
+        );
+        final var index = segmentIndexBuilder.build();
+        assertThat(index.offset().size()).isEqualTo(0);
+        assertThat(index.timestamp().size()).isEqualTo(0);
+        assertThat(index.leaderEpoch().size()).isEqualTo(0);
+        assertThat(index.producerSnapshot().size()).isEqualTo(0);
+        assertThat(index.transaction()).isNull();
     }
 
     @Test

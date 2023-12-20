@@ -16,7 +16,10 @@
 
 package io.aiven.kafka.tieredstorage.manifest;
 
+import java.util.ArrayList;
+import java.util.Collections;
 import java.util.HashMap;
+import java.util.List;
 import java.util.Map;
 
 import static org.apache.kafka.server.log.remote.storage.RemoteStorageManager.IndexType;
@@ -34,9 +37,17 @@ public class SegmentIndexesV1Builder {
         return this;
     }
 
+    // for testing and logging purposes
+    public List<IndexType> indexes() {
+        final var indexTypes = new ArrayList<>(indexes.keySet());
+        Collections.sort(indexTypes);
+        return indexTypes;
+    }
+
     public SegmentIndexesV1 build() {
         if (indexes.size() < 4) {
-            throw new IllegalStateException("Not enough indexes have been added. At least 4 required");
+            throw new IllegalStateException("Not enough indexes have been added; at least 4 required. "
+                + "Indexes included: " + indexes());
         }
         if (indexes.size() == 4 && indexes.containsKey(IndexType.TRANSACTION)) {
             throw new IllegalStateException("OFFSET, TIMESTAMP, PRODUCER_SNAPSHOT, "

@@ -29,7 +29,7 @@ class SegmentIndexesV1BuilderTest {
     void shouldFailWhenBuildingWithoutIndexes() {
         assertThatThrownBy(() -> new SegmentIndexesV1Builder().build())
             .isInstanceOf(IllegalStateException.class)
-            .hasMessage("Not enough indexes have been added. At least 4 required");
+            .hasMessage("Not enough indexes have been added; at least 4 required. Indexes included: []");
     }
 
     @Test
@@ -39,7 +39,8 @@ class SegmentIndexesV1BuilderTest {
             .add(RemoteStorageManager.IndexType.TIMESTAMP, 1)
             .build())
             .isInstanceOf(IllegalStateException.class)
-            .hasMessage("Not enough indexes have been added. At least 4 required");
+            .hasMessage("Not enough indexes have been added; at least 4 required. "
+                + "Indexes included: [OFFSET, TIMESTAMP]");
     }
 
     @Test
