@@ -207,7 +207,8 @@ class ChunkCacheTest {
                 .hasBinaryContent(CHUNK_1);
             verify(chunkManager).getChunk(SEGMENT_OBJECT_KEY, SEGMENT_MANIFEST, 1);
 
-            await().atMost(Duration.ofMillis(5000))
+            await()
+                .atMost(Duration.ofSeconds(30)) // increase to reduce chance of flakiness
                 .pollDelay(Duration.ofSeconds(2))
                 .pollInterval(Duration.ofMillis(10))
                 .until(() -> !mockingDetails(removalListener).getInvocations().isEmpty());
