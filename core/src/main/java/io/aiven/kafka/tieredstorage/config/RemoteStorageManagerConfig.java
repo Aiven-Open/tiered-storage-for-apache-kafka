@@ -41,6 +41,7 @@ import static org.apache.kafka.common.config.ConfigDef.ValidString.in;
 
 public class RemoteStorageManagerConfig extends AbstractConfig {
     private static final String STORAGE_PREFIX = "storage.";
+    private static final String FETCH_INDEXES_CACHE_PREFIX = "fetch.indexes.cache.";
 
     private static final String STORAGE_BACKEND_CLASS_CONFIG = STORAGE_PREFIX + "backend.class";
     private static final String STORAGE_BACKEND_CLASS_DOC = "The storage backend implementation class";
@@ -392,5 +393,9 @@ public class RemoteStorageManagerConfig extends AbstractConfig {
         return getList(CUSTOM_METADATA_FIELDS_INCLUDE_CONFIG).stream()
             .map(SegmentCustomMetadataField::valueOf)
             .collect(Collectors.toSet());
+    }
+
+    public Map<String, ?> fetchIndexesCacheConfigs() {
+        return originalsWithPrefix(FETCH_INDEXES_CACHE_PREFIX);
     }
 }

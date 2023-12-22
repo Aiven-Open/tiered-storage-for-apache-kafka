@@ -52,8 +52,11 @@ import io.aiven.kafka.tieredstorage.fetch.ChunkManager;
 import io.aiven.kafka.tieredstorage.fetch.ChunkManagerFactory;
 import io.aiven.kafka.tieredstorage.fetch.FetchChunkEnumeration;
 import io.aiven.kafka.tieredstorage.fetch.KeyNotFoundRuntimeException;
+import io.aiven.kafka.tieredstorage.fetch.index.MemorySegmentIndexesCache;
+import io.aiven.kafka.tieredstorage.fetch.index.SegmentIndexesCache;
 import io.aiven.kafka.tieredstorage.manifest.SegmentEncryptionMetadata;
 import io.aiven.kafka.tieredstorage.manifest.SegmentEncryptionMetadataV1;
+import io.aiven.kafka.tieredstorage.manifest.SegmentIndex;
 import io.aiven.kafka.tieredstorage.manifest.SegmentIndexesV1;
 import io.aiven.kafka.tieredstorage.manifest.SegmentIndexesV1Builder;
 import io.aiven.kafka.tieredstorage.manifest.SegmentManifest;
@@ -122,6 +125,7 @@ public class RemoteStorageManager implements org.apache.kafka.server.log.remote.
     private Set<SegmentCustomMetadataField> customMetadataFields;
 
     private SegmentManifestProvider segmentManifestProvider;
+    private SegmentIndexesCache segmentIndexesCache;
 
     public RemoteStorageManager() {
         this(Time.SYSTEM);
@@ -167,6 +171,9 @@ public class RemoteStorageManager implements org.apache.kafka.server.log.remote.
             fetcher,
             mapper,
             executor);
+
+        segmentIndexesCache = new MemorySegmentIndexesCache();
+        segmentIndexesCache.configure(config.fetchIndexesCacheConfigs());
 
         customMetadataSerde = new SegmentCustomMetadataSerde();
         customMetadataFields = config.customMetadataKeysIncluded();
@@ -513,25 +520,47 @@ public class RemoteStorageManager implements org.apache.kafka.server.log.remote.
             if (segmentIndex == null) {
                 throw new RemoteResourceNotFoundException("Index " + indexType + " not found on " + key);
             }
-            final var in = fetcher.fetch(key, segmentIndex.range());
-
-            DetransformChunkEnumeration detransformEnum = new BaseDetransformChunkEnumeration(in);
-            final Optional<SegmentEncryptionMetadata> encryptionMetadata = segmentManifest.encryption();
-            if (encryptionMetadata.isPresent()) {
-                detransformEnum = new DecryptionChunkEnumeration(
-                    detransformEnum,
-                    encryptionMetadata.get().ivSize(),
-                    encryptedChunk -> aesEncryptionProvider.decryptionCipher(encryptedChunk, encryptionMetadata.get())
-                );
-            }
-            final DetransformFinisher detransformFinisher = new DetransformFinisher(detransformEnum);
-            return detransformFinisher.toInputStream();
+            return segmentIndexesCache.get(
+                key,
+                indexType,
+                () -> fetchIndexBytes(key, segmentIndex, segmentManifest)
+            );
         } catch (final RemoteResourceNotFoundException e) {
             throw e;
         } catch (final KeyNotFoundException e) {
             throw new RemoteResourceNotFoundException(e);
         } catch (final Exception e) {
             throw new RemoteStorageException(e);
+        }
+    }
+
+    private byte[] fetchIndexBytes(
+        final ObjectKey key,
+        final SegmentIndex segmentIndex,
+        final SegmentManifest segmentManifest
+    ) {
+        final InputStream in;
+        try {
+            in = fetcher.fetch(key, segmentIndex.range());
+        } catch (final StorageBackendException e) {
+            throw new RuntimeException("Error fetching index from remote storage", e);
+        }
+
+        DetransformChunkEnumeration detransformEnum = new BaseDetransformChunkEnumeration(in);
+        final Optional<SegmentEncryptionMetadata> encryptionMetadata = segmentManifest.encryption();
+        if (encryptionMetadata.isPresent()) {
+            detransformEnum = new DecryptionChunkEnumeration(
+                detransformEnum,
+                encryptionMetadata.get().ivSize(),
+                encryptedChunk -> aesEncryptionProvider.decryptionCipher(encryptedChunk,
+                    encryptionMetadata.get())
+            );
+        }
+        final var detransformFinisher = new DetransformFinisher(detransformEnum);
+        try (final var is = detransformFinisher.toInputStream()) {
+            return is.readAllBytes();
+        } catch (final IOException e) {
+            throw new RuntimeException("Error reading de-transformed index bytes", e);
         }
     }
 
