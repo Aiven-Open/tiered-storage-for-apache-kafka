@@ -32,6 +32,7 @@ import io.aiven.kafka.tieredstorage.storage.StorageBackendException;
 import org.apache.commons.io.IOUtils;
 import org.apache.commons.io.input.BoundedInputStream;
 import org.apache.hadoop.conf.Configuration;
+import org.apache.hadoop.fs.ContentSummary;
 import org.apache.hadoop.fs.FSDataInputStream;
 import org.apache.hadoop.fs.FSDataOutputStream;
 import org.apache.hadoop.fs.FileSystem;
@@ -41,7 +42,7 @@ import org.apache.hadoop.fs.permission.FsAction;
 public class HdfsStorage implements StorageBackend {
 
     private int uploadBufferSize;
-    private String absoluteRootPath;
+    private Path absoluteRootPath;
 
     private FileSystem fileSystem;
 
@@ -59,7 +60,7 @@ public class HdfsStorage implements StorageBackend {
             validateRootDir(rootDirectory);
             fileSystem.setWorkingDirectory(rootDirectory);
 
-            absoluteRootPath = fileSystem.makeQualified(rootDirectory).toString();
+            absoluteRootPath = fileSystem.makeQualified(rootDirectory);
         } catch (final IOException exception) {
             throw new RuntimeException("Can't create Hadoop filesystem with provided config",
                 exception);
@@ -123,8 +124,18 @@ public class HdfsStorage implements StorageBackend {
     @Override
     public void delete(final ObjectKey key) throws StorageBackendException {
         try {
-            final Path path = new Path(key.value());
-            fileSystem.delete(path, false);
+            Path pathToDelete = fileSystem.makeQualified(new Path(key.value()));
+            if (!fileSystem.exists(pathToDelete)) {
+                // we should support delete idempotence
+                return;
+            }
+
+            Path containingDir;
+            do {
+                fileSystem.delete(pathToDelete, true);
+                containingDir = pathToDelete.getParent();
+                pathToDelete = containingDir;
+            } while (isEmptyDir(containingDir) && !containingDir.equals(absoluteRootPath));
         } catch (final IOException e) {
             throw new StorageBackendException("Error when deleting " + key, e);
         }
@@ -135,6 +146,13 @@ public class HdfsStorage implements StorageBackend {
         return "HdfsStorage{"
             + "root='" + absoluteRootPath + '\''
             + '}';
+    }
+
+    private boolean isEmptyDir(final Path directoryPath) throws IOException {
+        final ContentSummary contentSummary = fileSystem.getContentSummary(directoryPath);
+        return contentSummary.getFileCount() == 0
+            // directory itself
+            && contentSummary.getDirectoryCount() == 1;
     }
 
     private void validateRootDir(final Path path) throws IOException {

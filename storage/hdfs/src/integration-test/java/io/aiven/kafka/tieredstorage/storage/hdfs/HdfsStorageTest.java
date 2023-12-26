@@ -21,20 +21,27 @@ import java.util.Map;
 
 import io.aiven.kafka.tieredstorage.storage.BaseStorageTest;
 import io.aiven.kafka.tieredstorage.storage.StorageBackend;
+import io.aiven.kafka.tieredstorage.storage.StorageBackendException;
+import io.aiven.kafka.tieredstorage.storage.TestObjectKey;
 
 import org.apache.hadoop.conf.Configuration;
+import org.apache.hadoop.fs.FileSystem;
+import org.apache.hadoop.fs.Path;
 import org.apache.hadoop.hdfs.MiniDFSCluster;
 import org.junit.jupiter.api.AfterEach;
 import org.junit.jupiter.api.BeforeEach;
+import org.junit.jupiter.api.Test;
 
 import static io.aiven.kafka.tieredstorage.storage.hdfs.HdfsStorageConfig.HDFS_CONF_PREFIX;
 import static io.aiven.kafka.tieredstorage.storage.hdfs.HdfsStorageConfig.HDFS_ROOT_CONFIG;
 import static org.apache.hadoop.fs.FileSystem.FS_DEFAULT_NAME_KEY;
 import static org.apache.hadoop.http.HttpServer2.BIND_ADDRESS;
+import static org.assertj.core.api.Assertions.assertThat;
 
 public class HdfsStorageTest extends BaseStorageTest {
 
     private static final String MS_INIT_MODE_KEY = "hadoop.metrics.init.mode";
+    private static final String HDFS_ROOT_DIR = "/tmp/test/";
 
     private MiniDFSCluster miniDfsCluster;
 
@@ -49,6 +56,7 @@ public class HdfsStorageTest extends BaseStorageTest {
             .numDataNodes(3)
             .build();
         miniDfsCluster.waitActive();
+        miniDfsCluster.getFileSystem().setWorkingDirectory(new Path(HDFS_ROOT_DIR));
     }
 
     @AfterEach
@@ -65,5 +73,68 @@ public class HdfsStorageTest extends BaseStorageTest {
         );
         hdfsStorage.configure(storeConfig);
         return hdfsStorage;
+    }
+
+    @Test
+    void testDeleteAllEmptyParents() throws IOException, StorageBackendException {
+        final FileSystem fileSystem = miniDfsCluster.getFileSystem();
+        final String parentDir = "dirWithOtherFiles/emptyParentDir/emptyDir/";
+        final String segmentPath = parentDir + "kafkaSegment";
+
+        fileSystem.mkdirs(new Path(parentDir));
+        fileSystem.createNewFile(new Path(segmentPath));
+        fileSystem.createNewFile(new Path("dirWithOtherFiles/otherFile"));
+
+        storage().delete(new TestObjectKey(segmentPath));
+
+        assertThat(fileSystem.exists(
+            new Path("dirWithOtherFiles/emptyParentDir/emptyDir/kafkaSegment"))).isFalse();
+        assertThat(fileSystem.exists(
+            new Path("dirWithOtherFiles/emptyParentDir/emptyDir/"))).isFalse();
+        assertThat(fileSystem.exists(
+            new Path("dirWithOtherFiles/emptyParentDir/"))).isFalse();
+        assertThat(fileSystem.exists(
+            new Path("dirWithOtherFiles/otherFile"))).isTrue();
+        assertThat(fileSystem.exists(
+            new Path("dirWithOtherFiles/"))).isTrue();
+    }
+
+    @Test
+    void testDeleteAllParentsButRoot() throws IOException, StorageBackendException {
+        final FileSystem fileSystem = miniDfsCluster.getFileSystem();
+        final String parentDir = "emptyParentDir/emptyDir/";
+        final String segmentPath = parentDir + "kafkaSegment";
+
+        fileSystem.mkdirs(new Path(parentDir));
+        fileSystem.createNewFile(new Path(segmentPath));
+
+        storage().delete(new TestObjectKey(segmentPath));
+
+        assertThat(fileSystem.exists(
+            new Path("emptyParentDir/emptyDir/kafkaSegment"))).isFalse();
+        assertThat(fileSystem.exists(
+            new Path("emptyParentDir/emptyDir/"))).isFalse();
+        assertThat(fileSystem.exists(
+            new Path("emptyParentDir/"))).isFalse();
+    }
+
+    @Test
+    void testDontDeleteNonEmptyDirectory() throws IOException, StorageBackendException {
+        final FileSystem fileSystem = miniDfsCluster.getFileSystem();
+        final String parentDir = "emptyParentDir/nonEmptyDir/";
+        final String segmentPath = parentDir + "kafkaSegment";
+
+        fileSystem.mkdirs(new Path(parentDir));
+        fileSystem.createNewFile(new Path(segmentPath));
+        fileSystem.createNewFile(new Path(parentDir + "otherFile"));
+
+        storage().delete(new TestObjectKey(segmentPath));
+
+        assertThat(fileSystem.exists(
+            new Path("emptyParentDir/nonEmptyDir/kafkaSegment"))).isFalse();
+        assertThat(fileSystem.exists(
+            new Path("emptyParentDir/nonEmptyDir/otherFile"))).isTrue();
+        assertThat(fileSystem.exists(
+            new Path("emptyParentDir/nonEmptyDir/"))).isTrue();
     }
 }

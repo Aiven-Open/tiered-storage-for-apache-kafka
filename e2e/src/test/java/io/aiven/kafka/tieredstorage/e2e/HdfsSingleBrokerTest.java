@@ -128,9 +128,9 @@ public class HdfsSingleBrokerTest extends SingleBrokerTest {
 
     @Override
     boolean assertNoTopicDataOnTierStorage(final String topicName, final Uuid topicId) {
-        final String prefix = String.format("%s-%s", topicName, topicId.toString());
+        final String topicDir = String.format("%s-%s", topicName, topicId.toString());
         try {
-            return !fileSystem.listFiles(new Path(prefix), true).hasNext();
+            return !fileSystem.exists(new Path(topicDir));
         } catch (final IOException e) {
             throw new RuntimeException(e);
         }
