@@ -70,11 +70,11 @@ public class DiskChunkCache extends ChunkCache<Path> {
         final var chunkKeyPath = chunkKey.path();
         final Path tempChunkPath = config.tempCachePath().resolve(chunkKeyPath);
         final Path tempCached = writeToDisk(chunk, tempChunkPath);
-        log.debug("Chunk file has been stored to temporary caching directory {}", tempCached);
+        log.trace("Chunk file has been stored to temporary caching directory {}", tempCached);
         final Path cachedChunkPath = config.cachePath().resolve(chunkKeyPath);
         try {
             final Path newPath = Files.move(tempCached, cachedChunkPath, ATOMIC_MOVE);
-            log.debug("Chunk file has been moved to cache directory {}", newPath);
+            log.trace("Chunk file has been moved to cache directory {}", newPath);
             return newPath;
         } finally {
             // In case of exception during the move, the chunk file should be cleaned from temporary cache directory.
@@ -101,7 +101,7 @@ public class DiskChunkCache extends ChunkCache<Path> {
                     final long fileSize = Files.size(path);
                     Files.delete(path);
                     metrics.chunkDeleted(fileSize);
-                    log.debug("Deleted cached file for key {} with path {} from cache directory."
+                    log.trace("Deleted cached file for key {} with path {} from cache directory."
                         + " The reason of the deletion is {}", key, path, cause);
                 } else {
                     log.warn("Path not present when trying to delete cached file for key {} from cache directory."
