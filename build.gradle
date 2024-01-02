@@ -117,7 +117,7 @@ subprojects {
 
         awaitilityVersion = "4.2.0"
 
-        awsSdkVersion = "2.20.140"
+        awsSdkVersion = "2.22.9"
 
         gcpSdkVersion = "2.30.1"
 
