@@ -52,4 +52,14 @@ class BytesRangeTest {
             .isInstanceOf(IllegalArgumentException.class)
             .hasMessage("to cannot be less than from, from=2, to=1 given");
     }
+
+    @Test
+    void testEmptyRange() {
+        final BytesRange range = BytesRange.ofFromPositionAndSize(1, 0);
+        assertThat(range.size()).isEqualTo(0);
+        final BytesRange range2 = BytesRange.of(1, -1);
+        assertThat(range2.size()).isEqualTo(0);
+        final BytesRange range3 = BytesRange.empty(1);
+        assertThat(range3.size()).isEqualTo(0);
+    }
 }

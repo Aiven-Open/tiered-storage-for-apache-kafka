@@ -18,6 +18,8 @@ package io.aiven.kafka.tieredstorage.manifest;
 
 import org.apache.kafka.server.log.remote.storage.RemoteStorageManager;
 
+import io.aiven.kafka.tieredstorage.storage.BytesRange;
+
 import org.junit.jupiter.api.Test;
 
 import static org.assertj.core.api.Assertions.assertThat;
@@ -84,4 +86,22 @@ class SegmentIndexesV1BuilderTest {
         assertThat(indexes.transaction()).isNull();
     }
 
+    @Test
+    void shouldBuildWithEmptyIndex() {
+        final var indexes = new SegmentIndexesV1Builder()
+            .add(RemoteStorageManager.IndexType.OFFSET, 0)
+            .add(RemoteStorageManager.IndexType.TIMESTAMP, 1)
+            .add(RemoteStorageManager.IndexType.PRODUCER_SNAPSHOT, 0)
+            .add(RemoteStorageManager.IndexType.LEADER_EPOCH, 1)
+            .add(RemoteStorageManager.IndexType.TRANSACTION, 0)
+            .build();
+        assertThat(indexes.offset()).isEqualTo(new SegmentIndexV1(0, 0));
+        assertThat(indexes.offset().range()).isEqualTo(BytesRange.ofFromPositionAndSize(0, 0));
+        assertThat(indexes.timestamp()).isEqualTo(new SegmentIndexV1(0, 1));
+        assertThat(indexes.producerSnapshot()).isEqualTo(new SegmentIndexV1(1, 0));
+        assertThat(indexes.producerSnapshot().range()).isEqualTo(BytesRange.of(1, -1));
+        assertThat(indexes.leaderEpoch()).isEqualTo(new SegmentIndexV1(1, 1));
+        assertThat(indexes.transaction()).isEqualTo(new SegmentIndexV1(2, 0));
+        assertThat(indexes.transaction().range()).isEqualTo(BytesRange.empty(2));
+    }
 }

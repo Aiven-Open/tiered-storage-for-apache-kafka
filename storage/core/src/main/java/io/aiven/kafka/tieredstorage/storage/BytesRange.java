@@ -17,8 +17,9 @@
 package io.aiven.kafka.tieredstorage.storage;
 
 /**
- * Byte range with from and to edges; where to cannot be less than from.
- * Both, from and to, are inclusive positions.
+ * Byte range with from and to edges; where `to` cannot be less than `from`
+ * --unless to represent empty range where to is -1.
+ * Both, `from` and `to`, are inclusive positions.
  */
 public class BytesRange {
     public final int from;
@@ -28,7 +29,7 @@ public class BytesRange {
         if (from < 0) {
             throw new IllegalArgumentException("from cannot be negative, " + from + " given");
         }
-        if (to < from) {
+        if (to != -1 && to < from) {
             throw new IllegalArgumentException("to cannot be less than from, from=" + from + ", to=" + to + " given");
         }
         this.from = from;
@@ -36,6 +37,9 @@ public class BytesRange {
     }
 
     public int size() {
+        if (to == -1) {
+            return 0;
+        }
         return to - from + 1;
     }
 
@@ -67,7 +71,14 @@ public class BytesRange {
         return new BytesRange(from, to);
     }
 
+    public static BytesRange empty(final int from) {
+        return new BytesRange(from, -1);
+    }
+
     public static BytesRange ofFromPositionAndSize(final int from, final int size) {
+        if (size == 0) {
+            return empty(from);
+        }
         return new BytesRange(from, from + size - 1);
     }
 
