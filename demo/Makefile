@@ -156,10 +156,12 @@ show_remote_data_azurite:
 
 offset = 0
 consume = 10
+kcat_opts =
+# kcat_opts = "-X fetch.wait.max.ms=100"
 .PHONY: consume
 consume:
 	docker run --rm --network=host edenhill/kcat:1.7.1 \
-		-b $(bootstrap_server_host) -C -t $(topic) -c $(consume) -o $(offset) -e -f '%t-%p-%o\n'
+		-b $(bootstrap_server_host) -C -t $(topic) -c $(consume) -o $(offset) -e -f '%t-%p-%o\n' $(kcat_opts)
 
 .env:
 	echo "AWS_ACCESS_KEY_ID=" > .env
