@@ -62,10 +62,13 @@ public class FetchChunkEnumeration implements Enumeration<InputStream> {
 
         this.chunkIndex = manifest.chunkIndex();
 
-        final Chunk firstChunk = getFirstChunk(range.from);
+        if (range.isEmpty()) {
+            throw new IllegalArgumentException("range cannot be empty");
+        }
+        final Chunk firstChunk = getFirstChunk(range.firstPosition());
         startChunkId = firstChunk.id;
         currentChunkId = startChunkId;
-        final Chunk lastChunk = getLastChunk(range.to);
+        final Chunk lastChunk = getLastChunk(range.lastPosition());
         lastChunkId = lastChunk.id;
     }
 
@@ -107,7 +110,7 @@ public class FetchChunkEnumeration implements Enumeration<InputStream> {
         final boolean isAtLastChunk = currentChunkId == lastChunkId;
         final boolean isSingleChunk = isAtFirstChunk && isAtLastChunk;
         if (isSingleChunk) {
-            final int toSkip = range.from - chunkStartPosition;
+            final int toSkip = range.firstPosition() - chunkStartPosition;
             try {
                 chunkContent.skip(toSkip);
                 final int chunkSize = range.size();
@@ -117,7 +120,7 @@ public class FetchChunkEnumeration implements Enumeration<InputStream> {
             }
         } else {
             if (isAtFirstChunk) {
-                final int toSkip = range.from - chunkStartPosition;
+                final int toSkip = range.firstPosition() - chunkStartPosition;
                 try {
                     chunkContent.skip(toSkip);
                 } catch (final IOException e) {
@@ -125,7 +128,7 @@ public class FetchChunkEnumeration implements Enumeration<InputStream> {
                 }
             }
             if (isAtLastChunk) {
-                final int chunkSize = range.to - chunkStartPosition + 1;
+                final int chunkSize = range.lastPosition() - chunkStartPosition + 1;
                 chunkContent = new BoundedInputStream(chunkContent, chunkSize);
             }
         }

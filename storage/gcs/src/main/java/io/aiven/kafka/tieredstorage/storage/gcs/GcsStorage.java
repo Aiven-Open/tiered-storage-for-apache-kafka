@@ -94,16 +94,20 @@ public class GcsStorage implements StorageBackend {
     @Override
     public InputStream fetch(final ObjectKey key, final BytesRange range) throws StorageBackendException {
         try {
+            if (range.isEmpty()) {
+                return InputStream.nullInputStream();
+            }
+
             final Blob blob = getBlob(key);
 
-            if (range.from >= blob.getSize()) {
-                throw new InvalidRangeException("Range start position " + range.from
+            if (range.firstPosition() >= blob.getSize()) {
+                throw new InvalidRangeException("Range start position " + range.firstPosition()
                     + " is outside file content. file size = " + blob.getSize());
             }
 
             final ReadChannel reader = blob.reader();
-            reader.limit(range.to + 1);
-            reader.seek(range.from);
+            reader.limit(range.lastPosition() + 1);
+            reader.seek(range.firstPosition());
             return Channels.newInputStream(reader);
         } catch (final IOException e) {
             throw new StorageBackendException("Failed to fetch " + key, e);

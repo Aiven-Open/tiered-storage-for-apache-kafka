@@ -16,14 +16,16 @@
 
 package io.aiven.kafka.tieredstorage.storage;
 
+import java.util.OptionalInt;
+
 /**
  * Byte range with from and to edges; where `to` cannot be less than `from`
  * --unless to represent empty range where to is -1.
  * Both, `from` and `to`, are inclusive positions.
  */
 public class BytesRange {
-    public final int from;
-    public final int to;
+    final int from;
+    final int to;
 
     BytesRange(final int from, final int to) {
         if (from < 0) {
@@ -36,8 +38,33 @@ public class BytesRange {
         this.to = to;
     }
 
+    public int firstPosition() {
+        return from;
+    }
+
+    /**
+     * @return empty if size == 0, otherwise last position (inclusive)
+     */
+    public OptionalInt maybeLastPosition() {
+        if (isEmpty()) {
+            return OptionalInt.empty();
+        }
+        return OptionalInt.of(to);
+    }
+
+    public int lastPosition() {
+        if (isEmpty()) {
+            throw new IllegalStateException("No last position, range is empty");
+        }
+        return to;
+    }
+
+    public boolean isEmpty() {
+        return to == -1;
+    }
+
     public int size() {
-        if (to == -1) {
+        if (isEmpty()) {
             return 0;
         }
         return to - from + 1;
@@ -64,7 +91,10 @@ public class BytesRange {
 
     @Override
     public String toString() {
-        return "bytes=" + from + "-" + to;
+        return "BytesRange{"
+            + "position=" + firstPosition()
+            + ", size=" + size()
+            + '}';
     }
 
     public static BytesRange of(final int from, final int to) {

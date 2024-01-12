@@ -87,10 +87,14 @@ public class S3Storage implements StorageBackend {
     @Override
     public InputStream fetch(final ObjectKey key, final BytesRange range) throws StorageBackendException {
         try {
+            if (range.isEmpty()) {
+                return InputStream.nullInputStream();
+            }
+            
             final GetObjectRequest getRequest = GetObjectRequest.builder()
                 .bucket(bucketName)
                 .key(key.value())
-                .range(range.toString())
+                .range(formatRange(range))
                 .build();
             return s3Client.getObject(getRequest);
         } catch (final AwsServiceException e) {
@@ -103,6 +107,10 @@ public class S3Storage implements StorageBackend {
 
             throw new StorageBackendException("Failed to fetch " + key, e);
         }
+    }
+
+    private String formatRange(final BytesRange range) {
+        return "bytes=" + range.firstPosition() + "-" + range.lastPosition();
     }
 
     @Override
