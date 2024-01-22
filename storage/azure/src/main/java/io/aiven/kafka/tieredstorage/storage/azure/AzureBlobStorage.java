@@ -142,8 +142,12 @@ public class AzureBlobStorage implements StorageBackend {
     @Override
     public InputStream fetch(final ObjectKey key, final BytesRange range) throws StorageBackendException {
         try {
+            if (range.isEmpty()) {
+                return InputStream.nullInputStream();
+            }
+
             return blobContainerClient.getBlobClient(key.value()).openInputStream(
-                new BlobRange(range.from, (long) range.size()), null);
+                new BlobRange(range.firstPosition(), (long) range.size()), null);
         } catch (final BlobStorageException e) {
             if (e.getStatusCode() == 404) {
                 throw new KeyNotFoundException(this, key, e);

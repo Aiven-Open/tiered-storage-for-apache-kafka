@@ -17,6 +17,8 @@
 package io.aiven.kafka.tieredstorage.storage;
 
 import org.junit.jupiter.api.Test;
+import org.junit.jupiter.params.ParameterizedTest;
+import org.junit.jupiter.params.provider.MethodSource;
 
 import static org.assertj.core.api.Assertions.assertThat;
 import static org.assertj.core.api.Assertions.assertThatThrownBy;
@@ -26,15 +28,15 @@ class BytesRangeTest {
     @Test
     void testMinimalRange() {
         final BytesRange range = BytesRange.of(1, 1);
-        assertThat(range.from).isEqualTo(1);
-        assertThat(range.to).isEqualTo(1);
-        assertThat(range.size()).isEqualTo(1);
+        assertThat(range.from).isOne();
+        assertThat(range.to).isOne();
+        assertThat(range.size()).isOne();
     }
 
     @Test
     void testProperRange() {
         final BytesRange range = BytesRange.of(1, 2);
-        assertThat(range.from).isEqualTo(1);
+        assertThat(range.from).isOne();
         assertThat(range.to).isEqualTo(2);
         assertThat(range.size()).isEqualTo(2);
     }
@@ -51,5 +53,24 @@ class BytesRangeTest {
         assertThatThrownBy(() -> BytesRange.of(2, 1))
             .isInstanceOf(IllegalArgumentException.class)
             .hasMessage("to cannot be less than from, from=2, to=1 given");
+    }
+
+    static BytesRange[] emptyRanges() {
+        return new BytesRange[] {
+            BytesRange.ofFromPositionAndSize(1, 0),
+            BytesRange.of(1, -1),
+            BytesRange.empty(1)
+        };
+    }
+
+    @ParameterizedTest
+    @MethodSource("emptyRanges")
+    void testEmptyRange(final BytesRange range1) {
+        assertThat(range1.isEmpty()).isTrue();
+        assertThat(range1.size()).isZero();
+        assertThat(range1.maybeLastPosition()).isEmpty();
+        assertThatThrownBy(range1::lastPosition)
+            .isInstanceOf(IllegalStateException.class)
+            .hasMessage("No last position, range is empty");
     }
 }

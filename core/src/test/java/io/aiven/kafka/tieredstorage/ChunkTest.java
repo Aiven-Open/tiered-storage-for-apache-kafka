@@ -25,8 +25,8 @@ public class ChunkTest {
     void rangeIsInclusive() {
         final Chunk chunk = new Chunk(0, 0, 10, 0, 12);
 
-        assertThat(chunk.range().from).isEqualTo(0);
-        assertThat(chunk.range().to).isEqualTo(11);
+        assertThat(chunk.range().firstPosition()).isZero();
         assertThat(chunk.range().size()).isEqualTo(12);
+        assertThat(chunk.range().maybeLastPosition()).hasValue(11);
     }
 }

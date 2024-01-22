@@ -74,16 +74,20 @@ public class FileSystemStorage implements StorageBackend {
     @Override
     public InputStream fetch(final ObjectKey key, final BytesRange range) throws StorageBackendException {
         try {
+            if (range.isEmpty()) {
+                return InputStream.nullInputStream();
+            }
+
             final Path path = fsRoot.resolve(key.value());
             final long fileSize = Files.size(path);
-            if (range.from >= fileSize) {
-                throw new InvalidRangeException("Range start position " + range.from
+            if (range.firstPosition() >= fileSize) {
+                throw new InvalidRangeException("Range start position " + range.firstPosition()
                     + " is outside file content. file size = " + fileSize);
             }
             // slice file content
             final InputStream chunkContent = Files.newInputStream(path);
-            chunkContent.skip(range.from);
-            final long size = Math.min(range.to, fileSize) - range.from + 1;
+            chunkContent.skip(range.firstPosition());
+            final long size = Math.min(range.lastPosition(), fileSize) - range.firstPosition() + 1;
             return new BoundedInputStream(chunkContent, size);
         } catch (final NoSuchFileException e) {
             throw new KeyNotFoundException(this, key);

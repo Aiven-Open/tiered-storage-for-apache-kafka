@@ -520,6 +520,9 @@ public class RemoteStorageManager implements org.apache.kafka.server.log.remote.
             if (segmentIndex == null) {
                 throw new RemoteResourceNotFoundException("Index " + indexType + " not found on " + key);
             }
+            if (segmentIndex.range().isEmpty()) {
+                return InputStream.nullInputStream();
+            }
             return segmentIndexesCache.get(
                 key,
                 indexType,

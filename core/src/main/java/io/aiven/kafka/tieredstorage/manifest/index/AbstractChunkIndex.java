@@ -113,7 +113,9 @@ public abstract class AbstractChunkIndex implements ChunkIndex {
     public List<Chunk> chunksForRange(final BytesRange bytesRange) {
         Chunk current;
         final var result = new ArrayList<Chunk>();
-        for (int i = bytesRange.from; i <= bytesRange.to && i < originalFileSize; i += current.originalSize) {
+        for (int i = bytesRange.firstPosition();
+             i <= bytesRange.lastPosition() && i < originalFileSize;
+             i += current.originalSize) {
             current = findChunkForOriginalOffset(i);
             result.add(current);
         }
