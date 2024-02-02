@@ -16,6 +16,8 @@
 
 package io.aiven.kafka.tieredstorage.storage;
 
+import java.util.Set;
+
 public interface ObjectDeleter {
     /**
      * Delete the object with the specified key.
@@ -23,4 +25,15 @@ public interface ObjectDeleter {
      * <p>If the object doesn't exist, the operation still succeeds as it is idempotent.
      */
     void delete(ObjectKey key) throws StorageBackendException;
+
+    /**
+     * Delete objects from a set of keys.
+     *
+     * <p>If the object doesn't exist, the operation still succeeds as it is idempotent.
+     */
+    default void delete(Set<ObjectKey> keys) throws StorageBackendException {
+        for (final var key : keys) {
+            delete(key);
+        }
+    }
 }

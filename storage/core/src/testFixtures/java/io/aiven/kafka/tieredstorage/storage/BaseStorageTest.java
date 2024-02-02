@@ -19,6 +19,9 @@ package io.aiven.kafka.tieredstorage.storage;
 import java.io.ByteArrayInputStream;
 import java.io.IOException;
 import java.io.InputStream;
+import java.util.Set;
+import java.util.stream.Collectors;
+import java.util.stream.IntStream;
 
 import org.assertj.core.util.Throwables;
 import org.junit.jupiter.api.Test;
@@ -193,5 +196,25 @@ public abstract class BaseStorageTest {
         assertThatThrownBy(() -> storage().fetch(TOPIC_PARTITION_SEGMENT_KEY))
             .isInstanceOf(KeyNotFoundException.class)
             .hasMessage("Key topic/partition/log does not exists in storage " + storage());
+    }
+
+    @Test
+    protected void testDeletes() throws StorageBackendException {
+        final Set<ObjectKey> keys = IntStream.range(0, 10)
+            .mapToObj(i -> new TestObjectKey(TOPIC_PARTITION_SEGMENT_KEY.value() + i))
+            .collect(Collectors.toSet());
+        for (final var key : keys) {
+            storage().upload(new ByteArrayInputStream("test".getBytes()), key);
+        }
+        storage().delete(keys);
+
+        // Test deletion idempotence.
+        assertThatNoException().isThrownBy(() -> storage().delete(keys));
+
+        for (final var key : keys) {
+            assertThatThrownBy(() -> storage().fetch(key))
+                .isInstanceOf(KeyNotFoundException.class)
+                .hasMessage("Key " + key.value() + " does not exists in storage " + storage());
+        }
     }
 }
