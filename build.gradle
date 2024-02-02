@@ -119,7 +119,7 @@ subprojects {
 
         awsSdkVersion = "2.22.9"
 
-        gcpSdkVersion = "2.30.1"
+        gcpSdkVersion = "2.32.1"
 
         azureSdkVersion = "1.2.19"
 
