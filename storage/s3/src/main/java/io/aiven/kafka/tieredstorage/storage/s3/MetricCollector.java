@@ -74,6 +74,8 @@ class MetricCollector implements MetricPublisher {
         latencyMetrics.put("PutObject", createLatencySensor("put-object-time"));
         requestMetrics.put("DeleteObject", createRequestsSensor("delete-object-requests"));
         latencyMetrics.put("DeleteObject", createLatencySensor("delete-object-time"));
+        requestMetrics.put("DeleteObjects", createRequestsSensor("delete-objects-requests"));
+        latencyMetrics.put("DeleteObjects", createLatencySensor("delete-objects-time"));
         requestMetrics.put("AbortMultipartUpload", createRequestsSensor("abort-multipart-upload-requests"));
         latencyMetrics.put("AbortMultipartUpload", createLatencySensor("abort-multipart-upload-time"));
 

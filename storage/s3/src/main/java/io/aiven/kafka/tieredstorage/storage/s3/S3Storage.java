@@ -19,6 +19,8 @@ package io.aiven.kafka.tieredstorage.storage.s3;
 import java.io.IOException;
 import java.io.InputStream;
 import java.util.Map;
+import java.util.Set;
+import java.util.stream.Collectors;
 
 import io.aiven.kafka.tieredstorage.storage.BytesRange;
 import io.aiven.kafka.tieredstorage.storage.InvalidRangeException;
@@ -29,8 +31,11 @@ import io.aiven.kafka.tieredstorage.storage.StorageBackendException;
 
 import software.amazon.awssdk.awscore.exception.AwsServiceException;
 import software.amazon.awssdk.services.s3.S3Client;
+import software.amazon.awssdk.services.s3.model.Delete;
 import software.amazon.awssdk.services.s3.model.DeleteObjectRequest;
+import software.amazon.awssdk.services.s3.model.DeleteObjectsRequest;
 import software.amazon.awssdk.services.s3.model.GetObjectRequest;
+import software.amazon.awssdk.services.s3.model.ObjectIdentifier;
 
 public class S3Storage implements StorageBackend {
 
@@ -67,6 +72,23 @@ public class S3Storage implements StorageBackend {
             s3Client.deleteObject(deleteRequest);
         } catch (final AwsServiceException e) {
             throw new StorageBackendException("Failed to delete " + key, e);
+        }
+    }
+
+    @Override
+    public void delete(final Set<ObjectKey> keys) throws StorageBackendException {
+        try {
+            final Set<ObjectIdentifier> ids = keys.stream()
+                .map(k -> ObjectIdentifier.builder().key(k.value()).build())
+                .collect(Collectors.toSet());
+            final Delete delete = Delete.builder().objects(ids).build();
+            final DeleteObjectsRequest deleteObjectsRequest = DeleteObjectsRequest.builder()
+                .bucket(bucketName)
+                .delete(delete)
+                .build();
+            s3Client.deleteObjects(deleteObjectsRequest);
+        } catch (final AwsServiceException e) {
+            throw new StorageBackendException("Failed to delete keys " + keys, e);
         }
     }
 
