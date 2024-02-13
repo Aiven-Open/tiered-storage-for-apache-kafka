@@ -13,7 +13,11 @@
 # See the License for the specific language governing permissions and
 # limitations under the License.
 ##
-FROM docker.io/aivenoy/kafka:3.6.1-2023-12-05
+
+# Base image based 3.6.1 + bugfixes included on this branch:
+# https://github.com/apache/kafka/compare/3.6...aiven:kafka:3.6.1-2024-02-06
+# See commits and Dockerfile for more details on base image
+FROM docker.io/aivenoy/kafka:3.6.1-2024-02-06
 
 ARG _VERSION
 
