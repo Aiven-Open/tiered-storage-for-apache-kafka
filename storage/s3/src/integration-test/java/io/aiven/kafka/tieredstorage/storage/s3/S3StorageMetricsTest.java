@@ -24,6 +24,7 @@ import java.io.IOException;
 import java.io.InputStream;
 import java.lang.management.ManagementFactory;
 import java.util.Map;
+import java.util.Set;
 
 import io.aiven.kafka.tieredstorage.storage.BytesRange;
 import io.aiven.kafka.tieredstorage.storage.ObjectKey;
@@ -111,6 +112,7 @@ class S3StorageMetricsTest {
             fetch.readAllBytes();
         }
         storage.delete(key);
+        storage.delete(Set.of(key));
 
         final InputStream failingInputStream = mock(InputStream.class);
         final IOException exception = new IOException("test");
@@ -150,6 +152,18 @@ class S3StorageMetricsTest {
             .asInstanceOf(DOUBLE)
             .isGreaterThan(0.0);
         assertThat(MBEAN_SERVER.getAttribute(segmentCopyPerSecName, "delete-object-time-max"))
+            .asInstanceOf(DOUBLE)
+            .isGreaterThan(0.0);
+
+        assertThat(MBEAN_SERVER.getAttribute(segmentCopyPerSecName, "delete-objects-requests-rate"))
+            .asInstanceOf(DOUBLE)
+            .isGreaterThan(0.0);
+        assertThat(MBEAN_SERVER.getAttribute(segmentCopyPerSecName, "delete-objects-requests-total"))
+            .isEqualTo(1.0);
+        assertThat(MBEAN_SERVER.getAttribute(segmentCopyPerSecName, "delete-objects-time-avg"))
+            .asInstanceOf(DOUBLE)
+            .isGreaterThan(0.0);
+        assertThat(MBEAN_SERVER.getAttribute(segmentCopyPerSecName, "delete-objects-time-max"))
             .asInstanceOf(DOUBLE)
             .isGreaterThan(0.0);
 

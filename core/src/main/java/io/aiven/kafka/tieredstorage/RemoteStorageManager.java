@@ -26,6 +26,7 @@ import java.nio.file.Files;
 import java.nio.file.Path;
 import java.security.KeyPair;
 import java.util.ArrayList;
+import java.util.Arrays;
 import java.util.Collections;
 import java.util.HashMap;
 import java.util.List;
@@ -36,6 +37,7 @@ import java.util.Set;
 import java.util.concurrent.Executor;
 import java.util.concurrent.ForkJoinPool;
 import java.util.concurrent.TimeUnit;
+import java.util.stream.Collectors;
 
 import org.apache.kafka.common.metrics.MetricConfig;
 import org.apache.kafka.common.metrics.Sensor;
@@ -598,10 +600,10 @@ public class RemoteStorageManager implements org.apache.kafka.server.log.remote.
         final long startedMs = time.milliseconds();
 
         try {
-            for (final ObjectKeyFactory.Suffix suffix : ObjectKeyFactory.Suffix.values()) {
-                final ObjectKey key = objectKeyFactory.key(remoteLogSegmentMetadata, suffix);
-                deleter.delete(key);
-            }
+            final Set<ObjectKey> keys = Arrays.stream(ObjectKeyFactory.Suffix.values())
+                .map(s -> objectKeyFactory.key(remoteLogSegmentMetadata, s))
+                .collect(Collectors.toSet());
+            deleter.delete(keys);
         } catch (final Exception e) {
             metrics.recordSegmentDeleteError(remoteLogSegmentMetadata.remoteLogSegmentId()
                 .topicIdPartition().topicPartition());

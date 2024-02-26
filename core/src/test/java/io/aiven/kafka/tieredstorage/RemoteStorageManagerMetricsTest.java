@@ -55,6 +55,7 @@ import org.mockito.junit.jupiter.MockitoExtension;
 import static org.assertj.core.api.Assertions.assertThat;
 import static org.assertj.core.api.Assertions.assertThatThrownBy;
 import static org.assertj.core.api.InstanceOfAssertFactories.DOUBLE;
+import static org.mockito.ArgumentMatchers.anySet;
 import static org.mockito.Mockito.any;
 import static org.mockito.Mockito.doThrow;
 import static org.mockito.Mockito.mockConstruction;
@@ -225,7 +226,7 @@ class RemoteStorageManagerMetricsTest {
             FileSystemStorage.class,
             (mock, context) -> {
                 doThrow(testException).when(mock).upload(any(), any());
-                doThrow(testException).when(mock).delete(any());
+                doThrow(testException).when(mock).delete(anySet());
             }
         )) {
 
