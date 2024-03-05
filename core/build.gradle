@@ -26,7 +26,7 @@ ext {
 
     caffeineVersion = "3.1.8"
 
-    zstdVersion = "1.5.5-5"
+    zstdVersion = "1.5.5-11"
 }
 
 dependencies {
