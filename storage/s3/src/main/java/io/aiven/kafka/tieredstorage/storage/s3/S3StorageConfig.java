@@ -36,12 +36,7 @@ import software.amazon.awssdk.auth.credentials.AwsBasicCredentials;
 import software.amazon.awssdk.auth.credentials.AwsCredentials;
 import software.amazon.awssdk.auth.credentials.AwsCredentialsProvider;
 import software.amazon.awssdk.auth.credentials.StaticCredentialsProvider;
-import software.amazon.awssdk.core.internal.http.loader.DefaultSdkHttpClientBuilder;
-import software.amazon.awssdk.http.SdkHttpConfigurationOption;
 import software.amazon.awssdk.regions.Region;
-import software.amazon.awssdk.services.s3.S3Client;
-import software.amazon.awssdk.services.s3.S3ClientBuilder;
-import software.amazon.awssdk.utils.AttributeMap;
 import software.amazon.awssdk.utils.builder.Buildable;
 
 public class S3StorageConfig extends AbstractConfig {
@@ -205,43 +200,16 @@ public class S3StorageConfig extends AbstractConfig {
         }
     }
 
-    S3Client s3Client() {
-        final S3ClientBuilder s3ClientBuilder = S3Client.builder();
-        final String region = getString(S3_REGION_CONFIG);
-        if (Objects.isNull(s3ServiceEndpoint())) {
-            s3ClientBuilder.region(Region.of(region));
-        } else {
-            s3ClientBuilder.region(Region.of(region))
-                .endpointOverride(s3ServiceEndpoint());
-        }
-        final Boolean pathStyleAccessEnabled = getBoolean(S3_PATH_STYLE_ENABLED_CONFIG);
-        if (pathStyleAccessEnabled != null) {
-            s3ClientBuilder.forcePathStyle(pathStyleAccessEnabled);
-        }
+    Region region() {
+        return Region.of(getString(S3_REGION_CONFIG));
+    }
 
-        if (!certificateCheckEnabled()) {
-            s3ClientBuilder.httpClient(
-                new DefaultSdkHttpClientBuilder()
-                    .buildWithDefaults(
-                        AttributeMap.builder()
-                            .put(SdkHttpConfigurationOption.TRUST_ALL_CERTIFICATES, true)
-                            .build()
-                    )
-            );
-        }
+    Duration apiCallTimeout() {
+        return getDuration(S3_API_CALL_TIMEOUT_CONFIG);
+    }
 
-        s3ClientBuilder.serviceConfiguration(builder -> builder.checksumValidationEnabled(checksumCheckEnabled()));
-
-        final AwsCredentialsProvider credentialsProvider = credentialsProvider();
-        if (credentialsProvider != null) {
-            s3ClientBuilder.credentialsProvider(credentialsProvider);
-        }
-        s3ClientBuilder.overrideConfiguration(config -> {
-            config.addMetricPublisher(new MetricCollector());
-            config.apiCallTimeout(getDuration(S3_API_CALL_TIMEOUT_CONFIG));
-            config.apiCallAttemptTimeout(getDuration(S3_API_CALL_ATTEMPT_TIMEOUT_CONFIG));
-        });
-        return s3ClientBuilder.build();
+    Duration apiCallAttemptTimeout() {
+        return getDuration(S3_API_CALL_ATTEMPT_TIMEOUT_CONFIG);
     }
 
     AwsCredentialsProvider credentialsProvider() {
@@ -297,7 +265,7 @@ public class S3StorageConfig extends AbstractConfig {
         return getInt(S3_MULTIPART_UPLOAD_PART_SIZE_CONFIG);
     }
 
-    private URI s3ServiceEndpoint() {
+    URI s3ServiceEndpoint() {
         final String url = getString(S3_ENDPOINT_URL_CONFIG);
         if (url != null) {
             return URI.create(url);

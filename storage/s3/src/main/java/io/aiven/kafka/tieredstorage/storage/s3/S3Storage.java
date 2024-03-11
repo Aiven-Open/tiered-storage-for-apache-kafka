@@ -46,7 +46,7 @@ public class S3Storage implements StorageBackend {
     @Override
     public void configure(final Map<String, ?> configs) {
         final S3StorageConfig config = new S3StorageConfig(configs);
-        this.s3Client = config.s3Client();
+        this.s3Client = S3ClientBuilder.build(config);
         this.bucketName = config.bucketName();
         this.partSize = config.uploadPartSize();
     }

@@ -27,7 +27,6 @@ import software.amazon.awssdk.auth.credentials.AwsCredentialsProvider;
 import software.amazon.awssdk.auth.credentials.EnvironmentVariableCredentialsProvider;
 import software.amazon.awssdk.auth.credentials.StaticCredentialsProvider;
 import software.amazon.awssdk.regions.Region;
-import software.amazon.awssdk.services.s3.S3Client;
 
 import static io.aiven.kafka.tieredstorage.storage.s3.S3StorageConfig.S3_MULTIPART_UPLOAD_PART_SIZE_DEFAULT;
 import static org.assertj.core.api.Assertions.assertThat;
@@ -54,7 +53,10 @@ class S3StorageConfigTest {
         assertThat(config.uploadPartSize()).isEqualTo(S3_MULTIPART_UPLOAD_PART_SIZE_DEFAULT);
         assertThat(config.certificateCheckEnabled()).isTrue();
         assertThat(config.checksumCheckEnabled()).isFalse();
-        verifyClientConfiguration(config.s3Client(), null);
+        assertThat(config.region()).isEqualTo(TEST_REGION);
+        assertThat(config.s3ServiceEndpoint()).isNull();
+        assertThat(config.apiCallTimeout()).isNull();
+        assertThat(config.apiCallAttemptTimeout()).isNull();
     }
 
     // - Credential provider scenarios
@@ -72,8 +74,10 @@ class S3StorageConfigTest {
         assertThat(config.credentialsProvider()).isNull();
         assertThat(config.getBoolean(S3StorageConfig.S3_PATH_STYLE_ENABLED_CONFIG)).isTrue();
         assertThat(config.pathStyleAccessEnabled()).isTrue();
-
-        verifyClientConfiguration(config.s3Client(), "minio");
+        assertThat(config.region()).isEqualTo(TEST_REGION);
+        assertThat(config.s3ServiceEndpoint()).extracting(URI::getHost).isEqualTo("minio");
+        assertThat(config.apiCallTimeout()).isNull();
+        assertThat(config.apiCallAttemptTimeout()).isNull();
     }
 
     //   - With provider
@@ -95,8 +99,10 @@ class S3StorageConfigTest {
         assertThat(config.pathStyleAccessEnabled()).isFalse();
         assertThat(config.uploadPartSize()).isEqualTo(partSize);
         assertThat(config.credentialsProvider()).isInstanceOf(customCredentialsProvider);
-
-        verifyClientConfiguration(config.s3Client(), "minio");
+        assertThat(config.region()).isEqualTo(TEST_REGION);
+        assertThat(config.s3ServiceEndpoint()).extracting(URI::getHost).isEqualTo("minio");
+        assertThat(config.apiCallTimeout()).isNull();
+        assertThat(config.apiCallAttemptTimeout()).isNull();
     }
 
     //   - With static credentials
@@ -129,8 +135,10 @@ class S3StorageConfigTest {
         final var awsCredentials = credentialsProvider.resolveCredentials();
         assertThat(awsCredentials.accessKeyId()).isEqualTo(username);
         assertThat(awsCredentials.secretAccessKey()).isEqualTo(password);
-
-        verifyClientConfiguration(config.s3Client(), "minio");
+        assertThat(config.region()).isEqualTo(TEST_REGION);
+        assertThat(config.s3ServiceEndpoint()).extracting(URI::getHost).isEqualTo("minio");
+        assertThat(config.apiCallTimeout()).isNull();
+        assertThat(config.apiCallAttemptTimeout()).isNull();
     }
 
     //   - With missing static credentials
@@ -220,20 +228,7 @@ class S3StorageConfigTest {
             "s3.api.call.attempt.timeout", 1000
         );
         final var config = new S3StorageConfig(configs);
-
-        final var clientOverrideConfiguration = config.s3Client().serviceClientConfiguration().overrideConfiguration();
-        assertThat(clientOverrideConfiguration.apiCallTimeout()).hasValue(Duration.ofMillis(5000));
-        assertThat(clientOverrideConfiguration.apiCallAttemptTimeout()).hasValue(Duration.ofMillis(1000));
-    }
-
-    private static void verifyClientConfiguration(final S3Client s3Client, final String hostnameOverride) {
-        final var clientConfiguration = s3Client.serviceClientConfiguration();
-        assertThat(clientConfiguration.region()).isEqualTo(TEST_REGION);
-        assertThat(clientConfiguration.endpointOverride().map(URI::getHost).orElse(null)).isEqualTo(hostnameOverride);
-        final var clientOverrideConfiguration = clientConfiguration.overrideConfiguration();
-        assertThat(clientOverrideConfiguration.metricPublishers())
-            .allSatisfy(metricPublisher -> assertThat(metricPublisher).isInstanceOf(MetricCollector.class));
-        assertThat(clientOverrideConfiguration.apiCallTimeout()).isEmpty();
-        assertThat(clientOverrideConfiguration.apiCallAttemptTimeout()).isEmpty();
+        assertThat(config.apiCallTimeout()).isEqualTo(Duration.ofMillis(5000));
+        assertThat(config.apiCallAttemptTimeout()).isEqualTo(Duration.ofMillis(1000));
     }
 }
