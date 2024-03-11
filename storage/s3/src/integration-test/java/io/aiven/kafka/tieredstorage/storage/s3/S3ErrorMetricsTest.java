@@ -24,6 +24,7 @@ import java.io.InputStream;
 import java.lang.management.ManagementFactory;
 import java.util.Map;
 
+import io.aiven.kafka.tieredstorage.storage.StorageBackendException;
 import io.aiven.kafka.tieredstorage.storage.TestObjectKey;
 
 import com.github.tomakehurst.wiremock.http.Fault;
@@ -143,8 +144,11 @@ class S3ErrorMetricsTest {
         stubFor(any(anyUrl()).willReturn(aResponse().withFixedDelay(100)));
 
         assertThatThrownBy(() -> storage.fetch(new TestObjectKey("key")))
-            .isInstanceOf(ApiCallAttemptTimeoutException.class)
-            .hasMessage("HTTP request execution did not complete before the specified timeout configuration: 1 millis");
+            .isExactlyInstanceOf(StorageBackendException.class)
+            .hasMessage("Failed to fetch key")
+            .hasRootCauseExactlyInstanceOf(ApiCallAttemptTimeoutException.class)
+            .hasRootCauseMessage(
+                "HTTP request execution did not complete before the specified timeout configuration: 1 millis");
 
         // Comparing to 4 since the SDK makes 3 retries by default.
         assertThat(MBEAN_SERVER.getAttribute(s3MetricsObjectName, metricName + "-total"))
@@ -172,8 +176,10 @@ class S3ErrorMetricsTest {
                 .withFault(Fault.RANDOM_DATA_THEN_CLOSE)));
 
         assertThatThrownBy(() -> storage.fetch(new TestObjectKey("key")))
-            .isInstanceOf(SdkClientException.class)
-            .hasMessage("Unable to execute HTTP request: null");
+            .isExactlyInstanceOf(StorageBackendException.class)
+            .hasMessage("Failed to fetch key")
+            .hasCauseExactlyInstanceOf(SdkClientException.class)
+            .cause().hasMessage("Unable to execute HTTP request: null");
 
         // Comparing to 4 since the SDK makes 3 retries by default.
         assertThat(MBEAN_SERVER.getAttribute(s3MetricsObjectName, metricName + "-total"))
