@@ -39,6 +39,7 @@ import com.azure.storage.blob.options.BlockBlobOutputStreamOptions;
 import com.azure.storage.blob.specialized.BlockBlobClient;
 import com.azure.storage.blob.specialized.SpecializedBlobClientBuilder;
 import com.azure.storage.common.StorageSharedKeyCredential;
+import reactor.core.Exceptions;
 
 public class AzureBlobStorage implements StorageBackend {
     private AzureBlobStorageConfig config;
@@ -122,6 +123,8 @@ public class AzureBlobStorage implements StorageBackend {
             return inputStream.transferTo(os);
         } catch (final IOException e) {
             throw new StorageBackendException("Failed to upload " + key, e);
+        } catch (final RuntimeException e) {
+            throw unwrapReactorExceptions(e, "Failed to upload " + key);
         }
     }
 
@@ -136,6 +139,8 @@ public class AzureBlobStorage implements StorageBackend {
             } else {
                 throw new StorageBackendException("Failed to fetch " + key, e);
             }
+        } catch (final RuntimeException e) {
+            throw unwrapReactorExceptions(e, "Failed to fetch " + key);
         }
     }
 
@@ -156,6 +161,8 @@ public class AzureBlobStorage implements StorageBackend {
             } else {
                 throw new StorageBackendException("Failed to fetch " + key, e);
             }
+        } catch (final RuntimeException e) {
+            throw unwrapReactorExceptions(e, "Failed to fetch " + key);
         }
     }
 
@@ -165,6 +172,17 @@ public class AzureBlobStorage implements StorageBackend {
             blobContainerClient.getBlobClient(key.value()).deleteIfExists();
         } catch (final BlobStorageException e) {
             throw new StorageBackendException("Failed to delete " + key, e);
+        } catch (final RuntimeException e) {
+            throw unwrapReactorExceptions(e, "Failed to delete " + key);
+        }
+    }
+
+    private StorageBackendException unwrapReactorExceptions(final RuntimeException e, final String message) {
+        final Throwable unwrapped = Exceptions.unwrap(e);
+        if (unwrapped != e) {
+            return new StorageBackendException(message, unwrapped);
+        } else {
+            throw e;
         }
     }
 
