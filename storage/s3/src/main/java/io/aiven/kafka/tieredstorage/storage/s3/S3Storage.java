@@ -30,6 +30,7 @@ import io.aiven.kafka.tieredstorage.storage.StorageBackend;
 import io.aiven.kafka.tieredstorage.storage.StorageBackendException;
 
 import software.amazon.awssdk.awscore.exception.AwsServiceException;
+import software.amazon.awssdk.core.exception.SdkClientException;
 import software.amazon.awssdk.services.s3.S3Client;
 import software.amazon.awssdk.services.s3.model.Delete;
 import software.amazon.awssdk.services.s3.model.DeleteObjectRequest;
@@ -70,7 +71,7 @@ public class S3Storage implements StorageBackend {
         try {
             final var deleteRequest = DeleteObjectRequest.builder().bucket(bucketName).key(key.value()).build();
             s3Client.deleteObject(deleteRequest);
-        } catch (final AwsServiceException e) {
+        } catch (final SdkClientException e) {
             throw new StorageBackendException("Failed to delete " + key, e);
         }
     }
@@ -87,7 +88,7 @@ public class S3Storage implements StorageBackend {
                 .delete(delete)
                 .build();
             s3Client.deleteObjects(deleteObjectsRequest);
-        } catch (final AwsServiceException e) {
+        } catch (final SdkClientException e) {
             throw new StorageBackendException("Failed to delete keys " + keys, e);
         }
     }
@@ -103,6 +104,8 @@ public class S3Storage implements StorageBackend {
             } else {
                 throw new StorageBackendException("Failed to fetch " + key, e);
             }
+        } catch (final SdkClientException e) {
+            throw new StorageBackendException("Failed to fetch " + key, e);
         }
     }
 
@@ -127,6 +130,8 @@ public class S3Storage implements StorageBackend {
                 throw new InvalidRangeException("Invalid range " + range, e);
             }
 
+            throw new StorageBackendException("Failed to fetch " + key, e);
+        } catch (final SdkClientException e) {
             throw new StorageBackendException("Failed to fetch " + key, e);
         }
     }
