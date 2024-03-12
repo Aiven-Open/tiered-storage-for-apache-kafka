@@ -18,31 +18,23 @@ package io.aiven.kafka.tieredstorage.storage.azure;
 
 import org.testcontainers.containers.GenericContainer;
 import org.testcontainers.utility.DockerImageName;
-import org.testcontainers.utility.MountableFile;
 
 public class AzuriteBlobStorageUtils {
     static GenericContainer<?> azuriteContainer(final int port) {
         return
             new GenericContainer<>(DockerImageName.parse("mcr.microsoft.com/azure-storage/azurite"))
-                .withCopyFileToContainer(
-                    MountableFile.forClasspathResource("/azurite-cert.pem"),
-                    "/opt/azurite/azurite-cert.pem")
-                .withCopyFileToContainer(
-                    MountableFile.forClasspathResource("/azurite-key.pem"),
-                    "/opt/azurite/azurite-key.pem")
                 .withExposedPorts(port)
-                .withCommand("azurite-blob --blobHost 0.0.0.0 "
-                    + "--cert /opt/azurite/azurite-cert.pem --key /opt/azurite/azurite-key.pem");
+                .withCommand("azurite-blob --blobHost 0.0.0.0");
     }
 
 
     static String endpoint(final GenericContainer<?> azuriteContainer, final int port) {
-        return "https://127.0.0.1:" + azuriteContainer.getMappedPort(port) + "/devstoreaccount1";
+        return "http://127.0.0.1:" + azuriteContainer.getMappedPort(port) + "/devstoreaccount1";
     }
 
     static String connectionString(final GenericContainer<?> azuriteContainer, final int port) {
         // The well-known Azurite connection string.
-        return "DefaultEndpointsProtocol=https;"
+        return "DefaultEndpointsProtocol=http;"
             + "AccountName=devstoreaccount1;"
             + "AccountKey=Eby8vdM02xNOcqFlqUwJPLlmEtlCDXJ1OUzFT50uSRZ6IFsuFq2UVErCz4I6tq/K1SZFPTOtr/KBHBeksoGMGw==;"
             + "BlobEndpoint=" + endpoint(azuriteContainer, port) + ";";

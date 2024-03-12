@@ -66,12 +66,6 @@ public class AzureBlobStorageMetricsTest {
 
     @BeforeAll
     static void setUpClass() {
-        // Generally setting JVM-wide trust store needed only for one test may be not OK,
-        // but it's not conflicting with any other test now and this is the most straightforward way
-        // to make the self-signed certificate work.
-        System.setProperty("javax.net.ssl.trustStore",
-            AzureBlobStorageMetricsTest.class.getResource("/azurite-cacerts.jks").getPath());
-        System.setProperty("javax.net.ssl.trustStorePassword", "changeit");
         blobServiceClient = new BlobServiceClientBuilder()
             .connectionString(connectionString(AZURITE_SERVER, BLOB_STORAGE_PORT))
             .buildClient();
