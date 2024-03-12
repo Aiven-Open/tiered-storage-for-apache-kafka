@@ -192,6 +192,14 @@ Even in case of sequential reads, chunks may be required multiple times in a sho
 
 The cache is able to asynchronously prefetch next chunks, up to the specified number of bytes. This positively affects sequential read performance. At the moment, prefetching is limited with segment borders, i.e. it cannot prefetch from the following segment.
 
+## SOCKS5 proxy
+
+⚠️ This is an experimental feature subject for future changes.
+
+The Azure storage backend supports SOCKS5 proxy with the proxy-side host name resolution.
+
+The proxy support in other storage backends is in the work.
+
 ## License
 
 The project is licensed under the Apache license, version 2.0. Full license test is available in the [LICENSE](LICENSE) file.
