@@ -31,6 +31,7 @@ jobs:
 
       - name: Run integration tests
         run: make integration_test
+
   e2e_test:
     strategy:
       matrix:
@@ -43,12 +44,12 @@ jobs:
         uses: actions/checkout@v4
         with:
           fetch-depth: 0
-
-      - name: Build Docker image
-        run: make docker_image
+      - name: Set up JDK ${{ matrix.java-version }}
+        uses: actions/setup-java@v4
+        with:
+          java-version: ${{ matrix.java-version }}
+          distribution: temurin
 
       - name: Run E2E tests
         timeout-minutes: 30
         run: make E2E_TEST=${{ matrix.test }} e2e_test
-
-      # TODO: publish docker image
