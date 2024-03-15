@@ -28,11 +28,11 @@ import io.aiven.kafka.tieredstorage.storage.ObjectKey;
 import io.aiven.kafka.tieredstorage.storage.StorageBackend;
 import io.aiven.kafka.tieredstorage.storage.StorageBackendException;
 
+import com.google.cloud.BaseServiceException;
 import com.google.cloud.ReadChannel;
 import com.google.cloud.storage.Blob;
 import com.google.cloud.storage.BlobInfo;
 import com.google.cloud.storage.Storage;
-import com.google.cloud.storage.StorageException;
 import com.google.cloud.storage.StorageOptions;
 
 public class GcsStorage implements StorageBackend {
@@ -66,7 +66,7 @@ public class GcsStorage implements StorageBackend {
                 blob = storage.createFrom(blobInfo, inputStream);
             }
             return blob.getSize();
-        } catch (final IOException e) {
+        } catch (final IOException | BaseServiceException e) {
             throw new StorageBackendException("Failed to upload " + key, e);
         }
     }
@@ -75,7 +75,7 @@ public class GcsStorage implements StorageBackend {
     public void delete(final ObjectKey key) throws StorageBackendException {
         try {
             storage.delete(this.bucketName, key.value());
-        } catch (final StorageException e) {
+        } catch (final BaseServiceException e) {
             throw new StorageBackendException("Failed to delete " + key, e);
         }
     }
@@ -86,8 +86,13 @@ public class GcsStorage implements StorageBackend {
             final Blob blob = getBlob(key);
             final ReadChannel reader = blob.reader();
             return Channels.newInputStream(reader);
-        } catch (final StorageException e) {
-            throw new StorageBackendException("Failed to fetch " + key, e);
+        } catch (final BaseServiceException e) {
+            if (e.getCode() == 404) {
+                // https://cloud.google.com/storage/docs/json_api/v1/status-codes#404_Not_Found
+                throw new KeyNotFoundException(this, key, e);
+            } else {
+                throw new StorageBackendException("Failed to fetch " + key, e);
+            }
         }
     }
 
@@ -111,13 +116,16 @@ public class GcsStorage implements StorageBackend {
             return Channels.newInputStream(reader);
         } catch (final IOException e) {
             throw new StorageBackendException("Failed to fetch " + key, e);
-        } catch (final StorageException e) {
-            // https://cloud.google.com/storage/docs/json_api/v1/status-codes#416_Requested_Range_Not_Satisfiable
-            if (e.getCode() == 416) {
+        } catch (final BaseServiceException e) {
+            if (e.getCode() == 404) {
+                // https://cloud.google.com/storage/docs/json_api/v1/status-codes#404_Not_Found
+                throw new KeyNotFoundException(this, key, e);
+            } else if (e.getCode() == 416) {
+                // https://cloud.google.com/storage/docs/json_api/v1/status-codes#416_Requested_Range_Not_Satisfiable
                 throw new InvalidRangeException("Invalid range " + range, e);
+            } else {
+                throw new StorageBackendException("Failed to fetch " + key, e);
             }
-
-            throw new StorageBackendException("Failed to fetch " + key, e);
         }
     }
 
