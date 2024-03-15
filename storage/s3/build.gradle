@@ -35,7 +35,12 @@ dependencies {
         exclude group: "org.slf4j"
     }
 
-    implementation group: 'io.netty', name: 'netty-tcnative', version: '2.0.65.Final'
+    implementation group: 'io.netty', name: 'netty-tcnative-boringssl-static', version: '2.0.65.Final', classifier: "linux-aarch_64"
+    implementation group: 'io.netty', name: 'netty-tcnative-boringssl-static', version: '2.0.65.Final', classifier: "linux-x86_64"
+    implementation group: 'io.netty', name: 'netty-tcnative-boringssl-static', version: '2.0.65.Final', classifier: "osx-aarch_64"
+    implementation group: 'io.netty', name: 'netty-tcnative-boringssl-static', version: '2.0.65.Final', classifier: "osx-x86_64"
+
+
     // replacing with version used by core
     implementation "com.fasterxml.jackson.core:jackson-databind:$jacksonVersion"
     implementation "com.fasterxml.jackson.dataformat:jackson-dataformat-cbor:$jacksonVersion"

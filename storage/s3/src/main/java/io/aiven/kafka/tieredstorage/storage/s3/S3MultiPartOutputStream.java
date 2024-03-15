@@ -52,9 +52,10 @@ import software.amazon.awssdk.services.s3.model.UploadPartResponse;
  */
 public class S3MultiPartOutputStream extends OutputStream {
 
-    private final ExecutorService executorService;
     private static final Logger log = LoggerFactory.getLogger(S3MultiPartOutputStream.class);
-
+    private static final ExecutorService EXECUTOR_SERVICE = Executors.newFixedThreadPool(
+        Runtime.getRuntime().availableProcessors()
+    );
     private final S3AsyncClient client;
     private final ByteBuffer partBuffer;
     private final String bucketName;
@@ -76,7 +77,6 @@ public class S3MultiPartOutputStream extends OutputStream {
         this.client = client;
         this.partSize = partSize;
         this.partBuffer = ByteBuffer.allocate(partSize);
-        this.executorService = Executors.newSingleThreadExecutor();
         final CreateMultipartUploadRequest initialRequest = CreateMultipartUploadRequest.builder().bucket(bucketName)
             .key(key.value()).build();
         final CreateMultipartUploadResponse initiateResult;
@@ -193,7 +193,7 @@ public class S3MultiPartOutputStream extends OutputStream {
                 .uploadId(uploadId)
                 .partNumber(partNumber)
                 .build();
-        final AsyncRequestBody body = AsyncRequestBody.fromInputStream(in, (long) actualPartSize, executorService);
+        final AsyncRequestBody body = AsyncRequestBody.fromInputStream(in, (long) actualPartSize, EXECUTOR_SERVICE);
         final UploadPartResponse uploadResult;
         try {
             uploadResult = client.uploadPart(uploadPartRequest, body).get();
