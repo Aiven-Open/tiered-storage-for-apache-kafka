@@ -23,13 +23,16 @@ import java.io.OutputStream;
 import java.nio.ByteBuffer;
 import java.util.ArrayList;
 import java.util.List;
+import java.util.concurrent.ExecutionException;
+import java.util.concurrent.ExecutorService;
+import java.util.concurrent.Executors;
 
 import io.aiven.kafka.tieredstorage.storage.ObjectKey;
 
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
-import software.amazon.awssdk.core.sync.RequestBody;
-import software.amazon.awssdk.services.s3.S3Client;
+import software.amazon.awssdk.core.async.AsyncRequestBody;
+import software.amazon.awssdk.services.s3.S3AsyncClient;
 import software.amazon.awssdk.services.s3.model.AbortMultipartUploadRequest;
 import software.amazon.awssdk.services.s3.model.CompleteMultipartUploadRequest;
 import software.amazon.awssdk.services.s3.model.CompletedMultipartUpload;
@@ -49,9 +52,10 @@ import software.amazon.awssdk.services.s3.model.UploadPartResponse;
  */
 public class S3MultiPartOutputStream extends OutputStream {
 
+    private final ExecutorService executorService;
     private static final Logger log = LoggerFactory.getLogger(S3MultiPartOutputStream.class);
 
-    private final S3Client client;
+    private final S3AsyncClient client;
     private final ByteBuffer partBuffer;
     private final String bucketName;
     private final ObjectKey key;
@@ -66,15 +70,21 @@ public class S3MultiPartOutputStream extends OutputStream {
     public S3MultiPartOutputStream(final String bucketName,
                                    final ObjectKey key,
                                    final int partSize,
-                                   final S3Client client) {
+                                   final S3AsyncClient client) {
         this.bucketName = bucketName;
         this.key = key;
         this.client = client;
         this.partSize = partSize;
         this.partBuffer = ByteBuffer.allocate(partSize);
+        this.executorService = Executors.newSingleThreadExecutor();
         final CreateMultipartUploadRequest initialRequest = CreateMultipartUploadRequest.builder().bucket(bucketName)
             .key(key.value()).build();
-        final CreateMultipartUploadResponse initiateResult = client.createMultipartUpload(initialRequest);
+        final CreateMultipartUploadResponse initiateResult;
+        try {
+            initiateResult = client.createMultipartUpload(initialRequest).get();
+        } catch (InterruptedException|ExecutionException e) {
+            throw new RuntimeException(e);
+        }
         log.debug("Create new multipart upload request: {}", initiateResult.uploadId());
         this.uploadId = initiateResult.uploadId();
     }
@@ -183,8 +193,13 @@ public class S3MultiPartOutputStream extends OutputStream {
                 .uploadId(uploadId)
                 .partNumber(partNumber)
                 .build();
-        final RequestBody body = RequestBody.fromInputStream(in, actualPartSize);
-        final UploadPartResponse uploadResult = client.uploadPart(uploadPartRequest, body);
+        final AsyncRequestBody body = AsyncRequestBody.fromInputStream(in, (long) actualPartSize, executorService);
+        final UploadPartResponse uploadResult;
+        try {
+            uploadResult = client.uploadPart(uploadPartRequest, body).get();
+        } catch (InterruptedException|ExecutionException e) {
+            throw new RuntimeException(e);
+        }
         final CompletedPart completedPart = CompletedPart.builder()
             .partNumber(partNumber)
             .eTag(uploadResult.eTag())
