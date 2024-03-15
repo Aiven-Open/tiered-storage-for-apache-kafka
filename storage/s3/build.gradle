@@ -29,6 +29,7 @@ dependencies {
         exclude group: "com.fasterxml.jackson.dataformat"
         exclude group: "org.slf4j"
     }
+    implementation group: 'io.netty', name: 'netty-tcnative', version: '2.0.1.Final'
     // replacing with version used by core
     implementation "com.fasterxml.jackson.core:jackson-databind:$jacksonVersion"
     implementation "com.fasterxml.jackson.dataformat:jackson-dataformat-cbor:$jacksonVersion"
