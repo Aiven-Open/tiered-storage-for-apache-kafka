@@ -196,9 +196,11 @@ The cache is able to asynchronously prefetch next chunks, up to the specified nu
 
 ⚠️ This is an experimental feature subject for future changes.
 
-The Azure storage backend supports SOCKS5 proxy with the proxy-side host name resolution.
-
-The proxy support in other storage backends is in the work.
+| Object storage       |    Supported    | Host name resolution |
+|----------------------|:---------------:|:--------------------:|
+|        AWS S3        | ❌ (in progress) |                      |
+| Azure Blob Storage   |        ✅        |      Proxy-side      |
+| Google Cloud Storage |        ✅        |      Proxy-side      |
 
 ## License
 

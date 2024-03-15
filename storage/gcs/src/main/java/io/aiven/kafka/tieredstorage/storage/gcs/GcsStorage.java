@@ -27,9 +27,12 @@ import io.aiven.kafka.tieredstorage.storage.KeyNotFoundException;
 import io.aiven.kafka.tieredstorage.storage.ObjectKey;
 import io.aiven.kafka.tieredstorage.storage.StorageBackend;
 import io.aiven.kafka.tieredstorage.storage.StorageBackendException;
+import io.aiven.kafka.tieredstorage.storage.proxy.ProxyConfig;
+import io.aiven.kafka.tieredstorage.storage.proxy.Socks5ProxyAuthenticator;
 
 import com.google.cloud.BaseServiceException;
 import com.google.cloud.ReadChannel;
+import com.google.cloud.http.HttpTransportOptions;
 import com.google.cloud.storage.Blob;
 import com.google.cloud.storage.BlobInfo;
 import com.google.cloud.storage.Storage;
@@ -44,9 +47,23 @@ public class GcsStorage implements StorageBackend {
     public void configure(final Map<String, ?> configs) {
         final GcsStorageConfig config = new GcsStorageConfig(configs);
         this.bucketName = config.bucketName();
+
+        final HttpTransportOptions.Builder httpTransportOptionsBuilder = HttpTransportOptions.newBuilder();
+
+        final ProxyConfig proxyConfig = config.proxyConfig();
+        if (proxyConfig != null) {
+            httpTransportOptionsBuilder.setHttpTransportFactory(
+                new ProxiedHttpTransportFactory(proxyConfig.host(), proxyConfig.port())
+            );
+            if (proxyConfig.username() != null) {
+                Socks5ProxyAuthenticator.register(
+                    proxyConfig.host(), proxyConfig.port(), proxyConfig.username(), proxyConfig.password());
+            }
+        }
+
         final StorageOptions.Builder builder = StorageOptions.newBuilder()
             .setCredentials(config.credentials())
-            .setTransportOptions(new MetricCollector().httpTransportOptions());
+            .setTransportOptions(new MetricCollector().httpTransportOptions(httpTransportOptionsBuilder));
         if (config.endpointUrl() != null) {
             builder.setHost(config.endpointUrl());
         }
