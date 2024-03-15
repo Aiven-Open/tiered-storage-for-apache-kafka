@@ -31,7 +31,7 @@ dependencies {
     }
     implementation group: 'software.amazon.awssdk', name: 'netty-nio-client', version: awsSdkVersion
 
-    implementation group: 'io.netty', name: 'netty-tcnative', version: '2.0.1.Final'
+    implementation group: 'io.netty', name: 'netty-tcnative', version: '2.0.65.Final'
     // replacing with version used by core
     implementation "com.fasterxml.jackson.core:jackson-databind:$jacksonVersion"
     implementation "com.fasterxml.jackson.dataformat:jackson-dataformat-cbor:$jacksonVersion"
