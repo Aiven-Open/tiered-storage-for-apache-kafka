@@ -19,15 +19,16 @@ package io.aiven.kafka.tieredstorage.storage.s3;
 import java.util.Objects;
 
 import software.amazon.awssdk.auth.credentials.AwsCredentialsProvider;
-import software.amazon.awssdk.core.internal.http.loader.DefaultSdkHttpClientBuilder;
+import software.amazon.awssdk.core.internal.http.loader.DefaultSdkAsyncHttpClientBuilder;
 import software.amazon.awssdk.http.SdkHttpConfigurationOption;
+import software.amazon.awssdk.http.nio.netty.NettyNioAsyncHttpClient;
 import software.amazon.awssdk.regions.Region;
-import software.amazon.awssdk.services.s3.S3Client;
+import software.amazon.awssdk.services.s3.S3AsyncClient;
 import software.amazon.awssdk.utils.AttributeMap;
 
 class S3ClientBuilder {
-    static S3Client build(final S3StorageConfig config) {
-        final software.amazon.awssdk.services.s3.S3ClientBuilder s3ClientBuilder = S3Client.builder();
+    static S3AsyncClient build(final S3StorageConfig config) {
+        final software.amazon.awssdk.services.s3.S3AsyncClientBuilder s3ClientBuilder = S3AsyncClient.builder();
         final Region region = config.region();
         if (Objects.isNull(config.s3ServiceEndpoint())) {
             s3ClientBuilder.region(region);
@@ -38,10 +39,10 @@ class S3ClientBuilder {
         if (config.pathStyleAccessEnabled() != null) {
             s3ClientBuilder.forcePathStyle(config.pathStyleAccessEnabled());
         }
-
+        s3ClientBuilder.httpClient(NettyNioAsyncHttpClient.builder().build());
         if (!config.certificateCheckEnabled()) {
             s3ClientBuilder.httpClient(
-                new DefaultSdkHttpClientBuilder()
+                new DefaultSdkAsyncHttpClientBuilder()
                     .buildWithDefaults(
                         AttributeMap.builder()
                             .put(SdkHttpConfigurationOption.TRUST_ALL_CERTIFICATES, true)

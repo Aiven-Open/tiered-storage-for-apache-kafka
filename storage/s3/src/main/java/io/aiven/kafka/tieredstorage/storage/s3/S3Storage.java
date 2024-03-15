@@ -20,6 +20,9 @@ import java.io.IOException;
 import java.io.InputStream;
 import java.util.Map;
 import java.util.Set;
+import java.util.concurrent.ExecutionException;
+import java.util.concurrent.ExecutorService;
+import java.util.concurrent.Executors;
 import java.util.stream.Collectors;
 
 import io.aiven.kafka.tieredstorage.storage.BytesRange;
@@ -30,8 +33,9 @@ import io.aiven.kafka.tieredstorage.storage.StorageBackend;
 import io.aiven.kafka.tieredstorage.storage.StorageBackendException;
 
 import software.amazon.awssdk.awscore.exception.AwsServiceException;
+import software.amazon.awssdk.core.async.AsyncResponseTransformer;
 import software.amazon.awssdk.core.exception.SdkClientException;
-import software.amazon.awssdk.services.s3.S3Client;
+import software.amazon.awssdk.services.s3.S3AsyncClient;
 import software.amazon.awssdk.services.s3.model.Delete;
 import software.amazon.awssdk.services.s3.model.DeleteObjectRequest;
 import software.amazon.awssdk.services.s3.model.DeleteObjectsRequest;
@@ -40,9 +44,10 @@ import software.amazon.awssdk.services.s3.model.ObjectIdentifier;
 
 public class S3Storage implements StorageBackend {
 
-    private S3Client s3Client;
+    private S3AsyncClient s3Client;
     private String bucketName;
     private int partSize;
+    private ExecutorService executorService;
 
     @Override
     public void configure(final Map<String, ?> configs) {
@@ -50,6 +55,7 @@ public class S3Storage implements StorageBackend {
         this.s3Client = S3ClientBuilder.build(config);
         this.bucketName = config.bucketName();
         this.partSize = config.uploadPartSize();
+        this.executorService = Executors.newFixedThreadPool(Runtime.getRuntime().availableProcessors());
     }
 
     @Override
@@ -63,7 +69,7 @@ public class S3Storage implements StorageBackend {
     }
 
     S3MultiPartOutputStream s3OutputStream(final ObjectKey key) {
-        return new S3MultiPartOutputStream(bucketName, key, partSize, s3Client);
+        return new S3MultiPartOutputStream(bucketName, key, partSize, s3Client, executorService);
     }
 
     @Override
@@ -97,7 +103,7 @@ public class S3Storage implements StorageBackend {
     public InputStream fetch(final ObjectKey key) throws StorageBackendException {
         final GetObjectRequest getRequest = GetObjectRequest.builder().bucket(bucketName).key(key.value()).build();
         try {
-            return s3Client.getObject(getRequest);
+            return s3Client.getObject(getRequest, AsyncResponseTransformer.toBlockingInputStream()).get();
         } catch (final AwsServiceException e) {
             if (e.statusCode() == 404) {
                 throw new KeyNotFoundException(this, key, e);
@@ -106,6 +112,8 @@ public class S3Storage implements StorageBackend {
             }
         } catch (final SdkClientException e) {
             throw new StorageBackendException("Failed to fetch " + key, e);
+        } catch (final InterruptedException | ExecutionException e) {
+            throw new StorageBackendException("Failed to fetch", e);
         }
     }
 
@@ -121,7 +129,7 @@ public class S3Storage implements StorageBackend {
                 .key(key.value())
                 .range(formatRange(range))
                 .build();
-            return s3Client.getObject(getRequest);
+            return s3Client.getObject(getRequest, AsyncResponseTransformer.toBlockingInputStream()).get();
         } catch (final AwsServiceException e) {
             if (e.statusCode() == 404) {
                 throw new KeyNotFoundException(this, key, e);
@@ -131,7 +139,7 @@ public class S3Storage implements StorageBackend {
             }
 
             throw new StorageBackendException("Failed to fetch " + key, e);
-        } catch (final SdkClientException e) {
+        } catch (final SdkClientException | InterruptedException | ExecutionException e) {
             throw new StorageBackendException("Failed to fetch " + key, e);
         }
     }

@@ -29,6 +29,12 @@ dependencies {
     implementation ("software.amazon.awssdk:s3:$awsSdkVersion") {excludeFromAWSDeps(it)}
     runtimeOnly ("software.amazon.awssdk:sts:$awsSdkVersion") {excludeFromAWSDeps(it)}
 
+    implementation ("software.amazon.awssdk:netty-nio-client:$awsSdkVersion") { excludeFromAWSDeps(it) }
+    runtimeOnly group: 'io.netty', name: 'netty-tcnative-boringssl-static', version: '2.0.65.Final', classifier: "linux-aarch_64"
+    runtimeOnly group: 'io.netty', name: 'netty-tcnative-boringssl-static', version: '2.0.65.Final', classifier: "linux-x86_64"
+    runtimeOnly group: 'io.netty', name: 'netty-tcnative-boringssl-static', version: '2.0.65.Final', classifier: "osx-aarch_64"
+    runtimeOnly group: 'io.netty', name: 'netty-tcnative-boringssl-static', version: '2.0.65.Final', classifier: "osx-x86_64"
+
     implementation project(':commons')
 
     testImplementation(testFixtures(project(":storage:core")))
