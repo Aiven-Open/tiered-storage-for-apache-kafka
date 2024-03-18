@@ -21,20 +21,12 @@ ext {
 }
 
 dependencies {
-    implementation project(":storage:core")
-
-    // Take out jackson libraries out to avoid collision with core jackson dependencies
-    implementation ("software.amazon.awssdk:s3:$awsSdkVersion") {
-        exclude group: "com.fasterxml.jackson.core"
-        exclude group: "com.fasterxml.jackson.dataformat"
+    implementation("software.amazon.awssdk:s3:$awsSdkVersion") {
         exclude group: "org.slf4j"
+        exclude group: "commons-codec"
     }
     // replacing with version used by core
-    implementation "com.fasterxml.jackson.core:jackson-databind:$jacksonVersion"
-    implementation "com.fasterxml.jackson.dataformat:jackson-dataformat-cbor:$jacksonVersion"
-    implementation project(':commons')
-
-    testImplementation(testFixtures(project(":storage:core")))
+    implementation project(":commons")
 
     testImplementation "org.testcontainers:junit-jupiter:$testcontainersVersion"
     testImplementation "org.testcontainers:localstack:$testcontainersVersion"

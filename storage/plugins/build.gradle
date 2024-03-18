@@ -1,5 +1,5 @@
 /*
- * Copyright 2021 Aiven Oy
+ * Copyright 2024 Aiven Oy
  *
  * Licensed under the Apache License, Version 2.0 (the "License");
  * you may not use this file except in compliance with the License.
@@ -14,14 +14,18 @@
  * limitations under the License.
  */
 
-rootProject.name = 'tiered-storage-for-apache-kafka'
-include 'core'
-include 'storage'
-include 'storage:core'
-include 'storage:plugins'
-include 'storage:plugins:filesystem'
-include 'storage:plugins:azure'
-include 'storage:plugins:gcs'
-include 'storage:plugins:s3'
-include 'e2e'
-include 'commons'
+subprojects {
+    configurations {
+        providedRuntime
+        implementation.extendsFrom(providedRuntime)
+    }
+
+    dependencies {
+        implementation project(":storage:core")
+
+        providedRuntime project(":core")
+
+        testImplementation(testFixtures(project(":storage:core")))
+    }
+}
+
