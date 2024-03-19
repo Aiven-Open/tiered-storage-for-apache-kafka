@@ -23,15 +23,12 @@ ext {
 dependencies {
     implementation project(":storage:core")
 
-    // Take out jackson libraries out to avoid collision with core jackson dependencies
-    implementation ("software.amazon.awssdk:s3:$awsSdkVersion") {
-        exclude group: "com.fasterxml.jackson.core"
-        exclude group: "com.fasterxml.jackson.dataformat"
-        exclude group: "org.slf4j"
+    def excludeFromAWSDeps = { ModuleDependency dep ->
+        dep.exclude group: "org.slf4j"
     }
-    // replacing with version used by core
-    implementation "com.fasterxml.jackson.core:jackson-databind:$jacksonVersion"
-    implementation "com.fasterxml.jackson.dataformat:jackson-dataformat-cbor:$jacksonVersion"
+    implementation ("software.amazon.awssdk:s3:$awsSdkVersion") {excludeFromAWSDeps(it)}
+    runtimeOnly ("software.amazon.awssdk:sts:$awsSdkVersion") {excludeFromAWSDeps(it)}
+
     implementation project(':commons')
 
     testImplementation(testFixtures(project(":storage:core")))
