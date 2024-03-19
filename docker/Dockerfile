@@ -33,17 +33,17 @@ RUN cd /tiered-storage-for-apache-kafka/core \
     && tar -xf tiered-storage-for-apache-kafka-${_VERSION}.tgz --strip-components=1 \
     && rm tiered-storage-for-apache-kafka-${_VERSION}.tgz
 
-COPY storage/s3/build/distributions/s3-${_VERSION}.tgz /tiered-storage-for-apache-kafka/s3
+COPY storage/plugins/s3/build/distributions/s3-${_VERSION}.tgz /tiered-storage-for-apache-kafka/s3
 RUN cd /tiered-storage-for-apache-kafka/s3 \
     && tar -xf s3-${_VERSION}.tgz --strip-components=1 \
     && rm s3-${_VERSION}.tgz
 
-COPY storage/gcs/build/distributions/gcs-${_VERSION}.tgz /tiered-storage-for-apache-kafka/gcs
+COPY storage/plugins/gcs/build/distributions/gcs-${_VERSION}.tgz /tiered-storage-for-apache-kafka/gcs
 RUN cd /tiered-storage-for-apache-kafka/gcs \
     && tar -xf gcs-${_VERSION}.tgz --strip-components=1 \
     && rm gcs-${_VERSION}.tgz
 
-COPY storage/azure/build/distributions/azure-${_VERSION}.tgz /tiered-storage-for-apache-kafka/azure
+COPY storage/plugins/azure/build/distributions/azure-${_VERSION}.tgz /tiered-storage-for-apache-kafka/azure
 RUN cd /tiered-storage-for-apache-kafka/azure \
     && tar -xf azure-${_VERSION}.tgz --strip-components=1 \
     && rm azure-${_VERSION}.tgz

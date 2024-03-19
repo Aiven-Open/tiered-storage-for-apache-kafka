@@ -14,17 +14,20 @@
  * limitations under the License.
  */
 
-archivesBaseName = "storage-gcs"
+archivesBaseName = "storage-azure"
 
 dependencies {
-    implementation project(":storage:core")
+    implementation platform("com.azure:azure-sdk-bom:$azureSdkVersion")
+    implementation("com.azure:azure-identity") {
+        exclude group: "org.slf4j"
+        exclude group: "net.java.dev.jna"
+        exclude group: "com.microsoft.azure", module: "msal4j"
+    }
+    implementation("com.azure:azure-storage-blob") {
+        exclude group: "org.slf4j"
+    }
 
-    implementation "com.google.cloud:google-cloud-storage:$gcpSdkVersion"
     implementation project(":commons")
 
-    testImplementation(testFixtures(project(":storage:core")))
-
-    testImplementation "org.testcontainers:junit-jupiter:$testcontainersVersion"
-
-    testImplementation "io.aiven:testcontainers-fake-gcs-server:$testcontainersFakeGcsServerVersion"
+    testImplementation("org.testcontainers:junit-jupiter:$testcontainersVersion")
 }

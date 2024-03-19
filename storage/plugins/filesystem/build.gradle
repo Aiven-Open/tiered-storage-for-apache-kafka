@@ -17,9 +17,5 @@
 archivesBaseName = "storage-filesystem"
 
 dependencies {
-    implementation project(":storage:core")
-
     implementation "commons-io:commons-io:$apacheCommonsIOVersion"
-
-    testImplementation(testFixtures(project(":storage:core")))
 }

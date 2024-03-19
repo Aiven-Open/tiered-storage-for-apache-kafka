@@ -36,8 +36,8 @@ dependencies {
 
     implementation "org.bouncycastle:bcprov-jdk18on:$bouncyCastleVersion"
 
-    implementation "com.fasterxml.jackson.core:jackson-databind:$jacksonVersion"
-    implementation "com.fasterxml.jackson.datatype:jackson-datatype-jdk8:$jacksonVersion"
+    implementation "com.fasterxml.jackson.core:jackson-databind"
+    implementation "com.fasterxml.jackson.datatype:jackson-datatype-jdk8"
 
     implementation "com.github.luben:zstd-jni:$zstdVersion"
 
@@ -47,7 +47,7 @@ dependencies {
     implementation project(':commons')
 
     testImplementation(testFixtures(project(":storage:core")))
-    testImplementation(project(":storage:filesystem"))
+    testImplementation(project(":storage:plugins:filesystem"))
 
     testImplementation "com.github.luben:zstd-jni:$zstdVersion"
     integrationTestImplementation sourceSets.test.output
