@@ -47,6 +47,8 @@ public class S3StorageConfig extends AbstractConfig {
 
     public static final String S3_UPLOAD_LIMIT_CONFIG = "s3.upload.limit";
     private static final String S3_BUCKET_NAME_DOC = "S3 bucket to store log segments";
+
+    private static final String S3_UPLOAD_LIMIT_DOC = "S3 upload limit default segment.bytes in bytes";
     public static final String S3_ENDPOINT_URL_CONFIG = "s3.endpoint.url";
     private static final String S3_ENDPOINT_URL_DOC = "Custom S3 endpoint URL. "
         + "To be used with custom S3-compatible backends (e.g. minio).";
@@ -98,6 +100,13 @@ public class S3StorageConfig extends AbstractConfig {
 
     static {
         CONFIG = new ConfigDef()
+            .define(
+                S3_UPLOAD_LIMIT_CONFIG,
+                ConfigDef.Type.LONG,
+                null,
+                Null.or(ConfigDef.Range.between(1, Long.MAX_VALUE)),
+                ConfigDef.Importance.LOW,
+                S3_UPLOAD_LIMIT_DOC)
             .define(
                 S3_BUCKET_NAME_CONFIG,
                 ConfigDef.Type.STRING,
