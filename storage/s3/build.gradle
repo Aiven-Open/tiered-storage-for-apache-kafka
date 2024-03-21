@@ -18,6 +18,7 @@ archivesBaseName = "storage-s3"
 
 ext {
     wireMockVersion = "3.3.1"
+    bucket4jVersion = "6.0.1"
 }
 
 dependencies {
@@ -32,6 +33,7 @@ dependencies {
     // replacing with version used by core
     implementation "com.fasterxml.jackson.core:jackson-databind:$jacksonVersion"
     implementation "com.fasterxml.jackson.dataformat:jackson-dataformat-cbor:$jacksonVersion"
+    implementation "com.github.vladimir-bukhtoyarov:bucket4j-core:$bucket4jVersion"
     implementation project(':commons')
 
     testImplementation(testFixtures(project(":storage:core")))

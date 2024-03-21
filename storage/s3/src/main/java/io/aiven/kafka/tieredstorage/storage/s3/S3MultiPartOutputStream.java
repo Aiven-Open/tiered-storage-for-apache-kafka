@@ -26,6 +26,8 @@ import java.util.List;
 
 import io.aiven.kafka.tieredstorage.storage.ObjectKey;
 
+import io.github.bucket4j.Bucket;
+import io.github.bucket4j.ConsumptionProbe;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 import software.amazon.awssdk.core.sync.RequestBody;
@@ -63,6 +65,8 @@ public class S3MultiPartOutputStream extends OutputStream {
     private boolean closed;
     private long processedBytes;
 
+    private Bucket limitBucket;
+
     public S3MultiPartOutputStream(final String bucketName,
                                    final ObjectKey key,
                                    final int partSize,
@@ -77,6 +81,23 @@ public class S3MultiPartOutputStream extends OutputStream {
         final CreateMultipartUploadResponse initiateResult = client.createMultipartUpload(initialRequest);
         log.debug("Create new multipart upload request: {}", initiateResult.uploadId());
         this.uploadId = initiateResult.uploadId();
+    }
+
+    public S3MultiPartOutputStream(final String bucketName,
+                                   final ObjectKey key,
+                                   final int partSize,
+                                   final S3Client client, final Bucket limitBucket) {
+        this.bucketName = bucketName;
+        this.key = key;
+        this.client = client;
+        this.partSize = partSize;
+        this.partBuffer = ByteBuffer.allocate(partSize);
+        final CreateMultipartUploadRequest initialRequest = CreateMultipartUploadRequest.builder().bucket(bucketName)
+            .key(key.value()).build();
+        final CreateMultipartUploadResponse initiateResult = client.createMultipartUpload(initialRequest);
+        log.debug("Create new multipart upload request: {}", initiateResult.uploadId());
+        this.uploadId = initiateResult.uploadId();
+        this.limitBucket = limitBucket;
     }
 
     @Override
@@ -102,10 +123,23 @@ public class S3MultiPartOutputStream extends OutputStream {
                 processedBytes += transferred;
                 source.position(source.position() + transferred);
                 if (!partBuffer.hasRemaining()) {
-                    flushBuffer(0, partSize);
+                    while (true) {
+                        if (limitBucket != null) {
+                            ConsumptionProbe consumptionProbe = limitBucket.tryConsumeAndReturnRemaining(partSize);
+                            if (consumptionProbe.isConsumed()) {
+                                flushBuffer(0, partSize);
+                                break;
+                            } else {
+                                Thread.sleep(consumptionProbe.getNanosToWaitForRefill() / 1_000_000);
+                            }
+                        } else {
+                            flushBuffer(0, partSize);
+                            break;
+                        }
+                    }
                 }
             }
-        } catch (final RuntimeException e) {
+        } catch (final RuntimeException | InterruptedException e) {
             log.error("Failed to write to stream on upload {}, aborting transaction", uploadId, e);
             abortUpload();
             throw new IOException(e);

@@ -39,9 +39,13 @@ import software.amazon.awssdk.auth.credentials.StaticCredentialsProvider;
 import software.amazon.awssdk.regions.Region;
 import software.amazon.awssdk.utils.builder.Buildable;
 
+import static org.apache.kafka.common.config.TopicConfig.SEGMENT_BYTES_CONFIG;
+
 public class S3StorageConfig extends AbstractConfig {
 
     public static final String S3_BUCKET_NAME_CONFIG = "s3.bucket.name";
+
+    public static final String S3_UPLOAD_LIMIT_CONFIG = "s3.upload.limit";
     private static final String S3_BUCKET_NAME_DOC = "S3 bucket to store log segments";
     public static final String S3_ENDPOINT_URL_CONFIG = "s3.endpoint.url";
     private static final String S3_ENDPOINT_URL_DOC = "Custom S3 endpoint URL. "
@@ -255,6 +259,14 @@ public class S3StorageConfig extends AbstractConfig {
 
     public String bucketName() {
         return getString(S3_BUCKET_NAME_CONFIG);
+    }
+
+    public Long uploadLimit() {
+        return getLong(S3_UPLOAD_LIMIT_CONFIG);
+    }
+
+    public Long segmentBytes() {
+        return getLong(SEGMENT_BYTES_CONFIG);
     }
 
     public Boolean pathStyleAccessEnabled() {
