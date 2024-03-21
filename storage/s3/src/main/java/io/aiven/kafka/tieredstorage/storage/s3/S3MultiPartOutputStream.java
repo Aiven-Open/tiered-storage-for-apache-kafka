@@ -125,7 +125,8 @@ public class S3MultiPartOutputStream extends OutputStream {
                 if (!partBuffer.hasRemaining()) {
                     while (true) {
                         if (limitBucket != null) {
-                            final ConsumptionProbe consumptionProbe = limitBucket.tryConsumeAndReturnRemaining(partSize);
+                            final ConsumptionProbe consumptionProbe =
+                                limitBucket.tryConsumeAndReturnRemaining(partSize);
                             if (consumptionProbe.isConsumed()) {
                                 flushBuffer(0, partSize);
                                 break;
