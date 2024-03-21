@@ -62,7 +62,7 @@ public class S3Storage implements StorageBackend {
             uploadLimit = config.segmentBytes();
         }
         if (uploadLimit != null) {
-            Bandwidth bandwidth = Bandwidth.simple(uploadLimit, Duration.ofSeconds(1));
+            final Bandwidth bandwidth = Bandwidth.simple(uploadLimit, Duration.ofSeconds(1));
             this.limitBucket = Bucket4j.builder().addLimit(bandwidth).build();
         }
         this.partSize = config.uploadPartSize();
