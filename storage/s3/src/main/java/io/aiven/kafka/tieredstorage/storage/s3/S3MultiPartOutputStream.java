@@ -123,8 +123,8 @@ public class S3MultiPartOutputStream extends OutputStream {
                 processedBytes += transferred;
                 source.position(source.position() + transferred);
                 if (!partBuffer.hasRemaining()) {
-                    while (true) {
-                        if (limitBucket != null) {
+                    if (limitBucket != null) {
+                        while (true) {
                             final ConsumptionProbe consumptionProbe =
                                 limitBucket.tryConsumeAndReturnRemaining(partSize);
                             if (consumptionProbe.isConsumed()) {
@@ -133,10 +133,9 @@ public class S3MultiPartOutputStream extends OutputStream {
                             } else {
                                 Thread.sleep(consumptionProbe.getNanosToWaitForRefill() / 1_000_000);
                             }
-                        } else {
-                            flushBuffer(0, partSize);
-                            break;
                         }
+                    } else {
+                        flushBuffer(0, partSize);
                     }
                 }
             }
