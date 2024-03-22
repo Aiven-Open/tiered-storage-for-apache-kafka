@@ -20,6 +20,7 @@ import java.io.BufferedOutputStream;
 import java.io.IOException;
 import java.io.InputStream;
 import java.io.OutputStream;
+import java.net.InetSocketAddress;
 import java.util.Map;
 
 import io.aiven.kafka.tieredstorage.storage.BytesRange;
@@ -28,7 +29,10 @@ import io.aiven.kafka.tieredstorage.storage.KeyNotFoundException;
 import io.aiven.kafka.tieredstorage.storage.ObjectKey;
 import io.aiven.kafka.tieredstorage.storage.StorageBackend;
 import io.aiven.kafka.tieredstorage.storage.StorageBackendException;
+import io.aiven.kafka.tieredstorage.storage.proxy.ProxyConfig;
 
+import com.azure.core.http.ProxyOptions;
+import com.azure.core.util.HttpClientOptions;
 import com.azure.identity.DefaultAzureCredentialBuilder;
 import com.azure.storage.blob.BlobContainerClient;
 import com.azure.storage.blob.BlobServiceClientBuilder;
@@ -45,6 +49,7 @@ public class AzureBlobStorage implements StorageBackend {
     private AzureBlobStorageConfig config;
     private BlobContainerClient blobContainerClient;
     private MetricCollector metricsPolicy;
+    private ProxyOptions proxyOptions = null;
 
     @Override
     public void configure(final Map<String, ?> configs) {
@@ -68,6 +73,16 @@ public class AzureBlobStorage implements StorageBackend {
         }
 
         metricsPolicy = new MetricCollector(config);
+
+        final ProxyConfig proxyConfig = config.proxyConfig();
+        if (proxyConfig != null) {
+            proxyOptions = new ProxyOptions(ProxyOptions.Type.SOCKS5,
+                new InetSocketAddress(proxyConfig.host(), proxyConfig.port()));
+            if (proxyConfig.username() != null) {
+                proxyOptions.setCredentials(proxyConfig.username(), proxyConfig.password());
+            }
+            blobServiceClientBuilder.clientOptions(new HttpClientOptions().setProxyOptions(proxyOptions));
+        }
 
         blobContainerClient = blobServiceClientBuilder
             .addPolicy(metricsPolicy.policy())
@@ -101,6 +116,11 @@ public class AzureBlobStorage implements StorageBackend {
                     new DefaultAzureCredentialBuilder().build());
             }
         }
+
+        if (proxyOptions != null) {
+            specializedBlobClientBuilder.clientOptions(new HttpClientOptions().setProxyOptions(proxyOptions));
+        }
+
         final BlockBlobClient blockBlobClient = specializedBlobClientBuilder
             .addPolicy(metricsPolicy.policy())
             .containerName(config.containerName())

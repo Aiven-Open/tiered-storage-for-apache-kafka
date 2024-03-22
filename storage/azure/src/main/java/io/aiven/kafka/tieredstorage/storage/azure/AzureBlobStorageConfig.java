@@ -26,6 +26,7 @@ import org.apache.kafka.common.config.types.Password;
 import io.aiven.kafka.tieredstorage.config.validators.NonEmptyPassword;
 import io.aiven.kafka.tieredstorage.config.validators.Null;
 import io.aiven.kafka.tieredstorage.config.validators.ValidUrl;
+import io.aiven.kafka.tieredstorage.storage.proxy.ProxyConfig;
 
 public class AzureBlobStorageConfig extends AbstractConfig {
     static final String AZURE_ACCOUNT_NAME_CONFIG = "azure.account.name";
@@ -108,9 +109,20 @@ public class AzureBlobStorageConfig extends AbstractConfig {
                 AZURE_UPLOAD_BLOCK_SIZE_DOC);
     }
 
+    private ProxyConfig proxyConfig = null;
+
     public AzureBlobStorageConfig(final Map<String, ?> props) {
         super(CONFIG, props);
         validate();
+
+        final Map<String, ?> proxyProps = this.originalsWithPrefix(ProxyConfig.PROXY_PREFIX, true);
+        if (!proxyProps.isEmpty()) {
+            this.proxyConfig = new ProxyConfig(proxyProps);
+        }
+    }
+
+    ProxyConfig proxyConfig() {
+        return proxyConfig;
     }
 
     private void validate() {
