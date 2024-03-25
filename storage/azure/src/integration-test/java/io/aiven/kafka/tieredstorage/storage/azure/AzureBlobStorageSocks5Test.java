@@ -20,6 +20,7 @@ import java.util.List;
 import java.util.Map;
 
 import io.aiven.kafka.tieredstorage.storage.BaseSocks5Test;
+import io.aiven.kafka.tieredstorage.storage.TestUtils;
 
 import com.azure.storage.blob.BlobServiceClient;
 import com.azure.storage.blob.BlobServiceClientBuilder;
@@ -74,13 +75,7 @@ class AzureBlobStorageSocks5Test extends BaseSocks5Test<AzureBlobStorage> {
 
     @BeforeEach
     void setUp(final TestInfo testInfo) {
-        azureContainerName = testInfo.getDisplayName()
-            .toLowerCase()
-            .replace("(", "")
-            .replace(")", "");
-        while (azureContainerName.length() < 3) {
-            azureContainerName += azureContainerName;
-        }
+        azureContainerName = TestUtils.testNameToBucketName(testInfo);
         blobServiceClient.createBlobContainer(azureContainerName);
     }
 

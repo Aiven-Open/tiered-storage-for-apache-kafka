@@ -20,6 +20,7 @@ import java.util.List;
 import java.util.Map;
 
 import io.aiven.kafka.tieredstorage.storage.BaseSocks5Test;
+import io.aiven.kafka.tieredstorage.storage.TestUtils;
 import io.aiven.testcontainers.fakegcsserver.FakeGcsServerContainer;
 
 import com.google.cloud.NoCredentials;
@@ -72,13 +73,7 @@ class GcsStorageSocks5Test extends BaseSocks5Test<GcsStorage> {
 
     @BeforeEach
     void setUp(final TestInfo testInfo) {
-        bucketName = testInfo.getDisplayName()
-            .toLowerCase()
-            .replace("(", "")
-            .replace(")", "");
-        while (bucketName.length() < 3) {
-            bucketName += bucketName;
-        }
+        bucketName = TestUtils.testNameToBucketName(testInfo);
         storage.create(BucketInfo.newBuilder(bucketName).build());
     }
 
