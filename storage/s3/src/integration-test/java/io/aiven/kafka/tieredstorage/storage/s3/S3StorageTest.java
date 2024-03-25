@@ -22,6 +22,7 @@ import java.util.Map;
 import io.aiven.kafka.tieredstorage.storage.BaseStorageTest;
 import io.aiven.kafka.tieredstorage.storage.StorageBackend;
 import io.aiven.kafka.tieredstorage.storage.TestObjectKey;
+import io.aiven.kafka.tieredstorage.storage.TestUtils;
 
 import org.junit.jupiter.api.BeforeAll;
 import org.junit.jupiter.api.BeforeEach;
@@ -66,10 +67,7 @@ public class S3StorageTest extends BaseStorageTest {
 
     @BeforeEach
     void setUp(final TestInfo testInfo) {
-        bucketName = testInfo.getDisplayName()
-            .toLowerCase()
-            .replace("(", "")
-            .replace(")", "");
+        bucketName = TestUtils.testNameToBucketName(testInfo);
         s3Client.createBucket(CreateBucketRequest.builder().bucket(bucketName).build());
     }
 
