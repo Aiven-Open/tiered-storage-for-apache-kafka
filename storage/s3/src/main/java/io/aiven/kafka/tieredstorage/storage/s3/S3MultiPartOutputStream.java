@@ -54,7 +54,7 @@ public class S3MultiPartOutputStream extends OutputStream {
 
     private static final Logger log = LoggerFactory.getLogger(S3MultiPartOutputStream.class);
     private static final ExecutorService EXECUTOR_SERVICE = Executors.newFixedThreadPool(
-        Runtime.getRuntime().availableProcessors()
+        6
     );
     private final S3AsyncClient client;
     private final ByteBuffer partBuffer;
