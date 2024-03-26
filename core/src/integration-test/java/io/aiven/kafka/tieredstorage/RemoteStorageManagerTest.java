@@ -226,8 +226,10 @@ class RemoteStorageManagerTest extends RsaKeyAwareTest {
         final LogSegmentData logSegmentData = new LogSegmentData(
             logFilePath, offsetIndexFilePath, timeIndexFilePath, txnIndexPath,
             producerSnapshotFilePath, ByteBuffer.wrap(LEADER_EPOCH_INDEX_BYTES));
-        final Optional<RemoteLogSegmentMetadata.CustomMetadata> customMetadata =
-            rsm.copyLogSegmentData(REMOTE_LOG_METADATA, logSegmentData);
+        final Optional<RemoteLogSegmentMetadata.CustomMetadata> customMetadata;
+        try (final var checker = new AllOpenedFileInputStreamsAreClosedChecker()) {
+            customMetadata = rsm.copyLogSegmentData(REMOTE_LOG_METADATA, logSegmentData);
+        }
 
         checkCustomMetadata(customMetadata);
         checkFilesInTargetDirectory();

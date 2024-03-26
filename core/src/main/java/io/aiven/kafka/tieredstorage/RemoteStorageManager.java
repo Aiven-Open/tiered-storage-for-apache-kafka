@@ -223,25 +223,29 @@ public class RemoteStorageManager implements org.apache.kafka.server.log.remote.
         final long startedMs = time.milliseconds();
 
         try {
-            TransformChunkEnumeration transformEnum = new BaseTransformChunkEnumeration(
-                Files.newInputStream(logSegmentData.logSegment()), chunkSize);
             SegmentEncryptionMetadataV1 encryptionMetadata = null;
             final boolean requiresCompression = requiresCompression(logSegmentData);
-            if (requiresCompression) {
-                transformEnum = new CompressionChunkEnumeration(transformEnum);
-            }
-            if (encryptionEnabled) {
-                final DataKeyAndAAD dataKeyAndAAD = aesEncryptionProvider.createDataKeyAndAAD();
-                transformEnum = new EncryptionChunkEnumeration(
-                    transformEnum,
-                    () -> aesEncryptionProvider.encryptionCipher(dataKeyAndAAD));
-                encryptionMetadata = new SegmentEncryptionMetadataV1(dataKeyAndAAD.dataKey, dataKeyAndAAD.aad);
-            }
-            final TransformFinisher transformFinisher =
-                new TransformFinisher(transformEnum, remoteLogSegmentMetadata.segmentSizeInBytes());
-            uploadSegmentLog(remoteLogSegmentMetadata, transformFinisher, customMetadataBuilder);
 
-            final ChunkIndex chunkIndex = transformFinisher.chunkIndex();
+            final ChunkIndex chunkIndex;
+            try (final InputStream logSegmentInputStream = Files.newInputStream(logSegmentData.logSegment())) {
+                TransformChunkEnumeration transformEnum = new BaseTransformChunkEnumeration(
+                    logSegmentInputStream, chunkSize);
+                if (requiresCompression) {
+                    transformEnum = new CompressionChunkEnumeration(transformEnum);
+                }
+                if (encryptionEnabled) {
+                    final DataKeyAndAAD dataKeyAndAAD = aesEncryptionProvider.createDataKeyAndAAD();
+                    transformEnum = new EncryptionChunkEnumeration(
+                        transformEnum,
+                        () -> aesEncryptionProvider.encryptionCipher(dataKeyAndAAD));
+                    encryptionMetadata = new SegmentEncryptionMetadataV1(dataKeyAndAAD.dataKey, dataKeyAndAAD.aad);
+                }
+                final TransformFinisher transformFinisher =
+                    new TransformFinisher(transformEnum, remoteLogSegmentMetadata.segmentSizeInBytes());
+                uploadSegmentLog(remoteLogSegmentMetadata, transformFinisher, customMetadataBuilder);
+                chunkIndex = transformFinisher.chunkIndex();
+            }
+
             final SegmentIndexesV1 segmentIndexes = uploadIndexes(
                 remoteLogSegmentMetadata, logSegmentData, encryptionMetadata, customMetadataBuilder);
             final SegmentManifest segmentManifest = new SegmentManifestV1(
@@ -271,60 +275,63 @@ public class RemoteStorageManager implements org.apache.kafka.server.log.remote.
     ) throws IOException, RemoteStorageException, StorageBackendException {
         final List<InputStream> indexes = new ArrayList<>(IndexType.values().length);
         final SegmentIndexesV1Builder segmentIndexBuilder = new SegmentIndexesV1Builder();
-        final var offsetIndex = transformIndex(
-            IndexType.OFFSET,
-            Files.newInputStream(segmentData.offsetIndex()),
-            indexSize(segmentData.offsetIndex()),
-            encryptionMeta,
-            segmentIndexBuilder
-        );
-        indexes.add(offsetIndex);
-        final var timeIndex = transformIndex(
-            IndexType.TIMESTAMP,
-            Files.newInputStream(segmentData.timeIndex()),
-            indexSize(segmentData.timeIndex()),
-            encryptionMeta,
-            segmentIndexBuilder
-        );
-        indexes.add(timeIndex);
-        final var producerSnapshotIndex = transformIndex(
-            IndexType.PRODUCER_SNAPSHOT,
-            Files.newInputStream(segmentData.producerSnapshotIndex()),
-            indexSize(segmentData.producerSnapshotIndex()),
-            encryptionMeta,
-            segmentIndexBuilder
-        );
-        indexes.add(producerSnapshotIndex);
-        final var leaderEpoch = transformIndex(
-            IndexType.LEADER_EPOCH,
-            new ByteBufferInputStream(segmentData.leaderEpochIndex()),
-            segmentData.leaderEpochIndex().remaining(),
-            encryptionMeta,
-            segmentIndexBuilder
-        );
-        indexes.add(leaderEpoch);
-        if (segmentData.transactionIndex().isPresent()) {
-            final var transactionIndex = transformIndex(
-                IndexType.TRANSACTION,
-                Files.newInputStream(segmentData.transactionIndex().get()),
-                indexSize(segmentData.transactionIndex().get()),
+
+        try (final ClosableInputStreamHolder closableInputStreamHolder = new ClosableInputStreamHolder()) {
+            final var offsetIndex = transformIndex(
+                IndexType.OFFSET,
+                closableInputStreamHolder.add(Files.newInputStream(segmentData.offsetIndex())),
+                indexSize(segmentData.offsetIndex()),
                 encryptionMeta,
                 segmentIndexBuilder
             );
-            indexes.add(transactionIndex);
-        }
-        final var suffix = ObjectKeyFactory.Suffix.INDEXES;
-        final ObjectKey key = objectKeyFactory.key(remoteLogSegmentMetadata, suffix);
-        try (final var in = new SequenceInputStream(Collections.enumeration(indexes))) {
-            final var bytes = uploader.upload(in, key);
-            metrics.recordObjectUpload(
-                remoteLogSegmentMetadata.remoteLogSegmentId().topicIdPartition().topicPartition(),
-                suffix,
-                bytes
+            indexes.add(offsetIndex);
+            final var timeIndex = transformIndex(
+                IndexType.TIMESTAMP,
+                closableInputStreamHolder.add(Files.newInputStream(segmentData.timeIndex())),
+                indexSize(segmentData.timeIndex()),
+                encryptionMeta,
+                segmentIndexBuilder
             );
-            customMetadataBuilder.addUploadResult(suffix, bytes);
+            indexes.add(timeIndex);
+            final var producerSnapshotIndex = transformIndex(
+                IndexType.PRODUCER_SNAPSHOT,
+                closableInputStreamHolder.add(Files.newInputStream(segmentData.producerSnapshotIndex())),
+                indexSize(segmentData.producerSnapshotIndex()),
+                encryptionMeta,
+                segmentIndexBuilder
+            );
+            indexes.add(producerSnapshotIndex);
+            final var leaderEpoch = transformIndex(
+                IndexType.LEADER_EPOCH,
+                closableInputStreamHolder.add(new ByteBufferInputStream(segmentData.leaderEpochIndex())),
+                segmentData.leaderEpochIndex().remaining(),
+                encryptionMeta,
+                segmentIndexBuilder
+            );
+            indexes.add(leaderEpoch);
+            if (segmentData.transactionIndex().isPresent()) {
+                final var transactionIndex = transformIndex(
+                    IndexType.TRANSACTION,
+                    closableInputStreamHolder.add(Files.newInputStream(segmentData.transactionIndex().get())),
+                    indexSize(segmentData.transactionIndex().get()),
+                    encryptionMeta,
+                    segmentIndexBuilder
+                );
+                indexes.add(transactionIndex);
+            }
+            final var suffix = ObjectKeyFactory.Suffix.INDEXES;
+            final ObjectKey key = objectKeyFactory.key(remoteLogSegmentMetadata, suffix);
+            try (final var in = new SequenceInputStream(Collections.enumeration(indexes))) {
+                final var bytes = uploader.upload(in, key);
+                metrics.recordObjectUpload(
+                    remoteLogSegmentMetadata.remoteLogSegmentId().topicIdPartition().topicPartition(),
+                    suffix,
+                    bytes
+                );
+                customMetadataBuilder.addUploadResult(suffix, bytes);
 
-            log.debug("Uploaded indexes file for {}, size: {}", remoteLogSegmentMetadata, bytes);
+                log.debug("Uploaded indexes file for {}, size: {}", remoteLogSegmentMetadata, bytes);
+            }
         }
         return segmentIndexBuilder.build();
     }
