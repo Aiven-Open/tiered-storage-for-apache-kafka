@@ -18,6 +18,7 @@ archivesBaseName = "storage-s3"
 
 ext {
     wireMockVersion = "3.3.1"
+    bucket4jVersion = "6.0.1"
 }
 
 dependencies {
@@ -26,6 +27,8 @@ dependencies {
     def excludeFromAWSDeps = { ModuleDependency dep ->
         dep.exclude group: "org.slf4j"
     }
+
+    implementation "com.github.vladimir-bukhtoyarov:bucket4j-core:$bucket4jVersion"
     implementation ("software.amazon.awssdk:s3:$awsSdkVersion") {excludeFromAWSDeps(it)}
     runtimeOnly ("software.amazon.awssdk:sts:$awsSdkVersion") {excludeFromAWSDeps(it)}
 
