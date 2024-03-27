@@ -34,7 +34,10 @@ public class CacheConfig extends AbstractConfig {
         + "where \"-1\" represents infinite retention";
     private static final long DEFAULT_CACHE_RETENTION_MS = 600_000;
 
-    private static ConfigDef addCacheConfigs(final OptionalLong maybeDefaultSize) {
+    private static ConfigDef addCacheConfigs(
+        final OptionalLong maybeDefaultSize,
+        final OptionalLong maybeDefaultRetention
+    ) {
         final ConfigDef configDef = new ConfigDef();
         Object defaultValue = NO_DEFAULT_VALUE;
         if (maybeDefaultSize.isPresent()) {
@@ -51,7 +54,7 @@ public class CacheConfig extends AbstractConfig {
         configDef.define(
             CACHE_RETENTION_CONFIG,
             ConfigDef.Type.LONG,
-            DEFAULT_CACHE_RETENTION_MS,
+            maybeDefaultRetention.orElse(DEFAULT_CACHE_RETENTION_MS),
             ConfigDef.Range.between(-1L, Long.MAX_VALUE),
             ConfigDef.Importance.MEDIUM,
             CACHE_RETENTION_DOC
@@ -59,12 +62,16 @@ public class CacheConfig extends AbstractConfig {
         return configDef;
     }
 
-    public CacheConfig(final Map<String, ?> props) {
-        super(addCacheConfigs(OptionalLong.empty()), props);
+    private CacheConfig(
+        final Map<String, ?> props,
+        final OptionalLong defaultSize,
+        final OptionalLong defaultRetention
+    ) {
+        super(addCacheConfigs(defaultSize, defaultRetention), props);
     }
 
-    public CacheConfig(final Map<String, ?> props, final long defaultSize) {
-        super(addCacheConfigs(OptionalLong.of(defaultSize)), props);
+    public static Builder newBuilder() {
+        return new Builder();
     }
 
     public Optional<Long> cacheSize() {
@@ -81,5 +88,24 @@ public class CacheConfig extends AbstractConfig {
             return Optional.empty();
         }
         return Optional.of(Duration.ofMillis(rawValue));
+    }
+
+    public static class Builder {
+        private OptionalLong maybeCacheSize = OptionalLong.empty();
+        private OptionalLong maybeCacheRetention = OptionalLong.empty();
+
+        public Builder withDefaultSize(final long size) {
+            this.maybeCacheSize = OptionalLong.of(size);
+            return this;
+        }
+
+        public Builder withDefaultRetention(final long retention) {
+            this.maybeCacheRetention = OptionalLong.of(retention);
+            return this;
+        }
+
+        public CacheConfig build(final Map<String, ?> configs) {
+            return new CacheConfig(configs, maybeCacheSize, maybeCacheRetention);
+        }
     }
 }

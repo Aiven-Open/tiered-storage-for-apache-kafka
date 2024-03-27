@@ -56,13 +56,14 @@ import io.aiven.kafka.tieredstorage.fetch.FetchChunkEnumeration;
 import io.aiven.kafka.tieredstorage.fetch.KeyNotFoundRuntimeException;
 import io.aiven.kafka.tieredstorage.fetch.index.MemorySegmentIndexesCache;
 import io.aiven.kafka.tieredstorage.fetch.index.SegmentIndexesCache;
+import io.aiven.kafka.tieredstorage.fetch.manifest.MemorySegmentManifestCache;
+import io.aiven.kafka.tieredstorage.fetch.manifest.SegmentManifestCache;
 import io.aiven.kafka.tieredstorage.manifest.SegmentEncryptionMetadata;
 import io.aiven.kafka.tieredstorage.manifest.SegmentEncryptionMetadataV1;
 import io.aiven.kafka.tieredstorage.manifest.SegmentIndex;
 import io.aiven.kafka.tieredstorage.manifest.SegmentIndexesV1;
 import io.aiven.kafka.tieredstorage.manifest.SegmentIndexesV1Builder;
 import io.aiven.kafka.tieredstorage.manifest.SegmentManifest;
-import io.aiven.kafka.tieredstorage.manifest.SegmentManifestProvider;
 import io.aiven.kafka.tieredstorage.manifest.SegmentManifestV1;
 import io.aiven.kafka.tieredstorage.manifest.index.ChunkIndex;
 import io.aiven.kafka.tieredstorage.manifest.serde.EncryptionSerdeModule;
@@ -126,7 +127,7 @@ public class RemoteStorageManager implements org.apache.kafka.server.log.remote.
     private SegmentCustomMetadataSerde customMetadataSerde;
     private Set<SegmentCustomMetadataField> customMetadataFields;
 
-    private SegmentManifestProvider segmentManifestProvider;
+    private SegmentManifestCache segmentManifestCache;
     private SegmentIndexesCache segmentIndexesCache;
 
     public RemoteStorageManager() {
@@ -167,9 +168,8 @@ public class RemoteStorageManager implements org.apache.kafka.server.log.remote.
 
         mapper = getObjectMapper();
 
-        segmentManifestProvider = new SegmentManifestProvider(
-            config.segmentManifestCacheSize(),
-            config.segmentManifestCacheRetention(),
+        segmentManifestCache = new MemorySegmentManifestCache(
+            config.segmentManifestCacheConfigs(),
             fetcher,
             mapper,
             executor);
@@ -189,8 +189,8 @@ public class RemoteStorageManager implements org.apache.kafka.server.log.remote.
     }
 
     // for testing
-    void setSegmentManifestProvider(final SegmentManifestProvider segmentManifestProvider) {
-        this.segmentManifestProvider = segmentManifestProvider;
+    void setSegmentManifestProvider(final SegmentManifestCache segmentManifestCache) {
+        this.segmentManifestCache = segmentManifestCache;
     }
 
     // for testing
@@ -592,7 +592,7 @@ public class RemoteStorageManager implements org.apache.kafka.server.log.remote.
     private SegmentManifest fetchSegmentManifest(final RemoteLogSegmentMetadata remoteLogSegmentMetadata)
         throws StorageBackendException, IOException {
         final ObjectKey manifestKey = objectKeyFactory.key(remoteLogSegmentMetadata, ObjectKeyFactory.Suffix.MANIFEST);
-        return segmentManifestProvider.get(manifestKey);
+        return segmentManifestCache.get(manifestKey);
     }
 
     @Override

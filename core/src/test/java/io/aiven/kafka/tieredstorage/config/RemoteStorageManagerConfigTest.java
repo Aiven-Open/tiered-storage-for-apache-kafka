@@ -42,8 +42,8 @@ class RemoteStorageManagerConfigTest {
             )
         );
         assertThat(config.storage()).isInstanceOf(StorageBackend.class);
-        assertThat(config.segmentManifestCacheSize()).hasValue(1000L);
-        assertThat(config.segmentManifestCacheRetention()).hasValue(Duration.ofHours(1));
+        assertThat(config.segmentManifestCacheConfigs().cacheSize()).hasValue(1000L);
+        assertThat(config.segmentManifestCacheConfigs().cacheRetention()).hasValue(Duration.ofHours(1));
         assertThat(config.chunkSize()).isEqualTo(123);
         assertThat(config.compressionEnabled()).isFalse();
         assertThat(config.compressionHeuristicEnabled()).isFalse();
@@ -64,7 +64,7 @@ class RemoteStorageManagerConfigTest {
                 "segment.manifest.cache.size", "-1"
             )
         );
-        assertThat(config.segmentManifestCacheSize()).isEmpty();
+        assertThat(config.segmentManifestCacheConfigs().cacheSize()).isEmpty();
     }
 
     @Test
@@ -76,7 +76,7 @@ class RemoteStorageManagerConfigTest {
                 "segment.manifest.cache.size", "42"
             )
         );
-        assertThat(config.segmentManifestCacheSize()).hasValue(42L);
+        assertThat(config.segmentManifestCacheConfigs().cacheSize()).hasValue(42L);
     }
 
     @Test
@@ -88,7 +88,7 @@ class RemoteStorageManagerConfigTest {
                 "segment.manifest.cache.retention.ms", "-1"
             )
         );
-        assertThat(config.segmentManifestCacheRetention()).isEmpty();
+        assertThat(config.segmentManifestCacheConfigs().cacheRetention()).isEmpty();
     }
 
     @Test
@@ -100,7 +100,7 @@ class RemoteStorageManagerConfigTest {
                 "segment.manifest.cache.retention.ms", "42"
             )
         );
-        assertThat(config.segmentManifestCacheRetention()).hasValue(Duration.ofMillis(42));
+        assertThat(config.segmentManifestCacheConfigs().cacheRetention()).hasValue(Duration.ofMillis(42));
     }
 
     @Test
