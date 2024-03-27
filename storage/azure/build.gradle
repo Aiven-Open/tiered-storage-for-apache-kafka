@@ -21,9 +21,11 @@ dependencies {
 
     implementation platform("com.azure:azure-sdk-bom:$azureSdkVersion")
     implementation ("com.azure:azure-identity") {
+        exclude group: "com.fasterxml.jackson.core"
         exclude group: "org.slf4j"
     }
     implementation ("com.azure:azure-storage-blob") {
+        exclude group: "com.fasterxml.jackson.core"
         exclude group: "org.slf4j"
     }
 
