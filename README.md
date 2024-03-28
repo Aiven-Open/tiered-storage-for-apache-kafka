@@ -196,11 +196,11 @@ The cache is able to asynchronously prefetch next chunks, up to the specified nu
 
 ⚠️ This is an experimental feature subject for future changes.
 
-| Object storage       |    Supported    | Host name resolution |
-|----------------------|:---------------:|:--------------------:|
-|        AWS S3        | ❌ (in progress) |                      |
-| Azure Blob Storage   |        ✅        |      Proxy-side      |
-| Google Cloud Storage |        ✅        |      Proxy-side      |
+| Object storage       | Supported | Host name resolution |
+|----------------------|:---------:|:--------------------:|
+|        AWS S3        |     ✅     |     Client-side      |
+| Azure Blob Storage   |     ✅     |      Proxy-side      |
+| Google Cloud Storage |     ✅     |      Proxy-side      |
 
 ## License
 
