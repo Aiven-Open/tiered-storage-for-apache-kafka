@@ -129,8 +129,8 @@ class MetricCollector {
         }
     }
 
-    HttpTransportOptions httpTransportOptions() {
-        return new HttpTransportOptions(HttpTransportOptions.newBuilder()) {
+    HttpTransportOptions httpTransportOptions(final HttpTransportOptions.Builder builder) {
+        return new HttpTransportOptions(builder) {
             @Override
             public HttpRequestInitializer getHttpRequestInitializer(final ServiceOptions<?, ?> serviceOptions) {
                 final var superInitializer = super.getHttpRequestInitializer(serviceOptions);
