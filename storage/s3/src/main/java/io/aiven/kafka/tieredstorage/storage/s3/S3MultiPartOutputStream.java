@@ -96,15 +96,18 @@ public class S3MultiPartOutputStream extends OutputStream {
             final ByteBuffer source = ByteBuffer.wrap(b, off, len);
             while (source.hasRemaining()) {
                 final int transferred = Math.min(partBuffer.remaining(), source.remaining());
-                final int offset = source.arrayOffset() + source.position();
-                // TODO: get rid of this array copying
-                partBuffer.put(source.array(), offset, transferred);
+                final int originalLimit = source.limit();
+                final int newLimit = source.position()+transferred;
+                source.limit(newLimit);
+                partBuffer.put(source);
                 processedBytes += transferred;
-                source.position(source.position() + transferred);
+                source.position(newLimit);
+                source.limit(originalLimit);
                 if (!partBuffer.hasRemaining()) {
                     flushBuffer(0, partSize);
                 }
             }
+
         } catch (final RuntimeException e) {
             log.error("Failed to write to stream on upload {}, aborting transaction", uploadId, e);
             abortUpload();
