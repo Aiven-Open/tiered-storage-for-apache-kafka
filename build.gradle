@@ -115,7 +115,7 @@ subprojects {
 
         jacksonVersion = "2.16.1"
 
-        awaitilityVersion = "4.2.0"
+        awaitilityVersion = "4.2.1"
 
         awsSdkVersion = "2.23.16"
 
