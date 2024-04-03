@@ -14,7 +14,7 @@
  * limitations under the License.
  */
 
-package io.aiven.kafka.tieredstorage.storage.s3;
+package io.aiven.kafka.tieredstorage.storage.s3.proxy;
 
 import java.lang.reflect.Field;
 
