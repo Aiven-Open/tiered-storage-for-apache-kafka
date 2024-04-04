@@ -257,6 +257,12 @@ public class RemoteStorageManager implements org.apache.kafka.server.log.remote.
                 maybeEncryptionKey,
                 customMetadataBuilder);
         } catch (final Exception e) {
+            try {
+                // best effort on removing orphan files
+                tryDeleteSegmentObjects(remoteLogSegmentMetadata);
+            } catch (final Exception ignored) {
+                // ignore all exceptions
+            }
             throw new RemoteStorageException(e);
         }
 
@@ -342,7 +348,7 @@ public class RemoteStorageManager implements org.apache.kafka.server.log.remote.
         return transformEnum;
     }
 
-    private SegmentIndexesV1 uploadIndexes(
+    SegmentIndexesV1 uploadIndexes(
         final RemoteLogSegmentMetadata remoteLogSegmentMetadata,
         final LogSegmentData segmentData,
         final DataKeyAndAAD maybeEncryptionKey,
@@ -661,10 +667,7 @@ public class RemoteStorageManager implements org.apache.kafka.server.log.remote.
         final long startedMs = time.milliseconds();
 
         try {
-            final Set<ObjectKey> keys = Arrays.stream(ObjectKeyFactory.Suffix.values())
-                .map(s -> objectKeyFactory.key(remoteLogSegmentMetadata, s))
-                .collect(Collectors.toSet());
-            deleter.delete(keys);
+            tryDeleteSegmentObjects(remoteLogSegmentMetadata);
         } catch (final Exception e) {
             metrics.recordSegmentDeleteError(remoteLogSegmentMetadata.remoteLogSegmentId()
                 .topicIdPartition().topicPartition());
@@ -676,6 +679,15 @@ public class RemoteStorageManager implements org.apache.kafka.server.log.remote.
             startedMs, time.milliseconds());
 
         log.info("Deleting log segment data for completed successfully {}", remoteLogSegmentMetadata);
+    }
+
+    private void tryDeleteSegmentObjects(
+        final RemoteLogSegmentMetadata remoteLogSegmentMetadata
+    ) throws StorageBackendException {
+        final Set<ObjectKey> keys = Arrays.stream(ObjectKeyFactory.Suffix.values())
+            .map(s -> objectKeyFactory.key(remoteLogSegmentMetadata, s))
+            .collect(Collectors.toSet());
+        deleter.delete(keys);
     }
 
     @Override
