@@ -263,6 +263,13 @@ public class RemoteStorageManager implements org.apache.kafka.server.log.remote.
             uploadManifest(remoteLogSegmentMetadata, segmentManifest, customMetadataBuilder);
 
         } catch (final Exception e) {
+            try {
+                // best effort on removing orphan files
+                deleteSegmentObjects(remoteLogSegmentMetadata);
+            } catch (final Exception ex) {
+                // ignore all exceptions
+                log.warn("Removing orphan files failed", ex);
+            }
             throw new RemoteStorageException(e);
         }
 
@@ -277,7 +284,14 @@ public class RemoteStorageManager implements org.apache.kafka.server.log.remote.
         return customMetadata;
     }
 
-    private SegmentIndexesV1 uploadIndexes(
+    private void deleteSegmentObjects(final RemoteLogSegmentMetadata metadata) throws StorageBackendException {
+        final Set<ObjectKey> keys = Arrays.stream(ObjectKeyFactory.Suffix.values())
+            .map(s -> objectKeyFactory.key(metadata, s))
+            .collect(Collectors.toSet());
+        deleter.delete(keys);
+    }
+
+    SegmentIndexesV1 uploadIndexes(
         final RemoteLogSegmentMetadata remoteLogSegmentMetadata,
         final LogSegmentData segmentData,
         final SegmentEncryptionMetadataV1 encryptionMeta,
@@ -390,9 +404,9 @@ public class RemoteStorageManager implements org.apache.kafka.server.log.remote.
         return requiresCompression;
     }
 
-    private void uploadSegmentLog(final RemoteLogSegmentMetadata remoteLogSegmentMetadata,
-                                  final TransformFinisher transformFinisher,
-                                  final SegmentCustomMetadataBuilder customMetadataBuilder)
+    void uploadSegmentLog(final RemoteLogSegmentMetadata remoteLogSegmentMetadata,
+                          final TransformFinisher transformFinisher,
+                          final SegmentCustomMetadataBuilder customMetadataBuilder)
         throws IOException, StorageBackendException {
         final ObjectKey fileKey = objectKeyFactory.key(remoteLogSegmentMetadata, ObjectKeyFactory.Suffix.LOG);
         try (final var sis = transformFinisher.toInputStream()) {
@@ -440,9 +454,9 @@ public class RemoteStorageManager implements org.apache.kafka.server.log.remote.
         return chunks.get(0);
     }
 
-    private void uploadManifest(final RemoteLogSegmentMetadata remoteLogSegmentMetadata,
-                                final SegmentManifest segmentManifest,
-                                final SegmentCustomMetadataBuilder customMetadataBuilder)
+    void uploadManifest(final RemoteLogSegmentMetadata remoteLogSegmentMetadata,
+                        final SegmentManifest segmentManifest,
+                        final SegmentCustomMetadataBuilder customMetadataBuilder)
         throws StorageBackendException, IOException {
         final String manifest = mapper.writeValueAsString(segmentManifest);
         final ObjectKey manifestObjectKey =
@@ -617,10 +631,7 @@ public class RemoteStorageManager implements org.apache.kafka.server.log.remote.
         final long startedMs = time.milliseconds();
 
         try {
-            final Set<ObjectKey> keys = Arrays.stream(ObjectKeyFactory.Suffix.values())
-                .map(s -> objectKeyFactory.key(remoteLogSegmentMetadata, s))
-                .collect(Collectors.toSet());
-            deleter.delete(keys);
+            deleteSegmentObjects(remoteLogSegmentMetadata);
         } catch (final Exception e) {
             metrics.recordSegmentDeleteError(remoteLogSegmentMetadata.remoteLogSegmentId()
                 .topicIdPartition().topicPartition());
