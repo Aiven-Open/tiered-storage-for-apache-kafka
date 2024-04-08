@@ -20,16 +20,13 @@ import java.io.ByteArrayInputStream;
 import java.io.File;
 import java.io.IOException;
 import java.io.InputStream;
-import java.io.SequenceInputStream;
+import java.io.OutputStream;
 import java.nio.channels.ClosedByInterruptException;
 import java.nio.file.Files;
 import java.nio.file.Path;
 import java.security.KeyPair;
-import java.util.ArrayList;
 import java.util.Arrays;
-import java.util.Collections;
 import java.util.HashMap;
-import java.util.List;
 import java.util.Map;
 import java.util.Objects;
 import java.util.Optional;
@@ -42,6 +39,7 @@ import java.util.stream.Collectors;
 import org.apache.kafka.common.metrics.MetricConfig;
 import org.apache.kafka.common.metrics.Sensor;
 import org.apache.kafka.common.utils.ByteBufferInputStream;
+import org.apache.kafka.common.utils.ByteBufferOutputStream;
 import org.apache.kafka.common.utils.Time;
 import org.apache.kafka.server.log.remote.storage.LogSegmentData;
 import org.apache.kafka.server.log.remote.storage.RemoteLogSegmentMetadata;
@@ -273,55 +271,56 @@ public class RemoteStorageManager implements org.apache.kafka.server.log.remote.
         final SegmentEncryptionMetadataV1 encryptionMeta,
         final SegmentCustomMetadataBuilder customMetadataBuilder
     ) throws IOException, RemoteStorageException, StorageBackendException {
-        final List<InputStream> indexes = new ArrayList<>(IndexType.values().length);
         final SegmentIndexesV1Builder segmentIndexBuilder = new SegmentIndexesV1Builder();
 
         try (final ClosableInputStreamHolder closableInputStreamHolder = new ClosableInputStreamHolder()) {
-            final var offsetIndex = transformIndex(
+            final var outputStream = new ByteBufferOutputStream(0);
+            transformIndex(
                 IndexType.OFFSET,
                 closableInputStreamHolder.add(Files.newInputStream(segmentData.offsetIndex())),
                 indexSize(segmentData.offsetIndex()),
                 encryptionMeta,
-                segmentIndexBuilder
+                segmentIndexBuilder,
+                outputStream
             );
-            indexes.add(offsetIndex);
-            final var timeIndex = transformIndex(
+            transformIndex(
                 IndexType.TIMESTAMP,
                 closableInputStreamHolder.add(Files.newInputStream(segmentData.timeIndex())),
                 indexSize(segmentData.timeIndex()),
                 encryptionMeta,
-                segmentIndexBuilder
+                segmentIndexBuilder,
+                outputStream
             );
-            indexes.add(timeIndex);
-            final var producerSnapshotIndex = transformIndex(
+            transformIndex(
                 IndexType.PRODUCER_SNAPSHOT,
                 closableInputStreamHolder.add(Files.newInputStream(segmentData.producerSnapshotIndex())),
                 indexSize(segmentData.producerSnapshotIndex()),
                 encryptionMeta,
-                segmentIndexBuilder
+                segmentIndexBuilder,
+                outputStream
             );
-            indexes.add(producerSnapshotIndex);
-            final var leaderEpoch = transformIndex(
+            transformIndex(
                 IndexType.LEADER_EPOCH,
                 closableInputStreamHolder.add(new ByteBufferInputStream(segmentData.leaderEpochIndex())),
                 segmentData.leaderEpochIndex().remaining(),
                 encryptionMeta,
-                segmentIndexBuilder
+                segmentIndexBuilder,
+                outputStream
             );
-            indexes.add(leaderEpoch);
             if (segmentData.transactionIndex().isPresent()) {
-                final var transactionIndex = transformIndex(
+                transformIndex(
                     IndexType.TRANSACTION,
                     closableInputStreamHolder.add(Files.newInputStream(segmentData.transactionIndex().get())),
                     indexSize(segmentData.transactionIndex().get()),
                     encryptionMeta,
-                    segmentIndexBuilder
+                    segmentIndexBuilder,
+                    outputStream
                 );
-                indexes.add(transactionIndex);
             }
             final var suffix = ObjectKeyFactory.Suffix.INDEXES;
             final ObjectKey key = objectKeyFactory.key(remoteLogSegmentMetadata, suffix);
-            try (final var in = new SequenceInputStream(Collections.enumeration(indexes))) {
+            final var buffer = outputStream.buffer().rewind();
+            try (final var in = new ByteBufferInputStream(buffer)) {
                 final var bytes = uploader.upload(in, key);
                 metrics.recordObjectUpload(
                     remoteLogSegmentMetadata.remoteLogSegmentId().topicIdPartition().topicPartition(),
@@ -398,11 +397,14 @@ public class RemoteStorageManager implements org.apache.kafka.server.log.remote.
         }
     }
 
-    InputStream transformIndex(final IndexType indexType,
-                               final InputStream index,
-                               final int size,
-                               final SegmentEncryptionMetadata encryptionMetadata,
-                               final SegmentIndexesV1Builder segmentIndexBuilder) {
+    void transformIndex(
+        final IndexType indexType,
+        final InputStream index,
+        final int size,
+        final SegmentEncryptionMetadata encryptionMetadata,
+        final SegmentIndexesV1Builder segmentIndexBuilder,
+        final OutputStream outputStream
+    ) throws IOException {
         log.debug("Transforming index {} with size {}", indexType, size);
         if (size > 0) {
             TransformChunkEnumeration transformEnum = new BaseTransformChunkEnumeration(index, size);
@@ -413,12 +415,12 @@ public class RemoteStorageManager implements org.apache.kafka.server.log.remote.
                     () -> aesEncryptionProvider.encryptionCipher(dataKeyAndAAD));
             }
             final var transformFinisher = new TransformFinisher(transformEnum, size);
-            final var inputStream = transformFinisher.nextElement();
+            try (final var inputStream = transformFinisher.toInputStream()) {
+                inputStream.transferTo(outputStream);
+            }
             segmentIndexBuilder.add(indexType, singleChunk(transformFinisher.chunkIndex()).range().size());
-            return inputStream;
         } else {
             segmentIndexBuilder.add(indexType, 0);
-            return InputStream.nullInputStream();
         }
     }
 
