@@ -115,7 +115,7 @@ class SegmentManifestProviderTest {
         when(storage.fetch(key))
             .thenReturn(new ByteArrayInputStream(MANIFEST.getBytes()));
         final var chunkIndex = new FixedSizeChunkIndex(100, 1000, 110, 110);
-        final var expectedManifest = new SegmentManifestV1(chunkIndex, SEGMENT_INDEXES, false, null, null);
+        final var expectedManifest = SegmentManifestV1.newBuilder(chunkIndex, SEGMENT_INDEXES).build();
         assertThat(provider.get(key)).isEqualTo(expectedManifest);
         verify(storage).fetch(key);
         assertThat(provider.get(key)).isEqualTo(expectedManifest);
@@ -155,7 +155,7 @@ class SegmentManifestProviderTest {
             .hasMessage("test");
 
         final var chunkIndex = new FixedSizeChunkIndex(100, 1000, 110, 110);
-        final var expectedManifest = new SegmentManifestV1(chunkIndex, SEGMENT_INDEXES, false, null, null);
+        final var expectedManifest = SegmentManifestV1.newBuilder(chunkIndex, SEGMENT_INDEXES).build();
 
         await().atMost(Duration.ofMillis(50))
             .pollInterval(Duration.ofMillis(5))

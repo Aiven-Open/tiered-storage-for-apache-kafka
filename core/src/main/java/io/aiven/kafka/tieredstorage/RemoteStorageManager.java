@@ -57,7 +57,6 @@ import io.aiven.kafka.tieredstorage.fetch.KeyNotFoundRuntimeException;
 import io.aiven.kafka.tieredstorage.fetch.index.MemorySegmentIndexesCache;
 import io.aiven.kafka.tieredstorage.fetch.index.SegmentIndexesCache;
 import io.aiven.kafka.tieredstorage.manifest.SegmentEncryptionMetadata;
-import io.aiven.kafka.tieredstorage.manifest.SegmentEncryptionMetadataV1;
 import io.aiven.kafka.tieredstorage.manifest.SegmentIndex;
 import io.aiven.kafka.tieredstorage.manifest.SegmentIndexesV1;
 import io.aiven.kafka.tieredstorage.manifest.SegmentIndexesV1Builder;
@@ -481,19 +480,13 @@ public class RemoteStorageManager implements org.apache.kafka.server.log.remote.
                         final DataKeyAndAAD maybeEncryptionKey,
                         final SegmentCustomMetadataBuilder customMetadataBuilder
     ) throws StorageBackendException, IOException {
-        final SegmentEncryptionMetadataV1 maybeEncryptionMetadata;
+        final var segmentManifestBuilder = SegmentManifestV1.newBuilder(chunkIndex, segmentIndexes)
+            .withRlsm(remoteLogSegmentMetadata)
+            .withCompressionEnabled(requiresCompression);
         if (maybeEncryptionKey != null) {
-            maybeEncryptionMetadata = new SegmentEncryptionMetadataV1(maybeEncryptionKey);
-        } else {
-            maybeEncryptionMetadata = null;
+            segmentManifestBuilder.withEncryptionKey(maybeEncryptionKey);
         }
-        final SegmentManifest segmentManifest = new SegmentManifestV1(
-            chunkIndex,
-            segmentIndexes,
-            requiresCompression,
-            maybeEncryptionMetadata,
-            remoteLogSegmentMetadata
-        );
+        final SegmentManifest segmentManifest = segmentManifestBuilder.build();
         final String manifest = mapper.writeValueAsString(segmentManifest);
         final ObjectKey manifestObjectKey =
             objectKeyFactory.key(remoteLogSegmentMetadata, ObjectKeyFactory.Suffix.MANIFEST);

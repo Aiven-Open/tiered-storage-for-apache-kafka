@@ -70,8 +70,8 @@ class FetchChunkEnumerationSourceInputStreamClosingTest {
         .add(IndexType.LEADER_EPOCH, 1)
         .add(IndexType.TRANSACTION, 1)
         .build();
-    static final SegmentManifest SEGMENT_MANIFEST = new SegmentManifestV1(
-        CHUNK_INDEX, SEGMENT_INDEXES, false, null, null);
+    static final SegmentManifest SEGMENT_MANIFEST = SegmentManifestV1.newBuilder(CHUNK_INDEX, SEGMENT_INDEXES)
+        .build();
 
     TestObjectFetcher fetcher;
 
