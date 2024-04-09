@@ -23,6 +23,9 @@ import java.io.ByteArrayInputStream;
 import java.io.IOException;
 import java.io.InputStream;
 import java.lang.management.ManagementFactory;
+import java.nio.charset.StandardCharsets;
+import java.nio.file.Files;
+import java.nio.file.Path;
 import java.util.Map;
 import java.util.Set;
 
@@ -34,6 +37,7 @@ import org.junit.jupiter.api.BeforeAll;
 import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.Test;
 import org.junit.jupiter.api.extension.ExtendWith;
+import org.junit.jupiter.api.io.TempDir;
 import org.mockito.junit.jupiter.MockitoExtension;
 import org.testcontainers.containers.localstack.LocalStackContainer;
 import org.testcontainers.junit.jupiter.Container;
@@ -99,7 +103,7 @@ class S3StorageMetricsTest {
     }
 
     @Test
-    void metricsShouldBeReported() throws Exception {
+    void metricsShouldBeReported(@TempDir final Path tmpDir) throws Exception {
         final byte[] data = new byte[PART_SIZE + 1];
 
         final ObjectKey key = new TestObjectKey("x");
@@ -212,6 +216,26 @@ class S3StorageMetricsTest {
             .asInstanceOf(DOUBLE)
             .isGreaterThan(0.0);
         assertThat(MBEAN_SERVER.getAttribute(s3ClientMetrics, "abort-multipart-upload-time-max"))
+            .asInstanceOf(DOUBLE)
+            .isGreaterThan(0.0);
+
+        final var tmpPath = tmpDir.resolve("test.log");
+        final var testContent = "test".getBytes(StandardCharsets.UTF_8);
+        Files.write(tmpPath, testContent);
+
+        final var anotherKey = new TestObjectKey("y");
+        storage.upload(tmpPath, testContent.length, anotherKey);
+
+        assertThat(MBEAN_SERVER.getAttribute(s3ClientMetrics, "put-object-requests-rate"))
+            .asInstanceOf(DOUBLE)
+            .isGreaterThan(0.0);
+        assertThat(MBEAN_SERVER.getAttribute(s3ClientMetrics, "put-object-requests-total"))
+            .asInstanceOf(DOUBLE)
+            .isEqualTo(1.0);
+        assertThat(MBEAN_SERVER.getAttribute(s3ClientMetrics, "put-object-time-avg"))
+            .asInstanceOf(DOUBLE)
+            .isGreaterThan(0.0);
+        assertThat(MBEAN_SERVER.getAttribute(s3ClientMetrics, "put-object-time-max"))
             .asInstanceOf(DOUBLE)
             .isGreaterThan(0.0);
     }
