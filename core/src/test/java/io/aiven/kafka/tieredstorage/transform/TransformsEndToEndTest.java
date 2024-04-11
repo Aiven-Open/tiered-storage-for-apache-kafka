@@ -70,39 +70,43 @@ public class TransformsEndToEndTest extends AesKeyAwareTest {
 
     private void test(final int chunkSize, final boolean compression, final boolean encryption) throws IOException {
         // Transform.
-        TransformChunkEnumeration transformEnum = new BaseTransformChunkEnumeration(
-            new ByteArrayInputStream(original), chunkSize);
-        if (compression) {
-            transformEnum = new CompressionChunkEnumeration(transformEnum);
-        }
-        if (encryption) {
-            transformEnum = new EncryptionChunkEnumeration(transformEnum, AesKeyAwareTest::encryptionCipherSupplier);
-        }
-        final var transformFinisher = chunkSize == 0
-            ? new TransformFinisher(transformEnum)
-            : new TransformFinisher(transformEnum, ORIGINAL_SIZE);
-        final byte[] uploadedData;
-        final ChunkIndex chunkIndex;
-        try (final var sis = transformFinisher.toInputStream()) {
-            uploadedData = sis.readAllBytes();
-            chunkIndex = transformFinisher.chunkIndex();
-        }
+        try (final var inputStream = new ByteArrayInputStream(original)) {
+            TransformChunkEnumeration transformEnum = new BaseTransformChunkEnumeration(inputStream, chunkSize);
+            if (compression) {
+                transformEnum = new CompressionChunkEnumeration(transformEnum);
+            }
+            if (encryption) {
+                transformEnum = new EncryptionChunkEnumeration(
+                    transformEnum,
+                    AesKeyAwareTest::encryptionCipherSupplier
+                );
+            }
+            final var transformFinisher = new TransformFinisher(transformEnum, ORIGINAL_SIZE);
+            final byte[] uploadedData;
+            final ChunkIndex chunkIndex;
+            try (final var sis = transformFinisher.toInputStream()) {
+                uploadedData = sis.readAllBytes();
+                chunkIndex = transformFinisher.chunkIndex();
+            }
 
-        // Detransform.
-        DetransformChunkEnumeration detransformEnum = chunkIndex == null
-            ? new BaseDetransformChunkEnumeration(new ByteArrayInputStream(uploadedData))
-            : new BaseDetransformChunkEnumeration(new ByteArrayInputStream(uploadedData), chunkIndex.chunks());
-        if (encryption) {
-            detransformEnum = new DecryptionChunkEnumeration(
-                detransformEnum, ivSize, AesKeyAwareTest::decryptionCipherSupplier);
-        }
-        if (compression) {
-            detransformEnum = new DecompressionChunkEnumeration(detransformEnum);
-        }
-        final var detransformFinisher = new DetransformFinisher(detransformEnum);
-        try (final var sis = detransformFinisher.toInputStream()) {
-            final byte[] downloaded = sis.readAllBytes();
-            assertThat(downloaded).isEqualTo(original);
+            // Detransform.
+            try (final var uploadedStream = new ByteArrayInputStream(uploadedData)) {
+                DetransformChunkEnumeration detransformEnum = chunkIndex == null
+                    ? new BaseDetransformChunkEnumeration(uploadedStream)
+                    : new BaseDetransformChunkEnumeration(uploadedStream, chunkIndex.chunks());
+                if (encryption) {
+                    detransformEnum = new DecryptionChunkEnumeration(
+                        detransformEnum, ivSize, AesKeyAwareTest::decryptionCipherSupplier);
+                }
+                if (compression) {
+                    detransformEnum = new DecompressionChunkEnumeration(detransformEnum);
+                }
+                final var detransformFinisher = new DetransformFinisher(detransformEnum);
+                try (final var sis = detransformFinisher.toInputStream()) {
+                    final byte[] downloaded = sis.readAllBytes();
+                    assertThat(downloaded).isEqualTo(original);
+                }
+            }
         }
     }
 }

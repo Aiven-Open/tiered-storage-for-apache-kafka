@@ -33,7 +33,8 @@ import io.aiven.kafka.tieredstorage.Chunk;
  * both transformed and not. We rely on this information for determining the transformed chunks borders
  * in the input stream. We also can tell if the input stream has too few bytes.
  *
- * <p>An empty list of chunks means no chunking has been applied to the incoming stream.
+ * <p>An empty list of chunks means no chunking has been applied to the incoming stream
+ * and all content should be returned at once.
  */
 public class BaseDetransformChunkEnumeration implements DetransformChunkEnumeration {
     private final InputStream inputStream;
