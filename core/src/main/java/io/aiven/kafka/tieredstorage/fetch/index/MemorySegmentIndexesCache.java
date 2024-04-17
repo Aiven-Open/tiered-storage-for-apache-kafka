@@ -124,7 +124,9 @@ public class MemorySegmentIndexesCache implements SegmentIndexesCache {
 
     @Override
     public void configure(final Map<String, ?> configs) {
-        final var config = new CacheConfig(configs, DEFAULT_MAX_SIZE_BYTES);
+        final var config = CacheConfig.newBuilder(configs)
+            .withDefaultSize(DEFAULT_MAX_SIZE_BYTES)
+            .build();
         this.cache = buildCache(config);
     }
 }
