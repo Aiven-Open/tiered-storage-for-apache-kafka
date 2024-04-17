@@ -53,7 +53,7 @@ class FetchChunkEnumerationTest {
         .add(IndexType.LEADER_EPOCH, 1)
         .add(IndexType.TRANSACTION, 1)
         .build();
-    final SegmentManifest manifest = new SegmentManifestV1(chunkIndex, segmentIndexesV1, false, null, null);
+    final SegmentManifest manifest = SegmentManifestV1.newBuilder(chunkIndex, segmentIndexesV1).build();
 
     static final byte[] CHUNK_CONTENT = "0123456789".getBytes();
     static final ObjectKey SEGMENT_KEY = new TestObjectKey("topic/segment");
@@ -64,7 +64,7 @@ class FetchChunkEnumerationTest {
     @Test
     void failsWhenLargerStartPosition() {
         // Given
-        final SegmentManifest manifest = new SegmentManifestV1(chunkIndex, segmentIndexesV1, false, null, null);
+        final SegmentManifest manifest = SegmentManifestV1.newBuilder(chunkIndex, segmentIndexesV1).build();
         // When
         final int from = 1000;
         final int to = from + 1;

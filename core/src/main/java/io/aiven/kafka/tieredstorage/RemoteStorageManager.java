@@ -57,7 +57,6 @@ import io.aiven.kafka.tieredstorage.fetch.KeyNotFoundRuntimeException;
 import io.aiven.kafka.tieredstorage.fetch.index.MemorySegmentIndexesCache;
 import io.aiven.kafka.tieredstorage.fetch.index.SegmentIndexesCache;
 import io.aiven.kafka.tieredstorage.manifest.SegmentEncryptionMetadata;
-import io.aiven.kafka.tieredstorage.manifest.SegmentEncryptionMetadataV1;
 import io.aiven.kafka.tieredstorage.manifest.SegmentIndex;
 import io.aiven.kafka.tieredstorage.manifest.SegmentIndexesV1;
 import io.aiven.kafka.tieredstorage.manifest.SegmentIndexesV1Builder;
@@ -223,36 +222,46 @@ public class RemoteStorageManager implements org.apache.kafka.server.log.remote.
         final long startedMs = time.milliseconds();
 
         try {
-            SegmentEncryptionMetadataV1 encryptionMetadata = null;
             final boolean requiresCompression = requiresCompression(logSegmentData);
-
-            final ChunkIndex chunkIndex;
-            try (final InputStream logSegmentInputStream = Files.newInputStream(logSegmentData.logSegment())) {
-                TransformChunkEnumeration transformEnum = new BaseTransformChunkEnumeration(
-                    logSegmentInputStream, chunkSize);
-                if (requiresCompression) {
-                    transformEnum = new CompressionChunkEnumeration(transformEnum);
-                }
-                if (encryptionEnabled) {
-                    final DataKeyAndAAD dataKeyAndAAD = aesEncryptionProvider.createDataKeyAndAAD();
-                    transformEnum = new EncryptionChunkEnumeration(
-                        transformEnum,
-                        () -> aesEncryptionProvider.encryptionCipher(dataKeyAndAAD));
-                    encryptionMetadata = new SegmentEncryptionMetadataV1(dataKeyAndAAD.dataKey, dataKeyAndAAD.aad);
-                }
-                final TransformFinisher transformFinisher =
-                    new TransformFinisher(transformEnum, remoteLogSegmentMetadata.segmentSizeInBytes());
-                uploadSegmentLog(remoteLogSegmentMetadata, transformFinisher, customMetadataBuilder);
-                chunkIndex = transformFinisher.chunkIndex();
+            final DataKeyAndAAD maybeEncryptionKey;
+            if (encryptionEnabled) {
+                maybeEncryptionKey = aesEncryptionProvider.createDataKeyAndAAD();
+            } else {
+                maybeEncryptionKey = null;
             }
 
-            final SegmentIndexesV1 segmentIndexes = uploadIndexes(
-                remoteLogSegmentMetadata, logSegmentData, encryptionMetadata, customMetadataBuilder);
-            final SegmentManifest segmentManifest = new SegmentManifestV1(
-                chunkIndex, segmentIndexes, requiresCompression, encryptionMetadata, remoteLogSegmentMetadata);
-            uploadManifest(remoteLogSegmentMetadata, segmentManifest, customMetadataBuilder);
+            // upload segment
+            final ChunkIndex chunkIndex = uploadSegmentLog(
+                remoteLogSegmentMetadata,
+                logSegmentData,
+                requiresCompression,
+                maybeEncryptionKey,
+                customMetadataBuilder
+            );
 
+            // upload indexes
+            final SegmentIndexesV1 segmentIndexes = uploadIndexes(
+                remoteLogSegmentMetadata,
+                logSegmentData,
+                maybeEncryptionKey,
+                customMetadataBuilder
+            );
+
+            // upload manifest
+            uploadManifest(
+                remoteLogSegmentMetadata,
+                chunkIndex,
+                segmentIndexes,
+                requiresCompression,
+                maybeEncryptionKey,
+                customMetadataBuilder);
         } catch (final Exception e) {
+            try {
+                // best effort on removing orphan files
+                tryDeleteSegmentObjects(remoteLogSegmentMetadata);
+            } catch (final Exception ignored) {
+                // ignore all exceptions
+            }
             throw new RemoteStorageException(e);
         }
 
@@ -267,10 +276,81 @@ public class RemoteStorageManager implements org.apache.kafka.server.log.remote.
         return customMetadata;
     }
 
-    private SegmentIndexesV1 uploadIndexes(
+    boolean requiresCompression(final LogSegmentData logSegmentData) {
+        boolean requiresCompression = false;
+        if (compressionEnabled) {
+            if (compressionHeuristic) {
+                try {
+                    final File segmentFile = logSegmentData.logSegment().toFile();
+                    final boolean alreadyCompressed = SegmentCompressionChecker.check(segmentFile);
+                    requiresCompression = !alreadyCompressed;
+                } catch (final InvalidRecordBatchException e) {
+                    // Log and leave value as false to upload uncompressed.
+                    log.warn("Failed to check compression on log segment: {}", logSegmentData.logSegment(), e);
+                }
+            } else {
+                requiresCompression = true;
+            }
+        }
+        return requiresCompression;
+    }
+
+    ChunkIndex uploadSegmentLog(
+        final RemoteLogSegmentMetadata remoteLogSegmentMetadata,
+        final LogSegmentData logSegmentData,
+        final boolean requiresCompression,
+        final DataKeyAndAAD maybeEncryptionKey,
+        final SegmentCustomMetadataBuilder customMetadataBuilder
+    ) throws IOException, StorageBackendException {
+        final var fileKey = objectKeyFactory.key(remoteLogSegmentMetadata, ObjectKeyFactory.Suffix.LOG);
+
+        try (final var logSegmentInputStream = Files.newInputStream(logSegmentData.logSegment())) {
+            final var transformEnum = transformation(logSegmentInputStream, requiresCompression, maybeEncryptionKey);
+            final var transformFinisher = new TransformFinisher(
+                transformEnum,
+                remoteLogSegmentMetadata.segmentSizeInBytes()
+            );
+
+            try (final var sis = transformFinisher.toInputStream()) {
+                final var bytes = uploader.upload(sis, fileKey);
+                metrics.recordObjectUpload(
+                    remoteLogSegmentMetadata.remoteLogSegmentId().topicIdPartition().topicPartition(),
+                    ObjectKeyFactory.Suffix.LOG,
+                    bytes
+                );
+                customMetadataBuilder.addUploadResult(ObjectKeyFactory.Suffix.LOG, bytes);
+
+                log.debug("Uploaded segment log for {}, size: {}", remoteLogSegmentMetadata, bytes);
+            }
+            return transformFinisher.chunkIndex();
+        }
+    }
+
+    private TransformChunkEnumeration transformation(
+        final InputStream logSegmentInputStream,
+        final boolean requiresCompression,
+        final DataKeyAndAAD maybeEncryptionKey
+    ) {
+        TransformChunkEnumeration transformEnum = new BaseTransformChunkEnumeration(
+            logSegmentInputStream,
+            chunkSize
+        );
+        if (requiresCompression) {
+            transformEnum = new CompressionChunkEnumeration(transformEnum);
+        }
+        if (encryptionEnabled) {
+            transformEnum = new EncryptionChunkEnumeration(
+                transformEnum,
+                () -> aesEncryptionProvider.encryptionCipher(maybeEncryptionKey)
+            );
+        }
+        return transformEnum;
+    }
+
+    SegmentIndexesV1 uploadIndexes(
         final RemoteLogSegmentMetadata remoteLogSegmentMetadata,
         final LogSegmentData segmentData,
-        final SegmentEncryptionMetadataV1 encryptionMeta,
+        final DataKeyAndAAD maybeEncryptionKey,
         final SegmentCustomMetadataBuilder customMetadataBuilder
     ) throws IOException, RemoteStorageException, StorageBackendException {
         final List<InputStream> indexes = new ArrayList<>(IndexType.values().length);
@@ -281,7 +361,7 @@ public class RemoteStorageManager implements org.apache.kafka.server.log.remote.
                 IndexType.OFFSET,
                 closableInputStreamHolder.add(Files.newInputStream(segmentData.offsetIndex())),
                 indexSize(segmentData.offsetIndex()),
-                encryptionMeta,
+                maybeEncryptionKey,
                 segmentIndexBuilder
             );
             indexes.add(offsetIndex);
@@ -289,7 +369,7 @@ public class RemoteStorageManager implements org.apache.kafka.server.log.remote.
                 IndexType.TIMESTAMP,
                 closableInputStreamHolder.add(Files.newInputStream(segmentData.timeIndex())),
                 indexSize(segmentData.timeIndex()),
-                encryptionMeta,
+                maybeEncryptionKey,
                 segmentIndexBuilder
             );
             indexes.add(timeIndex);
@@ -297,7 +377,7 @@ public class RemoteStorageManager implements org.apache.kafka.server.log.remote.
                 IndexType.PRODUCER_SNAPSHOT,
                 closableInputStreamHolder.add(Files.newInputStream(segmentData.producerSnapshotIndex())),
                 indexSize(segmentData.producerSnapshotIndex()),
-                encryptionMeta,
+                maybeEncryptionKey,
                 segmentIndexBuilder
             );
             indexes.add(producerSnapshotIndex);
@@ -305,7 +385,7 @@ public class RemoteStorageManager implements org.apache.kafka.server.log.remote.
                 IndexType.LEADER_EPOCH,
                 closableInputStreamHolder.add(new ByteBufferInputStream(segmentData.leaderEpochIndex())),
                 segmentData.leaderEpochIndex().remaining(),
-                encryptionMeta,
+                maybeEncryptionKey,
                 segmentIndexBuilder
             );
             indexes.add(leaderEpoch);
@@ -314,7 +394,7 @@ public class RemoteStorageManager implements org.apache.kafka.server.log.remote.
                     IndexType.TRANSACTION,
                     closableInputStreamHolder.add(Files.newInputStream(segmentData.transactionIndex().get())),
                     indexSize(segmentData.transactionIndex().get()),
-                    encryptionMeta,
+                    maybeEncryptionKey,
                     segmentIndexBuilder
                 );
                 indexes.add(transactionIndex);
@@ -361,56 +441,19 @@ public class RemoteStorageManager implements org.apache.kafka.server.log.remote.
         }
     }
 
-    boolean requiresCompression(final LogSegmentData logSegmentData) {
-        boolean requiresCompression = false;
-        if (compressionEnabled) {
-            if (compressionHeuristic) {
-                try {
-                    final File segmentFile = logSegmentData.logSegment().toFile();
-                    final boolean alreadyCompressed = SegmentCompressionChecker.check(segmentFile);
-                    requiresCompression = !alreadyCompressed;
-                } catch (final InvalidRecordBatchException e) {
-                    // Log and leave value as false to upload uncompressed.
-                    log.warn("Failed to check compression on log segment: {}", logSegmentData.logSegment(), e);
-                }
-            } else {
-                requiresCompression = true;
-            }
-        }
-        return requiresCompression;
-    }
-
-    private void uploadSegmentLog(final RemoteLogSegmentMetadata remoteLogSegmentMetadata,
-                                  final TransformFinisher transformFinisher,
-                                  final SegmentCustomMetadataBuilder customMetadataBuilder)
-        throws IOException, StorageBackendException {
-        final ObjectKey fileKey = objectKeyFactory.key(remoteLogSegmentMetadata, ObjectKeyFactory.Suffix.LOG);
-        try (final var sis = transformFinisher.toInputStream()) {
-            final var bytes = uploader.upload(sis, fileKey);
-            metrics.recordObjectUpload(
-                remoteLogSegmentMetadata.remoteLogSegmentId().topicIdPartition().topicPartition(),
-                ObjectKeyFactory.Suffix.LOG,
-                bytes
-            );
-            customMetadataBuilder.addUploadResult(ObjectKeyFactory.Suffix.LOG, bytes);
-
-            log.debug("Uploaded segment log for {}, size: {}", remoteLogSegmentMetadata, bytes);
-        }
-    }
-
     InputStream transformIndex(final IndexType indexType,
                                final InputStream index,
                                final int size,
-                               final SegmentEncryptionMetadata encryptionMetadata,
+                               final DataKeyAndAAD maybeEncryptionKey,
                                final SegmentIndexesV1Builder segmentIndexBuilder) {
         log.debug("Transforming index {} with size {}", indexType, size);
         if (size > 0) {
             TransformChunkEnumeration transformEnum = new BaseTransformChunkEnumeration(index, size);
             if (encryptionEnabled) {
-                final var dataKeyAndAAD = new DataKeyAndAAD(encryptionMetadata.dataKey(), encryptionMetadata.aad());
                 transformEnum = new EncryptionChunkEnumeration(
                     transformEnum,
-                    () -> aesEncryptionProvider.encryptionCipher(dataKeyAndAAD));
+                    () -> aesEncryptionProvider.encryptionCipher(maybeEncryptionKey)
+                );
             }
             final var transformFinisher = new TransformFinisher(transformEnum, size);
             final var inputStream = transformFinisher.nextElement();
@@ -430,10 +473,20 @@ public class RemoteStorageManager implements org.apache.kafka.server.log.remote.
         return chunks.get(0);
     }
 
-    private void uploadManifest(final RemoteLogSegmentMetadata remoteLogSegmentMetadata,
-                                final SegmentManifest segmentManifest,
-                                final SegmentCustomMetadataBuilder customMetadataBuilder)
-        throws StorageBackendException, IOException {
+    void uploadManifest(final RemoteLogSegmentMetadata remoteLogSegmentMetadata,
+                        final ChunkIndex chunkIndex,
+                        final SegmentIndexesV1 segmentIndexes,
+                        final boolean requiresCompression,
+                        final DataKeyAndAAD maybeEncryptionKey,
+                        final SegmentCustomMetadataBuilder customMetadataBuilder
+    ) throws StorageBackendException, IOException {
+        final var segmentManifestBuilder = SegmentManifestV1.newBuilder(chunkIndex, segmentIndexes)
+            .withRlsm(remoteLogSegmentMetadata)
+            .withCompressionEnabled(requiresCompression);
+        if (maybeEncryptionKey != null) {
+            segmentManifestBuilder.withEncryptionKey(maybeEncryptionKey);
+        }
+        final SegmentManifest segmentManifest = segmentManifestBuilder.build();
         final String manifest = mapper.writeValueAsString(segmentManifest);
         final ObjectKey manifestObjectKey =
             objectKeyFactory.key(remoteLogSegmentMetadata, ObjectKeyFactory.Suffix.MANIFEST);
@@ -607,10 +660,7 @@ public class RemoteStorageManager implements org.apache.kafka.server.log.remote.
         final long startedMs = time.milliseconds();
 
         try {
-            final Set<ObjectKey> keys = Arrays.stream(ObjectKeyFactory.Suffix.values())
-                .map(s -> objectKeyFactory.key(remoteLogSegmentMetadata, s))
-                .collect(Collectors.toSet());
-            deleter.delete(keys);
+            tryDeleteSegmentObjects(remoteLogSegmentMetadata);
         } catch (final Exception e) {
             metrics.recordSegmentDeleteError(remoteLogSegmentMetadata.remoteLogSegmentId()
                 .topicIdPartition().topicPartition());
@@ -622,6 +672,15 @@ public class RemoteStorageManager implements org.apache.kafka.server.log.remote.
             startedMs, time.milliseconds());
 
         log.info("Deleting log segment data for completed successfully {}", remoteLogSegmentMetadata);
+    }
+
+    private void tryDeleteSegmentObjects(
+        final RemoteLogSegmentMetadata remoteLogSegmentMetadata
+    ) throws StorageBackendException {
+        final Set<ObjectKey> keys = Arrays.stream(ObjectKeyFactory.Suffix.values())
+            .map(s -> objectKeyFactory.key(remoteLogSegmentMetadata, s))
+            .collect(Collectors.toSet());
+        deleter.delete(keys);
     }
 
     @Override

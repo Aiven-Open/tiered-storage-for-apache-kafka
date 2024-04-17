@@ -56,16 +56,16 @@ class DiskChunkCacheMetricsTest {
         TimeUnit.SECONDS.convert(new MetricConfig().timeWindowMs(), TimeUnit.MILLISECONDS);
 
     static final SegmentManifest SEGMENT_MANIFEST =
-        new SegmentManifestV1(
-            new FixedSizeChunkIndex(10, 30, 10, 10),
-            SegmentIndexesV1.builder()
-                .add(RemoteStorageManager.IndexType.OFFSET, 1)
-                .add(RemoteStorageManager.IndexType.TIMESTAMP, 1)
-                .add(RemoteStorageManager.IndexType.PRODUCER_SNAPSHOT, 1)
-                .add(RemoteStorageManager.IndexType.LEADER_EPOCH, 1)
-                .add(RemoteStorageManager.IndexType.TRANSACTION, 1)
-                .build(),
-            false, null, null);
+        SegmentManifestV1.newBuilder(
+                new FixedSizeChunkIndex(10, 30, 10, 10),
+                SegmentIndexesV1.builder()
+                    .add(RemoteStorageManager.IndexType.OFFSET, 1)
+                    .add(RemoteStorageManager.IndexType.TIMESTAMP, 1)
+                    .add(RemoteStorageManager.IndexType.PRODUCER_SNAPSHOT, 1)
+                    .add(RemoteStorageManager.IndexType.LEADER_EPOCH, 1)
+                    .add(RemoteStorageManager.IndexType.TRANSACTION, 1)
+                    .build())
+            .build();
 
     static final ObjectKey OBJECT_KEY_PATH = () -> "topic/segment";
 

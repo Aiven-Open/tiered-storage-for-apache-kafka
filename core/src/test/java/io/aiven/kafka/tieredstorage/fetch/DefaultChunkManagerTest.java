@@ -62,7 +62,8 @@ class DefaultChunkManagerTest extends AesKeyAwareTest {
     void testGetChunk() throws Exception {
         final FixedSizeChunkIndex chunkIndex = new FixedSizeChunkIndex(10, 10, 10, 10);
 
-        final SegmentManifest manifest = new SegmentManifestV1(chunkIndex, SEGMENT_INDEXES, false, null, null);
+        final SegmentManifest manifest = SegmentManifestV1.newBuilder(chunkIndex, SEGMENT_INDEXES)
+            .build();
         final ChunkManager chunkManager = new DefaultChunkManager(storage, null);
         when(storage.fetch(OBJECT_KEY, chunkIndex.chunks().get(0).range()))
             .thenReturn(new ByteArrayInputStream("0123456789".getBytes()));
@@ -88,7 +89,9 @@ class DefaultChunkManagerTest extends AesKeyAwareTest {
             new ByteArrayInputStream(encrypted));
 
         final var encryption = new SegmentEncryptionMetadataV1(dataKeyAndAAD.dataKey, dataKeyAndAAD.aad);
-        final var manifest = new SegmentManifestV1(chunkIndex, SEGMENT_INDEXES, false, encryption, null);
+        final var manifest = SegmentManifestV1.newBuilder(chunkIndex, SEGMENT_INDEXES)
+            .withEncryptionMetadata(encryption)
+            .build();
         final ChunkManager chunkManager = new DefaultChunkManager(storage, aesEncryptionProvider);
 
         assertThat(chunkManager.getChunk(OBJECT_KEY, manifest, 0)).hasBinaryContent(TEST_CHUNK_CONTENT);
@@ -108,7 +111,9 @@ class DefaultChunkManagerTest extends AesKeyAwareTest {
         when(storage.fetch(OBJECT_KEY, chunkIndex.chunks().get(0).range()))
             .thenReturn(new ByteArrayInputStream(compressed));
 
-        final var manifest = new SegmentManifestV1(chunkIndex, SEGMENT_INDEXES, true, null, null);
+        final var manifest = SegmentManifestV1.newBuilder(chunkIndex, SEGMENT_INDEXES)
+            .withCompressionEnabled(true)
+            .build();
         final ChunkManager chunkManager = new DefaultChunkManager(storage, null);
 
         assertThat(chunkManager.getChunk(OBJECT_KEY, manifest, 0)).hasBinaryContent(TEST_CHUNK_CONTENT);

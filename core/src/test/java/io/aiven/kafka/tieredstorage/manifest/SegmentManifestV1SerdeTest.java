@@ -147,8 +147,10 @@ class SegmentManifestV1SerdeTest extends RsaKeyAwareTest {
 
     @Test
     void withEncryption() throws JsonProcessingException {
-        final SegmentManifest manifest = new SegmentManifestV1(INDEX, SEGMENT_INDEXES, false,
-            new SegmentEncryptionMetadataV1(DATA_KEY, AAD), REMOTE_LOG_SEGMENT_METADATA);
+        final SegmentManifest manifest = SegmentManifestV1.newBuilder(INDEX, SEGMENT_INDEXES)
+            .withRlsm(REMOTE_LOG_SEGMENT_METADATA)
+            .withEncryptionMetadata(new SegmentEncryptionMetadataV1(DATA_KEY, AAD))
+            .build();
 
         final String jsonStr = mapper.writeValueAsString(manifest);
 
@@ -174,7 +176,9 @@ class SegmentManifestV1SerdeTest extends RsaKeyAwareTest {
 
     @Test
     void withoutEncryption() throws JsonProcessingException {
-        final var manifest = new SegmentManifestV1(INDEX, SEGMENT_INDEXES, false, null, REMOTE_LOG_SEGMENT_METADATA);
+        final var manifest = SegmentManifestV1.newBuilder(INDEX, SEGMENT_INDEXES)
+            .withRlsm(REMOTE_LOG_SEGMENT_METADATA)
+            .build();
 
         final String jsonStr = mapper.writeValueAsString(manifest);
 
@@ -188,8 +192,9 @@ class SegmentManifestV1SerdeTest extends RsaKeyAwareTest {
 
     @Test
     void withoutTxnIndex() throws JsonProcessingException {
-        final var manifest = new SegmentManifestV1(INDEX, SEGMENT_INDEXES_WITHOUT_TXN_INDEX,
-            false, null, REMOTE_LOG_SEGMENT_METADATA);
+        final var manifest = SegmentManifestV1.newBuilder(INDEX, SEGMENT_INDEXES_WITHOUT_TXN_INDEX)
+            .withRlsm(REMOTE_LOG_SEGMENT_METADATA)
+            .build();
 
         final String jsonStr = mapper.writeValueAsString(manifest);
 

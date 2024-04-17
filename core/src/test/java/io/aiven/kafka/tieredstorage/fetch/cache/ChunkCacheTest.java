@@ -86,8 +86,11 @@ class ChunkCacheTest {
         .add(IndexType.TRANSACTION, 1)
         .build();
 
-    private static final SegmentManifest SEGMENT_MANIFEST =
-        new SegmentManifestV1(FIXED_SIZE_CHUNK_INDEX, SEGMENT_INDEXES, false, null, null);
+    private static final SegmentManifest SEGMENT_MANIFEST = SegmentManifestV1.newBuilder(
+            FIXED_SIZE_CHUNK_INDEX,
+            SEGMENT_INDEXES
+        )
+        .build();
     private static final String TEST_EXCEPTION_MESSAGE = "test_message";
     private static final String SEGMENT_KEY = "topic/segment";
     private static final ObjectKey SEGMENT_OBJECT_KEY = () -> SEGMENT_KEY;

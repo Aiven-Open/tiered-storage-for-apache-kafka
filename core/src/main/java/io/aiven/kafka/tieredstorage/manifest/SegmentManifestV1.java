@@ -22,6 +22,7 @@ import java.util.Optional;
 import org.apache.kafka.server.log.remote.storage.RemoteLogSegmentMetadata;
 
 import io.aiven.kafka.tieredstorage.manifest.index.ChunkIndex;
+import io.aiven.kafka.tieredstorage.security.DataKeyAndAAD;
 
 import com.fasterxml.jackson.annotation.JsonCreator;
 import com.fasterxml.jackson.annotation.JsonInclude;
@@ -44,7 +45,7 @@ public class SegmentManifestV1 implements SegmentManifest {
         this(chunkIndex, segmentIndexes, compression, encryption, null);
     }
 
-    public SegmentManifestV1(final ChunkIndex chunkIndex,
+    private SegmentManifestV1(final ChunkIndex chunkIndex,
                              final SegmentIndexesV1 segmentIndexes,
                              final boolean compression,
                              final SegmentEncryptionMetadataV1 encryption,
@@ -56,6 +57,13 @@ public class SegmentManifestV1 implements SegmentManifest {
         this.encryption = encryption;
 
         this.remoteLogSegmentMetadata = remoteLogSegmentMetadata;
+    }
+
+    public static Builder newBuilder(
+        final ChunkIndex chunkIndex,
+        final SegmentIndexesV1 segmentIndexes
+    ) {
+        return new Builder(chunkIndex, segmentIndexes);
     }
 
     @Override
@@ -128,5 +136,47 @@ public class SegmentManifestV1 implements SegmentManifest {
             + ", compression=" + compression
             + ", encryption=" + encryption
             + ")";
+    }
+
+    public static class Builder {
+        final ChunkIndex chunkIndex;
+        final SegmentIndexesV1 segmentIndexes;
+        boolean compression = false;
+        SegmentEncryptionMetadataV1 encryptionMetadata = null;
+        RemoteLogSegmentMetadata rlsm = null;
+
+        public Builder(
+            final ChunkIndex chunkIndex,
+            final SegmentIndexesV1 segmentIndexes
+        ) {
+            this.chunkIndex = chunkIndex;
+            this.segmentIndexes = segmentIndexes;
+        }
+
+        public Builder withCompressionEnabled(final boolean requiresCompression) {
+            this.compression = requiresCompression;
+            return this;
+        }
+
+        public Builder withEncryptionMetadata(final SegmentEncryptionMetadataV1 encryptionMetadata) {
+            this.encryptionMetadata = Objects.requireNonNull(encryptionMetadata, "encryptionMetadata cannot be null");
+            return this;
+        }
+
+        public Builder withEncryptionKey(final DataKeyAndAAD dataKeyAndAAD) {
+            this.encryptionMetadata = new SegmentEncryptionMetadataV1(
+                Objects.requireNonNull(dataKeyAndAAD, "dataKeyAndAAD cannot be null")
+            );
+            return this;
+        }
+
+        public Builder withRlsm(final RemoteLogSegmentMetadata rlsm) {
+            this.rlsm = Objects.requireNonNull(rlsm, "remoteLogSegmentMetadata cannot be null");
+            return this;
+        }
+
+        public SegmentManifestV1 build() {
+            return new SegmentManifestV1(chunkIndex, segmentIndexes, compression, encryptionMetadata, rlsm);
+        }
     }
 }
