@@ -101,7 +101,7 @@ subprojects {
 
         junitVersion = "5.10.2"
 
-        junitPlatformVersion = "1.10.1"
+        junitPlatformVersion = "1.10.2"
 
         mockitoVersion = "5.11.0"
 
@@ -115,13 +115,13 @@ subprojects {
 
         jacksonVersion = "2.16.1"
 
-        awaitilityVersion = "4.2.0"
+        awaitilityVersion = "4.2.1"
 
         awsSdkVersion = "2.23.16"
 
         gcpSdkVersion = "2.32.1"
 
-        azureSdkVersion = "1.2.21"
+        azureSdkVersion = "1.2.22"
 
         testcontainersVersion = "1.19.4"
 

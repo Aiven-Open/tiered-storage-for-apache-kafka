@@ -19,7 +19,6 @@ package io.aiven.kafka.tieredstorage.config;
 import java.time.Duration;
 import java.util.Map;
 import java.util.Optional;
-import java.util.OptionalLong;
 
 import org.apache.kafka.common.config.AbstractConfig;
 import org.apache.kafka.common.config.ConfigDef;
@@ -34,16 +33,12 @@ public class CacheConfig extends AbstractConfig {
         + "where \"-1\" represents infinite retention";
     private static final long DEFAULT_CACHE_RETENTION_MS = 600_000;
 
-    private static ConfigDef addCacheConfigs(final OptionalLong maybeDefaultSize) {
-        final ConfigDef configDef = new ConfigDef();
-        Object defaultValue = NO_DEFAULT_VALUE;
-        if (maybeDefaultSize.isPresent()) {
-            defaultValue = maybeDefaultSize.getAsLong();
-        }
+    private static ConfigDef configDef(final Object defaultSize) {
+        final var configDef = new ConfigDef();
         configDef.define(
             CACHE_SIZE_CONFIG,
             ConfigDef.Type.LONG,
-            defaultValue,
+            defaultSize,
             ConfigDef.Range.between(-1L, Long.MAX_VALUE),
             ConfigDef.Importance.MEDIUM,
             CACHE_SIZE_DOC
@@ -59,12 +54,12 @@ public class CacheConfig extends AbstractConfig {
         return configDef;
     }
 
-    public CacheConfig(final Map<String, ?> props) {
-        super(addCacheConfigs(OptionalLong.empty()), props);
+    private CacheConfig(final Map<String, ?> props, final Object defaultSize) {
+        super(configDef(defaultSize), props);
     }
 
-    public CacheConfig(final Map<String, ?> props, final long defaultSize) {
-        super(addCacheConfigs(OptionalLong.of(defaultSize)), props);
+    public static Builder newBuilder(final Map<String, ?> configs) {
+        return new Builder(configs);
     }
 
     public Optional<Long> cacheSize() {
@@ -81,5 +76,23 @@ public class CacheConfig extends AbstractConfig {
             return Optional.empty();
         }
         return Optional.of(Duration.ofMillis(rawValue));
+    }
+
+    public static class Builder {
+        private final Map<String, ?> props;
+        private Object maybeDefaultSize = NO_DEFAULT_VALUE;
+
+        public Builder(final Map<String, ?> props) {
+            this.props = props;
+        }
+
+        public Builder withDefaultSize(final long defaultSize) {
+            this.maybeDefaultSize = defaultSize;
+            return this;
+        }
+
+        public CacheConfig build() {
+            return new CacheConfig(props, maybeDefaultSize);
+        }
     }
 }

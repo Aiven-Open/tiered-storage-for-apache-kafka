@@ -32,6 +32,7 @@ import io.aiven.kafka.tieredstorage.storage.ObjectKey;
 import io.aiven.kafka.tieredstorage.storage.StorageBackend;
 import io.aiven.kafka.tieredstorage.storage.StorageBackendException;
 import io.aiven.kafka.tieredstorage.storage.TestObjectKey;
+import io.aiven.kafka.tieredstorage.storage.TestUtils;
 
 import com.azure.storage.blob.BlobServiceClient;
 import com.azure.storage.blob.BlobServiceClientBuilder;
@@ -73,17 +74,7 @@ public class AzureBlobStorageMetricsTest {
 
     @BeforeEach
     void setUp(final TestInfo testInfo) {
-        azureContainerName = testInfo.getDisplayName()
-            .toLowerCase()
-            .replace(" ", "")
-            .replace(",", "-")
-            .replace("(", "")
-            .replace(")", "")
-            .replace("[", "")
-            .replace("]", "");
-        while (azureContainerName.length() < 3) {
-            azureContainerName += azureContainerName;
-        }
+        azureContainerName = TestUtils.testNameToBucketName(testInfo);
         blobServiceClient.createBlobContainer(azureContainerName);
     }
 

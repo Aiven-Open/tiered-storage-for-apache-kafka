@@ -226,10 +226,12 @@ class RemoteStorageManagerTest extends RsaKeyAwareTest {
         final LogSegmentData logSegmentData = new LogSegmentData(
             logFilePath, offsetIndexFilePath, timeIndexFilePath, txnIndexPath,
             producerSnapshotFilePath, ByteBuffer.wrap(LEADER_EPOCH_INDEX_BYTES));
-        final Optional<RemoteLogSegmentMetadata.CustomMetadata> customMetadata =
-            rsm.copyLogSegmentData(REMOTE_LOG_METADATA, logSegmentData);
-
-        checkCustomMetadata(customMetadata);
+        final Optional<RemoteLogSegmentMetadata.CustomMetadata> customMetadata;
+        try (final var checker = new AllOpenedFileInputStreamsAreClosedChecker()) {
+            customMetadata = rsm.copyLogSegmentData(REMOTE_LOG_METADATA, logSegmentData);
+        }
+        assertThat(customMetadata).isPresent();
+        checkCustomMetadata(customMetadata.get());
         checkFilesInTargetDirectory();
         checkManifest(chunkSize, compression, encryption);
         if (encryption) {
@@ -240,9 +242,8 @@ class RemoteStorageManagerTest extends RsaKeyAwareTest {
         checkDeletion();
     }
 
-    private void checkCustomMetadata(final Optional<RemoteLogSegmentMetadata.CustomMetadata> customMetadata) {
-        assertThat(customMetadata).isPresent();
-        final var fields = CUSTOM_METADATA_SERDE.deserialize(customMetadata.get().value());
+    private void checkCustomMetadata(final RemoteLogSegmentMetadata.CustomMetadata customMetadata) {
+        final var fields = CUSTOM_METADATA_SERDE.deserialize(customMetadata.value());
         assertThat(fields).hasSize(3);
         assertThat(fields.get(SegmentCustomMetadataField.REMOTE_SIZE.index()))
             .asInstanceOf(InstanceOfAssertFactories.LONG)

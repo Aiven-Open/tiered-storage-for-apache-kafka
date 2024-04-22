@@ -17,8 +17,8 @@
 archivesBaseName = "storage-s3"
 
 ext {
-    wireMockVersion = "3.3.1"
     bucket4jVersion = "6.0.1"
+    wireMockVersion = "3.5.2"
 }
 
 dependencies {

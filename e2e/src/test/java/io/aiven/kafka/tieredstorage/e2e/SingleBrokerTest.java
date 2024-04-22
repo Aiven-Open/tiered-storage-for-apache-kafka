@@ -66,9 +66,11 @@ import org.junit.jupiter.api.extension.ExtensionContext;
 import org.junit.jupiter.api.extension.TestWatcher;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
+import org.testcontainers.containers.GenericContainer;
 import org.testcontainers.containers.KafkaContainer;
 import org.testcontainers.containers.Network;
 import org.testcontainers.containers.output.Slf4jLogConsumer;
+import org.testcontainers.junit.jupiter.Container;
 import org.testcontainers.junit.jupiter.Testcontainers;
 import org.testcontainers.utility.DockerImageName;
 
@@ -82,7 +84,6 @@ import static org.awaitility.Awaitility.await;
 @TestInstance(TestInstance.Lifecycle.PER_CLASS)
 @ExtendWith(SingleBrokerTest.FailFastExtension.class)
 abstract class SingleBrokerTest {
-
     static final Logger LOG = LoggerFactory.getLogger(SingleBrokerTest.class);
 
     static final String KAFKA_DATA_SUBDIR_HOST = "data";
@@ -107,6 +108,23 @@ abstract class SingleBrokerTest {
     static final Duration TOTAL_RETENTION = Duration.ofHours(1);
     static final Duration LOCAL_RETENTION = Duration.ofSeconds(5);
     static final Network NETWORK = Network.newNetwork();
+
+    static final String SOCKS5_NETWORK_ALIAS = "socks5-proxy";
+    static final int SOCKS5_PORT = 1080;
+    static final String SOCKS5_USER = "user";
+    static final String SOCKS5_PASSWORD = "password";
+
+    @Container
+    static final GenericContainer<?> SOCKS5_PROXY =
+        new GenericContainer<>(DockerImageName.parse("ananclub/ss5"))
+            .withEnv(Map.of(
+                "LISTEN", "0.0.0.0:" + SOCKS5_PORT,
+                "USER", SOCKS5_USER,
+                "PASSWORD", SOCKS5_PASSWORD
+            ))
+            .withExposedPorts(SOCKS5_PORT)
+            .withNetwork(NETWORK)
+            .withNetworkAliases(SOCKS5_NETWORK_ALIAS);
 
     static Path baseDir;
     // Can't use @TempDir, because it's initialized too late.

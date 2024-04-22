@@ -30,6 +30,8 @@ dependencies {
     testFixturesImplementation "org.assertj:assertj-core:$assertJVersion"
 
     testFixturesImplementation "org.apache.kafka:kafka-clients:$kafkaVersion"
+
+    testFixturesImplementation "org.testcontainers:junit-jupiter:$testcontainersVersion"
 }
 
 components.java.withVariantsFromConfiguration(configurations.testFixturesApiElements) { skip() }

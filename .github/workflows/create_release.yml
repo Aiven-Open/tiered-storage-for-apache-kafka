@@ -27,7 +27,7 @@ jobs:
         env:
           COMMIT_HASH: ${{ github.event.inputs.commit_hash }}
         run: |
-          export commit_title=$(git log --pretty=format:%s -1 $COMMIT_HASH
+          export commit_title=$(git log --pretty=format:%s -1 $COMMIT_HASH)
           echo "Commit title: $commit_title"
           if [[ $commit_title =~ ^Release\ version\ [0-9]*\.[0-9]*\.[0-9]*$ ]]; then
             echo "Valid commit title"
@@ -43,13 +43,35 @@ jobs:
         run: |
           ./gradlew distTar distZip
 
-          export tar_file=$(ls ./build/distributions/ | grep tar)
-          export zip_file=$(ls ./build/distributions/ | grep zip)
-          echo tar_file=${tar_file} >> $GITHUB_ENV
-          echo zip_file=${zip_file} >> $GITHUB_ENV
+          # Core libs
+          export core_tar_file=$(ls ./core/build/distributions/ | grep tgz)
+          export core_zip_file=$(ls ./core/build/distributions/ | grep zip)
+          echo core_tar_file=${core_tar_file} >> $GITHUB_ENV
+          echo core_zip_file=${core_zip_file} >> $GITHUB_ENV
+          # S3 libs
+          export s3_tar_file=$(ls ./storage/s3/build/distributions/ | grep tgz)
+          export s3_zip_file=$(ls ./storage/s3/build/distributions/ | grep zip)
+          echo s3_tar_file=${s3_tar_file} >> $GITHUB_ENV
+          echo s3_zip_file=${s3_zip_file} >> $GITHUB_ENV
+          # GCS libs
+          export gcs_tar_file=$(ls ./storage/gcs/build/distributions/ | grep tgz)
+          export gcs_zip_file=$(ls ./storage/gcs/build/distributions/ | grep zip)
+          echo gcs_tar_file=${gcs_tar_file} >> $GITHUB_ENV
+          echo gcs_zip_file=${gcs_zip_file} >> $GITHUB_ENV
+          # Azure libs
+          export azure_tar_file=$(ls ./storage/azure/build/distributions/ | grep tgz)
+          export azure_zip_file=$(ls ./storage/azure/build/distributions/ | grep zip)
+          echo azure_tar_file=${azure_tar_file} >> $GITHUB_ENV
+          echo azure_zip_file=${azure_zip_file} >> $GITHUB_ENV
 
-          echo tar_path=`realpath ./build/distributions/${tar_file}` >> $GITHUB_ENV
-          echo zip_path=`realpath ./build/distributions/${zip_file}` >> $GITHUB_ENV
+          echo core_tar_path=`realpath ./core/build/distributions/${core_tar_file}` >> $GITHUB_ENV
+          echo core_zip_path=`realpath ./core/build/distributions/${core_zip_file}` >> $GITHUB_ENV
+          echo s3_tar_path=`realpath ./storage/s3/build/distributions/${s3_tar_file}` >> $GITHUB_ENV
+          echo s3_zip_path=`realpath ./storage/s3/build/distributions/${s3_zip_file}` >> $GITHUB_ENV
+          echo gcs_tar_path=`realpath ./storage/gcs/build/distributions/${gcs_tar_file}` >> $GITHUB_ENV
+          echo gcs_zip_path=`realpath ./storage/gcs/build/distributions/${gcs_zip_file}` >> $GITHUB_ENV
+          echo azure_tar_path=`realpath ./storage/azure/build/distributions/${azure_tar_file}` >> $GITHUB_ENV
+          echo azure_zip_path=`realpath ./storage/azure/build/distributions/${azure_zip_file}` >> $GITHUB_ENV
 
       - name: Create tag
         env:
@@ -74,22 +96,75 @@ jobs:
           draft: true
           prerelease: false
 
-      - name: Upload tar
+      - name: Upload core tar
         uses: actions/upload-release-asset@v1
         env:
           GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
         with:
           upload_url: ${{ steps.create_release.outputs.upload_url }}
-          asset_path: ${{ env.tar_path }}
-          asset_name: ${{ env.tar_file }}
+          asset_path: ${{ env.core_tar_path }}
+          asset_name: ${{ env.core_tar_file }}
           asset_content_type: application/tar
-
-      - name: Upload zip
+      - name: Upload core zip
         uses: actions/upload-release-asset@v1
         env:
           GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
         with:
           upload_url: ${{ steps.create_release.outputs.upload_url }}
-          asset_path: ${{ env.zip_path }}
-          asset_name: ${{ env.zip_file }}
+          asset_path: ${{ env.core_zip_path }}
+          asset_name: ${{ env.core_zip_file }}
+          asset_content_type: application/zip
+      - name: Upload s3 tar
+        uses: actions/upload-release-asset@v1
+        env:
+          GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+        with:
+          upload_url: ${{ steps.create_release.outputs.upload_url }}
+          asset_path: ${{ env.s3_tar_path }}
+          asset_name: ${{ env.s3_tar_file }}
+          asset_content_type: application/tar
+      - name: Upload s3 zip
+        uses: actions/upload-release-asset@v1
+        env:
+          GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+        with:
+          upload_url: ${{ steps.create_release.outputs.upload_url }}
+          asset_path: ${{ env.s3_zip_path }}
+          asset_name: ${{ env.s3_zip_file }}
+          asset_content_type: application/zip
+      - name: Upload gcs tar
+        uses: actions/upload-release-asset@v1
+        env:
+          GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+        with:
+          upload_url: ${{ steps.create_release.outputs.upload_url }}
+          asset_path: ${{ env.gcs_tar_path }}
+          asset_name: ${{ env.gcs_tar_file }}
+          asset_content_type: application/tar
+      - name: Upload gcs zip
+        uses: actions/upload-release-asset@v1
+        env:
+          GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+        with:
+          upload_url: ${{ steps.create_release.outputs.upload_url }}
+          asset_path: ${{ env.gcs_zip_path }}
+          asset_name: ${{ env.gcs_zip_file }}
+          asset_content_type: application/zip
+      - name: Upload azure tar
+        uses: actions/upload-release-asset@v1
+        env:
+          GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+        with:
+          upload_url: ${{ steps.create_release.outputs.upload_url }}
+          asset_path: ${{ env.azure_tar_path }}
+          asset_name: ${{ env.azure_tar_file }}
+          asset_content_type: application/tar
+      - name: Upload azure zip
+        uses: actions/upload-release-asset@v1
+        env:
+          GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+        with:
+          upload_url: ${{ steps.create_release.outputs.upload_url }}
+          asset_path: ${{ env.azure_zip_path }}
+          asset_name: ${{ env.azure_zip_file }}
           asset_content_type: application/zip
