@@ -113,7 +113,7 @@ subprojects {
 
         apacheCommonsIOVersion = "2.15.1"
 
-        jacksonVersion = "2.16.1"
+        jacksonVersion = "2.17.0"
 
         awaitilityVersion = "4.2.1"
 
