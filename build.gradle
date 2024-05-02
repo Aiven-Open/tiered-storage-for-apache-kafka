@@ -123,7 +123,7 @@ subprojects {
 
         azureSdkVersion = "1.2.23"
 
-        testcontainersVersion = "1.19.4"
+        testcontainersVersion = "1.19.7"
 
         testcontainersFakeGcsServerVersion = "0.2.0"
     }
