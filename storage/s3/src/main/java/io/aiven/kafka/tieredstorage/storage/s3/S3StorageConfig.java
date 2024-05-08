@@ -39,16 +39,12 @@ import software.amazon.awssdk.auth.credentials.StaticCredentialsProvider;
 import software.amazon.awssdk.regions.Region;
 import software.amazon.awssdk.utils.builder.Buildable;
 
-import static org.apache.kafka.common.config.TopicConfig.SEGMENT_BYTES_CONFIG;
-
 public class S3StorageConfig extends AbstractConfig {
 
     public static final String S3_BUCKET_NAME_CONFIG = "s3.bucket.name";
 
-    public static final String S3_UPLOAD_LIMIT_CONFIG = "s3.upload.limit";
     private static final String S3_BUCKET_NAME_DOC = "S3 bucket to store log segments";
 
-    private static final String S3_UPLOAD_LIMIT_DOC = "S3 upload limit default segment.bytes in bytes";
     public static final String S3_ENDPOINT_URL_CONFIG = "s3.endpoint.url";
     private static final String S3_ENDPOINT_URL_DOC = "Custom S3 endpoint URL. "
         + "To be used with custom S3-compatible backends (e.g. minio).";
@@ -100,13 +96,6 @@ public class S3StorageConfig extends AbstractConfig {
 
     static {
         CONFIG = new ConfigDef()
-            .define(
-                S3_UPLOAD_LIMIT_CONFIG,
-                ConfigDef.Type.LONG,
-                null,
-                Null.or(ConfigDef.Range.between(1, Long.MAX_VALUE)),
-                ConfigDef.Importance.LOW,
-                S3_UPLOAD_LIMIT_DOC)
             .define(
                 S3_BUCKET_NAME_CONFIG,
                 ConfigDef.Type.STRING,
@@ -268,14 +257,6 @@ public class S3StorageConfig extends AbstractConfig {
 
     public String bucketName() {
         return getString(S3_BUCKET_NAME_CONFIG);
-    }
-
-    public Long uploadLimit() {
-        return getLong(S3_UPLOAD_LIMIT_CONFIG);
-    }
-
-    public Long segmentBytes() {
-        return getLong(SEGMENT_BYTES_CONFIG);
     }
 
     public Boolean pathStyleAccessEnabled() {

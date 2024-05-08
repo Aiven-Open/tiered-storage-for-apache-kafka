@@ -29,10 +29,6 @@ import io.aiven.kafka.tieredstorage.storage.KeyNotFoundException;
 import io.aiven.kafka.tieredstorage.storage.ObjectKey;
 import io.aiven.kafka.tieredstorage.storage.StorageBackend;
 import io.aiven.kafka.tieredstorage.storage.StorageBackendException;
-
-import io.github.bucket4j.Bandwidth;
-import io.github.bucket4j.Bucket;
-import io.github.bucket4j.Bucket4j;
 import software.amazon.awssdk.awscore.exception.AwsServiceException;
 import software.amazon.awssdk.core.exception.SdkClientException;
 import software.amazon.awssdk.services.s3.S3Client;
@@ -48,8 +44,6 @@ public class S3Storage implements StorageBackend {
 
     private String bucketName;
 
-    private Bucket limitBucket;
-
     private int partSize;
 
     @Override
@@ -57,15 +51,7 @@ public class S3Storage implements StorageBackend {
         final S3StorageConfig config = new S3StorageConfig(configs);
         this.s3Client = S3ClientBuilder.build(config);
         this.bucketName = config.bucketName();
-        Long uploadLimit = config.uploadLimit();
-        if (uploadLimit == null) {
-            uploadLimit = config.segmentBytes();
-        }
-        if (uploadLimit != null) {
-            final Bandwidth bandwidth = Bandwidth.simple(uploadLimit, Duration.ofSeconds(1));
-            this.limitBucket = Bucket4j.builder().addLimit(bandwidth).build();
-        }
-        this.partSize = config.uploadPartSize();
+	    this.partSize = config.uploadPartSize();
     }
 
     @Override
@@ -79,7 +65,7 @@ public class S3Storage implements StorageBackend {
     }
 
     S3MultiPartOutputStream s3OutputStream(final ObjectKey key) {
-        return new S3MultiPartOutputStream(bucketName, key, partSize, s3Client, limitBucket);
+        return new S3MultiPartOutputStream(bucketName, key, partSize, s3Client);
     }
 
     @Override

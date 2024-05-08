@@ -22,6 +22,9 @@ plugins {
 archivesBaseName = "storage-core"
 
 dependencies {
+
+    implementation "com.github.vladimir-bukhtoyarov:bucket4j-core:$bucket4jVersion"
+
     compileOnly "org.apache.kafka:kafka-clients:$kafkaVersion"
 
     testFixturesImplementation "org.junit.jupiter:junit-jupiter-api:$junitVersion"

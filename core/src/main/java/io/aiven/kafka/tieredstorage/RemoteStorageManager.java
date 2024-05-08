@@ -39,6 +39,7 @@ import java.util.concurrent.ForkJoinPool;
 import java.util.concurrent.TimeUnit;
 import java.util.stream.Collectors;
 
+import io.aiven.kafka.tieredstorage.storage.RLMQuotaManager;
 import org.apache.kafka.common.metrics.MetricConfig;
 import org.apache.kafka.common.metrics.Sensor;
 import org.apache.kafka.common.utils.ByteBufferInputStream;
@@ -140,6 +141,11 @@ public class RemoteStorageManager implements org.apache.kafka.server.log.remote.
 
     @Override
     public void configure(final Map<String, ?> configs) {
+        if (configs.containsKey("remote.log.manager.copy.max.bytes.per.second")) {
+            Long limit = (Long)configs.get("remote.log.manager.copy.max.bytes.per.second");
+            log.info("remote.log.manager.copy.max.bytes.per.second: {}", limit);
+            RLMQuotaManager.createBucket(limit);
+        }
         Objects.requireNonNull(configs, "configs must not be null");
         final RemoteStorageManagerConfig config = new RemoteStorageManagerConfig(configs);
         final MetricConfig metricConfig = new MetricConfig()
