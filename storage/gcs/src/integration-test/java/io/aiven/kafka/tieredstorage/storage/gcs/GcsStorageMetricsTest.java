@@ -30,6 +30,7 @@ import io.aiven.kafka.tieredstorage.storage.BytesRange;
 import io.aiven.kafka.tieredstorage.storage.ObjectKey;
 import io.aiven.kafka.tieredstorage.storage.StorageBackendException;
 import io.aiven.kafka.tieredstorage.storage.TestObjectKey;
+import io.aiven.kafka.tieredstorage.storage.TestUtils;
 import io.aiven.testcontainers.fakegcsserver.FakeGcsServerContainer;
 
 import com.google.cloud.NoCredentials;
@@ -73,13 +74,7 @@ public class GcsStorageMetricsTest {
 
     @BeforeEach
     void setUp(final TestInfo testInfo) {
-        String bucketName = testInfo.getDisplayName()
-            .toLowerCase()
-            .replace("(", "")
-            .replace(")", "");
-        while (bucketName.length() < 3) {
-            bucketName += bucketName;
-        }
+        final String bucketName = TestUtils.testNameToBucketName(testInfo);
         storageClient.create(BucketInfo.newBuilder(bucketName).build());
 
         storage = new GcsStorage();

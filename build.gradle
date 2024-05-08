@@ -101,7 +101,7 @@ subprojects {
 
         junitVersion = "5.10.2"
 
-        junitPlatformVersion = "1.10.1"
+        junitPlatformVersion = "1.10.2"
 
         mockitoVersion = "5.11.0"
 
@@ -111,19 +111,19 @@ subprojects {
 
         assertJVersion = "3.25.3"
 
-        apacheCommonsIOVersion = "2.15.1"
+        apacheCommonsIOVersion = "2.16.1"
 
-        jacksonVersion = "2.16.1"
+        jacksonVersion = "2.17.0"
 
-        awaitilityVersion = "4.2.0"
+        awaitilityVersion = "4.2.1"
 
-        awsSdkVersion = "2.23.16"
+        awsSdkVersion = "2.25.43"
 
         gcpSdkVersion = "2.32.1"
 
-        azureSdkVersion = "1.2.21"
+        azureSdkVersion = "1.2.23"
 
-        testcontainersVersion = "1.19.4"
+        testcontainersVersion = "1.19.7"
 
         testcontainersFakeGcsServerVersion = "0.2.0"
     }

@@ -26,20 +26,19 @@ import io.aiven.testcontainers.fakegcsserver.FakeGcsServerContainer;
 
 import com.google.cloud.NoCredentials;
 import com.google.cloud.storage.BlobInfo;
-import com.google.cloud.storage.BucketInfo;
 import com.google.cloud.storage.Storage;
 import com.google.cloud.storage.StorageOptions;
 import org.junit.jupiter.api.AfterAll;
 import org.junit.jupiter.api.BeforeAll;
+import org.testcontainers.containers.KafkaContainer;
 
-public class GcsSingleBrokerTest extends SingleBrokerTest {
-    static final String NETWORK_ALIAS = "fake-gcs-server";
+abstract class GcsSingleBrokerTest extends SingleBrokerTest {
+    static final String GCS_SERVER_NETWORK_ALIAS = "fake-gcs-server";
 
     static final FakeGcsServerContainer GCS_SERVER = new FakeGcsServerContainer()
         .withNetwork(NETWORK)
-        .withNetworkAliases(NETWORK_ALIAS)
-        .withExternalURL(String.format("http://%s:%s", NETWORK_ALIAS, FakeGcsServerContainer.PORT));
-    static final String BUCKET = "test-bucket";
+        .withNetworkAliases(GCS_SERVER_NETWORK_ALIAS)
+        .withExternalURL(String.format("http://%s:%s", GCS_SERVER_NETWORK_ALIAS, FakeGcsServerContainer.PORT));
 
     static Storage gcsClient;
 
@@ -53,17 +52,6 @@ public class GcsSingleBrokerTest extends SingleBrokerTest {
             .setProjectId("test-project")
             .build()
             .getService();
-
-        gcsClient.create(BucketInfo.newBuilder(BUCKET).build());
-
-        setupKafka(kafka -> kafka.withEnv("KAFKA_RSM_CONFIG_STORAGE_BACKEND_CLASS",
-                "io.aiven.kafka.tieredstorage.storage.gcs.GcsStorage")
-            .withEnv("KAFKA_REMOTE_LOG_STORAGE_MANAGER_CLASS_PATH",
-                "/tiered-storage-for-apache-kafka/core/*:/tiered-storage-for-apache-kafka/gcs/*")
-            .withEnv("KAFKA_RSM_CONFIG_STORAGE_GCS_BUCKET_NAME", BUCKET)
-            .withEnv("KAFKA_RSM_CONFIG_STORAGE_GCS_ENDPOINT_URL", GCS_SERVER.externalUrl())
-            .withEnv("KAFKA_RSM_CONFIG_STORAGE_GCS_CREDENTIALS_DEFAULT", "false")
-            .dependsOn(GCS_SERVER));
     }
 
     @AfterAll
@@ -75,17 +63,31 @@ public class GcsSingleBrokerTest extends SingleBrokerTest {
         cleanupStorage();
     }
 
+    static KafkaContainer rsmPluginBasicSetup(final KafkaContainer container) {
+        container
+            .withEnv("KAFKA_RSM_CONFIG_STORAGE_BACKEND_CLASS",
+                "io.aiven.kafka.tieredstorage.storage.gcs.GcsStorage")
+            .withEnv("KAFKA_REMOTE_LOG_STORAGE_MANAGER_CLASS_PATH",
+                "/tiered-storage-for-apache-kafka/core/*:/tiered-storage-for-apache-kafka/gcs/*")
+            .withEnv("KAFKA_RSM_CONFIG_STORAGE_GCS_ENDPOINT_URL", GCS_SERVER.externalUrl())
+            .withEnv("KAFKA_RSM_CONFIG_STORAGE_GCS_CREDENTIALS_DEFAULT", "false")
+            .dependsOn(GCS_SERVER);
+        return container;
+    }
+
+    protected abstract String bucket();
+
     @Override
     boolean assertNoTopicDataOnTierStorage(final String topicName, final Uuid topicId) {
         final String prefix = String.format("%s-%s", topicName, topicId.toString());
 
-        final var list = gcsClient.list(BUCKET, Storage.BlobListOption.prefix(prefix));
+        final var list = gcsClient.list(bucket(), Storage.BlobListOption.prefix(prefix));
         return list.streamAll().findAny().isEmpty();
     }
 
     @Override
     List<String> remotePartitionFiles(final TopicIdPartition topicIdPartition) {
-        return gcsClient.list(BUCKET).streamAll()
+        return gcsClient.list(bucket()).streamAll()
             .map(BlobInfo::getName)
             .map(k -> k.substring(k.lastIndexOf('/') + 1))
             .sorted()

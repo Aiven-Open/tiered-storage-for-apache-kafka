@@ -22,6 +22,7 @@ import io.aiven.kafka.tieredstorage.storage.BaseStorageTest;
 import io.aiven.kafka.tieredstorage.storage.BytesRange;
 import io.aiven.kafka.tieredstorage.storage.InvalidRangeException;
 import io.aiven.kafka.tieredstorage.storage.StorageBackendException;
+import io.aiven.kafka.tieredstorage.storage.TestUtils;
 
 import com.azure.storage.blob.BlobServiceClient;
 import com.azure.storage.blob.BlobServiceClientBuilder;
@@ -55,13 +56,7 @@ abstract class AzureBlobStorageTest extends BaseStorageTest {
 
     @BeforeEach
     void setUp(final TestInfo testInfo) {
-        azureContainerName = testInfo.getDisplayName()
-            .toLowerCase()
-            .replace("(", "")
-            .replace(")", "");
-        while (azureContainerName.length() < 3) {
-            azureContainerName += azureContainerName;
-        }
+        azureContainerName = TestUtils.testNameToBucketName(testInfo);
         blobServiceClient.createBlobContainer(azureContainerName);
     }
 
