@@ -14,10 +14,10 @@
 # limitations under the License.
 ##
 
-# Base image based 3.6.1 + bugfixes included on this branch:
-# https://github.com/apache/kafka/compare/3.6...aiven:kafka:3.6.1-2024-02-06
+# Base image based 3.7.0 + bugfixes included on this branch:
+# https://github.com/apache/kafka/compare/3.7...aiven:kafka:3.7.0-2024-05-17
 # See commits and Dockerfile for more details on base image
-FROM docker.io/aivenoy/kafka:3.6.1-2024-02-06
+FROM docker.io/aivenoy/kafka:3.7.0-2024-05-17
 
 ARG _VERSION
 
