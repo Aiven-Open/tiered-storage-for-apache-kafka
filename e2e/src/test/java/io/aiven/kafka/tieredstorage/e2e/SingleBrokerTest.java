@@ -356,10 +356,20 @@ abstract class SingleBrokerTest {
     @Test
     @Order(2)
     void remoteRead() {
-        try (final var consumer = new KafkaConsumer<>(Map.of(
-            "bootstrap.servers", kafka.getBootstrapServers(),
-            "fetch.max.bytes", "1"
-        ), new ByteArrayDeserializer(), new ByteArrayDeserializer())) {
+        validateReadWithinBatch();
+        validateReadOverBatchBorders();
+    }
+
+    private void validateReadWithinBatch() {
+        // Consumer configs to read messages on single batch
+        try (final var consumer = new KafkaConsumer<>(
+            Map.of(
+                "bootstrap.servers", kafka.getBootstrapServers(),
+                "fetch.max.bytes", "1"
+            ),
+            new ByteArrayDeserializer(),
+            new ByteArrayDeserializer()
+        )) {
 
             // Check the beginning and end offsets.
             final Map<TopicPartition, Long> startOffsets = consumer.beginningOffsets(USER_TOPIC_PARTITIONS);
@@ -419,7 +429,9 @@ abstract class SingleBrokerTest {
 
             LOG.info("Validation per batch completed");
         }
+    }
 
+    private void validateReadOverBatchBorders() {
         // Read over batch borders.
         LOG.info("Starting validation over batch borders");
 
@@ -430,10 +442,15 @@ abstract class SingleBrokerTest {
             final int batchSize = batchSize(offset);
             offset += batchSize;
         }
-        try (final var consumer = new KafkaConsumer<>(Map.of(
-            "bootstrap.servers", kafka.getBootstrapServers(),
-            "fetch.max.bytes", Integer.toString(RECORD_VALUE_SIZE_MAX * 50)
-        ), new ByteArrayDeserializer(), new ByteArrayDeserializer())) {
+
+        try (final var consumer = new KafkaConsumer<>(
+            Map.of(
+                "bootstrap.servers", kafka.getBootstrapServers(),
+                "fetch.max.bytes", Integer.toString(RECORD_VALUE_SIZE_MAX * 50)
+            ),
+            new ByteArrayDeserializer(),
+            new ByteArrayDeserializer()
+        )) {
             for (final TopicPartition tp : USER_TOPIC_PARTITIONS) {
                 consumer.assign(List.of(tp));
                 for (final long batchBorder : batchBorders) {
