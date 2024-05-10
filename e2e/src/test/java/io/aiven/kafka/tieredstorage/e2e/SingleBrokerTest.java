@@ -277,9 +277,9 @@ abstract class SingleBrokerTest {
         fillTopics();
 
         // Prepare tracker for a minute to wait for all segments to be copied
-        remoteLogMetadataTracker.initialize(userTopicIdPartitions);
+        remoteLogMetadataTracker.poll(userTopicIdPartitions, Duration.ofMinutes(1));
 
-        // Check remote segments are present.
+        // Check remote segments are present in storage back-end
         final var allRemoteSegments = remoteLogMetadataTracker.remoteSegments();
 
         for (final Map.Entry<TopicIdPartition, List<RemoteSegment>> entry : allRemoteSegments.entrySet()) {

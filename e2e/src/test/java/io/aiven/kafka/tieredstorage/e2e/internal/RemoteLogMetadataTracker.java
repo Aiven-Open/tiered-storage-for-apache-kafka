@@ -49,7 +49,7 @@ public class RemoteLogMetadataTracker {
     private static final String REMOTE_LOG_METADATA_TOPIC = "__remote_log_metadata";
 
     private final KafkaConsumer<byte[], RemoteLogMetadata> consumer;
-    private List<TopicPartition> partitions;
+    private List<TopicPartition> metadataPartitions;
 
     private final Map<TopicIdPartition, Set<RemoteSegment>> remoteSegments = new HashMap<>();
     private final Map<RemoteLogSegmentId, RemoteLogSegmentState> remoteSegmentStates = new HashMap<>();
@@ -73,39 +73,45 @@ public class RemoteLogMetadataTracker {
     }
 
     /**
-     * Initializes the tracker.
+     * Initializes the tracker by reading metadata topic for {@code timeout} to wait for segments to be copied
+     * be aware that this needs to be higher than local retention and RLM task interval ms
+     * at least a few times higher to give enough time for all segments to be placed remotely.
      *
      * <p>It expects at least one record to be present in __remote_log_metadata
      * and that all remote segments are in {@code COPY_SEGMENT_FINISHED} state.
      */
-    public void initialize(final List<TopicIdPartition> expectedPartitions) {
-        partitions = consumer.partitionsFor(REMOTE_LOG_METADATA_TOPIC).stream()
+    public void poll(final List<TopicIdPartition> expectedPartitions, final Duration timeout) {
+        metadataPartitions = consumer.partitionsFor(REMOTE_LOG_METADATA_TOPIC)
+            .stream()
             .map(pi -> new TopicPartition(pi.topic(), pi.partition()))
             .collect(Collectors.toList());
 
-        await().atMost(Duration.ofSeconds(60))
-            .pollInterval(Duration.ofMillis(100))
+        // waits for metadata topic to have received some events
+        await().atMost(timeout)
+            .pollInterval(Duration.ofSeconds(1))
             .until(() ->
-                consumer.endOffsets(partitions).values().stream()
+                consumer.endOffsets(metadataPartitions)
+                    .values()
+                    .stream()
                     .mapToLong(Long::longValue)
                     .sum() > 0);
 
-        // supply segment states where copy has not finished
-        final Supplier<Map<RemoteLogSegmentId, RemoteLogSegmentState>> segmentsStillCopying = () ->
-            remoteSegmentStates.entrySet().stream()
-                .filter(s -> s.getValue() != RemoteLogSegmentState.COPY_SEGMENT_FINISHED)
-                .collect(Collectors.toMap(Map.Entry::getKey, Map.Entry::getValue));
-
-        consumer.assign(partitions);
-        consumer.seekToBeginning(partitions);
+        consumer.assign(metadataPartitions);
+        consumer.seekToBeginning(metadataPartitions);
 
         LOG.info("Initializing remote segments");
 
-        final var timeout = Duration.ofMinutes(1);
         final var startAt = System.currentTimeMillis();
 
         final var metadataRecords = new LinkedHashMap<Map.Entry<TopicPartition, Long>, RemoteLogMetadata>();
         boolean isReady = false;
+        // supply segment states where copy has not finished
+        final Supplier<Map<RemoteLogSegmentId, RemoteLogSegmentState>> segmentsStillCopying = () ->
+            remoteSegmentStates.entrySet()
+                .stream()
+                .filter(s -> s.getValue() != RemoteLogSegmentState.COPY_SEGMENT_FINISHED)
+                .collect(Collectors.toMap(Map.Entry::getKey, Map.Entry::getValue));
+
         while (!isReady) {
             consumer.poll(Duration.ofSeconds(5)).forEach(r -> {
                 final RemoteLogMetadata metadata = r.value();
