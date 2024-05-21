@@ -185,7 +185,7 @@ public class RemoteStorageManager implements org.apache.kafka.server.log.remote.
         customMetadataFields = config.customMetadataKeysIncluded();
 
         config.uploadRateLimit().ifPresent(value ->
-            rateLimitingBucket = RateLimitedInputStream.rateLimitBucket(value, chunkSize));
+            rateLimitingBucket = RateLimitedInputStream.rateLimitBucket(value));
     }
 
     // for testing

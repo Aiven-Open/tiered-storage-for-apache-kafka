@@ -35,15 +35,12 @@ public class RateLimitedInputStream extends InputStream {
         this.bucket = bucket;
     }
 
-    public static Bucket rateLimitBucket(final int bucketSize, final int chunkSize) {
-        if (bucketSize < chunkSize) {
-            throw new IllegalArgumentException("bucketSize must be larger or equal to chunkSize");
-        }
+    public static Bucket rateLimitBucket(final int uploadRate) {
         return Bucket.builder()
             .addLimit(limit ->
-                limit.capacity(bucketSize)
+                limit.capacity(uploadRate)
                     // every 100ms a 10th of the chunk size is added back to bucket
-                    .refillGreedy(chunkSize, Duration.ofSeconds(1)))
+                    .refillGreedy(uploadRate, Duration.ofSeconds(1)))
             .build();
     }
 
