@@ -187,6 +187,8 @@ abstract class SingleBrokerTest {
                 "io.aiven.kafka.tieredstorage.RemoteStorageManager")
             .withEnv("KAFKA_RSM_CONFIG_CHUNK_SIZE", Integer.toString(CHUNK_SIZE))
             .withEnv("KAFKA_RSM_CONFIG_CUSTOM_METADATA_FIELDS_INCLUDE", "REMOTE_SIZE")
+            // upload rate at smallest rate
+            .withEnv("KAFKA_RSM_CONFIG_UPLOAD_RATE_LIMIT_BYTES_PER_SECOND", Integer.toString(1024 * 1024))
             // chunk caching
             .withEnv("KAFKA_RSM_CONFIG_FETCH_CHUNK_CACHE_CLASS",
                 "io.aiven.kafka.tieredstorage.fetch.cache.DiskChunkCache")

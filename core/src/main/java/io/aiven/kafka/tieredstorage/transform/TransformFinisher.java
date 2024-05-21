@@ -27,6 +27,8 @@ import io.aiven.kafka.tieredstorage.manifest.index.ChunkIndex;
 import io.aiven.kafka.tieredstorage.manifest.index.FixedSizeChunkIndexBuilder;
 import io.aiven.kafka.tieredstorage.manifest.index.VariableSizeChunkIndexBuilder;
 
+import io.github.bucket4j.Bucket;
+
 // TODO test transforms and detransforms with property-based tests
 
 /**
@@ -42,12 +44,17 @@ public class TransformFinisher implements Enumeration<InputStream> {
     private final AbstractChunkIndexBuilder chunkIndexBuilder;
     private final int originalFileSize;
     private ChunkIndex chunkIndex = null;
+    private final Bucket rateLimitingBucket;
 
-    public TransformFinisher(final TransformChunkEnumeration inner) {
-        this(inner, 0);
+    public TransformFinisher(final TransformChunkEnumeration inner, final Bucket rateLimitingBucket) {
+        this(inner, 0, rateLimitingBucket);
     }
 
-    public TransformFinisher(final TransformChunkEnumeration inner, final int originalFileSize) {
+    public TransformFinisher(
+        final TransformChunkEnumeration inner,
+        final int originalFileSize,
+        final Bucket rateLimitingBucket
+    ) {
         this.inner = Objects.requireNonNull(inner, "inner cannot be null");
         this.originalFileSize = originalFileSize;
 
@@ -65,6 +72,8 @@ public class TransformFinisher implements Enumeration<InputStream> {
             this.chunkIndexBuilder = new FixedSizeChunkIndexBuilder(
                 inner.originalChunkSize(), originalFileSize, transformedChunkSize);
         }
+
+        this.rateLimitingBucket = rateLimitingBucket;
     }
 
     @Override
@@ -94,6 +103,11 @@ public class TransformFinisher implements Enumeration<InputStream> {
     }
 
     public InputStream toInputStream() {
-        return new SequenceInputStream(this);
+        final SequenceInputStream sequencedInputStream = new SequenceInputStream(this);
+        if (rateLimitingBucket == null) {
+            return sequencedInputStream;
+        } else {
+            return new RateLimitedInputStream(sequencedInputStream, rateLimitingBucket);
+        }
     }
 }

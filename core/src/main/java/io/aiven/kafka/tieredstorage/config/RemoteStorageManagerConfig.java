@@ -23,6 +23,7 @@ import java.util.HashMap;
 import java.util.List;
 import java.util.Map;
 import java.util.Optional;
+import java.util.OptionalInt;
 import java.util.Set;
 import java.util.stream.Collectors;
 
@@ -33,6 +34,7 @@ import org.apache.kafka.common.config.ConfigException;
 import org.apache.kafka.common.metrics.Sensor;
 import org.apache.kafka.common.utils.Utils;
 
+import io.aiven.kafka.tieredstorage.config.validators.Null;
 import io.aiven.kafka.tieredstorage.metadata.SegmentCustomMetadataField;
 import io.aiven.kafka.tieredstorage.storage.StorageBackend;
 
@@ -94,6 +96,11 @@ public class RemoteStorageManagerConfig extends AbstractConfig {
     private static final String CUSTOM_METADATA_FIELDS_INCLUDE_DOC = "Custom Metadata to be stored along "
         + "Remote Log Segment metadata on Remote Log Metadata Manager back-end. "
         + "Allowed values: " + Arrays.toString(SegmentCustomMetadataField.names());
+
+    private static final String UPLOAD_RATE_LIMIT_BYTES_CONFIG = "upload.rate.limit.bytes.per.second";
+    private static final String UPLOAD_RATE_LIMIT_BYTES_DOC = "Upper bound on bytes to upload "
+        + "(therefore read from disk) per second. Rate limit must be equal or larger than 1 MiB/sec "
+        + "as minimal upload throughput.";
 
     private static final ConfigDef CONFIG;
 
@@ -207,6 +214,22 @@ public class RemoteStorageManagerConfig extends AbstractConfig {
             ConfigDef.ValidList.in(SegmentCustomMetadataField.names()),
             ConfigDef.Importance.LOW,
             CUSTOM_METADATA_FIELDS_INCLUDE_DOC);
+
+        CONFIG.define(
+            UPLOAD_RATE_LIMIT_BYTES_CONFIG,
+            ConfigDef.Type.INT,
+            null,
+            // at least 1MiB. Not hard-limit, but to avoid a rate too low that could affect other components.
+            Null.or(ConfigDef.Range.atLeast(1024 * 1024)),
+            ConfigDef.Importance.MEDIUM,
+            UPLOAD_RATE_LIMIT_BYTES_DOC
+        );
+    }
+
+    public OptionalInt uploadRateLimit() {
+        return Optional.ofNullable(getInt(UPLOAD_RATE_LIMIT_BYTES_CONFIG)).stream()
+            .mapToInt(Integer::intValue)
+            .findAny();
     }
 
     /**

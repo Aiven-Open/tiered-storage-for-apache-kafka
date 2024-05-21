@@ -46,6 +46,8 @@ dependencies {
     implementation "commons-io:commons-io:$apacheCommonsIOVersion"
     implementation project(':commons')
 
+    implementation "com.bucket4j:bucket4j_jdk11-core:$bucket4jVersion"
+
     testImplementation(testFixtures(project(":storage:core")))
     testImplementation(project(":storage:filesystem"))
 

@@ -173,6 +173,10 @@ With this approach, it's possible to start using a new KEK for new data: keep th
 
 ### Uploads
 
+#### Rate Limit
+
+TBD
+
 #### S3 Multipart Upload
 
 When uploading processed segments and indexes, multipart upload is used to put files on S3 back-end.
