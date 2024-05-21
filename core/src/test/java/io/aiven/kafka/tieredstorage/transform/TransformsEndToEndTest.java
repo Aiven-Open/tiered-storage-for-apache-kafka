@@ -79,8 +79,8 @@ public class TransformsEndToEndTest extends AesKeyAwareTest {
             transformEnum = new EncryptionChunkEnumeration(transformEnum, AesKeyAwareTest::encryptionCipherSupplier);
         }
         final var transformFinisher = chunkSize == 0
-            ? new TransformFinisher(transformEnum)
-            : new TransformFinisher(transformEnum, ORIGINAL_SIZE);
+            ? new TransformFinisher(transformEnum, null)
+            : new TransformFinisher(transformEnum, ORIGINAL_SIZE, null);
         final byte[] uploadedData;
         final ChunkIndex chunkIndex;
         try (final var sis = transformFinisher.toInputStream()) {

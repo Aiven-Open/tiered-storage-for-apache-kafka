@@ -90,11 +90,13 @@ import io.aiven.kafka.tieredstorage.transform.DecryptionChunkEnumeration;
 import io.aiven.kafka.tieredstorage.transform.DetransformChunkEnumeration;
 import io.aiven.kafka.tieredstorage.transform.DetransformFinisher;
 import io.aiven.kafka.tieredstorage.transform.EncryptionChunkEnumeration;
+import io.aiven.kafka.tieredstorage.transform.RateLimitedInputStream;
 import io.aiven.kafka.tieredstorage.transform.TransformChunkEnumeration;
 import io.aiven.kafka.tieredstorage.transform.TransformFinisher;
 
 import com.fasterxml.jackson.databind.ObjectMapper;
 import com.fasterxml.jackson.datatype.jdk8.Jdk8Module;
+import io.github.bucket4j.Bucket;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
@@ -128,6 +130,8 @@ public class RemoteStorageManager implements org.apache.kafka.server.log.remote.
 
     private SegmentManifestProvider segmentManifestProvider;
     private SegmentIndexesCache segmentIndexesCache;
+
+    private Bucket rateLimitingBucket;
 
     public RemoteStorageManager() {
         this(Time.SYSTEM);
@@ -179,6 +183,9 @@ public class RemoteStorageManager implements org.apache.kafka.server.log.remote.
 
         customMetadataSerde = new SegmentCustomMetadataSerde();
         customMetadataFields = config.customMetadataKeysIncluded();
+
+        config.uploadRateLimit().ifPresent(value ->
+            rateLimitingBucket = RateLimitedInputStream.rateLimitBucket(value, chunkSize));
     }
 
     // for testing
@@ -240,8 +247,11 @@ public class RemoteStorageManager implements org.apache.kafka.server.log.remote.
                         () -> aesEncryptionProvider.encryptionCipher(dataKeyAndAAD));
                     encryptionMetadata = new SegmentEncryptionMetadataV1(dataKeyAndAAD.dataKey, dataKeyAndAAD.aad);
                 }
-                final TransformFinisher transformFinisher =
-                    new TransformFinisher(transformEnum, remoteLogSegmentMetadata.segmentSizeInBytes());
+                final TransformFinisher transformFinisher = new TransformFinisher(
+                    transformEnum,
+                    remoteLogSegmentMetadata.segmentSizeInBytes(),
+                    rateLimitingBucket
+                );
                 uploadSegmentLog(remoteLogSegmentMetadata, transformFinisher, customMetadataBuilder);
                 chunkIndex = transformFinisher.chunkIndex();
             }
@@ -412,7 +422,7 @@ public class RemoteStorageManager implements org.apache.kafka.server.log.remote.
                     transformEnum,
                     () -> aesEncryptionProvider.encryptionCipher(dataKeyAndAAD));
             }
-            final var transformFinisher = new TransformFinisher(transformEnum, size);
+            final var transformFinisher = new TransformFinisher(transformEnum, size, rateLimitingBucket);
             final var inputStream = transformFinisher.nextElement();
             segmentIndexBuilder.add(indexType, singleChunk(transformFinisher.chunkIndex()).range().size());
             return inputStream;

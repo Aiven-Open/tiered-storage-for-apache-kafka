@@ -53,6 +53,7 @@ class RemoteStorageManagerConfigTest {
         assertThat(config.keyPrefix()).isEmpty();
         assertThat(config.keyPrefixMask()).isFalse();
         assertThat(config.customMetadataKeysIncluded()).isEmpty();
+        assertThat(config.uploadRateLimit()).isEmpty();
     }
 
     @Test
@@ -350,5 +351,43 @@ class RemoteStorageManagerConfigTest {
             )
         );
         assertThat(config.keyPrefixMask()).isTrue();
+    }
+
+    @Test
+    void uploadRateLimitInvalid() {
+        assertThatThrownBy(() ->
+            new RemoteStorageManagerConfig(
+                Map.of(
+                    "storage.backend.class", NoopStorageBackend.class.getCanonicalName(),
+                    "chunk.size", "123",
+                    "upload.rate.limit.bytes", "122"
+                )
+            ))
+            .isInstanceOf(ConfigException.class)
+            .hasMessage("Invalid value 122 for configuration upload.rate.limit.bytes: Value must be at least 1048576");
+        assertThatThrownBy(() ->
+            new RemoteStorageManagerConfig(
+                Map.of(
+                    "storage.backend.class", NoopStorageBackend.class.getCanonicalName(),
+                    "chunk.size", Integer.toString(2 * 1024 * 1024),
+                    "upload.rate.limit.bytes", Integer.toString(1024 * 1024 + 1)
+                )
+            ))
+            .isInstanceOf(ConfigException.class)
+            .hasMessage("upload.rate.limit.bytes must be larger than chunk.size");
+    }
+
+    @Test
+    void uploadRateLimitValid() {
+        final int limit = 1024 * 1024;
+        final var config = new RemoteStorageManagerConfig(
+            Map.of(
+                "storage.backend.class", NoopStorageBackend.class.getCanonicalName(),
+                "chunk.size", "123",
+                "upload.rate.limit.bytes", Integer.toString(limit)
+            )
+        );
+        assertThat(config.uploadRateLimit()).hasValue(limit);
+
     }
 }
