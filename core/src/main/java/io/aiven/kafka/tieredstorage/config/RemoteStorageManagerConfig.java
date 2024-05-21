@@ -97,7 +97,7 @@ public class RemoteStorageManagerConfig extends AbstractConfig {
         + "Remote Log Segment metadata on Remote Log Metadata Manager back-end. "
         + "Allowed values: " + Arrays.toString(SegmentCustomMetadataField.names());
 
-    private static final String UPLOAD_RATE_LIMIT_BYTES_CONFIG = "upload.rate.limit.bytes";
+    private static final String UPLOAD_RATE_LIMIT_BYTES_CONFIG = "upload.rate.limit.bytes.per.second";
     private static final String UPLOAD_RATE_LIMIT_BYTES_DOC = "Upper bound on bytes to upload "
         + "(therefore read from disk) per second. This affects only the upload rate. "
         + "Rate limit must be equal or larger than chunk.size to allow a proper rate per second.";

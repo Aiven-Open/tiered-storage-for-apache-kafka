@@ -360,21 +360,22 @@ class RemoteStorageManagerConfigTest {
                 Map.of(
                     "storage.backend.class", NoopStorageBackend.class.getCanonicalName(),
                     "chunk.size", "123",
-                    "upload.rate.limit.bytes", "122"
+                    "upload.rate.limit.bytes.per.second", "122"
                 )
             ))
             .isInstanceOf(ConfigException.class)
-            .hasMessage("Invalid value 122 for configuration upload.rate.limit.bytes: Value must be at least 1048576");
+            .hasMessage("Invalid value 122 for configuration upload.rate.limit.bytes.per.second: "
+                + "Value must be at least 1048576");
         assertThatThrownBy(() ->
             new RemoteStorageManagerConfig(
                 Map.of(
                     "storage.backend.class", NoopStorageBackend.class.getCanonicalName(),
                     "chunk.size", Integer.toString(2 * 1024 * 1024),
-                    "upload.rate.limit.bytes", Integer.toString(1024 * 1024 + 1)
+                    "upload.rate.limit.bytes.per.second", Integer.toString(1024 * 1024 + 1)
                 )
             ))
             .isInstanceOf(ConfigException.class)
-            .hasMessage("upload.rate.limit.bytes must be larger than chunk.size");
+            .hasMessage("upload.rate.limit.bytes.per.second must be larger than chunk.size");
     }
 
     @Test
@@ -384,7 +385,7 @@ class RemoteStorageManagerConfigTest {
             Map.of(
                 "storage.backend.class", NoopStorageBackend.class.getCanonicalName(),
                 "chunk.size", "123",
-                "upload.rate.limit.bytes", Integer.toString(limit)
+                "upload.rate.limit.bytes.per.second", Integer.toString(limit)
             )
         );
         assertThat(config.uploadRateLimit()).hasValue(limit);
