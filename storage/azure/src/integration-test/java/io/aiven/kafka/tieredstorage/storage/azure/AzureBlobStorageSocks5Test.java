@@ -118,10 +118,12 @@ class AzureBlobStorageSocks5Test extends BaseSocks5Test<AzureBlobStorage> {
 
     @Override
     protected Iterable<String> possibleRootCauseMessagesWhenNoProxy() {
-        // Either - or, it seems it depends on the JVM version.
+        // Either - or, it seems it depends on the JVM version or OS.
         final String possibleMessage1 = String.format(
             "%s: Temporary failure in name resolution", azuriteContainerNetworkAlias);
         final String possibleMessage2 = String.format("%s: Name or service not known", azuriteContainerNetworkAlias);
-        return List.of(possibleMessage1, possibleMessage2);
+        final String possibleMessage3 = String.format(
+            "%s: nodename nor servname provided, or not known", azuriteContainerNetworkAlias);
+        return List.of(possibleMessage1, possibleMessage2, possibleMessage3);
     }
 }
