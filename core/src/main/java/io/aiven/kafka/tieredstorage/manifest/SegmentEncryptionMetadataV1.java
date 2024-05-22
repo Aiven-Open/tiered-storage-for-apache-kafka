@@ -21,6 +21,8 @@ import javax.crypto.SecretKey;
 import java.util.Arrays;
 import java.util.Objects;
 
+import io.aiven.kafka.tieredstorage.security.DataKeyAndAAD;
+
 import com.fasterxml.jackson.annotation.JsonCreator;
 import com.fasterxml.jackson.annotation.JsonProperty;
 
@@ -35,6 +37,10 @@ public class SegmentEncryptionMetadataV1 implements SegmentEncryptionMetadata {
                                        @JsonProperty(value = "aad", required = true) final byte[] aad) {
         this.dataKey = Objects.requireNonNull(dataKey, "dataKey cannot be null");
         this.aad = Objects.requireNonNull(aad, "aad cannot be null");
+    }
+
+    public SegmentEncryptionMetadataV1(final DataKeyAndAAD dataKeyAndAAD) {
+        this(dataKeyAndAAD.dataKey, dataKeyAndAAD.aad);
     }
 
     @Override

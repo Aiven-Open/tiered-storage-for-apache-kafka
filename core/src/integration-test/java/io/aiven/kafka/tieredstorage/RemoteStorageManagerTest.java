@@ -57,7 +57,6 @@ import org.apache.kafka.server.log.remote.storage.RemoteStorageManager.IndexType
 import io.aiven.kafka.tieredstorage.fetch.KeyNotFoundRuntimeException;
 import io.aiven.kafka.tieredstorage.fetch.cache.DiskChunkCache;
 import io.aiven.kafka.tieredstorage.fetch.cache.MemoryChunkCache;
-import io.aiven.kafka.tieredstorage.manifest.SegmentEncryptionMetadataV1;
 import io.aiven.kafka.tieredstorage.manifest.SegmentIndexesV1Builder;
 import io.aiven.kafka.tieredstorage.manifest.index.ChunkIndex;
 import io.aiven.kafka.tieredstorage.manifest.serde.EncryptionSerdeModule;
@@ -479,16 +478,15 @@ class RemoteStorageManagerTest extends RsaKeyAwareTest {
             "storage.root", targetDir.toString(),
             "encryption.enabled", Boolean.toString(encryption)
         ));
-        final SegmentEncryptionMetadataV1 encryptionMetadata;
+        final DataKeyAndAAD maybeEncryptionKey;
         if (encryption) {
             config.put("encryption.key.pair.id", KEY_ENCRYPTION_KEY_ID);
             config.put("encryption.key.pairs", KEY_ENCRYPTION_KEY_ID);
             config.put("encryption.key.pairs." + KEY_ENCRYPTION_KEY_ID + ".public.key.file", publicKeyPem.toString());
             config.put("encryption.key.pairs." + KEY_ENCRYPTION_KEY_ID + ".private.key.file", privateKeyPem.toString());
-            final var dataKeyAndAAD = aesEncryptionProvider.createDataKeyAndAAD();
-            encryptionMetadata = new SegmentEncryptionMetadataV1(dataKeyAndAAD.dataKey, dataKeyAndAAD.aad);
+            maybeEncryptionKey = aesEncryptionProvider.createDataKeyAndAAD();
         } else {
-            encryptionMetadata = null;
+            maybeEncryptionKey = null;
         }
         rsm.configure(config);
 
@@ -498,7 +496,7 @@ class RemoteStorageManagerTest extends RsaKeyAwareTest {
             IndexType.OFFSET,
             new ByteArrayInputStream(bytes),
             bytes.length,
-            encryptionMetadata,
+            maybeEncryptionKey,
             segmentIndexBuilder
         );
         assertThat(is).isNotEmpty();
@@ -510,21 +508,21 @@ class RemoteStorageManagerTest extends RsaKeyAwareTest {
             IndexType.TIMESTAMP,
             new ByteArrayInputStream(bytes),
             bytes.length,
-            encryptionMetadata,
+            maybeEncryptionKey,
             segmentIndexBuilder
         );
         rsm.transformIndex(
             IndexType.LEADER_EPOCH,
             new ByteArrayInputStream(bytes),
             bytes.length,
-            encryptionMetadata,
+            maybeEncryptionKey,
             segmentIndexBuilder
         );
         rsm.transformIndex(
             IndexType.PRODUCER_SNAPSHOT,
             new ByteArrayInputStream(bytes),
             bytes.length,
-            encryptionMetadata,
+            maybeEncryptionKey,
             segmentIndexBuilder
         );
         final var index = segmentIndexBuilder.build();
@@ -544,14 +542,15 @@ class RemoteStorageManagerTest extends RsaKeyAwareTest {
             "storage.root", targetDir.toString(),
             "encryption.enabled", Boolean.toString(encryption)
         ));
-        SegmentEncryptionMetadataV1 encryptionMetadata = null;
+        final DataKeyAndAAD maybeEncryptionKey;
         if (encryption) {
             config.put("encryption.key.pair.id", KEY_ENCRYPTION_KEY_ID);
             config.put("encryption.key.pairs", KEY_ENCRYPTION_KEY_ID);
             config.put("encryption.key.pairs." + KEY_ENCRYPTION_KEY_ID + ".public.key.file", publicKeyPem.toString());
             config.put("encryption.key.pairs." + KEY_ENCRYPTION_KEY_ID + ".private.key.file", privateKeyPem.toString());
-            final var dataKeyAndAAD = aesEncryptionProvider.createDataKeyAndAAD();
-            encryptionMetadata = new SegmentEncryptionMetadataV1(dataKeyAndAAD.dataKey, dataKeyAndAAD.aad);
+            maybeEncryptionKey = aesEncryptionProvider.createDataKeyAndAAD();
+        } else {
+            maybeEncryptionKey = null;
         }
         rsm.configure(config);
 
@@ -560,7 +559,7 @@ class RemoteStorageManagerTest extends RsaKeyAwareTest {
             IndexType.OFFSET,
             InputStream.nullInputStream(),
             0,
-            encryptionMetadata,
+            maybeEncryptionKey,
             segmentIndexBuilder
         );
         assertThat(is).isEmpty();
@@ -571,21 +570,21 @@ class RemoteStorageManagerTest extends RsaKeyAwareTest {
             IndexType.TIMESTAMP,
             InputStream.nullInputStream(),
             0,
-            encryptionMetadata,
+            maybeEncryptionKey,
             segmentIndexBuilder
         );
         rsm.transformIndex(
             IndexType.LEADER_EPOCH,
             InputStream.nullInputStream(),
             0,
-            encryptionMetadata,
+            maybeEncryptionKey,
             segmentIndexBuilder
         );
         rsm.transformIndex(
             IndexType.PRODUCER_SNAPSHOT,
             InputStream.nullInputStream(),
             0,
-            encryptionMetadata,
+            maybeEncryptionKey,
             segmentIndexBuilder
         );
         final var index = segmentIndexBuilder.build();
