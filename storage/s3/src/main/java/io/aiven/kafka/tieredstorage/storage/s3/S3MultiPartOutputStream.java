@@ -169,8 +169,11 @@ public class S3MultiPartOutputStream extends OutputStream {
 
     private void flushBuffer(final int offset,
                              final int actualPartSize) {
-        final ByteArrayInputStream in = new ByteArrayInputStream(partBuffer.array(), offset, actualPartSize);
-        uploadPart(in, actualPartSize);
+        try (final ByteArrayInputStream in = new ByteArrayInputStream(partBuffer.array(), offset, actualPartSize)) {
+            uploadPart(in, actualPartSize);
+        } catch (final IOException e) {
+            throw new RuntimeException(e);
+        }
         partBuffer.clear();
     }
 
