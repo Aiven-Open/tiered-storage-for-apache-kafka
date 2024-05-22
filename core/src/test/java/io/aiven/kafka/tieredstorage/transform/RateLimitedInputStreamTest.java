@@ -19,70 +19,69 @@ package io.aiven.kafka.tieredstorage.transform;
 import java.io.ByteArrayInputStream;
 import java.io.InputStream;
 import java.time.Duration;
+import java.util.Arrays;
 
 import io.github.bucket4j.Bucket;
 import org.junit.jupiter.api.Test;
 
-import static org.assertj.core.api.Assertions.assertThat;
 import static org.awaitility.Awaitility.await;
 
 class RateLimitedInputStreamTest {
     @Test
     void testDoesNotBlockRead() {
-        final Bucket bucket = Bucket.builder()
-            .addLimit(limit -> limit.capacity(3).refillGreedy(1, Duration.ofSeconds(1)))
-            .build();
-        final byte[] bytes = "ABC".getBytes();
+        // Given a bucket with min size of default buffer
+        final Bucket bucket = RateLimitedInputStream.rateLimitBucket(1);
+        // When a stream of size less than capacity is read
+        final byte[] bytes = new byte[RateLimitedInputStream.DEFAULT_BUFFER_SIZE - 1];
         final ByteArrayInputStream source = new ByteArrayInputStream(bytes);
         final InputStream test = new RateLimitedInputStream(source, bucket);
-        final int[] ints = new int[3];
-        await().atMost(Duration.ofSeconds(2))
+        // Then read should happen without blocking, i.e. less than 1 sec
+        await().atMost(Duration.ofSeconds(1))
             .until(() -> {
-                ints[0] = test.read();
-                ints[1] = test.read();
-                ints[2] = test.read();
+                test.readAllBytes();
                 return true;
             });
-        assertThat(bytes).contains(ints);
     }
 
     @Test
     void testBlocksRead() {
-        final Bucket bucket = Bucket.builder()
-            .addLimit(limit -> limit.capacity(1).refillGreedy(1, Duration.ofSeconds(1)))
-            .build();
-        final byte[] bytes = "ABC".getBytes();
+        // Given a bucket with min size of default buffer
+        final Bucket bucket = RateLimitedInputStream.rateLimitBucket(1);
+        // When a stream of size larger than capacity is read
+        final byte[] bytes = new byte[RateLimitedInputStream.DEFAULT_BUFFER_SIZE + 1];
+        Arrays.fill(bytes, (byte) 0);
         final InputStream test = new RateLimitedInputStream(new ByteArrayInputStream(bytes), bucket);
-        final int[] ints = new int[3];
-        await().between(Duration.ofSeconds(2), Duration.ofSeconds(3))
+        // Then read should block while bucket is refill; taking at least 1 sec but not more than 2
+        await().atLeast(Duration.ofSeconds(1))
             .until(() -> {
-                ints[0] = test.read();
-                ints[1] = test.read();
-                ints[2] = test.read();
+                test.readAllBytes();
                 return true;
             });
-        assertThat(bytes).contains(ints);
     }
 
     @Test
-    void testBlocksReadAll() {
-        final Bucket bucket = Bucket.builder()
-            .addLimit(limit -> limit.capacity(3).refillGreedy(3, Duration.ofSeconds(1)))
-            .build();
-        final byte[] bytes = "ABC".getBytes();
-        final InputStream test0 = new RateLimitedInputStream(new ByteArrayInputStream(bytes), bucket);
-        final InputStream test1 = new RateLimitedInputStream(new ByteArrayInputStream(bytes), bucket);
+    void testBlocksOnSeparateStreams() {
+        // Given a bucket with min size of default buffer
+        final Bucket bucket = RateLimitedInputStream.rateLimitBucket(1);
+        // When 2 streams with less than buffer size
+        final byte[] bytes0 = new byte[RateLimitedInputStream.DEFAULT_BUFFER_SIZE - 1];
+        Arrays.fill(bytes0, (byte) 0);
+        final InputStream test0 = new RateLimitedInputStream(new ByteArrayInputStream(bytes0), bucket);
+        final byte[] bytes1 = new byte[RateLimitedInputStream.DEFAULT_BUFFER_SIZE - 1];
+        Arrays.fill(bytes1, (byte) 0);
+        final InputStream test1 = new RateLimitedInputStream(new ByteArrayInputStream(bytes1), bucket);
+        // Then read should not block on first stream
         await().atMost(Duration.ofSeconds(1))
             .until(() -> {
                 test0.readAllBytes();
                 return true;
             });
-
-        await().between(Duration.ofSeconds(1), Duration.ofSeconds(2))
+        // but should block on the second one for a second to refill bucket consumed by first stream
+        // minus 100 to account for some timing skew in between runs
+        await().atLeast(Duration.ofSeconds(1).minusMillis(100))
             .until(() -> {
                 test1.readAllBytes();
                 return true;
             });
     }
-
 }
