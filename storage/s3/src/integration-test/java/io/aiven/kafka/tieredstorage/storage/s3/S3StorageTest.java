@@ -50,8 +50,8 @@ public class S3StorageTest extends BaseStorageTest {
 
     @BeforeAll
     static void setUpClass() {
-        final var clientBuilder = S3Client.builder();
-        clientBuilder.region(Region.of(LOCALSTACK.getRegion()))
+        s3Client = S3Client.builder()
+            .region(Region.of(LOCALSTACK.getRegion()))
             .endpointOverride(LOCALSTACK.getEndpointOverride(LocalStackContainer.Service.S3))
             .credentialsProvider(
                 StaticCredentialsProvider.create(
@@ -62,7 +62,6 @@ public class S3StorageTest extends BaseStorageTest {
                 )
             )
             .build();
-        s3Client = clientBuilder.build();
     }
 
     @BeforeEach
