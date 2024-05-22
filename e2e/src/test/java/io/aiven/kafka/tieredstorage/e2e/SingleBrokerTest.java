@@ -23,6 +23,7 @@ import java.nio.file.Files;
 import java.nio.file.Path;
 import java.time.Duration;
 import java.util.ArrayList;
+import java.util.Collection;
 import java.util.Comparator;
 import java.util.List;
 import java.util.Map;
@@ -79,6 +80,20 @@ import static org.assertj.core.api.Assertions.assertThat;
 import static org.assertj.core.api.Assertions.fail;
 import static org.awaitility.Awaitility.await;
 
+/**
+ * Tiered Storage end-to-end test on a Single Broker:
+ * This test includes the following stages:
+ * <ul>
+ *     <li>{@link SingleBrokerTest#remoteCopy()}: ensure that Kafka TS is moving files to remote storage</li>
+ *     <li>{@link SingleBrokerTest#remoteRead()}: ensure fetch request retrieve data from remote segments</li>
+ *     <li>{@link SingleBrokerTest#remoteManualDelete()}: delete records manually and ensure data is removed
+ *     from remote storage</li>
+ *     <li>{@link SingleBrokerTest#remoteCleanupDueToRetention()}: wait for retention by size to remove data
+ *     from remote storage</li>
+ *     <li>{@link SingleBrokerTest#topicDelete()}: (unsupported) delete topic and validate data is removed
+ *     from remote storage</li>
+ * </ul>
+ */
 @Testcontainers
 @TestMethodOrder(MethodOrderer.OrderAnnotation.class)
 @TestInstance(TestInstance.Lifecycle.PER_CLASS)
@@ -94,21 +109,23 @@ abstract class SingleBrokerTest {
     static final TopicPartition TP_0_0 = new TopicPartition(TOPIC_0, 0);
     static final TopicPartition TP_0_1 = new TopicPartition(TOPIC_0, 1);
     static final TopicPartition TP_1_0 = new TopicPartition(TOPIC_1, 0);
-    static final List<TopicPartition> TOPIC_PARTITIONS = List.of(TP_0_0, TP_0_1, TP_1_0);
+    static final List<TopicPartition> USER_TOPIC_PARTITIONS = List.of(TP_0_0, TP_0_1, TP_1_0);
 
     static final int CHUNK_SIZE = 1024;  // TODO something more reasonable?
+    // segment sizes not aligned to chunk size
     static final int SEGMENT_SIZE_T0 = 256 * CHUNK_SIZE + CHUNK_SIZE / 2;
     static final int SEGMENT_SIZE_T1 = 123 * CHUNK_SIZE + 123;
 
-    static final int VALUE_SIZE_MIN = CHUNK_SIZE / 4 - 3;
-    static final int VALUE_SIZE_MAX = CHUNK_SIZE * 2 + 5;
+    static final Duration TOTAL_RETENTION = Duration.ofHours(1);
+    static final Duration LOCAL_RETENTION = Duration.ofSeconds(5);
+
+    // record value size range to be generated
+    static final int RECORD_VALUE_SIZE_MIN = CHUNK_SIZE / 4 - 3;
+    static final int RECORD_VALUE_SIZE_MAX = CHUNK_SIZE * 2 + 5;
 
     static final long RECORDS_TO_PRODUCE = 10_000;
 
-    static final Duration TOTAL_RETENTION = Duration.ofHours(1);
-    static final Duration LOCAL_RETENTION = Duration.ofSeconds(5);
     static final Network NETWORK = Network.newNetwork();
-
     static final String SOCKS5_NETWORK_ALIAS = "socks5-proxy";
     static final int SOCKS5_PORT = 1080;
     static final String SOCKS5_USER = "user";
@@ -139,8 +156,9 @@ abstract class SingleBrokerTest {
     static TopicIdPartition t0p0;
     static TopicIdPartition t0p1;
     static TopicIdPartition t1p0;
+    static List<TopicIdPartition> userTopicIdPartitions;
 
-    static void setupKafka(final Consumer<KafkaContainer> tsPluginSetup) throws Exception {
+    public static void setupKafka(final Consumer<KafkaContainer> tsPluginSetup) throws Exception {
 
         try {
             baseDir = Files.createTempDirectory("junit");
@@ -168,11 +186,12 @@ abstract class SingleBrokerTest {
             .withEnv("KAFKA_REMOTE_LOG_STORAGE_MANAGER_CLASS_NAME",
                 "io.aiven.kafka.tieredstorage.RemoteStorageManager")
             .withEnv("KAFKA_RSM_CONFIG_CHUNK_SIZE", Integer.toString(CHUNK_SIZE))
+            .withEnv("KAFKA_RSM_CONFIG_CUSTOM_METADATA_FIELDS_INCLUDE", "REMOTE_SIZE")
+            // chunk caching
             .withEnv("KAFKA_RSM_CONFIG_FETCH_CHUNK_CACHE_CLASS",
                 "io.aiven.kafka.tieredstorage.fetch.cache.DiskChunkCache")
             .withEnv("KAFKA_RSM_CONFIG_FETCH_CHUNK_CACHE_SIZE", "-1")
             .withEnv("KAFKA_RSM_CONFIG_FETCH_CHUNK_CACHE_PATH", "/home/appuser/kafka-tiered-storage-cache")
-            .withEnv("KAFKA_RSM_CONFIG_CUSTOM_METADATA_FIELDS_INCLUDE", "REMOTE_SIZE")
             // other tweaks
             .withEnv("KAFKA_OPTS", "") // disable JMX exporter
             .withEnv("KAFKA_LOG4J_LOGGERS", "io.aiven.kafka.tieredstorage=DEBUG,"
@@ -197,7 +216,7 @@ abstract class SingleBrokerTest {
         createTopics();
     }
 
-    static void stopKafka() {
+    public static void stopKafka() {
         if (adminClient != null) {
             adminClient.close();
         }
@@ -205,7 +224,7 @@ abstract class SingleBrokerTest {
         kafka.stop();
     }
 
-    static void cleanupStorage() {
+    public static void cleanupStorage() {
         if (baseDir != null) {
             // TODO: failing silently atm. As Delete Topics test is disabled, and topic directories are not removed
             //   they cannot be deleted as they have different user/group. see #366
@@ -213,7 +232,7 @@ abstract class SingleBrokerTest {
         }
     }
 
-    static void createTopics() throws Exception {
+    private static void createTopics() throws Exception {
         final NewTopic newTopic0 = new NewTopic(TOPIC_0, 2, (short) 1)
             .configs(Map.of(
                 "remote.storage.enable", "true",
@@ -230,11 +249,14 @@ abstract class SingleBrokerTest {
             ));
         final var topicsToCreate = List.of(newTopic0, newTopic1);
         adminClient.createTopics(topicsToCreate)
-            .all().get(30, TimeUnit.SECONDS);
+            .all()
+            .get(30, TimeUnit.SECONDS);
 
         adminClient.describeTopics(List.of(TOPIC_0, TOPIC_1))
-            .allTopicNames().get(30, TimeUnit.SECONDS)
-            .values().forEach(td -> {
+            .allTopicNames()
+            .get(30, TimeUnit.SECONDS)
+            .values()
+            .forEach(td -> {
                 if (td.name().equals(TOPIC_0)) {
                     t0p0 = new TopicIdPartition(td.topicId(), TP_0_0);
                     t0p1 = new TopicIdPartition(td.topicId(), TP_0_1);
@@ -244,6 +266,7 @@ abstract class SingleBrokerTest {
                     fail("Unknown topic %s", td);
                 }
             });
+        userTopicIdPartitions = List.of(t0p0, t0p1, t1p0);
 
         LOG.info("Topics {} created successfully", topicsToCreate);
     }
@@ -253,9 +276,10 @@ abstract class SingleBrokerTest {
     void remoteCopy() throws Exception {
         fillTopics();
 
-        remoteLogMetadataTracker.initialize(List.of(t0p0, t0p1, t1p0));
+        // Prepare tracker for a minute to wait for all segments to be copied
+        remoteLogMetadataTracker.poll(userTopicIdPartitions, Duration.ofMinutes(1));
 
-        // Check remote segments are present.
+        // Check remote segments are present in storage back-end
         final var allRemoteSegments = remoteLogMetadataTracker.remoteSegments();
 
         for (final Map.Entry<TopicIdPartition, List<RemoteSegment>> entry : allRemoteSegments.entrySet()) {
@@ -271,8 +295,8 @@ abstract class SingleBrokerTest {
             }
         }
 
-        // Check that at least local segments are fully deleted for following test to read from remote tier
-        for (final TopicIdPartition tp : List.of(t0p0, t0p1, t1p0)) {
+        // Ensure local segments available in remote storage are fully deleted for following test to read from remote
+        for (final TopicIdPartition tp : userTopicIdPartitions) {
             await().atMost(Duration.ofSeconds(60))
                 .pollInterval(Duration.ofMillis(100))
                 .until(() -> localLogFiles(tp.topicPartition()).size() == 1);
@@ -284,14 +308,14 @@ abstract class SingleBrokerTest {
         }
     }
 
-    void fillTopics() throws Exception {
+    private void fillTopics() throws Exception {
         try (final var producer = new KafkaProducer<>(Map.of(
             "bootstrap.servers", kafka.getBootstrapServers(),
             "linger.ms", Long.toString(Duration.ofSeconds(1).toMillis()),
             "batch.size", Integer.toString(1_000_000)
         ), new ByteArraySerializer(), new ByteArraySerializer())) {
 
-            for (final TopicPartition topicPartition : TOPIC_PARTITIONS) {
+            for (final TopicPartition topicPartition : USER_TOPIC_PARTITIONS) {
                 long offset = 0;
                 while (offset < RECORDS_TO_PRODUCE) {
                     final int batchSize = batchSize(offset);
@@ -332,19 +356,29 @@ abstract class SingleBrokerTest {
     @Test
     @Order(2)
     void remoteRead() {
-        try (final var consumer = new KafkaConsumer<>(Map.of(
-            "bootstrap.servers", kafka.getBootstrapServers(),
-            "fetch.max.bytes", "1"
-        ), new ByteArrayDeserializer(), new ByteArrayDeserializer())) {
+        validateReadWithinBatch();
+        validateReadOverBatchBorders();
+    }
+
+    private void validateReadWithinBatch() {
+        // Consumer configs to read messages on single batch
+        try (final var consumer = new KafkaConsumer<>(
+            Map.of(
+                "bootstrap.servers", kafka.getBootstrapServers(),
+                "fetch.max.bytes", "1"
+            ),
+            new ByteArrayDeserializer(),
+            new ByteArrayDeserializer()
+        )) {
 
             // Check the beginning and end offsets.
-            final Map<TopicPartition, Long> startOffsets = consumer.beginningOffsets(TOPIC_PARTITIONS);
+            final Map<TopicPartition, Long> startOffsets = consumer.beginningOffsets(USER_TOPIC_PARTITIONS);
             assertThat(startOffsets).containsAllEntriesOf(
                 Map.of(
                     TP_0_0, 0L,
                     TP_0_1, 0L,
                     TP_1_0, 0L));
-            final Map<TopicPartition, Long> endOffsets = consumer.endOffsets(TOPIC_PARTITIONS);
+            final Map<TopicPartition, Long> endOffsets = consumer.endOffsets(USER_TOPIC_PARTITIONS);
             assertThat(endOffsets).containsAllEntriesOf(
                 Map.of(
                     TP_0_0, RECORDS_TO_PRODUCE + 1,
@@ -358,7 +392,7 @@ abstract class SingleBrokerTest {
             // Read by record.
             LOG.info("Starting validation per record");
 
-            for (final TopicPartition tp : TOPIC_PARTITIONS) {
+            for (final TopicPartition tp : USER_TOPIC_PARTITIONS) {
                 consumer.assign(List.of(tp));
                 LOG.info("Checking records from partition {}", tp);
                 for (long offset = 0; offset < RECORDS_TO_PRODUCE; offset++) {
@@ -378,7 +412,7 @@ abstract class SingleBrokerTest {
             // Read by batches.
             LOG.info("Starting validation per batch");
 
-            for (final TopicPartition tp : TOPIC_PARTITIONS) {
+            for (final TopicPartition tp : USER_TOPIC_PARTITIONS) {
                 consumer.assign(List.of(tp));
                 long offset = 0;
                 while (offset < RECORDS_TO_PRODUCE) {
@@ -395,7 +429,9 @@ abstract class SingleBrokerTest {
 
             LOG.info("Validation per batch completed");
         }
+    }
 
+    private void validateReadOverBatchBorders() {
         // Read over batch borders.
         LOG.info("Starting validation over batch borders");
 
@@ -406,11 +442,16 @@ abstract class SingleBrokerTest {
             final int batchSize = batchSize(offset);
             offset += batchSize;
         }
-        try (final var consumer = new KafkaConsumer<>(Map.of(
-            "bootstrap.servers", kafka.getBootstrapServers(),
-            "fetch.max.bytes", Integer.toString(VALUE_SIZE_MAX * 50)
-        ), new ByteArrayDeserializer(), new ByteArrayDeserializer())) {
-            for (final TopicPartition tp : TOPIC_PARTITIONS) {
+
+        try (final var consumer = new KafkaConsumer<>(
+            Map.of(
+                "bootstrap.servers", kafka.getBootstrapServers(),
+                "fetch.max.bytes", Integer.toString(RECORD_VALUE_SIZE_MAX * 50)
+            ),
+            new ByteArrayDeserializer(),
+            new ByteArrayDeserializer()
+        )) {
+            for (final TopicPartition tp : USER_TOPIC_PARTITIONS) {
                 consumer.assign(List.of(tp));
                 for (final long batchBorder : batchBorders) {
                     final var offset = batchBorder - 1;
@@ -444,37 +485,47 @@ abstract class SingleBrokerTest {
     @Test
     @Order(3)
     void remoteManualDelete() throws Exception {
+        // Reduce records in half by manual deletion affecting only topic t1
         final long newStartOffset = RECORDS_TO_PRODUCE / 2;
 
-        final List<RemoteSegment> remoteSegmentsBefore = remoteLogMetadataTracker.remoteSegments()
-            .get(t0p0);
-        final List<RemoteSegment> segmentsToBeDeleted = remoteSegmentsBefore.stream()
+        // Collect segments to be deleted for T1
+        final List<RemoteSegment> segmentsToBeDeleted = remoteLogMetadataTracker.remoteSegments()
+            .get(t1p0)
+            .stream()
             .filter(rs -> rs.endOffset() < newStartOffset)
             .collect(Collectors.toList());
 
-        adminClient.deleteRecords(Map.of(TP_0_0, RecordsToDelete.beforeOffset(newStartOffset)))
+        final TopicPartition t1p0 = TP_1_0;
+
+        adminClient.deleteRecords(Map.of(t1p0, RecordsToDelete.beforeOffset(newStartOffset)))
             .all().get(5, TimeUnit.SECONDS);
 
         remoteLogMetadataTracker.waitUntilSegmentsAreDeleted(segmentsToBeDeleted);
 
-        try (final var consumer = new KafkaConsumer<>(Map.of(
-            "bootstrap.servers", kafka.getBootstrapServers(),
-            "auto.offset.reset", "earliest"
-        ), new ByteArrayDeserializer(), new ByteArrayDeserializer())) {
+        // Check reduced records available in partition
+        try (final var consumer = new KafkaConsumer<>(
+            Map.of(
+                "bootstrap.servers", kafka.getBootstrapServers()
+            ),
+            new ByteArrayDeserializer(),
+            new ByteArrayDeserializer()
+        )) {
 
             // Check the beginning and end offsets.
-            final Map<TopicPartition, Long> startOffsets = consumer.beginningOffsets(List.of(TP_0_0));
-            assertThat(startOffsets).containsEntry(TP_0_0, newStartOffset);
-            final Map<TopicPartition, Long> endOffsets = consumer.endOffsets(List.of(TP_0_0));
-            assertThat(endOffsets).containsEntry(TP_0_0, RECORDS_TO_PRODUCE + 1);
+            final Map<TopicPartition, Long> startOffsets = consumer.beginningOffsets(List.of(t1p0));
+            assertThat(startOffsets).containsEntry(t1p0, newStartOffset);
+            final Map<TopicPartition, Long> endOffsets = consumer.endOffsets(List.of(t1p0));
+            assertThat(endOffsets).containsEntry(t1p0, RECORDS_TO_PRODUCE + 1);
             // TODO check for EARLIEST_LOCAL_TIMESTAMP when available in client
 
             // TODO check segments deleted on the remote
 
             // Check what we can now consume.
-            consumer.assign(List.of(TP_0_0));
-            consumer.seek(TP_0_0, 0);
-            final ConsumerRecord<byte[], byte[]> record = consumer.poll(Duration.ofSeconds(1)).records(TP_0_0).get(0);
+            consumer.assign(List.of(t1p0));
+            consumer.seekToBeginning(List.of(t1p0));
+            final List<ConsumerRecord<byte[], byte[]>> records = consumer.poll(Duration.ofSeconds(5)).records(t1p0);
+            assertThat(records).isNotEmpty();
+            final ConsumerRecord<byte[], byte[]> record = records.get(0);
             assertThat(record.offset()).isEqualTo(newStartOffset);
         }
     }
@@ -482,30 +533,35 @@ abstract class SingleBrokerTest {
     @Test
     @Order(4)
     void remoteCleanupDueToRetention() throws Exception {
-        // Collect all remote segments, as after changing retention, all should be deleted.
-        final var remoteSegmentsBefore = remoteLogMetadataTracker.remoteSegments();
-        final var segmentsToBeDeleted = Stream.concat(
-            remoteSegmentsBefore.get(t0p0).stream(),
-            remoteSegmentsBefore.get(t0p1).stream()
-        ).collect(Collectors.toList());
+        LOG.info("Forcing cleanup by setting bytes retention to 1 ms");
 
-        LOG.info("Forcing cleanup by setting bytes retention to 1");
-
-        final var alterConfigs = List.of(new AlterConfigOp(
-            new ConfigEntry("retention.bytes", "1"), AlterConfigOp.OpType.SET));
-        adminClient.incrementalAlterConfigs(Map.of(
-            new ConfigResource(ConfigResource.Type.TOPIC, TOPIC_0), alterConfigs
-        )).all().get(5, TimeUnit.SECONDS);
+        final var alterConfigs = List.of(
+            new AlterConfigOp(
+                new ConfigEntry("retention.ms", "1"),
+                AlterConfigOp.OpType.SET),
+            new AlterConfigOp(
+                new ConfigEntry("local.retention.ms", "1"),
+                AlterConfigOp.OpType.SET)
+        );
+        final Map<ConfigResource, Collection<AlterConfigOp>> configs = Map.of(
+            new ConfigResource(ConfigResource.Type.TOPIC, TOPIC_0),
+            alterConfigs
+        );
+        adminClient.incrementalAlterConfigs(configs)
+            .all()
+            .get(5, TimeUnit.SECONDS);
 
         LOG.info("Starting cleanup validation");
 
-        try (final var consumer = new KafkaConsumer<>(Map.of(
-            "bootstrap.servers", kafka.getBootstrapServers(),
-            "auto.offset.reset", "earliest"
-        ), new ByteArrayDeserializer(), new ByteArrayDeserializer())) {
-
+        try (
+            // start a consumer to read from earliest
+            final var consumer = new KafkaConsumer<>(
+                Map.of("bootstrap.servers", kafka.getBootstrapServers()),
+                new ByteArrayDeserializer(),
+                new ByteArrayDeserializer())
+        ) {
             // Get earliest offset available locally
-            final long newStartOffset = localLogFiles(TP_0_0).stream()
+            final long nextOffset = localLogFiles(TP_0_0).stream()
                 .mapToLong(f -> Long.parseLong(f.getName().replace(".log", "")))
                 .max()
                 .getAsLong();
@@ -515,8 +571,8 @@ abstract class SingleBrokerTest {
                 .atMost(Duration.ofSeconds(30))
                 .until(() -> {
                     final var beginningOffset = consumer.beginningOffsets(List.of(TP_0_0)).get(TP_0_0);
-                    LOG.info("Beginning offset found {}, expecting {}", beginningOffset, newStartOffset);
-                    return beginningOffset.equals(newStartOffset);
+                    LOG.info("Beginning offset found {}, expecting {}", beginningOffset, nextOffset);
+                    return beginningOffset.equals(nextOffset);
                 });
 
             final Map<TopicPartition, Long> endOffsets = consumer.endOffsets(List.of(TP_0_0));
@@ -525,11 +581,18 @@ abstract class SingleBrokerTest {
             // TODO check for EARLIEST_LOCAL_TIMESTAMP when available in client
 
             consumer.assign(List.of(TP_0_0));
-            consumer.seek(TP_0_0, 0);
+            consumer.seekToBeginning(List.of(TP_0_0));
 
-            final ConsumerRecord<byte[], byte[]> record = consumer.poll(Duration.ofSeconds(1)).records(TP_0_0).get(0);
-            assertThat(record.offset()).isEqualTo(newStartOffset);
+            // with current retention logic, active segment is rotated, and no data is available locally.
+            final List<ConsumerRecord<byte[], byte[]>> records = consumer.poll(Duration.ofSeconds(1)).records(TP_0_0);
+            assertThat(records).isEmpty();
 
+            // Collect all remote segments, as after changing retention, all should be deleted.
+            final var remoteSegmentsBefore = remoteLogMetadataTracker.remoteSegments();
+            final var segmentsToBeDeleted = Stream.concat(
+                remoteSegmentsBefore.get(t0p0).stream(),
+                remoteSegmentsBefore.get(t0p1).stream()
+            ).collect(Collectors.toList());
             remoteLogMetadataTracker.waitUntilSegmentsAreDeleted(segmentsToBeDeleted);
             await()
                 .between(Duration.ofSeconds(1), Duration.ofSeconds(30))
@@ -589,7 +652,7 @@ abstract class SingleBrokerTest {
         key.put(keyPattern, 0, key.remaining());
         assertThat(key.hasRemaining()).isFalse();
 
-        final int valueSize = VALUE_SIZE_MIN + (VALUE_SIZE_MAX - VALUE_SIZE_MIN) / 10 * seed;
+        final int valueSize = RECORD_VALUE_SIZE_MIN + (RECORD_VALUE_SIZE_MAX - RECORD_VALUE_SIZE_MIN) / 10 * seed;
         final var value = ByteBuffer.allocate(valueSize);
 
         return new ProducerRecord<>(topic, partition, key.array(), value.array());
