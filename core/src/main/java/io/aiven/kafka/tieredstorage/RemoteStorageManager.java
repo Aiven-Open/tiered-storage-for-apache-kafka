@@ -39,7 +39,6 @@ import java.util.concurrent.ForkJoinPool;
 import java.util.concurrent.TimeUnit;
 import java.util.stream.Collectors;
 
-import io.aiven.kafka.tieredstorage.storage.RLMQuotaManager;
 import org.apache.kafka.common.metrics.MetricConfig;
 import org.apache.kafka.common.metrics.Sensor;
 import org.apache.kafka.common.utils.ByteBufferInputStream;
@@ -77,6 +76,7 @@ import io.aiven.kafka.tieredstorage.security.DataKeyAndAAD;
 import io.aiven.kafka.tieredstorage.security.RsaEncryptionProvider;
 import io.aiven.kafka.tieredstorage.security.RsaKeyReader;
 import io.aiven.kafka.tieredstorage.storage.BytesRange;
+import io.aiven.kafka.tieredstorage.storage.InterimQuotaManager;
 import io.aiven.kafka.tieredstorage.storage.KeyNotFoundException;
 import io.aiven.kafka.tieredstorage.storage.ObjectDeleter;
 import io.aiven.kafka.tieredstorage.storage.ObjectFetcher;
@@ -142,9 +142,9 @@ public class RemoteStorageManager implements org.apache.kafka.server.log.remote.
     @Override
     public void configure(final Map<String, ?> configs) {
         if (configs.containsKey("remote.log.manager.copy.max.bytes.per.second")) {
-            Long limit = (Long)configs.get("remote.log.manager.copy.max.bytes.per.second");
+            final Long limit = (Long) configs.get("remote.log.manager.copy.max.bytes.per.second");
             log.info("remote.log.manager.copy.max.bytes.per.second: {}", limit);
-            RLMQuotaManager.createBucket(limit);
+            InterimQuotaManager.createBucket(limit);
         }
         Objects.requireNonNull(configs, "configs must not be null");
         final RemoteStorageManagerConfig config = new RemoteStorageManagerConfig(configs);

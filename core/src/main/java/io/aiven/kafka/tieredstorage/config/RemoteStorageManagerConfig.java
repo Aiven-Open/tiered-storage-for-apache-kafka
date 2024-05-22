@@ -54,8 +54,6 @@ public class RemoteStorageManagerConfig extends AbstractConfig {
 
     private static final String SEGMENT_MANIFEST_CACHE_PREFIX = "segment.manifest.cache.";
 
-    private static final String REMOTE_LOG_MANAGER_COPY_MAX_BYTES_PER_SECOND = "remote.log.manager.copy.max.bytes.per.second";
-
     private static final String SEGMENT_MANIFEST_CACHE_SIZE_CONFIG = SEGMENT_MANIFEST_CACHE_PREFIX + "size";
     private static final Long SEGMENT_MANIFEST_CACHE_SIZE_DEFAULT = 1000L;  // TODO consider a better default
     private static final String SEGMENT_MANIFEST_CACHE_SIZE_DOC =

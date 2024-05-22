@@ -18,7 +18,6 @@ package io.aiven.kafka.tieredstorage.storage.s3;
 
 import java.io.IOException;
 import java.io.InputStream;
-import java.time.Duration;
 import java.util.Map;
 import java.util.Set;
 import java.util.stream.Collectors;
@@ -29,6 +28,7 @@ import io.aiven.kafka.tieredstorage.storage.KeyNotFoundException;
 import io.aiven.kafka.tieredstorage.storage.ObjectKey;
 import io.aiven.kafka.tieredstorage.storage.StorageBackend;
 import io.aiven.kafka.tieredstorage.storage.StorageBackendException;
+
 import software.amazon.awssdk.awscore.exception.AwsServiceException;
 import software.amazon.awssdk.core.exception.SdkClientException;
 import software.amazon.awssdk.services.s3.S3Client;
@@ -51,7 +51,7 @@ public class S3Storage implements StorageBackend {
         final S3StorageConfig config = new S3StorageConfig(configs);
         this.s3Client = S3ClientBuilder.build(config);
         this.bucketName = config.bucketName();
-	    this.partSize = config.uploadPartSize();
+        this.partSize = config.uploadPartSize();
     }
 
     @Override

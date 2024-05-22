@@ -24,9 +24,9 @@ import java.nio.ByteBuffer;
 import java.util.ArrayList;
 import java.util.List;
 
+import io.aiven.kafka.tieredstorage.storage.InterimQuotaManager;
 import io.aiven.kafka.tieredstorage.storage.ObjectKey;
 
-import io.aiven.kafka.tieredstorage.storage.RLMQuotaManager;
 import io.github.bucket4j.Bucket;
 import io.github.bucket4j.ConsumptionProbe;
 import org.slf4j.Logger;
@@ -66,7 +66,7 @@ public class S3MultiPartOutputStream extends OutputStream {
     private boolean closed;
     private long processedBytes;
 
-    private final Bucket limitBucket = RLMQuotaManager.getBucket();
+    private final Bucket limitBucket = InterimQuotaManager.getBucket();
 
     public S3MultiPartOutputStream(final String bucketName,
                                    final ObjectKey key,
