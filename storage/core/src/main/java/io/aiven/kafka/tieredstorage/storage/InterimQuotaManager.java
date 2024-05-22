@@ -44,7 +44,7 @@ public class InterimQuotaManager {
         if (limitBucket == null) {
             synchronized (InterimQuotaManager.class) {
                 if (limitBucket == null) {
-                    final Bandwidth bandwidth = Bandwidth.simple(Long.MAX_VALUE, Duration.ofSeconds(1));
+                    final Bandwidth bandwidth = Bandwidth.simple(1_000_000_000, Duration.ofSeconds(1));
                     limitBucket = Bucket4j.builder().addLimit(bandwidth).build();
                 }
             }

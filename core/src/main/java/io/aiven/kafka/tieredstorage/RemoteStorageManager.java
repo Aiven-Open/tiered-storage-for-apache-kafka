@@ -141,10 +141,12 @@ public class RemoteStorageManager implements org.apache.kafka.server.log.remote.
 
     @Override
     public void configure(final Map<String, ?> configs) {
-        if (configs.containsKey("remote.log.manager.copy.max.bytes.per.second")) {
-            final Long limit = (Long) configs.get("remote.log.manager.copy.max.bytes.per.second");
-            log.info("remote.log.manager.copy.max.bytes.per.second: {}", limit);
-            InterimQuotaManager.createBucket(limit);
+        if (configs.containsKey("copy.max.bytes.per.second")) {
+            final String limit = (String) configs.get("copy.max.bytes.per.second");
+            if (!limit.isBlank()) {
+                log.info("remote.log.manager.copy.max.bytes.per.second: {}", limit);
+                InterimQuotaManager.createBucket(Long.parseLong(limit));
+            }
         }
         Objects.requireNonNull(configs, "configs must not be null");
         final RemoteStorageManagerConfig config = new RemoteStorageManagerConfig(configs);
