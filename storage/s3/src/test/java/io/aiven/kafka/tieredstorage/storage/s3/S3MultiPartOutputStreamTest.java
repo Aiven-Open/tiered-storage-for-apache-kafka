@@ -16,8 +16,10 @@
 
 package io.aiven.kafka.tieredstorage.storage.s3;
 
+import java.io.ByteArrayInputStream;
 import java.io.IOException;
 import java.io.InputStream;
+import java.io.SequenceInputStream;
 import java.util.ArrayList;
 import java.util.List;
 import java.util.Random;
@@ -284,6 +286,122 @@ class S3MultiPartOutputStreamTest {
 
         assertUploadPartRequest(uploadPartRequests.get(0), requestBodies.get(0), 30, 1, expectedFullMessage);
         assertUploadPartRequest(uploadPartRequests.get(1), requestBodies.get(1), 10, 2, expectedTailMessage);
+
+        verify(mockedS3).createMultipartUpload(any(CreateMultipartUploadRequest.class));
+        verify(mockedS3, times(2)).uploadPart(any(UploadPartRequest.class), any(RequestBody.class));
+        verify(mockedS3, times(1)).completeMultipartUpload(completeMultipartUploadRequestCaptor.capture());
+        assertCompleteMultipartUploadRequest(
+            completeMultipartUploadRequestCaptor.getValue(),
+            List.of(
+                CompletedPart.builder().partNumber(1).eTag("SOME_ETAG#1").build(),
+                CompletedPart.builder().partNumber(2).eTag("SOME_ETAG#2").build()
+            )
+        );
+    }
+
+    @Test
+    void writesTailMessagesFromInputStreamBufferSmallerThanSize() throws Exception {
+        final int messageSize = 10;
+
+        final List<UploadPartRequest> uploadPartRequests = new ArrayList<>();
+        final List<RequestBody> requestBodies = new ArrayList<>();
+
+        when(mockedS3.uploadPart(any(UploadPartRequest.class), any(RequestBody.class)))
+            .thenAnswer(invocation -> {
+                final UploadPartRequest upload = invocation.getArgument(0);
+                final RequestBody originalBody = invocation.getArgument(1);
+                //emulate the behavior of S3 client otherwise we will get a wrong array in the memory
+                try (final InputStream inputStream = originalBody.contentStreamProvider().newStream()) {
+                    final RequestBody requestBody = RequestBody.fromBytes(inputStream.readAllBytes());
+                    requestBodies.add(requestBody);
+                }
+                uploadPartRequests.add(upload);
+
+                return newUploadPartResponse("SOME_ETAG#" + upload.partNumber());
+            });
+        when(mockedS3.completeMultipartUpload(any(CompleteMultipartUploadRequest.class)))
+            .thenReturn(CompleteMultipartUploadResponse.builder().build());
+        final byte[] expectedFullMessage0 = new byte[8];
+        final byte[] expectedFullMessage1 = new byte[8];
+        final byte[] expectedTailMessage = new byte[4];
+
+        final byte[] message0 = new byte[messageSize];
+        random.nextBytes(message0);
+        System.arraycopy(message0, 0, expectedFullMessage0, 0, 8);
+        System.arraycopy(message0, 8, expectedFullMessage1, 0, 2);
+        final byte[] message1 = new byte[messageSize];
+        random.nextBytes(message1);
+        System.arraycopy(message1, 0, expectedFullMessage1, 2, 6);
+        System.arraycopy(message1, 6, expectedTailMessage, 0, 4);
+        final var in = new SequenceInputStream(new ByteArrayInputStream(message0), new ByteArrayInputStream(message1));
+        final var out = new S3MultiPartOutputStream(BUCKET_NAME, FILE_KEY, 8, mockedS3);
+        try (in; out) {
+            in.transferTo(out);
+        }
+
+        assertThat(out.isClosed()).isTrue();
+        assertThatCode(out::close).doesNotThrowAnyException();
+
+        assertUploadPartRequest(uploadPartRequests.get(0), requestBodies.get(0), 8, 1, expectedFullMessage0);
+        assertUploadPartRequest(uploadPartRequests.get(1), requestBodies.get(1), 8, 2, expectedFullMessage1);
+        assertUploadPartRequest(uploadPartRequests.get(2), requestBodies.get(2), 4, 3, expectedTailMessage);
+
+        verify(mockedS3).createMultipartUpload(any(CreateMultipartUploadRequest.class));
+        verify(mockedS3, times(3)).uploadPart(any(UploadPartRequest.class), any(RequestBody.class));
+        verify(mockedS3, times(1)).completeMultipartUpload(completeMultipartUploadRequestCaptor.capture());
+        assertCompleteMultipartUploadRequest(
+            completeMultipartUploadRequestCaptor.getValue(),
+            List.of(
+                CompletedPart.builder().partNumber(1).eTag("SOME_ETAG#1").build(),
+                CompletedPart.builder().partNumber(2).eTag("SOME_ETAG#2").build(),
+                CompletedPart.builder().partNumber(3).eTag("SOME_ETAG#3").build()
+            )
+        );
+    }
+
+    @Test
+    void writesTailMessagesFromInputStreamSizeSmallerThanBuffer() throws Exception {
+        final int messageSize = 10;
+
+        final List<UploadPartRequest> uploadPartRequests = new ArrayList<>();
+        final List<RequestBody> requestBodies = new ArrayList<>();
+
+        when(mockedS3.uploadPart(any(UploadPartRequest.class), any(RequestBody.class)))
+            .thenAnswer(invocation -> {
+                final UploadPartRequest upload = invocation.getArgument(0);
+                final RequestBody originalBody = invocation.getArgument(1);
+                //emulate the behavior of S3 client otherwise we will get a wrong array in the memory
+                try (final InputStream inputStream = originalBody.contentStreamProvider().newStream()) {
+                    final RequestBody requestBody = RequestBody.fromBytes(inputStream.readAllBytes());
+                    requestBodies.add(requestBody);
+                }
+                uploadPartRequests.add(upload);
+
+                return newUploadPartResponse("SOME_ETAG#" + upload.partNumber());
+            });
+        when(mockedS3.completeMultipartUpload(any(CompleteMultipartUploadRequest.class)))
+            .thenReturn(CompleteMultipartUploadResponse.builder().build());
+        final byte[] expectedFullMessage0 = new byte[12];
+        final byte[] expectedTailMessage = new byte[8];
+
+        final byte[] message0 = new byte[messageSize];
+        random.nextBytes(message0);
+        System.arraycopy(message0, 0, expectedFullMessage0, 0, 10);
+        final byte[] message1 = new byte[messageSize];
+        random.nextBytes(message1);
+        System.arraycopy(message1, 0, expectedFullMessage0, 10, 2);
+        System.arraycopy(message1, 2, expectedTailMessage, 0, 8);
+        final var in = new SequenceInputStream(new ByteArrayInputStream(message0), new ByteArrayInputStream(message1));
+        final var out = new S3MultiPartOutputStream(BUCKET_NAME, FILE_KEY, 12, mockedS3);
+        try (in; out) {
+            in.transferTo(out);
+        }
+
+        assertThat(out.isClosed()).isTrue();
+        assertThatCode(out::close).doesNotThrowAnyException();
+
+        assertUploadPartRequest(uploadPartRequests.get(0), requestBodies.get(0), 12, 1, expectedFullMessage0);
+        assertUploadPartRequest(uploadPartRequests.get(1), requestBodies.get(1), 8, 2, expectedTailMessage);
 
         verify(mockedS3).createMultipartUpload(any(CreateMultipartUploadRequest.class));
         verify(mockedS3, times(2)).uploadPart(any(UploadPartRequest.class), any(RequestBody.class));

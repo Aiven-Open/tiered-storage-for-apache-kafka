@@ -54,12 +54,13 @@ public class S3Storage implements StorageBackend {
 
     @Override
     public long upload(final InputStream inputStream, final ObjectKey key) throws StorageBackendException {
-        try (final var out = s3OutputStream(key)) {
+        final var out = s3OutputStream(key);
+        try (out) {
             inputStream.transferTo(out);
-            return out.processedBytes();
         } catch (final IOException e) {
             throw new StorageBackendException("Failed to upload " + key, e);
         }
+        return out.processedBytes();
     }
 
     S3MultiPartOutputStream s3OutputStream(final ObjectKey key) {
