@@ -42,7 +42,7 @@ class TransformFinisherTest {
 
     @Test
     void getIndexBeforeUsing() {
-        final TransformFinisher finisher = new TransformFinisher(new FakeDataEnumerator(3), 7);
+        final TransformFinisher finisher = new TransformFinisher(new FakeDataEnumerator(3), 7, null);
         assertThatThrownBy(() -> finisher.chunkIndex())
             .isInstanceOf(IllegalStateException.class)
             .hasMessage("Chunk index was not built, was finisher used?");
@@ -50,14 +50,14 @@ class TransformFinisherTest {
 
     @Test
     void nullInnerEnumeration() {
-        assertThatThrownBy(() -> new TransformFinisher(null, 100))
+        assertThatThrownBy(() -> new TransformFinisher(null, 100, null))
             .isInstanceOf(NullPointerException.class)
             .hasMessage("inner cannot be null");
     }
 
     @Test
     void negativeOriginalFileSize() {
-        assertThatThrownBy(() -> new TransformFinisher(inner, -1))
+        assertThatThrownBy(() -> new TransformFinisher(inner, -1, null))
             .isInstanceOf(IllegalArgumentException.class)
             .hasMessage("originalFileSize must be non-negative, -1 given");
     }
@@ -66,7 +66,7 @@ class TransformFinisherTest {
     @MethodSource("provideForBuildIndexAndReturnCorrectInputStreams")
     void buildIndexAndReturnCorrectInputStreams(final Integer transformedChunkSize,
                                                 final Class<ChunkIndex> indexType) throws IOException {
-        final TransformFinisher finisher = new TransformFinisher(new FakeDataEnumerator(transformedChunkSize), 7);
+        final TransformFinisher finisher = new TransformFinisher(new FakeDataEnumerator(transformedChunkSize), 7, null);
         assertThat(finisher.hasMoreElements()).isTrue();
         assertThat(finisher.nextElement().readAllBytes()).isEqualTo(new byte[] {0, 1, 2});
         assertThat(finisher.hasMoreElements()).isTrue();
