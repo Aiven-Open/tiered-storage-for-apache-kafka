@@ -118,10 +118,15 @@ class MetricCollector implements MetricPublisher {
                     latency.record(durations.get(0).toMillis());
                 }
             } else {
-                log.warn("Latencies included on metric collection is larger than 1: " + metricValues);
+                log.warn(
+                    "Latencies included on metric collection is larger than 1: "
+                        + "metric values: {} and durations: {}",
+                    metricValues, durations);
             }
         } else {
-            log.warn("Operations included on metric collection is larger than 1: " + metricValues);
+            log.warn("Operations included on metric collection is larger than 1: "
+                + "metric values: {}",
+                metricValues);
         }
 
         final List<String> errorValues = metricCollection.childrenWithName("ApiCallAttempt")

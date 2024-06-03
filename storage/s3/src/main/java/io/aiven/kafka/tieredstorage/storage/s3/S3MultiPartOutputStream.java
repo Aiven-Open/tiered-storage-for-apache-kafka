@@ -16,13 +16,14 @@
 
 package io.aiven.kafka.tieredstorage.storage.s3;
 
-import java.io.ByteArrayInputStream;
 import java.io.IOException;
 import java.io.InputStream;
 import java.io.OutputStream;
 import java.nio.ByteBuffer;
 import java.util.ArrayList;
 import java.util.List;
+
+import org.apache.kafka.common.utils.ByteBufferInputStream;
 
 import io.aiven.kafka.tieredstorage.storage.ObjectKey;
 
@@ -93,16 +94,23 @@ public class S3MultiPartOutputStream extends OutputStream {
             return;
         }
         try {
-            final ByteBuffer source = ByteBuffer.wrap(b, off, len);
-            while (source.hasRemaining()) {
-                final int transferred = Math.min(partBuffer.remaining(), source.remaining());
-                final int offset = source.arrayOffset() + source.position();
-                // TODO: get rid of this array copying
-                partBuffer.put(source.array(), offset, transferred);
-                processedBytes += transferred;
-                source.position(source.position() + transferred);
+            final ByteBuffer inputBuffer = ByteBuffer.wrap(b, off, len);
+            while (inputBuffer.hasRemaining()) {
+                // copy batch to part buffer
+                final int inputLimit = inputBuffer.limit();
+                final int toCopy = Math.min(partBuffer.remaining(), inputBuffer.remaining());
+                final int positionAfterCopying = inputBuffer.position() + toCopy;
+                inputBuffer.limit(positionAfterCopying);
+                partBuffer.put(inputBuffer.slice());
+
+                // prepare current batch for next part
+                inputBuffer.limit(inputLimit);
+                inputBuffer.position(positionAfterCopying);
+
                 if (!partBuffer.hasRemaining()) {
-                    flushBuffer(0, partSize);
+                    partBuffer.position(0);
+                    partBuffer.limit(partSize);
+                    flushBuffer(partBuffer.slice(), partSize);
                 }
             }
         } catch (final RuntimeException e) {
@@ -115,9 +123,12 @@ public class S3MultiPartOutputStream extends OutputStream {
     @Override
     public void close() throws IOException {
         if (!isClosed()) {
-            if (partBuffer.position() > 0) {
+            final int lastPosition = partBuffer.position();
+            if (lastPosition > 0) {
                 try {
-                    flushBuffer(partBuffer.arrayOffset(), partBuffer.position());
+                    partBuffer.position(0);
+                    partBuffer.limit(lastPosition);
+                    flushBuffer(partBuffer.slice(), lastPosition);
                 } catch (final RuntimeException e) {
                     log.error("Failed to upload last part {}, aborting transaction", uploadId, e);
                     abortUpload();
@@ -167,11 +178,14 @@ public class S3MultiPartOutputStream extends OutputStream {
         closed = true;
     }
 
-    private void flushBuffer(final int offset,
+    private void flushBuffer(final ByteBuffer buffer,
                              final int actualPartSize) {
-        final ByteArrayInputStream in = new ByteArrayInputStream(partBuffer.array(), offset, actualPartSize);
-        uploadPart(in, actualPartSize);
-        partBuffer.clear();
+        try (final InputStream in = new ByteBufferInputStream(buffer)) {
+            processedBytes += actualPartSize;
+            uploadPart(in, actualPartSize);
+        } catch (final IOException e) {
+            throw new RuntimeException(e);
+        }
     }
 
     private void uploadPart(final InputStream in, final int actualPartSize) {
