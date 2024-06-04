@@ -44,12 +44,15 @@ public class S3Storage implements StorageBackend {
     private String bucketName;
     private int partSize;
 
+    private boolean multiartDirectBuffers;
+
     @Override
     public void configure(final Map<String, ?> configs) {
         final S3StorageConfig config = new S3StorageConfig(configs);
         this.s3Client = S3ClientBuilder.build(config);
         this.bucketName = config.bucketName();
         this.partSize = config.uploadPartSize();
+        this.multiartDirectBuffers = config.multipartDirectBuffers();
     }
 
     @Override
@@ -64,7 +67,7 @@ public class S3Storage implements StorageBackend {
     }
 
     S3MultiPartOutputStream s3OutputStream(final ObjectKey key) {
-        return new S3MultiPartOutputStream(bucketName, key, partSize, s3Client);
+        return new S3MultiPartOutputStream(bucketName, key, partSize, s3Client, multiartDirectBuffers);
     }
 
     @Override
