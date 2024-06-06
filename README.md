@@ -60,6 +60,8 @@ rsm.config.fetch.chunk.cache.path=/cache/root/directory
 rsm.config.fetch.chunk.cache.size=17179869184
 # Prefetching size, 16 MiB here:
 rsm.config.fetch.chunk.cache.prefetch.max.size=16777216
+# Cache retention time ms, where -1 represents infinite retention
+rsm.config.fetch.chunk.cache.retention.ms=600000
 ```
 
 You may want to tweak `remote.log.manager.task.interval.ms` and `log.retention.check.interval.ms` to see the tiered storage effects faster. However, you probably don't need to change this in production setups.
