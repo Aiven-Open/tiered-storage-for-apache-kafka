@@ -28,7 +28,7 @@ remote.log.storage.system.enable=true
 # This is the default, but adding it for explicitness:
 remote.log.metadata.manager.class.name=org.apache.kafka.server.log.remote.metadata.storage.TopicBasedRemoteLogMetadataManager
 
-# Put the real listener name you'd like to you here:
+# Put the real listener name you'd like to use here:
 remote.log.metadata.manager.listener.name=PLAINTEXT
 
 # You may need to set this if you're experimenting with a single broker setup:
@@ -132,7 +132,7 @@ It's important to keep the size of these indices small. One technique is to keep
 
 ##### Index encoding
 
-Binary encoding could reduce the index size further. Values are encoded as a difference from a common base and the encoding uses the minimum number of bytes per value. See the [javadoc](java/io/aiven/kafka/tiered/storage/commons/chunkindex/serde/ChunkSizesBinaryCodec.java) for `ChunkSizesBinaryCodec` for details. We could expect 1-2 bytes per value on average.
+Binary encoding could reduce the index size further. Values are encoded as a difference from a common base and the encoding uses the minimum number of bytes per value. See the [javadoc](core/src/main/java/io/aiven/kafka/tieredstorage/manifest/index/serde/ChunkSizesBinaryCodec.java) for `ChunkSizesBinaryCodec` for details. We could expect 1-2 bytes per value on average.
 
 A 2 GB file chunked into 1 MB chunks produce about 2000 index entries, which is 2-4 KB.
 
