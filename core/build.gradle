@@ -41,7 +41,10 @@ dependencies {
 
     implementation "com.github.luben:zstd-jni:$zstdVersion"
 
-    implementation "com.github.ben-manes.caffeine:caffeine:$caffeineVersion"
+    implementation("com.github.ben-manes.caffeine:caffeine:$caffeineVersion") {
+        exclude group: 'org.checkerframework', module: 'checker-qual'
+        exclude group: 'com.google.errorprone', module: 'error_prone_annotations'
+    }
 
     implementation "commons-io:commons-io:$apacheCommonsIOVersion"
     implementation project(':commons')
