@@ -287,7 +287,6 @@ tasks.register('validateDependencies') {
     }
 }
 
-// TODO fix GCP dependency issues
 //tasks.named("check") {
 //    dependsOn(tasks.named("validateDependencies"))
 //}
