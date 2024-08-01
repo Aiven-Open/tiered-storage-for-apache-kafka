@@ -107,7 +107,7 @@ subprojects {
 
         slf4jVersion = "1.7.36"
 
-        kafkaVersion = "3.6.0"
+        kafkaVersion = "3.8.0"
 
         assertJVersion = "3.25.3"
 
