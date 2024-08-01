@@ -78,6 +78,7 @@ class S3ErrorMetricsTest {
             "s3.bucket.name", BUCKET_NAME,
             "s3.region", Region.US_EAST_1.id(),
             "s3.endpoint.url", wmRuntimeInfo.getHttpBaseUrl(),
+            "s3.path.style.access.enabled", "true",
             "aws.credentials.provider.class", AnonymousCredentialsProvider.class.getName()
         );
         storage.configure(configs);
@@ -106,6 +107,7 @@ class S3ErrorMetricsTest {
             "s3.bucket.name", BUCKET_NAME,
             "s3.region", Region.US_EAST_1.id(),
             "s3.endpoint.url", wmRuntimeInfo.getHttpBaseUrl(),
+            "s3.path.style.access.enabled", "true",
             "aws.credentials.provider.class", AnonymousCredentialsProvider.class.getName()
         );
         storage.configure(configs);
@@ -135,6 +137,7 @@ class S3ErrorMetricsTest {
             "s3.bucket.name", BUCKET_NAME,
             "s3.region", Region.US_EAST_1.id(),
             "s3.endpoint.url", wmRuntimeInfo.getHttpBaseUrl(),
+            "s3.path.style.access.enabled", "true",
             "s3.api.call.attempt.timeout", 1,
             "aws.credentials.provider.class", AnonymousCredentialsProvider.class.getName()
         );
@@ -164,6 +167,7 @@ class S3ErrorMetricsTest {
             "s3.bucket.name", BUCKET_NAME,
             "s3.region", Region.US_EAST_1.id(),
             "s3.endpoint.url", wmRuntimeInfo.getHttpBaseUrl(),
+            "s3.path.style.access.enabled", "true",
             "aws.credentials.provider.class", AnonymousCredentialsProvider.class.getName()
         );
         storage.configure(configs);
