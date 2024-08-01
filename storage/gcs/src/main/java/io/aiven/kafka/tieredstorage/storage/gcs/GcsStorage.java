@@ -41,12 +41,16 @@ import com.google.cloud.storage.StorageOptions;
 public class GcsStorage implements StorageBackend {
     private Storage storage;
     private String bucketName;
+    private String secondaryBucketName;
     private Integer resumableUploadChunkSize;
+    private GcsMetrics gcsMetrics;
 
     @Override
     public void configure(final Map<String, ?> configs) {
         final GcsStorageConfig config = new GcsStorageConfig(configs);
         this.bucketName = config.bucketName();
+        this.secondaryBucketName = config.secondaryBucketName();
+        this.gcsMetrics = new GcsMetrics();
 
         final HttpTransportOptions.Builder httpTransportOptionsBuilder = HttpTransportOptions.newBuilder();
 
@@ -150,7 +154,11 @@ public class GcsStorage implements StorageBackend {
         // Unfortunately, it seems Google will do two a separate (HEAD-like) call to get blob metadata.
         // Since the blobs are immutable in tiered storage, we can consider caching them locally
         // to avoid the extra round trip.
-        final Blob blob = storage.get(this.bucketName, key.value());
+        Blob blob = storage.get(this.bucketName, key.value());
+        if (blob == null && this.secondaryBucketName != null) {
+            gcsMetrics.recordFallbackRead();
+            blob = storage.get(this.secondaryBucketName, key.value());
+        }
         if (blob == null) {
             throw new KeyNotFoundException(this, key);
         }

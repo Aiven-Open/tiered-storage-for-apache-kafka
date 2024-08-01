@@ -34,6 +34,9 @@ class GcsStorageConfig extends AbstractConfig {
     static final String GCS_BUCKET_NAME_CONFIG = "gcs.bucket.name";
     private static final String GCS_BUCKET_NAME_DOC = "GCS bucket to store log segments";
 
+    static final String GCS_BUCKET_SECONDARY_NAME_CONFIG = "gcs.bucket.secondary.name";
+    private static final String GCS_BUCKET_SECONDARY_NAME_DOC = "GCS bucket to read if not found in primary bucket";
+
     static final String GCS_ENDPOINT_URL_CONFIG = "gcs.endpoint.url";
     private static final String GCS_ENDPOINT_URL_DOC = "Custom GCS endpoint URL. "
         + "To be used with custom GCS-compatible backends.";
@@ -69,6 +72,13 @@ class GcsStorageConfig extends AbstractConfig {
                 new ConfigDef.NonEmptyString(),
                 ConfigDef.Importance.HIGH,
                 GCS_BUCKET_NAME_DOC)
+            .define(
+                GCS_BUCKET_SECONDARY_NAME_CONFIG,
+                ConfigDef.Type.STRING,
+                null,
+                new ConfigDef.NonEmptyString(),
+                ConfigDef.Importance.HIGH,
+                GCS_BUCKET_SECONDARY_NAME_DOC)
             .define(
                 GCS_ENDPOINT_URL_CONFIG,
                 ConfigDef.Type.STRING,
@@ -143,6 +153,10 @@ class GcsStorageConfig extends AbstractConfig {
 
     String bucketName() {
         return getString(GCS_BUCKET_NAME_CONFIG);
+    }
+
+    String secondaryBucketName() {
+        return getString(GCS_BUCKET_SECONDARY_NAME_CONFIG);
     }
 
     String endpointUrl() {
