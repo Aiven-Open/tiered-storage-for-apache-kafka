@@ -95,7 +95,10 @@ public class GcsStorage implements StorageBackend {
     @Override
     public void delete(final ObjectKey key) throws StorageBackendException {
         try {
-            storage.delete(this.bucketName, key.value());
+            final boolean deleted = storage.delete(this.bucketName, key.value());
+            if (!deleted && this.secondaryBucketName != null) {
+                storage.delete(this.secondaryBucketName, key.value());
+            }
         } catch (final BaseServiceException e) {
             throw new StorageBackendException("Failed to delete " + key, e);
         }
