@@ -24,6 +24,7 @@ import io.aiven.kafka.tieredstorage.storage.StorageBackend;
 import io.aiven.kafka.tieredstorage.storage.TestObjectKey;
 import io.aiven.kafka.tieredstorage.storage.TestUtils;
 
+import org.junit.jupiter.api.AfterAll;
 import org.junit.jupiter.api.BeforeAll;
 import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.Test;
@@ -50,8 +51,8 @@ public class S3StorageTest extends BaseStorageTest {
 
     @BeforeAll
     static void setUpClass() {
-        final var clientBuilder = S3Client.builder();
-        clientBuilder.region(Region.of(LOCALSTACK.getRegion()))
+        s3Client = S3Client.builder()
+            .region(Region.of(LOCALSTACK.getRegion()))
             .endpointOverride(LOCALSTACK.getEndpointOverride(LocalStackContainer.Service.S3))
             .credentialsProvider(
                 StaticCredentialsProvider.create(
@@ -62,13 +63,19 @@ public class S3StorageTest extends BaseStorageTest {
                 )
             )
             .build();
-        s3Client = clientBuilder.build();
     }
 
     @BeforeEach
     void setUp(final TestInfo testInfo) {
         bucketName = TestUtils.testNameToBucketName(testInfo);
         s3Client.createBucket(CreateBucketRequest.builder().bucket(bucketName).build());
+    }
+
+    @AfterAll
+    static void closeAll() {
+        if (s3Client != null) {
+            s3Client.close();
+        }
     }
 
     @Override
