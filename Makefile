@@ -50,7 +50,7 @@ integration_test: build
 
 E2E_TEST=LocalSystem
 
-e2e_test: build
+e2e_test:
 	./gradlew e2e:test --tests $(E2E_TEST)*
 
 .PHONY: docker_image

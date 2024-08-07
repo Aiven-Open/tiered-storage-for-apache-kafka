@@ -24,6 +24,7 @@ plugins {
     id 'info.solidsoft.pitest' version '1.15.0' apply false
     id "java-library"
     id "distribution"
+    id "com.palantir.docker" version "0.36.0"
 }
 
 apply plugin: 'info.solidsoft.pitest.aggregator'
@@ -285,6 +286,29 @@ tasks.register('validateDependencies') {
 
         assert !conflictsFound : "Dependency conflicts found!"
     }
+}
+
+dockerPrepare.dependsOn(
+        tasks.distTar,
+        project("core").tasks.distTar,
+        project("storage:s3").tasks.distTar,
+        project("storage:gcs").tasks.distTar,
+        project("storage:azure").tasks.distTar,
+)
+
+docker {
+    name 'aivenoy/kafka-with-ts-plugin'
+    dockerfile file('docker/Dockerfile')
+    buildx true
+    buildArgs([_VERSION: project.version.toString()])
+    copySpec.from(".")
+            .include("build/distributions/*.tgz", "storage/**/distributions/*.tgz", "docker/*.yml")
+            .into(".")
+            .includeEmptyDirs(false)
+}
+
+project("e2e").tasks.named("test") {
+    dependsOn(rootProject.tasks.named("docker"))
 }
 
 // TODO fix GCP dependency issues
