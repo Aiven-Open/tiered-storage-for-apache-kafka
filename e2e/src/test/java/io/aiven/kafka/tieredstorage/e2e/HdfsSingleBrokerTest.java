@@ -61,7 +61,7 @@ public class HdfsSingleBrokerTest extends SingleBrokerTest {
     );
 
     static final GenericContainer<?> HDFS_NAMENODE_CONTAINER =
-        new GenericContainer<>(DockerImageName.parse("apache/hadoop:3"))
+        new GenericContainer<>(DockerImageName.parse("apache/hadoop:3.3.6"))
             .withExposedPorts(NAME_NODE_UI_PORT, NAME_NODE_PORT)
             .withCommand("hdfs namenode")
             .withNetwork(NETWORK)
@@ -72,7 +72,7 @@ public class HdfsSingleBrokerTest extends SingleBrokerTest {
             .withEnv("ENSURE_NAMENODE_DIR", "/tmp/hadoop-root/dfs/name");
 
     static final GenericContainer<?> HDFS_DATANODE_CONTAINER =
-        new GenericContainer<>(DockerImageName.parse("apache/hadoop:3"))
+        new GenericContainer<>(DockerImageName.parse("apache/hadoop:3.3.6"))
             .withExposedPorts(DATA_NODE_PORT)
             .withCommand("hdfs datanode")
             .withNetwork(NETWORK)

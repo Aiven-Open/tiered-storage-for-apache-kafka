@@ -42,6 +42,9 @@ storage/gcs/build/distributions/gcs-$(VERSION).tgz:
 storage/azure/build/distributions/azure-$(VERSION).tgz:
 	./gradlew build :storage:azure:distTar -x test -x integrationTest -x e2e:test
 
+storage/hdfs/build/distributions/hdfs-$(VERSION).tgz:
+	./gradlew build :storage:hdfs:distTar -x test -x integrationTest -x e2e:test
+
 test: build
 	./gradlew test -x e2e:test --info
 

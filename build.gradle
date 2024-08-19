@@ -129,7 +129,7 @@ subprojects {
 
         bucket4jVersion = "8.13.1"
 
-        hadoopVersion = "3.2.4"
+        hadoopVersion = "3.3.6"
     }
 
     dependencies {

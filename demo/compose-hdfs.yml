@@ -76,7 +76,7 @@ services:
       HADOOP_USER_NAME: "hadoop"
 
   namenode:
-    image: apache/hadoop:3
+    image: apache/hadoop:3.3.6
     container_name: "hdfs_ts_namenode"
     ports:
       - "9870:9870"
@@ -89,7 +89,7 @@ services:
       ENSURE_NAMENODE_DIR: "/tmp/hadoop-root/dfs/name"
 
   datanode:
-    image: apache/hadoop:3
+    image: apache/hadoop:3.3.6
     command: hdfs datanode
     env_file:
       - ./hdfs/.env
