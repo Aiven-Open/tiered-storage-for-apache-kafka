@@ -24,6 +24,5 @@ dependencies {
     implementation "org.apache.hadoop:hadoop-hdfs-client:$hadoopVersion"
 
     testImplementation "org.apache.hadoop:hadoop-minicluster:$hadoopVersion"
-    testImplementation "junit:junit:4.13.2"
     testImplementation(testFixtures(project(":storage:core")))
 }

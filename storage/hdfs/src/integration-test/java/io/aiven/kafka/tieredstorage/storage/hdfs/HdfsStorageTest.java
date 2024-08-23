@@ -46,7 +46,7 @@ public class HdfsStorageTest extends BaseStorageTest {
     private MiniDFSCluster miniDfsCluster;
 
     @BeforeEach
-    public void initCluster() throws IOException {
+    void initCluster() throws IOException {
         System.setProperty(MS_INIT_MODE_KEY, "STANDBY");
 
         final Configuration configuration = new Configuration();
@@ -60,7 +60,7 @@ public class HdfsStorageTest extends BaseStorageTest {
     }
 
     @AfterEach
-    public void shutdownCluster() {
+    void shutdownCluster() {
         miniDfsCluster.shutdown(true);
     }
 

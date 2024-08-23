@@ -63,6 +63,11 @@ jobs:
           export azure_zip_file=$(ls ./storage/azure/build/distributions/ | grep zip)
           echo azure_tar_file=${azure_tar_file} >> $GITHUB_ENV
           echo azure_zip_file=${azure_zip_file} >> $GITHUB_ENV
+          # HDFS libs
+          export hdfs_tar_file=$(ls ./storage/hdfs/build/distributions/ | grep tgz)
+          export hdfs_zip_file=$(ls ./storage/hdfs/build/distributions/ | grep zip)
+          echo hdfs_tar_file=${hdfs_tar_file} >> $GITHUB_ENV
+          echo hdfs_zip_file=${hdfs_zip_file} >> $GITHUB_ENV
 
           echo core_tar_path=`realpath ./core/build/distributions/${core_tar_file}` >> $GITHUB_ENV
           echo core_zip_path=`realpath ./core/build/distributions/${core_zip_file}` >> $GITHUB_ENV
@@ -72,6 +77,8 @@ jobs:
           echo gcs_zip_path=`realpath ./storage/gcs/build/distributions/${gcs_zip_file}` >> $GITHUB_ENV
           echo azure_tar_path=`realpath ./storage/azure/build/distributions/${azure_tar_file}` >> $GITHUB_ENV
           echo azure_zip_path=`realpath ./storage/azure/build/distributions/${azure_zip_file}` >> $GITHUB_ENV
+          echo hdfs_tar_path=`realpath ./storage/hdfs/build/distributions/${hdfs_tar_file}` >> $GITHUB_ENV
+          echo hdfs_zip_path=`realpath ./storage/hdfs/build/distributions/${hdfs_zip_file}` >> $GITHUB_ENV
 
       - name: Create tag
         env:
@@ -167,4 +174,22 @@ jobs:
           upload_url: ${{ steps.create_release.outputs.upload_url }}
           asset_path: ${{ env.azure_zip_path }}
           asset_name: ${{ env.azure_zip_file }}
+          asset_content_type: application/zip
+      - name: Upload hdfs tar
+        uses: actions/upload-release-asset@v1
+        env:
+          GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+        with:
+          upload_url: ${{ steps.create_release.outputs.upload_url }}
+          asset_path: ${{ env.hdfs_tar_path }}
+          asset_name: ${{ env.hdfs_tar_file }}
+          asset_content_type: application/tar
+      - name: Upload hdfs zip
+        uses: actions/upload-release-asset@v1
+        env:
+          GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+        with:
+          upload_url: ${{ steps.create_release.outputs.upload_url }}
+          asset_path: ${{ env.hdfs_zip_path }}
+          asset_name: ${{ env.hdfs_zip_file }}
           asset_content_type: application/zip

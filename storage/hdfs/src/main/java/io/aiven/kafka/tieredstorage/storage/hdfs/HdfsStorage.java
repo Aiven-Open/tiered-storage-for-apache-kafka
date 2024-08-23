@@ -45,10 +45,12 @@ public class HdfsStorage implements StorageBackend {
     private Path absoluteRootPath;
 
     private FileSystem fileSystem;
+    private MetricCollector metricCollector;
 
     @Override
     public void configure(final Map<String, ?> configs) {
         final HdfsStorageConfig config = new HdfsStorageConfig(configs);
+
         uploadBufferSize = config.uploadBufferSize();
         try {
             final Configuration hadoopConf = config.hadoopConf();
@@ -61,6 +63,11 @@ public class HdfsStorage implements StorageBackend {
             fileSystem.setWorkingDirectory(rootDirectory);
 
             absoluteRootPath = fileSystem.makeQualified(rootDirectory);
+
+            if (config.areMetricsEnabled()) {
+                metricCollector = buildMetricCollector(config);
+                metricCollector.start();
+            }
         } catch (final IOException exception) {
             throw new RuntimeException("Can't create Hadoop filesystem with provided config",
                 exception);
@@ -102,18 +109,26 @@ public class HdfsStorage implements StorageBackend {
     public InputStream fetch(final ObjectKey key, final BytesRange range)
         throws StorageBackendException {
 
+        if (range.isEmpty()) {
+            return InputStream.nullInputStream();
+        }
+
         final Path path = new Path(key.value());
         try {
-            final FSDataInputStream inputStream = fileSystem.open(path);
             final long fileSize = fileSystem.getFileStatus(path).getLen();
-            if (range.from >= fileSize) {
-                throw new InvalidRangeException("Range start position " + range.from
+            if (range.firstPosition() >= fileSize) {
+                throw new InvalidRangeException("Range start position " + range.firstPosition()
                     + " is outside file content. file size = " + fileSize);
             }
 
-            inputStream.seek(range.from);
-            final long size = Math.min(range.to, fileSize) - range.from + 1;
-            return new BoundedInputStream(inputStream, size);
+            final FSDataInputStream inputStream = fileSystem.open(path);
+            inputStream.seek(range.firstPosition());
+
+            return BoundedInputStream.builder()
+                .setCount(range.firstPosition())
+                .setMaxCount(range.lastPosition() + 1)
+                .setInputStream(inputStream)
+                .get();
         } catch (final FileNotFoundException e) {
             throw new KeyNotFoundException(this, key);
         } catch (final IOException e) {
@@ -132,7 +147,7 @@ public class HdfsStorage implements StorageBackend {
 
             Path containingDir;
             do {
-                fileSystem.delete(pathToDelete, true);
+                fileSystem.delete(pathToDelete, false);
                 containingDir = pathToDelete.getParent();
                 pathToDelete = containingDir;
             } while (isEmptyDir(containingDir) && !containingDir.equals(absoluteRootPath));
@@ -146,6 +161,10 @@ public class HdfsStorage implements StorageBackend {
         return "HdfsStorage{"
             + "root='" + absoluteRootPath + '\''
             + '}';
+    }
+
+    MetricCollector buildMetricCollector(final HdfsStorageConfig config) {
+        return new MetricCollector(config.getMetricsReportPeriod());
     }
 
     private boolean isEmptyDir(final Path directoryPath) throws IOException {

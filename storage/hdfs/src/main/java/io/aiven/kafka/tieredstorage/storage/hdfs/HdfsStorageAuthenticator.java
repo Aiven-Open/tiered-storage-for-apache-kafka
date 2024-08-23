@@ -19,7 +19,7 @@ package io.aiven.kafka.tieredstorage.storage.hdfs;
 
 import java.io.IOException;
 
-public interface HdfsStorageAuthenticator {
+interface HdfsStorageAuthenticator {
 
     void authenticate() throws IOException;
 

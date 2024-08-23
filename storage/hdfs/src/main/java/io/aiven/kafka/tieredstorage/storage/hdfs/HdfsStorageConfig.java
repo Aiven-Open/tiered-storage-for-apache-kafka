@@ -63,6 +63,16 @@ class HdfsStorageConfig extends AbstractConfig {
     private static final String HDFS_AUTH_KERBEROS_KEYTAB_DOC =
         "Absolute path of the keytab file with the credentials for the principal";
 
+    static final String HDFS_METRICS_ENABLED_CONFIG = "hdfs.metrics.enabled";
+    private static final boolean HDFS_METRICS_ENABLED_DEFAULT = true;
+    private static final String HDFS_METRICS_ENABLED_DOC =
+        "Whether to enable HDFS client metrics asynchronous collection";
+
+    static final String HDFS_METRICS_REPORT_PERIOD_MS_CONFIG = "hdfs.metrics.report.period.ms";
+    private static final Long HDFS_METRICS_REPORT_PERIOD_MS_DEFAULT = 5000L;
+    private static final String HDFS_METRICS_REPORT_PERIOD_MS_DOC =
+        "The period of HDFS client metrics asynchronous reporting in milliseconds";
+
     private final Configuration hadoopConf;
 
     static {
@@ -121,6 +131,20 @@ class HdfsStorageConfig extends AbstractConfig {
                 new ConfigDef.NonEmptyString(),
                 ConfigDef.Importance.MEDIUM,
                 HDFS_AUTH_KERBEROS_KEYTAB_DOC
+            )
+            .define(
+                HDFS_METRICS_ENABLED_CONFIG,
+                ConfigDef.Type.BOOLEAN,
+                HDFS_METRICS_ENABLED_DEFAULT,
+                ConfigDef.Importance.MEDIUM,
+                HDFS_METRICS_ENABLED_DOC
+            )
+            .define(
+                HDFS_METRICS_REPORT_PERIOD_MS_CONFIG,
+                ConfigDef.Type.LONG,
+                HDFS_METRICS_REPORT_PERIOD_MS_DEFAULT,
+                ConfigDef.Importance.MEDIUM,
+                HDFS_METRICS_REPORT_PERIOD_MS_DOC
             );
     }
 
@@ -151,6 +175,14 @@ class HdfsStorageConfig extends AbstractConfig {
 
     final String kerberosKeytab() {
         return getString(HDFS_AUTH_KERBEROS_KEYTAB_CONFIG);
+    }
+
+    final boolean areMetricsEnabled() {
+        return getBoolean(HDFS_METRICS_ENABLED_CONFIG);
+    }
+
+    final long getMetricsReportPeriod() {
+        return getLong(HDFS_METRICS_REPORT_PERIOD_MS_CONFIG);
     }
 
     final Configuration hadoopConf() {

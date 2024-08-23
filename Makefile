@@ -46,10 +46,10 @@ storage/hdfs/build/distributions/hdfs-$(VERSION).tgz:
 	./gradlew build :storage:hdfs:distTar -x test -x integrationTest -x e2e:test
 
 test: build
-	./gradlew test -x e2e:test --info
+	./gradlew test -x e2e:test
 
 integration_test: build
-	./gradlew integrationTest --info
+	./gradlew integrationTest
 
 E2E_TEST=LocalSystem
 

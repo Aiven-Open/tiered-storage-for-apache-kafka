@@ -16,7 +16,9 @@
 
 package io.aiven.kafka.tieredstorage.storage.hdfs;
 
+import java.net.InetAddress;
 import java.net.URL;
+import java.net.UnknownHostException;
 import java.util.Map;
 
 import org.apache.kafka.common.config.ConfigException;
@@ -114,13 +116,13 @@ class HdfsStorageConfigTest {
     }
 
     @Test
-    void provideKerberosAuthenticator() {
+    void provideKerberosAuthenticator() throws UnknownHostException {
         System.setProperty("java.security.krb5.conf", getResourcePath("krb5.conf"));
 
         final HdfsStorageConfig config = new HdfsStorageConfig(Map.of(
             HDFS_HDFS_SITE_CONFIG, getResourcePath("hdfs-site.xml"),
             HDFS_AUTH_ENABLED_CONFIG, true,
-            HDFS_AUTH_KERBEROS_PRINCIPAL_CONFIG, "principal@TEST",
+            HDFS_AUTH_KERBEROS_PRINCIPAL_CONFIG, "principal/_HOST@TEST",
             HDFS_AUTH_KERBEROS_KEYTAB_CONFIG, "/path/to/file.keytab",
             HDFS_CONF_PREFIX + "hadoop.security.authentication", "kerberos"
         ));
@@ -128,9 +130,8 @@ class HdfsStorageConfigTest {
         assertThat(config.hdfsAuthenticator())
             .isInstanceOf(HdfsStorageConfig.KeytabHdfsStorageAuthenticator.class);
 
-        // TODO checked manually, uncomment when Gitlab CI name resolution problem will be fixed
-        // assertThat(config.kerberosPrincipal())
-        //    .isEqualTo(String.format("principal/%s@TEST", InetAddress.getLocalHost().getCanonicalHostName()));
+        assertThat(config.kerberosPrincipal())
+            .isEqualTo(String.format("principal/%s@TEST", InetAddress.getLocalHost().getCanonicalHostName()));
     }
 
     @Test
