@@ -18,6 +18,7 @@ package io.aiven.kafka.tieredstorage.fetch.cache;
 
 import java.io.IOException;
 import java.io.InputStream;
+import java.time.Duration;
 import java.util.concurrent.CompletableFuture;
 import java.util.concurrent.CompletionException;
 import java.util.concurrent.ExecutionException;
@@ -45,7 +46,6 @@ import com.github.benmanes.caffeine.cache.Scheduler;
 import com.github.benmanes.caffeine.cache.Weigher;
 
 public abstract class ChunkCache<T> implements ChunkManager, Configurable {
-    private static final long GET_TIMEOUT_SEC = 10;
     private static final String METRIC_GROUP = "chunk-cache-metrics";
 
     private final ChunkManager chunkManager;
@@ -56,6 +56,7 @@ public abstract class ChunkCache<T> implements ChunkManager, Configurable {
     protected AsyncCache<ChunkKey, T> cache;
 
     private int prefetchingSize;
+    private Duration getTimeout;
 
     protected ChunkCache(final ChunkManager chunkManager) {
         this.chunkManager = chunkManager;
@@ -103,7 +104,7 @@ public abstract class ChunkCache<T> implements ChunkManager, Configurable {
                     }
                 }, executor))
                 .thenApplyAsync(t -> result.get())
-                .get(GET_TIMEOUT_SEC, TimeUnit.SECONDS);
+                .get(getTimeout.toMillis(), TimeUnit.MILLISECONDS);
         } catch (final ExecutionException e) {
             // Unwrap previously wrapped exceptions if possible.
             final Throwable cause = e.getCause();
@@ -134,7 +135,8 @@ public abstract class ChunkCache<T> implements ChunkManager, Configurable {
     public abstract Weigher<ChunkKey, T> weigher();
 
     protected AsyncCache<ChunkKey, T> buildCache(final ChunkCacheConfig config) {
-        this.executor = new ForkJoinPool();
+        this.executor = config.threadPoolSize().map(ForkJoinPool::new).orElse(new ForkJoinPool());
+        this.getTimeout = config.getTimeout();
         this.prefetchingSize = config.cachePrefetchingSize();
         final Caffeine<Object, Object> cacheBuilder = Caffeine.newBuilder();
         config.cacheSize().ifPresent(maximumWeight -> cacheBuilder.maximumWeight(maximumWeight).weigher(weigher()));

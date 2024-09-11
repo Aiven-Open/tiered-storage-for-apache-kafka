@@ -19,6 +19,7 @@ package io.aiven.kafka.tieredstorage.fetch.index;
 import java.io.ByteArrayInputStream;
 import java.io.IOException;
 import java.io.InputStream;
+import java.time.Duration;
 import java.util.Map;
 import java.util.concurrent.CompletableFuture;
 import java.util.concurrent.ExecutionException;
@@ -46,14 +47,14 @@ import org.slf4j.LoggerFactory;
 public class MemorySegmentIndexesCache implements SegmentIndexesCache {
     private static final Logger log = LoggerFactory.getLogger(MemorySegmentIndexesCache.class);
 
-    private static final long GET_TIMEOUT_SEC = 10;
     private static final long DEFAULT_MAX_SIZE_BYTES = 10 * 1024 * 1024;
     private static final String METRIC_GROUP = "segment-indexes-cache";
 
-    private final Executor executor = new ForkJoinPool();
     private final CaffeineStatsCounter statsCounter = new CaffeineStatsCounter(METRIC_GROUP);
 
+    private Executor executor;
     protected AsyncCache<SegmentIndexKey, byte[]> cache;
+    private Duration getTimeout;
 
     // for testing
     RemovalListener<SegmentIndexKey, byte[]> removalListener() {
@@ -66,6 +67,8 @@ public class MemorySegmentIndexesCache implements SegmentIndexesCache {
     }
 
     protected AsyncCache<SegmentIndexKey, byte[]> buildCache(final CacheConfig config) {
+        this.executor = config.threadPoolSize().map(ForkJoinPool::new).orElse(new ForkJoinPool());
+        this.getTimeout = config.getTimeout();
         final Caffeine<Object, Object> cacheBuilder = Caffeine.newBuilder();
         config.cacheSize().ifPresent(maximumWeight -> cacheBuilder.maximumWeight(maximumWeight).weigher(weigher()));
         config.cacheRetention().ifPresent(cacheBuilder::expireAfterAccess);
@@ -96,7 +99,7 @@ public class MemorySegmentIndexesCache implements SegmentIndexesCache {
                     }
                 })
                 .thenApplyAsync(ByteArrayInputStream::new, executor)
-                .get(GET_TIMEOUT_SEC, TimeUnit.SECONDS);
+                .get(getTimeout.toMillis(), TimeUnit.MILLISECONDS);
         } catch (final ExecutionException e) {
             // Unwrap previously wrapped exceptions if possible.
             Throwable cause = e.getCause();

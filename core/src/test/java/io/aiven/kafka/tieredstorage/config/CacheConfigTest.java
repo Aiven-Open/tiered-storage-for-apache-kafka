@@ -34,6 +34,9 @@ class CacheConfigTest {
 
         assertThat(config.cacheSize()).isNotPresent();
         assertThat(config.cacheRetention()).hasValue(Duration.ofMinutes(10));
+        // other defaults
+        assertThat(config.threadPoolSize()).isEmpty();
+        assertThat(config.getTimeout()).hasSeconds(10);
     }
 
     @Test
@@ -44,6 +47,9 @@ class CacheConfigTest {
 
         assertThat(config.cacheSize()).isNotPresent();
         assertThat(config.cacheRetention()).hasValue(Duration.ofMinutes(10));
+        // other defaults
+        assertThat(config.threadPoolSize()).isEmpty();
+        assertThat(config.getTimeout()).hasSeconds(10);
     }
 
     @Test
@@ -118,5 +124,17 @@ class CacheConfigTest {
         assertThatThrownBy(() -> CacheConfig.newBuilder(configs).build())
             .isInstanceOf(ConfigException.class)
             .hasMessage("Invalid value -2 for configuration retention.ms: Value must be at least -1");
+    }
+
+    @Test
+    void setOtherConfigs() {
+        final CacheConfig config = CacheConfig.newBuilder(Map.of(
+                "fetch.thread.pool.size", 16,
+                "fetch.timeout.ms", Duration.ofSeconds(20).toMillis()
+            ))
+            .withDefaultSize(-1L)
+            .build();
+        assertThat(config.threadPoolSize()).hasValue(16);
+        assertThat(config.getTimeout()).hasSeconds(20);
     }
 }

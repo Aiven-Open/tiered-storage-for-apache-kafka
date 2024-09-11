@@ -18,9 +18,9 @@ package io.aiven.kafka.tieredstorage.fetch.manifest;
 
 import java.io.IOException;
 import java.io.InputStream;
+import java.time.Duration;
 import java.util.Map;
 import java.util.concurrent.ExecutionException;
-import java.util.concurrent.ExecutorService;
 import java.util.concurrent.ForkJoinPool;
 import java.util.concurrent.TimeUnit;
 import java.util.concurrent.TimeoutException;
@@ -44,7 +44,6 @@ import org.slf4j.LoggerFactory;
 public class MemorySegmentManifestCache implements SegmentManifestCache {
     private static final Logger log = LoggerFactory.getLogger(MemorySegmentManifestCache.class);
     private static final String METRIC_GROUP = "segment-manifest-cache-metrics";
-    private static final long GET_TIMEOUT_SEC = 10;
     private static final long DEFAULT_MAX_SIZE = 1000L;
     private static final long DEFAULT_RETENTION_MS = 3_600_000;
 
@@ -54,6 +53,8 @@ public class MemorySegmentManifestCache implements SegmentManifestCache {
     final ObjectFetcher fileFetcher;
     final ObjectMapper mapper;
 
+    Duration getTimeout;
+
     public MemorySegmentManifestCache(final ObjectFetcher fileFetcher, final ObjectMapper mapper) {
         this.fileFetcher = fileFetcher;
         this.mapper = mapper;
@@ -62,7 +63,7 @@ public class MemorySegmentManifestCache implements SegmentManifestCache {
     public SegmentManifest get(final ObjectKey manifestKey)
         throws StorageBackendException, IOException {
         try {
-            return cache.get(manifestKey).get(GET_TIMEOUT_SEC, TimeUnit.SECONDS);
+            return cache.get(manifestKey).get(getTimeout.toMillis(), TimeUnit.MILLISECONDS);
         } catch (final ExecutionException e) {
             // Unwrap previously wrapped exceptions if possible.
             final Throwable cause = e.getCause();
@@ -95,7 +96,8 @@ public class MemorySegmentManifestCache implements SegmentManifestCache {
     }
 
     protected AsyncLoadingCache<ObjectKey, SegmentManifest> buildCache(final CacheConfig config) {
-        final ExecutorService executor = new ForkJoinPool();
+        final var executor = config.threadPoolSize().map(ForkJoinPool::new).orElse(new ForkJoinPool());
+        getTimeout = config.getTimeout();
         final Caffeine<Object, Object> cacheBuilder = Caffeine.newBuilder();
         config.cacheSize().ifPresent(maximumWeight -> cacheBuilder.maximumWeight(maximumWeight).weigher(weigher()));
         config.cacheRetention().ifPresent(cacheBuilder::expireAfterAccess);
