@@ -14,7 +14,7 @@
  * limitations under the License.
  */
 
-package io.aiven.kafka.tieredstorage.fetch.cache;
+package io.aiven.kafka.tieredstorage.config;
 
 import java.io.File;
 import java.io.IOException;
@@ -37,8 +37,8 @@ import org.junit.jupiter.params.provider.Arguments;
 import org.junit.jupiter.params.provider.MethodSource;
 import org.mockito.junit.jupiter.MockitoExtension;
 
-import static io.aiven.kafka.tieredstorage.fetch.cache.DiskChunkCacheConfig.CACHE_DIRECTORY;
-import static io.aiven.kafka.tieredstorage.fetch.cache.DiskChunkCacheConfig.TEMP_CACHE_DIRECTORY;
+import static io.aiven.kafka.tieredstorage.config.DiskChunkCacheConfig.CACHE_DIRECTORY;
+import static io.aiven.kafka.tieredstorage.config.DiskChunkCacheConfig.TEMP_CACHE_DIRECTORY;
 import static org.assertj.core.api.Assertions.assertThat;
 import static org.assertj.core.api.Assertions.assertThatThrownBy;
 import static org.junit.jupiter.params.provider.Arguments.arguments;

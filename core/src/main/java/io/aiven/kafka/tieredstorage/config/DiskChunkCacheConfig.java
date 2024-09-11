@@ -14,7 +14,7 @@
  * limitations under the License.
  */
 
-package io.aiven.kafka.tieredstorage.fetch.cache;
+package io.aiven.kafka.tieredstorage.config;
 
 import java.io.IOException;
 import java.nio.file.Files;
@@ -75,11 +75,11 @@ public class DiskChunkCacheConfig extends ChunkCacheConfig {
         return Path.of(getString(CACHE_PATH_CONFIG));
     }
 
-    final Path cachePath() {
+    public final Path cachePath() {
         return baseCachePath().resolve(CACHE_DIRECTORY);
     }
 
-    final Path tempCachePath() {
+    public final Path tempCachePath() {
         return baseCachePath().resolve(TEMP_CACHE_DIRECTORY);
     }
 }

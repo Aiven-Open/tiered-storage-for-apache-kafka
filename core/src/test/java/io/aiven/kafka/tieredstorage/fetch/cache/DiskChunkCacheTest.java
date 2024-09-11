@@ -22,6 +22,7 @@ import java.nio.file.Files;
 import java.nio.file.Path;
 import java.util.Map;
 
+import io.aiven.kafka.tieredstorage.config.DiskChunkCacheConfig;
 import io.aiven.kafka.tieredstorage.fetch.ChunkKey;
 import io.aiven.kafka.tieredstorage.fetch.ChunkManager;
 
@@ -36,8 +37,8 @@ import org.mockito.Mock;
 import org.mockito.MockedStatic;
 import org.mockito.junit.jupiter.MockitoExtension;
 
-import static io.aiven.kafka.tieredstorage.fetch.cache.DiskChunkCacheConfig.CACHE_DIRECTORY;
-import static io.aiven.kafka.tieredstorage.fetch.cache.DiskChunkCacheConfig.TEMP_CACHE_DIRECTORY;
+import static io.aiven.kafka.tieredstorage.config.DiskChunkCacheConfig.CACHE_DIRECTORY;
+import static io.aiven.kafka.tieredstorage.config.DiskChunkCacheConfig.TEMP_CACHE_DIRECTORY;
 import static org.assertj.core.api.Assertions.assertThat;
 import static org.assertj.core.api.Assertions.assertThatNoException;
 import static org.assertj.core.api.Assertions.assertThatThrownBy;

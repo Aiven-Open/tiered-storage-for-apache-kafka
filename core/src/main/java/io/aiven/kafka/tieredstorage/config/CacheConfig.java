@@ -31,10 +31,14 @@ public class CacheConfig extends AbstractConfig {
     private static final String CACHE_RETENTION_CONFIG = "retention.ms";
     private static final String CACHE_RETENTION_DOC = "Cache retention time ms, "
         + "where \"-1\" represents infinite retention";
-    private static final long DEFAULT_CACHE_RETENTION_MS = 600_000;
 
-    private static ConfigDef configDef(final Object defaultSize, final long defaultRetentionMs) {
-        final var configDef = new ConfigDef();
+    static final long CACHE_RETENTION_MS_DEFAULT = 600_000;
+
+    private static ConfigDef configDef(
+        final ConfigDef configDef,
+        final Object defaultSize,
+        final long defaultRetentionMs
+    ) {
         configDef.define(
             CACHE_SIZE_CONFIG,
             ConfigDef.Type.LONG,
@@ -54,12 +58,13 @@ public class CacheConfig extends AbstractConfig {
         return configDef;
     }
 
-    private CacheConfig(
+    CacheConfig(
+        final ConfigDef configDef,
         final Map<String, ?> props,
         final Object defaultSize,
         final long defaultRetentionMs
     ) {
-        super(configDef(defaultSize, defaultRetentionMs), props);
+        super(configDef(configDef, defaultSize, defaultRetentionMs), props);
     }
 
     public static Builder newBuilder(final Map<String, ?> configs) {
@@ -84,7 +89,7 @@ public class CacheConfig extends AbstractConfig {
 
     public static class Builder {
         private final Map<String, ?> props;
-        private long defaultRetentionMs = DEFAULT_CACHE_RETENTION_MS;
+        private long defaultRetentionMs = CACHE_RETENTION_MS_DEFAULT;
         private Object maybeDefaultSize = NO_DEFAULT_VALUE;
 
         public Builder(final Map<String, ?> props) {
@@ -102,7 +107,7 @@ public class CacheConfig extends AbstractConfig {
         }
 
         public CacheConfig build() {
-            return new CacheConfig(props, maybeDefaultSize, defaultRetentionMs);
+            return new CacheConfig(new ConfigDef(), props, maybeDefaultSize, defaultRetentionMs);
         }
     }
 }

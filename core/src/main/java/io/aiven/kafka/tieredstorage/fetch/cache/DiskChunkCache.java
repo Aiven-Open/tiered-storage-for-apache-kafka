@@ -24,6 +24,7 @@ import java.util.Map;
 
 import org.apache.kafka.common.utils.Time;
 
+import io.aiven.kafka.tieredstorage.config.DiskChunkCacheConfig;
 import io.aiven.kafka.tieredstorage.fetch.ChunkKey;
 import io.aiven.kafka.tieredstorage.fetch.ChunkManager;
 
