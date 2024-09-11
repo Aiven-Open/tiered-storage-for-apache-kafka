@@ -48,7 +48,7 @@ public abstract class ChunkCache<T> implements ChunkManager, Configurable {
     private static final String METRIC_GROUP = "chunk-cache-metrics";
 
     private final ChunkManager chunkManager;
-    private final Executor executor = new ForkJoinPool();
+    private Executor executor;
 
     final CaffeineStatsCounter statsCounter;
 
@@ -133,6 +133,7 @@ public abstract class ChunkCache<T> implements ChunkManager, Configurable {
     public abstract Weigher<ChunkKey, T> weigher();
 
     protected AsyncCache<ChunkKey, T> buildCache(final ChunkCacheConfig config) {
+        this.executor = new ForkJoinPool();
         this.prefetchingSize = config.cachePrefetchingSize();
         final Caffeine<Object, Object> cacheBuilder = Caffeine.newBuilder();
         config.cacheSize().ifPresent(maximumWeight -> cacheBuilder.maximumWeight(maximumWeight).weigher(weigher()));

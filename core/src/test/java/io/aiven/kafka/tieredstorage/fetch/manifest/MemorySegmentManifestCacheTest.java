@@ -14,17 +14,18 @@
  * limitations under the License.
  */
 
-package io.aiven.kafka.tieredstorage.manifest;
+package io.aiven.kafka.tieredstorage.fetch.manifest;
 
 import java.io.ByteArrayInputStream;
 import java.io.IOException;
 import java.io.InputStream;
 import java.time.Duration;
-import java.util.Optional;
-import java.util.concurrent.ForkJoinPool;
+import java.util.Map;
 
 import org.apache.kafka.server.log.remote.storage.RemoteStorageManager.IndexType;
 
+import io.aiven.kafka.tieredstorage.manifest.SegmentIndexesV1;
+import io.aiven.kafka.tieredstorage.manifest.SegmentManifestV1;
 import io.aiven.kafka.tieredstorage.manifest.index.FixedSizeChunkIndex;
 import io.aiven.kafka.tieredstorage.manifest.serde.KafkaTypeSerdeModule;
 import io.aiven.kafka.tieredstorage.storage.ObjectKey;
@@ -40,7 +41,6 @@ import org.mockito.Mock;
 import org.mockito.junit.jupiter.MockitoExtension;
 
 import static org.assertj.core.api.Assertions.assertThat;
-import static org.assertj.core.api.Assertions.assertThatNoException;
 import static org.assertj.core.api.Assertions.assertThatThrownBy;
 import static org.awaitility.Awaitility.await;
 import static org.mockito.ArgumentMatchers.any;
@@ -50,7 +50,7 @@ import static org.mockito.Mockito.verifyNoMoreInteractions;
 import static org.mockito.Mockito.when;
 
 @ExtendWith(MockitoExtension.class)
-class SegmentManifestProviderTest {
+class MemorySegmentManifestCacheTest {
     static final ObjectMapper MAPPER = new ObjectMapper();
     public static final ObjectKey MANIFEST_KEY = () -> "topic/manifest";
 
@@ -83,29 +83,12 @@ class SegmentManifestProviderTest {
     @Mock
     StorageBackend storage;
 
-    SegmentManifestProvider provider;
+    MemorySegmentManifestCache cache;
 
     @BeforeEach
     void setup() {
-        provider = new SegmentManifestProvider(
-            Optional.of(1000L), Optional.empty(), storage, MAPPER,
-            ForkJoinPool.commonPool());
-    }
-
-    @Test
-    void unboundedShouldBeCreated() {
-        assertThatNoException()
-            .isThrownBy(() -> new SegmentManifestProvider(
-                Optional.empty(), Optional.of(Duration.ofMillis(1)), storage, MAPPER,
-                ForkJoinPool.commonPool()));
-    }
-
-    @Test
-    void withoutRetentionLimitsShouldBeCreated() {
-        assertThatNoException()
-            .isThrownBy(() -> new SegmentManifestProvider(
-                Optional.of(1L), Optional.empty(), storage, MAPPER,
-                ForkJoinPool.commonPool()));
+        cache = new MemorySegmentManifestCache(storage, MAPPER);
+        cache.configure(Map.of("size", 1000));
     }
 
     @Test
@@ -116,9 +99,9 @@ class SegmentManifestProviderTest {
             .thenReturn(new ByteArrayInputStream(MANIFEST.getBytes()));
         final var chunkIndex = new FixedSizeChunkIndex(100, 1000, 110, 110);
         final var expectedManifest = new SegmentManifestV1(chunkIndex, SEGMENT_INDEXES, false, null, null);
-        assertThat(provider.get(key)).isEqualTo(expectedManifest);
+        assertThat(cache.get(key)).isEqualTo(expectedManifest);
         verify(storage).fetch(key);
-        assertThat(provider.get(key)).isEqualTo(expectedManifest);
+        assertThat(cache.get(key)).isEqualTo(expectedManifest);
         verifyNoMoreInteractions(storage);
     }
 
@@ -126,7 +109,7 @@ class SegmentManifestProviderTest {
     void shouldPropagateStorageBackendException() throws StorageBackendException {
         when(storage.fetch(any()))
             .thenThrow(new StorageBackendException("test"));
-        assertThatThrownBy(() -> provider.get(MANIFEST_KEY))
+        assertThatThrownBy(() -> cache.get(MANIFEST_KEY))
             .isInstanceOf(StorageBackendException.class)
             .hasMessage("test");
     }
@@ -138,19 +121,18 @@ class SegmentManifestProviderTest {
         }).when(isMock).close();
         when(storage.fetch(any()))
             .thenReturn(isMock);
-        assertThatThrownBy(() -> provider.get(MANIFEST_KEY))
+        assertThatThrownBy(() -> cache.get(MANIFEST_KEY))
             .isInstanceOf(IOException.class)
             .hasMessage("test");
     }
 
     @Test
-    void shouldNotPoisonCacheWithFailedFutures()
-        throws StorageBackendException {
+    void shouldNotPoisonCacheWithFailedFutures() throws StorageBackendException {
         when(storage.fetch(MANIFEST_KEY))
             .thenThrow(new StorageBackendException("test"))
             .thenReturn(new ByteArrayInputStream(MANIFEST.getBytes()));
 
-        assertThatThrownBy(() -> provider.get(MANIFEST_KEY))
+        assertThatThrownBy(() -> cache.get(MANIFEST_KEY))
             .isInstanceOf(StorageBackendException.class)
             .hasMessage("test");
 
@@ -160,6 +142,6 @@ class SegmentManifestProviderTest {
         await().atMost(Duration.ofMillis(50))
             .pollInterval(Duration.ofMillis(5))
             .ignoreExceptions()
-            .until(() -> provider.get(MANIFEST_KEY).equals(expectedManifest));
+            .until(() -> cache.get(MANIFEST_KEY).equals(expectedManifest));
     }
 }

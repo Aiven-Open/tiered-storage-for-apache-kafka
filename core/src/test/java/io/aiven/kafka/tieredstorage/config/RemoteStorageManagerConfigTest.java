@@ -17,7 +17,6 @@
 package io.aiven.kafka.tieredstorage.config;
 
 import java.nio.file.Path;
-import java.time.Duration;
 import java.util.HashMap;
 import java.util.Map;
 
@@ -42,8 +41,6 @@ class RemoteStorageManagerConfigTest {
             )
         );
         assertThat(config.storage()).isInstanceOf(StorageBackend.class);
-        assertThat(config.segmentManifestCacheSize()).hasValue(1000L);
-        assertThat(config.segmentManifestCacheRetention()).hasValue(Duration.ofHours(1));
         assertThat(config.chunkSize()).isEqualTo(123);
         assertThat(config.compressionEnabled()).isFalse();
         assertThat(config.compressionHeuristicEnabled()).isFalse();
@@ -54,54 +51,6 @@ class RemoteStorageManagerConfigTest {
         assertThat(config.keyPrefixMask()).isFalse();
         assertThat(config.customMetadataKeysIncluded()).isEmpty();
         assertThat(config.uploadRateLimit()).isEmpty();
-    }
-
-    @Test
-    void segmentManifestCacheSizeUnbounded() {
-        final var config = new RemoteStorageManagerConfig(
-            Map.of(
-                "storage.backend.class", NoopStorageBackend.class.getCanonicalName(),
-                "chunk.size", "123",
-                "segment.manifest.cache.size", "-1"
-            )
-        );
-        assertThat(config.segmentManifestCacheSize()).isEmpty();
-    }
-
-    @Test
-    void segmentManifestCacheSizeBounded() {
-        final var config = new RemoteStorageManagerConfig(
-            Map.of(
-                "storage.backend.class", NoopStorageBackend.class.getCanonicalName(),
-                "chunk.size", "123",
-                "segment.manifest.cache.size", "42"
-            )
-        );
-        assertThat(config.segmentManifestCacheSize()).hasValue(42L);
-    }
-
-    @Test
-    void segmentManifestCacheRetentionForever() {
-        final var config = new RemoteStorageManagerConfig(
-            Map.of(
-                "storage.backend.class", NoopStorageBackend.class.getCanonicalName(),
-                "chunk.size", "123",
-                "segment.manifest.cache.retention.ms", "-1"
-            )
-        );
-        assertThat(config.segmentManifestCacheRetention()).isEmpty();
-    }
-
-    @Test
-    void segmentManifestCacheRetentionLimited() {
-        final var config = new RemoteStorageManagerConfig(
-            Map.of(
-                "storage.backend.class", NoopStorageBackend.class.getCanonicalName(),
-                "chunk.size", "123",
-                "segment.manifest.cache.retention.ms", "42"
-            )
-        );
-        assertThat(config.segmentManifestCacheRetention()).hasValue(Duration.ofMillis(42));
     }
 
     @Test
