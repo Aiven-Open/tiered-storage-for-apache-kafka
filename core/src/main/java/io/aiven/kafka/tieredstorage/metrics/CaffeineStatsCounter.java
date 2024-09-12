@@ -28,8 +28,6 @@ import org.apache.kafka.common.MetricNameTemplate;
 import org.apache.kafka.common.metrics.JmxReporter;
 import org.apache.kafka.common.metrics.KafkaMetricsContext;
 import org.apache.kafka.common.metrics.MetricConfig;
-import org.apache.kafka.common.metrics.Sensor;
-import org.apache.kafka.common.metrics.stats.Value;
 import org.apache.kafka.common.utils.Time;
 
 import com.github.benmanes.caffeine.cache.RemovalCause;
@@ -227,21 +225,4 @@ public class CaffeineStatsCounter implements StatsCounter {
         return (value >= 0) ? value : Long.MAX_VALUE;
     }
 
-    /**
-     * Implementation of {@link Value} that allows fetching a value from provided {@code Long} {@link Supplier}
-     * to avoid unnecessary calls to {@link Sensor#record()} that under the hood has a synchronized block and affects
-     * performance because of that.
-     */
-    private static class MeasurableValue extends Value {
-        private final Supplier<Long> value;
-
-        MeasurableValue(final Supplier<Long> value) {
-            this.value = value;
-        }
-
-        @Override
-        public double measure(final MetricConfig config, final long now) {
-            return value.get();
-        }
-    }
 }
