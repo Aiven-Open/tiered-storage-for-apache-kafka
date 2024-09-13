@@ -29,6 +29,7 @@ import java.util.concurrent.atomic.AtomicReference;
 
 import org.apache.kafka.common.Configurable;
 
+import io.aiven.kafka.tieredstorage.config.ChunkCacheConfig;
 import io.aiven.kafka.tieredstorage.fetch.ChunkKey;
 import io.aiven.kafka.tieredstorage.fetch.ChunkManager;
 import io.aiven.kafka.tieredstorage.manifest.SegmentManifest;

@@ -23,6 +23,7 @@ import java.util.Map;
 
 import org.apache.kafka.common.config.ConfigDef;
 
+import io.aiven.kafka.tieredstorage.config.ChunkCacheConfig;
 import io.aiven.kafka.tieredstorage.fetch.ChunkKey;
 import io.aiven.kafka.tieredstorage.fetch.ChunkManager;
 

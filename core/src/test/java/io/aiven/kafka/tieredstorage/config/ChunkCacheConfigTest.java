@@ -14,7 +14,7 @@
  * limitations under the License.
  */
 
-package io.aiven.kafka.tieredstorage.fetch.cache;
+package io.aiven.kafka.tieredstorage.config;
 
 import java.time.Duration;
 import java.util.Map;
