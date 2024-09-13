@@ -36,7 +36,7 @@ import org.apache.kafka.server.log.remote.storage.RemoteLogSegmentMetadata;
 import org.apache.kafka.server.log.remote.storage.RemoteStorageException;
 
 import io.aiven.kafka.tieredstorage.fetch.ChunkManager;
-import io.aiven.kafka.tieredstorage.manifest.SegmentManifestProvider;
+import io.aiven.kafka.tieredstorage.fetch.manifest.MemorySegmentManifestCache;
 import io.aiven.kafka.tieredstorage.storage.StorageBackendException;
 
 import org.junit.jupiter.api.BeforeEach;
@@ -87,8 +87,8 @@ class RemoteStorageManagerTest {
     @MethodSource("provideInterruptionExceptions")
     void fetchSegmentInterruptionWhenGettingManifest(final Class<Exception> outerExceptionClass,
                                                      final Class<Exception> exceptionClass) throws Exception {
-        final SegmentManifestProvider segmentManifestProvider = mock(SegmentManifestProvider.class);
-        when(segmentManifestProvider.get(any())).thenAnswer(invocation -> {
+        final MemorySegmentManifestCache segmentManifestCache = mock(MemorySegmentManifestCache.class);
+        when(segmentManifestCache.get(any())).thenAnswer(invocation -> {
             final Exception innerException = exceptionClass.getDeclaredConstructor().newInstance();
             if (outerExceptionClass != null) {
                 throw outerExceptionClass.getDeclaredConstructor(String.class, Throwable.class)
@@ -104,7 +104,7 @@ class RemoteStorageManagerTest {
             "storage.root", targetDir.toString()
         );
         rsm.configure(config);
-        rsm.setSegmentManifestProvider(segmentManifestProvider);
+        rsm.setSegmentManifestCache(segmentManifestCache);
 
         final InputStream inputStream = rsm.fetchLogSegment(REMOTE_LOG_METADATA, 0);
         assertThat(inputStream).isEmpty();
@@ -159,8 +159,8 @@ class RemoteStorageManagerTest {
         final Class<Exception> outerExceptionClass,
         final Class<Exception> exceptionClass
     ) throws Exception {
-        final SegmentManifestProvider segmentManifestProvider = mock(SegmentManifestProvider.class);
-        when(segmentManifestProvider.get(any())).thenAnswer(invocation -> {
+        final MemorySegmentManifestCache segmentManifestCache = mock(MemorySegmentManifestCache.class);
+        when(segmentManifestCache.get(any())).thenAnswer(invocation -> {
             Exception innerException;
             try {
                 innerException = exceptionClass.getDeclaredConstructor().newInstance();
@@ -182,7 +182,7 @@ class RemoteStorageManagerTest {
             "storage.root", targetDir.toString()
         );
         rsm.configure(config);
-        rsm.setSegmentManifestProvider(segmentManifestProvider);
+        rsm.setSegmentManifestCache(segmentManifestCache);
 
         assertThatThrownBy(() -> rsm.fetchLogSegment(REMOTE_LOG_METADATA, 0))
             .isInstanceOf(RemoteStorageException.class)

@@ -61,6 +61,15 @@ class CacheConfigTest {
     }
 
     @Test
+    void cacheSizeBoundedWithDefaultRetentionMs() {
+        final CacheConfig config = CacheConfig.newBuilder(Map.of())
+            .withDefaultSize(-1L)
+            .withDefaultRetentionMs(3_600_000L)
+            .build();
+        assertThat(config.cacheRetention()).hasValue(Duration.ofHours(1));
+    }
+
+    @Test
     void invalidCacheSize() {
         assertThatThrownBy(() -> CacheConfig.newBuilder(Map.of("size", "-2")).build())
             .isInstanceOf(ConfigException.class)

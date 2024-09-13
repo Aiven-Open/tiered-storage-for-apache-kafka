@@ -33,7 +33,7 @@ public class CacheConfig extends AbstractConfig {
         + "where \"-1\" represents infinite retention";
     private static final long DEFAULT_CACHE_RETENTION_MS = 600_000;
 
-    private static ConfigDef configDef(final Object defaultSize) {
+    private static ConfigDef configDef(final Object defaultSize, final long defaultRetentionMs) {
         final var configDef = new ConfigDef();
         configDef.define(
             CACHE_SIZE_CONFIG,
@@ -46,7 +46,7 @@ public class CacheConfig extends AbstractConfig {
         configDef.define(
             CACHE_RETENTION_CONFIG,
             ConfigDef.Type.LONG,
-            DEFAULT_CACHE_RETENTION_MS,
+            defaultRetentionMs,
             ConfigDef.Range.between(-1L, Long.MAX_VALUE),
             ConfigDef.Importance.MEDIUM,
             CACHE_RETENTION_DOC
@@ -54,8 +54,12 @@ public class CacheConfig extends AbstractConfig {
         return configDef;
     }
 
-    private CacheConfig(final Map<String, ?> props, final Object defaultSize) {
-        super(configDef(defaultSize), props);
+    private CacheConfig(
+        final Map<String, ?> props,
+        final Object defaultSize,
+        final long defaultRetentionMs
+    ) {
+        super(configDef(defaultSize, defaultRetentionMs), props);
     }
 
     public static Builder newBuilder(final Map<String, ?> configs) {
@@ -80,6 +84,7 @@ public class CacheConfig extends AbstractConfig {
 
     public static class Builder {
         private final Map<String, ?> props;
+        private long defaultRetentionMs = DEFAULT_CACHE_RETENTION_MS;
         private Object maybeDefaultSize = NO_DEFAULT_VALUE;
 
         public Builder(final Map<String, ?> props) {
@@ -91,8 +96,13 @@ public class CacheConfig extends AbstractConfig {
             return this;
         }
 
+        public Builder withDefaultRetentionMs(final long retentionMs) {
+            this.defaultRetentionMs = retentionMs;
+            return this;
+        }
+
         public CacheConfig build() {
-            return new CacheConfig(props, maybeDefaultSize);
+            return new CacheConfig(props, maybeDefaultSize, defaultRetentionMs);
         }
     }
 }
