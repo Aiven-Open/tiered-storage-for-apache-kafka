@@ -31,6 +31,12 @@ public class CacheConfig extends AbstractConfig {
     private static final String CACHE_RETENTION_CONFIG = "retention.ms";
     private static final String CACHE_RETENTION_DOC = "Cache retention time ms, "
         + "where \"-1\" represents infinite retention";
+    private static final String CACHE_FETCH_THREAD_POOL_SIZE_CONFIG = "fetch.thread.pool.size";
+    private static final String CACHE_FETCH_THREAD_POOL_SIZE_DOC = "Size for the thread pool used to "
+        + "schedule asynchronous fetching tasks, default to number of processors.";
+    private static final String CACHE_FETCH_TIMEOUT_MS_CONFIG = "fetch.timeout.ms";
+    private static final String CACHE_FETCH_TIMEOUT_MS_DOC = "When getting an object from the fetch, "
+        + "how long to wait before timing out. Defaults to 10 sec.";
 
     static final long CACHE_RETENTION_MS_DEFAULT = 600_000;
 
@@ -54,6 +60,22 @@ public class CacheConfig extends AbstractConfig {
             ConfigDef.Range.between(-1L, Long.MAX_VALUE),
             ConfigDef.Importance.MEDIUM,
             CACHE_RETENTION_DOC
+        );
+        configDef.define(
+            CACHE_FETCH_THREAD_POOL_SIZE_CONFIG,
+            ConfigDef.Type.INT,
+            0,
+            ConfigDef.Range.between(0, 1024),
+            ConfigDef.Importance.LOW,
+            CACHE_FETCH_THREAD_POOL_SIZE_DOC
+        );
+        configDef.define(
+            CACHE_FETCH_TIMEOUT_MS_CONFIG,
+            ConfigDef.Type.LONG,
+            Duration.ofSeconds(10).toMillis(),
+            ConfigDef.Range.between(1, Long.MAX_VALUE),
+            ConfigDef.Importance.LOW,
+            CACHE_FETCH_TIMEOUT_MS_DOC
         );
         return configDef;
     }
@@ -85,6 +107,18 @@ public class CacheConfig extends AbstractConfig {
             return Optional.empty();
         }
         return Optional.of(Duration.ofMillis(rawValue));
+    }
+
+    public Optional<Integer> threadPoolSize() {
+        final Integer rawValue = getInt(CACHE_FETCH_THREAD_POOL_SIZE_CONFIG);
+        if (rawValue == 0) {
+            return Optional.empty();
+        }
+        return Optional.of(rawValue);
+    }
+
+    public Duration getTimeout() {
+        return Duration.ofMillis(getLong(CACHE_FETCH_TIMEOUT_MS_CONFIG));
     }
 
     public static class Builder {
