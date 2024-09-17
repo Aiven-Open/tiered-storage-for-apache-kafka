@@ -21,7 +21,6 @@ import java.io.InputStream;
 import java.util.concurrent.CompletableFuture;
 import java.util.concurrent.CompletionException;
 import java.util.concurrent.ExecutionException;
-import java.util.concurrent.Executor;
 import java.util.concurrent.ForkJoinPool;
 import java.util.concurrent.TimeUnit;
 import java.util.concurrent.TimeoutException;
@@ -42,13 +41,17 @@ import com.github.benmanes.caffeine.cache.Caffeine;
 import com.github.benmanes.caffeine.cache.RemovalListener;
 import com.github.benmanes.caffeine.cache.Scheduler;
 import com.github.benmanes.caffeine.cache.Weigher;
+import org.slf4j.Logger;
+import org.slf4j.LoggerFactory;
 
 public abstract class ChunkCache<T> implements ChunkManager, Configurable {
     private static final long GET_TIMEOUT_SEC = 10;
     private static final String METRIC_GROUP = "chunk-cache-metrics";
 
     private final ChunkManager chunkManager;
-    private final Executor executor = new ForkJoinPool();
+    private final ForkJoinPool executor;
+
+    private static final Logger log = LoggerFactory.getLogger(ChunkCache.class);
 
     final CaffeineStatsCounter statsCounter;
 
@@ -56,9 +59,11 @@ public abstract class ChunkCache<T> implements ChunkManager, Configurable {
 
     private int prefetchingSize;
 
-    protected ChunkCache(final ChunkManager chunkManager) {
+    protected ChunkCache(final ChunkManager chunkManager, final Integer parallelism) {
         this.chunkManager = chunkManager;
         this.statsCounter = new CaffeineStatsCounter(METRIC_GROUP);
+        log.info("Creating chunk cache fork join pool with parallelism: {}", parallelism);
+        this.executor = new ForkJoinPool(parallelism);
     }
 
     /**

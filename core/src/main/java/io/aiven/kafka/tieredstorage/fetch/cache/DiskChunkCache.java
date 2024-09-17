@@ -42,11 +42,19 @@ public class DiskChunkCache extends ChunkCache<Path> {
     private DiskChunkCacheConfig config;
 
     public DiskChunkCache(final ChunkManager chunkManager) {
-        this(chunkManager, Time.SYSTEM);
+        this(chunkManager, Time.SYSTEM, Runtime.getRuntime().availableProcessors());
     }
 
-    DiskChunkCache(final ChunkManager chunkManager, final Time time) {
-        super(chunkManager);
+    public DiskChunkCache(final ChunkManager chunkManager, final Time time) {
+        this(chunkManager, time, Runtime.getRuntime().availableProcessors());
+    }
+
+    public DiskChunkCache(final ChunkManager chunkManager, final Integer parallelism) {
+        this(chunkManager, Time.SYSTEM, parallelism);
+    }
+
+    DiskChunkCache(final ChunkManager chunkManager, final Time time, final int parallelism) {
+        super(chunkManager, parallelism);
         metrics = new DiskChunkCacheMetrics(time);
     }
 

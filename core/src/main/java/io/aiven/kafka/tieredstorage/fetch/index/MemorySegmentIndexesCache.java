@@ -47,13 +47,22 @@ public class MemorySegmentIndexesCache implements SegmentIndexesCache {
     private static final Logger log = LoggerFactory.getLogger(MemorySegmentIndexesCache.class);
 
     private static final long GET_TIMEOUT_SEC = 10;
-    private static final long DEFAULT_MAX_SIZE_BYTES = 10 * 1024 * 1024;
+    public static final long DEFAULT_MAX_SIZE_BYTES = 10 * 1024 * 1024;
     private static final String METRIC_GROUP = "segment-indexes-cache";
 
-    private final Executor executor = new ForkJoinPool();
+    private final Executor executor;
     private final CaffeineStatsCounter statsCounter = new CaffeineStatsCounter(METRIC_GROUP);
 
     protected AsyncCache<SegmentIndexKey, byte[]> cache;
+
+    public MemorySegmentIndexesCache() {
+        this(Runtime.getRuntime().availableProcessors());
+    }
+
+    public MemorySegmentIndexesCache(final int parallelism) {
+        log.info("Creating memory segment index cache fork join pool with parallelism: {}", parallelism);
+        this.executor = new ForkJoinPool(parallelism);
+    }
 
     // for testing
     RemovalListener<SegmentIndexKey, byte[]> removalListener() {

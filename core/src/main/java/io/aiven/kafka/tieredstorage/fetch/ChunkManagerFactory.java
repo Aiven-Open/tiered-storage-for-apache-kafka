@@ -19,10 +19,13 @@ package io.aiven.kafka.tieredstorage.fetch;
 import java.util.Map;
 
 import org.apache.kafka.common.Configurable;
+import org.apache.kafka.common.config.ConfigDef;
 
 import io.aiven.kafka.tieredstorage.fetch.cache.ChunkCache;
+import io.aiven.kafka.tieredstorage.fetch.cache.ChunkCacheConfig;
 import io.aiven.kafka.tieredstorage.security.AesEncryptionProvider;
 import io.aiven.kafka.tieredstorage.storage.ObjectFetcher;
+
 
 public class ChunkManagerFactory implements Configurable {
     private ChunkManagerFactoryConfig config;
@@ -37,10 +40,12 @@ public class ChunkManagerFactory implements Configurable {
         final DefaultChunkManager defaultChunkManager = new DefaultChunkManager(fileFetcher, aesEncryptionProvider);
         if (config.cacheClass() != null) {
             try {
+                final var parallelism = new ChunkCacheConfig(new ConfigDef(),
+                    this.config.originalsWithPrefix(ChunkManagerFactoryConfig.FETCH_CHUNK_CACHE_PREFIX)).parallelism();
                 final ChunkCache<?> chunkCache = config
                     .cacheClass()
-                    .getDeclaredConstructor(ChunkManager.class)
-                    .newInstance(defaultChunkManager);
+                    .getDeclaredConstructor(ChunkManager.class, Integer.class)
+                    .newInstance(defaultChunkManager, parallelism);
                 chunkCache.configure(config.originalsWithPrefix(ChunkManagerFactoryConfig.FETCH_CHUNK_CACHE_PREFIX));
                 return chunkCache;
             } catch (final ReflectiveOperationException e) {

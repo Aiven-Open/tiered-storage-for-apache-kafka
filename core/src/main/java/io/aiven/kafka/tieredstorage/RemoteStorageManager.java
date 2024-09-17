@@ -49,6 +49,7 @@ import org.apache.kafka.server.log.remote.storage.RemoteLogSegmentMetadata.Custo
 import org.apache.kafka.server.log.remote.storage.RemoteResourceNotFoundException;
 import org.apache.kafka.server.log.remote.storage.RemoteStorageException;
 
+import io.aiven.kafka.tieredstorage.config.CacheConfig;
 import io.aiven.kafka.tieredstorage.config.RemoteStorageManagerConfig;
 import io.aiven.kafka.tieredstorage.fetch.ChunkManager;
 import io.aiven.kafka.tieredstorage.fetch.ChunkManagerFactory;
@@ -178,7 +179,10 @@ public class RemoteStorageManager implements org.apache.kafka.server.log.remote.
             mapper,
             executor);
 
-        segmentIndexesCache = new MemorySegmentIndexesCache();
+        final var conf = config.fetchIndexesCacheConfigs();
+        segmentIndexesCache = new MemorySegmentIndexesCache(
+            CacheConfig.newBuilder(config.fetchIndexesCacheConfigs())
+                .withDefaultSize(MemorySegmentIndexesCache.DEFAULT_MAX_SIZE_BYTES).build().parallelism());
         segmentIndexesCache.configure(config.fetchIndexesCacheConfigs());
 
         customMetadataSerde = new SegmentCustomMetadataSerde();

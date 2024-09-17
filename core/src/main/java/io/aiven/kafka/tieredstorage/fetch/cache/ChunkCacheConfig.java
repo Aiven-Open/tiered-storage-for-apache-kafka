@@ -37,6 +37,9 @@ public class ChunkCacheConfig extends AbstractConfig {
     private static final String CACHE_PREFETCH_MAX_SIZE_DOC =
         "The amount of data that should be eagerly prefetched and cached";
 
+    private static final String CACHE_PARALLELISM_CONFIG = "parallelism";
+    private static final String CACHE_PARALLELISM_DOC = "Maximum number of threads to use for the cache";
+
     private static final int CACHE_PREFETCHING_SIZE_DEFAULT = 0; //TODO find out what it should be
 
     private static ConfigDef addCacheConfigs(final ConfigDef configDef) {
@@ -64,6 +67,14 @@ public class ChunkCacheConfig extends AbstractConfig {
             ConfigDef.Importance.MEDIUM,
             CACHE_PREFETCH_MAX_SIZE_DOC
         );
+        configDef.define(
+            CACHE_PARALLELISM_CONFIG,
+            ConfigDef.Type.INT,
+            Runtime.getRuntime().availableProcessors(),
+            ConfigDef.Range.between(1, Integer.MAX_VALUE),
+            ConfigDef.Importance.MEDIUM,
+            CACHE_PARALLELISM_DOC
+        );
         return configDef;
     }
 
@@ -85,6 +96,10 @@ public class ChunkCacheConfig extends AbstractConfig {
             return Optional.empty();
         }
         return Optional.of(Duration.ofMillis(rawValue));
+    }
+
+    public int parallelism() {
+        return getInt(CACHE_PARALLELISM_CONFIG);
     }
 
     public int cachePrefetchingSize() {

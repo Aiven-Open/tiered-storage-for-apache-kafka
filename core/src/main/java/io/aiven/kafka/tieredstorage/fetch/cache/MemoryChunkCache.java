@@ -35,7 +35,11 @@ public class MemoryChunkCache extends ChunkCache<byte[]> {
     private static final Logger log = LoggerFactory.getLogger(MemoryChunkCache.class);
 
     public MemoryChunkCache(final ChunkManager chunkManager) {
-        super(chunkManager);
+        super(chunkManager, Runtime.getRuntime().availableProcessors());
+    }
+
+    public MemoryChunkCache(final ChunkManager chunkManager, final Integer parallelism) {
+        super(chunkManager, parallelism);
     }
 
     @Override

@@ -31,7 +31,11 @@ public class CacheConfig extends AbstractConfig {
     private static final String CACHE_RETENTION_CONFIG = "retention.ms";
     private static final String CACHE_RETENTION_DOC = "Cache retention time ms, "
         + "where \"-1\" represents infinite retention";
+    private static final String CACHE_PARALLELISM_CONFIG = "parallelism";
+    private static final String CACHE_PARALLELISM_DOC = "Cache parallelism";
+
     private static final long DEFAULT_CACHE_RETENTION_MS = 600_000;
+
 
     private static ConfigDef configDef(final Object defaultSize) {
         final var configDef = new ConfigDef();
@@ -50,6 +54,14 @@ public class CacheConfig extends AbstractConfig {
             ConfigDef.Range.between(-1L, Long.MAX_VALUE),
             ConfigDef.Importance.MEDIUM,
             CACHE_RETENTION_DOC
+        );
+        configDef.define(
+            CACHE_PARALLELISM_CONFIG,
+            ConfigDef.Type.INT,
+            Runtime.getRuntime().availableProcessors(),
+            ConfigDef.Range.between(1, Integer.MAX_VALUE),
+            ConfigDef.Importance.MEDIUM,
+            CACHE_PARALLELISM_DOC
         );
         return configDef;
     }
@@ -76,6 +88,10 @@ public class CacheConfig extends AbstractConfig {
             return Optional.empty();
         }
         return Optional.of(Duration.ofMillis(rawValue));
+    }
+
+    public int parallelism() {
+        return getInt(CACHE_PARALLELISM_CONFIG);
     }
 
     public static class Builder {

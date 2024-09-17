@@ -80,7 +80,8 @@ class ChunkManagerFactoryTest {
 
     @Test
     void failedInitialization() {
-        chunkManagerFactory.configure(Map.of("fetch.chunk.cache.class", MemoryChunkCache.class));
+        chunkManagerFactory.configure(
+            Map.of("fetch.chunk.cache.class", MemoryChunkCache.class, "fetch.chunk.cache.size", 123));
         try (final MockedConstruction<?> ignored = mockConstruction(MemoryChunkCache.class,
             (cachingChunkManager, context) -> {
                 throw new InvocationTargetException(null);
