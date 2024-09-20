@@ -74,7 +74,7 @@ class ChunkCacheMetricsTest {
                     "retention.ms", "-1",
                     "size", "-1",
                     "path", baseCachePath.toString(),
-                    "fetch.thread.pool.size", 4
+                    "thread.pool.size", 4
                 )
             ),
             Arguments.of(
@@ -82,7 +82,7 @@ class ChunkCacheMetricsTest {
                 Map.of(
                     "retention.ms", "-1",
                     "size", "-1",
-                    "fetch.thread.pool.size", 4
+                    "thread.pool.size", 4
                 )
             ));
     }

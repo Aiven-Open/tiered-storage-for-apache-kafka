@@ -31,10 +31,10 @@ public class CacheConfig extends AbstractConfig {
     private static final String CACHE_RETENTION_CONFIG = "retention.ms";
     private static final String CACHE_RETENTION_DOC = "Cache retention time ms, "
         + "where \"-1\" represents infinite retention";
-    private static final String CACHE_FETCH_THREAD_POOL_SIZE_CONFIG = "fetch.thread.pool.size";
+    private static final String CACHE_FETCH_THREAD_POOL_SIZE_CONFIG = "thread.pool.size";
     private static final String CACHE_FETCH_THREAD_POOL_SIZE_DOC = "Size for the thread pool used to "
         + "schedule asynchronous fetching tasks, default to number of processors.";
-    private static final String CACHE_FETCH_TIMEOUT_MS_CONFIG = "fetch.timeout.ms";
+    private static final String CACHE_FETCH_TIMEOUT_MS_CONFIG = "get.timeout.ms";
     private static final String CACHE_FETCH_TIMEOUT_MS_DOC = "When getting an object from the fetch, "
         + "how long to wait before timing out. Defaults to 10 sec.";
 
