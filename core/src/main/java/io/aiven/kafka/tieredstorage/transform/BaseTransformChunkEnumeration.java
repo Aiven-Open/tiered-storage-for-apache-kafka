@@ -32,12 +32,10 @@ public class BaseTransformChunkEnumeration implements TransformChunkEnumeration 
 
     private byte[] chunk = null;
 
-    public BaseTransformChunkEnumeration(final InputStream inputStream) {
-        this.inputStream = Objects.requireNonNull(inputStream, "inputStream cannot be null");
-
-        this.originalChunkSize = 0;
-    }
-
+    /**
+     * @param inputStream       original content
+     * @param originalChunkSize chunk size from the <b>original</b> content. If zero, it disables chunking.
+     */
     public BaseTransformChunkEnumeration(final InputStream inputStream,
                                          final int originalChunkSize) {
         this.inputStream = Objects.requireNonNull(inputStream, "inputStream cannot be null");

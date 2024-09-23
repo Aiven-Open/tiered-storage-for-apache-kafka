@@ -408,11 +408,12 @@ public class RemoteStorageManager implements org.apache.kafka.server.log.remote.
 
         try (final var logSegmentInputStream = Files.newInputStream(logSegmentData.logSegment())) {
             final var transformEnum = transformation(logSegmentInputStream, requiresCompression, maybeEncryptionKey);
-            final TransformFinisher transformFinisher = new TransformFinisher(
-                transformEnum,
-                remoteLogSegmentMetadata.segmentSizeInBytes(),
-                rateLimitingBucket
-            );
+            final TransformFinisher transformFinisher = TransformFinisher.newBuilder(
+                    transformEnum,
+                    remoteLogSegmentMetadata.segmentSizeInBytes()
+                )
+                .withRateLimitingBucket(rateLimitingBucket)
+                .build();
 
             try (final var sis = transformFinisher.toInputStream()) {
                 final var bytes = uploader.upload(sis, objectKey);
@@ -463,22 +464,28 @@ public class RemoteStorageManager implements org.apache.kafka.server.log.remote.
                     transformEnum,
                     () -> aesEncryptionProvider.encryptionCipher(maybeEncryptionKey));
             }
-            final var transformFinisher = new TransformFinisher(transformEnum, size, rateLimitingBucket);
+            final var transformFinisher = TransformFinisher.newBuilder(transformEnum, size)
+                .withChunkingDisabled()
+                .withRateLimitingBucket(rateLimitingBucket)
+                .build();
+            // Getting next element and expecting that it is the only one.
+            // No need to get a sequenced input stream
             final var inputStream = transformFinisher.nextElement();
-            segmentIndexBuilder.add(indexType, singleChunk(transformFinisher.chunkIndex()).range().size());
+            final var chunkIndex = transformFinisher.chunkIndex();
+            // by getting a chunk index, means that the transformation is completed.
+            if (chunkIndex == null) {
+                throw new IllegalStateException("Chunking disabled when single chunk is expected");
+            }
+            if (chunkIndex.chunks().size() != 1) {
+                // not expected, as next element run once. But for safety
+                throw new IllegalStateException("Number of chunks different than 1, single chunk is expected");
+            }
+            segmentIndexBuilder.add(indexType, chunkIndex.chunks().get(0).range().size());
             return inputStream;
         } else {
             segmentIndexBuilder.add(indexType, 0);
             return InputStream.nullInputStream();
         }
-    }
-
-    private Chunk singleChunk(final ChunkIndex chunkIndex) {
-        final var chunks = chunkIndex.chunks();
-        if (chunks.size() != 1) {
-            throw new IllegalStateException("Single chunk expected when transforming indexes");
-        }
-        return chunks.get(0);
     }
 
     void uploadManifest(final RemoteLogSegmentMetadata remoteLogSegmentMetadata,

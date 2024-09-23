@@ -42,7 +42,8 @@ class TransformFinisherTest {
 
     @Test
     void getIndexBeforeUsing() {
-        final TransformFinisher finisher = new TransformFinisher(new FakeDataEnumerator(3), 7, null);
+        final TransformChunkEnumeration enumerator = new FakeDataEnumerator(3);
+        final TransformFinisher finisher = TransformFinisher.newBuilder(enumerator, 7).build();
         assertThatThrownBy(() -> finisher.chunkIndex())
             .isInstanceOf(IllegalStateException.class)
             .hasMessage("Chunk index was not built, was finisher used?");
@@ -50,14 +51,14 @@ class TransformFinisherTest {
 
     @Test
     void nullInnerEnumeration() {
-        assertThatThrownBy(() -> new TransformFinisher(null, 100, null))
+        assertThatThrownBy(() -> TransformFinisher.newBuilder(null, 100).build())
             .isInstanceOf(NullPointerException.class)
             .hasMessage("inner cannot be null");
     }
 
     @Test
     void negativeOriginalFileSize() {
-        assertThatThrownBy(() -> new TransformFinisher(inner, -1, null))
+        assertThatThrownBy(() -> TransformFinisher.newBuilder(inner, -1).build())
             .isInstanceOf(IllegalArgumentException.class)
             .hasMessage("originalFileSize must be non-negative, -1 given");
     }
@@ -66,7 +67,8 @@ class TransformFinisherTest {
     @MethodSource("provideForBuildIndexAndReturnCorrectInputStreams")
     void buildIndexAndReturnCorrectInputStreams(final Integer transformedChunkSize,
                                                 final Class<ChunkIndex> indexType) throws IOException {
-        final TransformFinisher finisher = new TransformFinisher(new FakeDataEnumerator(transformedChunkSize), 7, null);
+        final TransformChunkEnumeration enumerator = new FakeDataEnumerator(transformedChunkSize);
+        final TransformFinisher finisher = TransformFinisher.newBuilder(enumerator, 7).build();
         assertThat(finisher.hasMoreElements()).isTrue();
         assertThat(finisher.nextElement().readAllBytes()).isEqualTo(new byte[] {0, 1, 2});
         assertThat(finisher.hasMoreElements()).isTrue();
