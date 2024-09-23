@@ -43,6 +43,7 @@ import static org.apache.kafka.common.config.ConfigDef.ValidString.in;
 public class RemoteStorageManagerConfig extends AbstractConfig {
     private static final String STORAGE_PREFIX = "storage.";
     private static final String FETCH_INDEXES_CACHE_PREFIX = "fetch.indexes.cache.";
+    private static final String SEGMENT_MANIFEST_CACHE_PREFIX = "fetch.manifest.cache.";
 
     private static final String STORAGE_BACKEND_CLASS_CONFIG = STORAGE_PREFIX + "backend.class";
     private static final String STORAGE_BACKEND_CLASS_DOC = "The storage backend implementation class";
@@ -52,8 +53,6 @@ public class RemoteStorageManagerConfig extends AbstractConfig {
 
     private static final String OBJECT_KEY_PREFIX_MASK_CONFIG = "key.prefix.mask";
     private static final String OBJECT_KEY_PREFIX_MASK_DOC = "Whether to mask path prefix in logs";
-
-    private static final String SEGMENT_MANIFEST_CACHE_PREFIX = "segment.manifest.cache.";
 
     private static final String CHUNK_SIZE_CONFIG = "chunk.size";
     private static final String CHUNK_SIZE_DOC = "The chunk size of log files";

@@ -28,6 +28,7 @@ import java.util.concurrent.TimeoutException;
 import io.aiven.kafka.tieredstorage.config.CacheConfig;
 import io.aiven.kafka.tieredstorage.manifest.SegmentManifest;
 import io.aiven.kafka.tieredstorage.metrics.CaffeineStatsCounter;
+import io.aiven.kafka.tieredstorage.metrics.ThreadPoolMonitor;
 import io.aiven.kafka.tieredstorage.storage.ObjectFetcher;
 import io.aiven.kafka.tieredstorage.storage.ObjectKey;
 import io.aiven.kafka.tieredstorage.storage.StorageBackendException;
@@ -44,6 +45,7 @@ import org.slf4j.LoggerFactory;
 public class MemorySegmentManifestCache implements SegmentManifestCache {
     private static final Logger log = LoggerFactory.getLogger(MemorySegmentManifestCache.class);
     private static final String METRIC_GROUP = "segment-manifest-cache-metrics";
+    private static final String THREAD_POOL_METRIC_GROUP = "segment-manifest-cache-thread-pool-metrics";
     private static final long DEFAULT_MAX_SIZE = 1000L;
     private static final long DEFAULT_RETENTION_MS = 3_600_000;
 
@@ -97,7 +99,9 @@ public class MemorySegmentManifestCache implements SegmentManifestCache {
 
     protected AsyncLoadingCache<ObjectKey, SegmentManifest> buildCache(final CacheConfig config) {
         final var executor = config.threadPoolSize().map(ForkJoinPool::new).orElse(new ForkJoinPool());
+        new ThreadPoolMonitor(THREAD_POOL_METRIC_GROUP, executor);
         getTimeout = config.getTimeout();
+
         final Caffeine<Object, Object> cacheBuilder = Caffeine.newBuilder();
         config.cacheSize().ifPresent(maximumWeight -> cacheBuilder.maximumWeight(maximumWeight).weigher(weigher()));
         config.cacheRetention().ifPresent(cacheBuilder::expireAfterAccess);
@@ -110,7 +114,9 @@ public class MemorySegmentManifestCache implements SegmentManifestCache {
                     return mapper.readValue(is, SegmentManifest.class);
                 }
             });
+
         statsCounter.registerSizeMetric(cache.synchronous()::estimatedSize);
+
         return cache;
     }
 

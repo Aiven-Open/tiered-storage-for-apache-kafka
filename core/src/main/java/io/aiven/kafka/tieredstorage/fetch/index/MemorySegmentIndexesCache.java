@@ -23,7 +23,7 @@ import java.time.Duration;
 import java.util.Map;
 import java.util.concurrent.CompletableFuture;
 import java.util.concurrent.ExecutionException;
-import java.util.concurrent.Executor;
+import java.util.concurrent.ExecutorService;
 import java.util.concurrent.ForkJoinPool;
 import java.util.concurrent.TimeUnit;
 import java.util.concurrent.TimeoutException;
@@ -33,6 +33,7 @@ import org.apache.kafka.server.log.remote.storage.RemoteStorageManager.IndexType
 
 import io.aiven.kafka.tieredstorage.config.CacheConfig;
 import io.aiven.kafka.tieredstorage.metrics.CaffeineStatsCounter;
+import io.aiven.kafka.tieredstorage.metrics.ThreadPoolMonitor;
 import io.aiven.kafka.tieredstorage.storage.ObjectKey;
 import io.aiven.kafka.tieredstorage.storage.StorageBackendException;
 
@@ -48,11 +49,12 @@ public class MemorySegmentIndexesCache implements SegmentIndexesCache {
     private static final Logger log = LoggerFactory.getLogger(MemorySegmentIndexesCache.class);
 
     private static final long DEFAULT_MAX_SIZE_BYTES = 10 * 1024 * 1024;
-    private static final String METRIC_GROUP = "segment-indexes-cache";
+    private static final String METRIC_GROUP = "segment-indexes-cache-metrics";
+    private static final String THREAD_POOL_METRIC_GROUP = "segment-indexes-cache-thread-pool-metrics";
 
     private final CaffeineStatsCounter statsCounter = new CaffeineStatsCounter(METRIC_GROUP);
 
-    private Executor executor;
+    private ExecutorService executor;
     protected AsyncCache<SegmentIndexKey, byte[]> cache;
     private Duration getTimeout;
 
@@ -68,7 +70,9 @@ public class MemorySegmentIndexesCache implements SegmentIndexesCache {
 
     protected AsyncCache<SegmentIndexKey, byte[]> buildCache(final CacheConfig config) {
         this.executor = config.threadPoolSize().map(ForkJoinPool::new).orElse(new ForkJoinPool());
+        new ThreadPoolMonitor(THREAD_POOL_METRIC_GROUP, executor);
         this.getTimeout = config.getTimeout();
+
         final Caffeine<Object, Object> cacheBuilder = Caffeine.newBuilder();
         config.cacheSize().ifPresent(maximumWeight -> cacheBuilder.maximumWeight(maximumWeight).weigher(weigher()));
         config.cacheRetention().ifPresent(cacheBuilder::expireAfterAccess);
@@ -77,7 +81,9 @@ public class MemorySegmentIndexesCache implements SegmentIndexesCache {
             .executor(executor)
             .recordStats(() -> statsCounter)
             .buildAsync();
+
         statsCounter.registerSizeMetric(cache.synchronous()::estimatedSize);
+
         return cache;
     }
 

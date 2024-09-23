@@ -129,8 +129,8 @@ class CacheConfigTest {
     @Test
     void setOtherConfigs() {
         final CacheConfig config = CacheConfig.newBuilder(Map.of(
-                "fetch.thread.pool.size", 16,
-                "fetch.timeout.ms", Duration.ofSeconds(20).toMillis()
+                "thread.pool.size", 16,
+                "get.timeout.ms", Duration.ofSeconds(20).toMillis()
             ))
             .withDefaultSize(-1L)
             .build();

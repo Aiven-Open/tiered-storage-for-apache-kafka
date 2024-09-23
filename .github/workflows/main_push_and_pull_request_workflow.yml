@@ -30,6 +30,13 @@ jobs:
 
       - name: Run integration tests
         run: make integration_test
+
+      - name: Upload build reports
+        uses: actions/upload-artifact@v4
+        if: always()
+        with:
+          name: build-reports-${{ matrix.java-version }}
+          path: '**/build/reports/**'
   e2e_test:
     strategy:
       matrix:

@@ -22,7 +22,7 @@ import java.time.Duration;
 import java.util.concurrent.CompletableFuture;
 import java.util.concurrent.CompletionException;
 import java.util.concurrent.ExecutionException;
-import java.util.concurrent.Executor;
+import java.util.concurrent.ExecutorService;
 import java.util.concurrent.ForkJoinPool;
 import java.util.concurrent.TimeUnit;
 import java.util.concurrent.TimeoutException;
@@ -35,6 +35,7 @@ import io.aiven.kafka.tieredstorage.fetch.ChunkKey;
 import io.aiven.kafka.tieredstorage.fetch.ChunkManager;
 import io.aiven.kafka.tieredstorage.manifest.SegmentManifest;
 import io.aiven.kafka.tieredstorage.metrics.CaffeineStatsCounter;
+import io.aiven.kafka.tieredstorage.metrics.ThreadPoolMonitor;
 import io.aiven.kafka.tieredstorage.storage.BytesRange;
 import io.aiven.kafka.tieredstorage.storage.ObjectKey;
 import io.aiven.kafka.tieredstorage.storage.StorageBackendException;
@@ -47,9 +48,10 @@ import com.github.benmanes.caffeine.cache.Weigher;
 
 public abstract class ChunkCache<T> implements ChunkManager, Configurable {
     private static final String METRIC_GROUP = "chunk-cache-metrics";
+    private static final String THREAD_POOL_METRIC_GROUP = "chunk-cache-thread-pool-metrics";
 
     private final ChunkManager chunkManager;
-    private Executor executor;
+    private ExecutorService executor;
 
     final CaffeineStatsCounter statsCounter;
 
@@ -136,8 +138,10 @@ public abstract class ChunkCache<T> implements ChunkManager, Configurable {
 
     protected AsyncCache<ChunkKey, T> buildCache(final ChunkCacheConfig config) {
         this.executor = config.threadPoolSize().map(ForkJoinPool::new).orElse(new ForkJoinPool());
+        new ThreadPoolMonitor(THREAD_POOL_METRIC_GROUP, this.executor);
         this.getTimeout = config.getTimeout();
         this.prefetchingSize = config.cachePrefetchingSize();
+
         final Caffeine<Object, Object> cacheBuilder = Caffeine.newBuilder();
         config.cacheSize().ifPresent(maximumWeight -> cacheBuilder.maximumWeight(maximumWeight).weigher(weigher()));
         config.cacheRetention().ifPresent(cacheBuilder::expireAfterAccess);
@@ -146,7 +150,9 @@ public abstract class ChunkCache<T> implements ChunkManager, Configurable {
             .executor(executor)
             .recordStats(() -> statsCounter)
             .buildAsync();
+
         statsCounter.registerSizeMetric(cache.synchronous()::estimatedSize);
+
         return cache;
     }
 

@@ -1,5 +1,5 @@
 /*
- * Copyright 2023 Aiven Oy
+ * Copyright 2024 Aiven Oy
  *
  * Licensed under the Apache License, Version 2.0 (the "License");
  * you may not use this file except in compliance with the License.
@@ -14,105 +14,92 @@
  * limitations under the License.
  */
 
-package io.aiven.kafka.tieredstorage.fetch.cache;
+package io.aiven.kafka.tieredstorage.fetch.manifest;
 
 import javax.management.MBeanServer;
 import javax.management.ObjectName;
 
 import java.io.ByteArrayInputStream;
+import java.io.InputStream;
 import java.lang.management.ManagementFactory;
-import java.nio.file.Path;
+import java.nio.charset.StandardCharsets;
 import java.time.Duration;
 import java.util.Map;
-import java.util.stream.Stream;
 
-import io.aiven.kafka.tieredstorage.fetch.ChunkManager;
-import io.aiven.kafka.tieredstorage.manifest.SegmentManifest;
-import io.aiven.kafka.tieredstorage.manifest.index.ChunkIndex;
-import io.aiven.kafka.tieredstorage.manifest.index.FixedSizeChunkIndex;
+import io.aiven.kafka.tieredstorage.manifest.serde.KafkaTypeSerdeModule;
+import io.aiven.kafka.tieredstorage.storage.BytesRange;
+import io.aiven.kafka.tieredstorage.storage.ObjectFetcher;
 import io.aiven.kafka.tieredstorage.storage.ObjectKey;
 
-import org.junit.jupiter.api.BeforeEach;
+import com.fasterxml.jackson.databind.ObjectMapper;
+import com.fasterxml.jackson.datatype.jdk8.Jdk8Module;
+import org.junit.jupiter.api.Test;
 import org.junit.jupiter.api.extension.ExtendWith;
-import org.junit.jupiter.api.io.TempDir;
-import org.junit.jupiter.params.ParameterizedTest;
-import org.junit.jupiter.params.provider.Arguments;
-import org.junit.jupiter.params.provider.MethodSource;
-import org.mockito.Mock;
 import org.mockito.junit.jupiter.MockitoExtension;
 
 import static org.assertj.core.api.Assertions.assertThat;
 import static org.assertj.core.api.InstanceOfAssertFactories.DOUBLE;
 import static org.awaitility.Awaitility.await;
-import static org.mockito.ArgumentMatchers.any;
-import static org.mockito.ArgumentMatchers.anyInt;
-import static org.mockito.Mockito.when;
 
-/**
- * Tests metrics gathering on Chunk Cache implementations
- */
 @ExtendWith(MockitoExtension.class)
-class ChunkCacheMetricsTest {
-    private static final ChunkIndex FIXED_SIZE_CHUNK_INDEX = new FixedSizeChunkIndex(10, 10, 10, 10);
+class MemorySegmentManifestCacheMetricsTest {
     static final MBeanServer MBEAN_SERVER = ManagementFactory.getPlatformMBeanServer();
 
     public static final ObjectKey OBJECT_KEY_PATH = () -> "topic/segment";
 
-    @TempDir
-    static Path baseCachePath;
+    static final String MANIFEST =
+        "{\"version\":\"1\","
+            + "\"chunkIndex\":{\"type\":\"fixed\",\"originalChunkSize\":100,"
+            + "\"originalFileSize\":1000,\"transformedChunkSize\":110,\"finalTransformedChunkSize\":110},"
+            + "\"segmentIndexes\":{"
+            + "\"offset\":{\"position\":0,\"size\":1},"
+            + "\"timestamp\":{\"position\":1,\"size\":1},"
+            + "\"producerSnapshot\":{\"position\":2,\"size\":1},"
+            + "\"leaderEpoch\":{\"position\":3,\"size\":1},"
+            + "\"transaction\":{\"position\":4,\"size\":1}"
+            + "},"
+            + "\"compression\":false}";
+    public static final ObjectFetcher FILE_FETCHER = new ObjectFetcher() {
+        @Override
+        public InputStream fetch(final ObjectKey key) {
+            return new ByteArrayInputStream(MANIFEST.getBytes(StandardCharsets.UTF_8));
+        }
 
-    @Mock
-    ChunkManager chunkManager;
-    @Mock
-    SegmentManifest segmentManifest;
+        @Override
+        public InputStream fetch(final ObjectKey key, final BytesRange range) {
+            return new ByteArrayInputStream(MANIFEST.getBytes(StandardCharsets.UTF_8));
+        }
+    };
 
-    private static Stream<Arguments> caches() {
-        return Stream.of(
-            Arguments.of(
-                DiskChunkCache.class,
-                Map.of(
-                    "retention.ms", "-1",
-                    "size", "-1",
-                    "path", baseCachePath.toString(),
-                    "thread.pool.size", 4
-                )
-            ),
-            Arguments.of(
-                MemoryChunkCache.class,
-                Map.of(
-                    "retention.ms", "-1",
-                    "size", "-1",
-                    "thread.pool.size", 4
-                )
-            ));
+    static final ObjectMapper MAPPER = new ObjectMapper();
+
+    static {
+        MAPPER.registerModule(new Jdk8Module());
+        MAPPER.registerModule(KafkaTypeSerdeModule.create());
     }
 
-    @BeforeEach
-    void setUp() {
-        when(segmentManifest.chunkIndex()).thenReturn(FIXED_SIZE_CHUNK_INDEX);
-    }
-
-    @ParameterizedTest(name = "Cache {0}")
-    @MethodSource("caches")
-    void shouldRecordMetrics(final Class<ChunkCache<?>> chunkCacheClass, final Map<String, ?> config)
+    @Test
+    void shouldRecordMetrics()
         throws Exception {
-        // Given a fetch chunk cache implementation
-        when(chunkManager.getChunk(any(), any(), anyInt()))
-            .thenReturn(new ByteArrayInputStream("test".getBytes()));
+        // Given
+        final var cache = new MemorySegmentManifestCache(FILE_FETCHER, MAPPER);
+        cache.configure(Map.of(
+            "size", "-1",
+            "retention.ms", "10000",
+            "thread.pool.size", "4"
+        ));
 
-        final var chunkCache = chunkCacheClass.getDeclaredConstructor(ChunkManager.class).newInstance(chunkManager);
-        chunkCache.configure(config);
-
-        final var objectName = new ObjectName("aiven.kafka.server.tieredstorage.cache:type=chunk-cache-metrics");
+        final var objectName =
+            new ObjectName("aiven.kafka.server.tieredstorage.cache:type=segment-manifest-cache-metrics");
 
         // When getting a existing chunk from cache
-        chunkCache.getChunk(OBJECT_KEY_PATH, segmentManifest, 0);
+        cache.get(OBJECT_KEY_PATH);
 
         // check cache size increases after first miss
         assertThat(MBEAN_SERVER.getAttribute(objectName, "cache-size-total"))
             .isEqualTo(1.0);
 
-        chunkCache.getChunk(OBJECT_KEY_PATH, segmentManifest, 0);
+        cache.get(OBJECT_KEY_PATH);
 
         // Then the following metrics should be available
         assertThat(MBEAN_SERVER.getAttribute(objectName, "cache-hits-total"))
@@ -123,9 +110,9 @@ class ChunkCacheMetricsTest {
             .asInstanceOf(DOUBLE)
             .isGreaterThan(0);
 
-        // compute is considered as load success regardless if present or not
+        // when using cache loader, load success seem to be only the missed loads (hits do not count)
         assertThat(MBEAN_SERVER.getAttribute(objectName, "cache-load-success-total"))
-            .isEqualTo(2.0);
+            .isEqualTo(1.0);
         assertThat(MBEAN_SERVER.getAttribute(objectName, "cache-load-failure-time-total"))
             .isEqualTo(0.0);
 
@@ -138,7 +125,8 @@ class ChunkCacheMetricsTest {
             .isEqualTo(0.0);
 
         final var threadPoolObjectName =
-            new ObjectName("aiven.kafka.server.tieredstorage.thread-pool:type=chunk-cache-thread-pool-metrics");
+            new ObjectName("aiven.kafka.server.tieredstorage.thread-pool:type="
+                + "segment-manifest-cache-thread-pool-metrics");
 
         // The following assertions are relaxed, just to show that metrics are collected
         assertThat(MBEAN_SERVER.getAttribute(threadPoolObjectName, "parallelism-total"))
