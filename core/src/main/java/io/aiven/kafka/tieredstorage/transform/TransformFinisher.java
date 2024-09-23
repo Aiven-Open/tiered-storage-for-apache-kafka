@@ -17,10 +17,14 @@
 package io.aiven.kafka.tieredstorage.transform;
 
 import java.io.ByteArrayInputStream;
+import java.io.IOException;
 import java.io.InputStream;
 import java.io.SequenceInputStream;
+import java.nio.file.Files;
+import java.nio.file.Path;
 import java.util.Enumeration;
 import java.util.Objects;
+import java.util.Optional;
 
 import io.aiven.kafka.tieredstorage.manifest.index.AbstractChunkIndexBuilder;
 import io.aiven.kafka.tieredstorage.manifest.index.ChunkIndex;
@@ -43,6 +47,8 @@ import io.github.bucket4j.Bucket;
 public class TransformFinisher implements Enumeration<InputStream> {
     private final TransformChunkEnumeration inner;
     private final AbstractChunkIndexBuilder chunkIndexBuilder;
+    private final Path originalFilePath;
+    private final int originalFileSize;
     private ChunkIndex chunkIndex = null;
     private final Bucket rateLimitingBucket;
 
@@ -53,6 +59,7 @@ public class TransformFinisher implements Enumeration<InputStream> {
     private TransformFinisher(
         final TransformChunkEnumeration inner,
         final boolean chunkingEnabled,
+        final Path originalFilePath,
         final int originalFileSize,
         final Bucket rateLimitingBucket
     ) {
@@ -60,6 +67,8 @@ public class TransformFinisher implements Enumeration<InputStream> {
 
         final int originalChunkSize = chunkingEnabled ? inner.originalChunkSize() : originalFileSize;
         this.chunkIndexBuilder = chunkIndexBuilder(inner, originalChunkSize, originalFileSize);
+        this.originalFilePath = originalFilePath;
+        this.originalFileSize = originalFileSize;
         this.rateLimitingBucket = rateLimitingBucket;
     }
 
@@ -102,24 +111,58 @@ public class TransformFinisher implements Enumeration<InputStream> {
 
     public ChunkIndex chunkIndex() {
         if (chunkIndex == null) {
-            throw new IllegalStateException("Chunk index was not built, was finisher used?");
+            if (isBaseTransform()) {
+                // as chunk index will not be built by consuming the input stream, calculate it from source file
+                return calculateChunkIndex();
+            } else {
+                throw new IllegalStateException("Chunk index was not built, was finisher used?");
+            }
         }
         return this.chunkIndex;
     }
 
-    public InputStream toInputStream() {
-        final SequenceInputStream sequencedInputStream = new SequenceInputStream(this);
-        if (rateLimitingBucket == null) {
-            return sequencedInputStream;
-        } else {
-            return new RateLimitedInputStream(sequencedInputStream, rateLimitingBucket);
+    private ChunkIndex calculateChunkIndex() {
+        final var chunkSize = inner.transformedChunkSize();
+        var size = originalFileSize;
+        while (size > chunkSize) {
+            chunkIndexBuilder.addChunk(chunkSize);
+            size -= chunkSize;
         }
+        return chunkIndexBuilder.finish(size);
+    }
+
+    public InputStream toInputStream() throws IOException {
+        if (isBaseTransform() && originalFilePath != null) {
+            // close inner input stream (based on source file)
+            final var sequenceInputStream = new SequenceInputStream(this);
+            sequenceInputStream.close();
+
+            return maybeToRateLimitedInputStream(Files.newInputStream(originalFilePath));
+        } else {
+            return maybeToRateLimitedInputStream(new SequenceInputStream(this));
+        }
+    }
+
+    private InputStream maybeToRateLimitedInputStream(final InputStream delegated) {
+        if (rateLimitingBucket == null) {
+            return delegated;
+        }
+        return new RateLimitedInputStream(delegated, rateLimitingBucket);
+    }
+
+    private boolean isBaseTransform() {
+        return inner instanceof BaseTransformChunkEnumeration;
+    }
+
+    Optional<Path> maybeOriginalFilePath() {
+        return Optional.ofNullable(originalFilePath);
     }
 
     public static class Builder {
         final TransformChunkEnumeration inner;
         final Integer originalFileSize;
         boolean chunkingEnabled = true;
+        Path originalFilePath = null;
         Bucket rateLimitingBucket;
 
         public Builder(final TransformChunkEnumeration inner, final int originalFileSize) {
@@ -143,8 +186,14 @@ public class TransformFinisher implements Enumeration<InputStream> {
             return this;
         }
 
+        public Builder withOriginalFilePath(final Path originalFilePath) {
+            this.originalFilePath = Objects.requireNonNull(originalFilePath, "originalFilePath cannot be null");
+            return this;
+        }
+
         public TransformFinisher build() {
-            return new TransformFinisher(inner, chunkingEnabled, originalFileSize, rateLimitingBucket);
+            return new TransformFinisher(inner, chunkingEnabled, originalFilePath, originalFileSize,
+                rateLimitingBucket);
         }
     }
 }

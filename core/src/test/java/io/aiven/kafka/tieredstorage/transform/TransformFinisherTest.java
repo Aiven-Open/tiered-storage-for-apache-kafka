@@ -17,6 +17,8 @@
 package io.aiven.kafka.tieredstorage.transform;
 
 import java.io.IOException;
+import java.nio.file.Files;
+import java.nio.file.Path;
 import java.util.Iterator;
 import java.util.List;
 
@@ -27,6 +29,7 @@ import io.aiven.kafka.tieredstorage.manifest.index.VariableSizeChunkIndex;
 
 import org.junit.jupiter.api.Test;
 import org.junit.jupiter.api.extension.ExtendWith;
+import org.junit.jupiter.api.io.TempDir;
 import org.junit.jupiter.params.ParameterizedTest;
 import org.junit.jupiter.params.provider.MethodSource;
 import org.mockito.Mock;
@@ -61,6 +64,34 @@ class TransformFinisherTest {
         assertThatThrownBy(() -> TransformFinisher.newBuilder(inner, -1).build())
             .isInstanceOf(IllegalArgumentException.class)
             .hasMessage("originalFileSize must be non-negative, -1 given");
+    }
+
+    @Test
+    void nullOriginalFilePath() {
+        assertThatThrownBy(() ->
+            TransformFinisher.newBuilder(inner, 100)
+                .withOriginalFilePath(null)
+                .build())
+            .isInstanceOf(NullPointerException.class)
+            .hasMessage("originalFilePath cannot be null");
+    }
+
+    @Test
+    void emptyOriginalFilePath() {
+        final var finisher = TransformFinisher.newBuilder(inner, 100).build();
+        assertThat(finisher.maybeOriginalFilePath()).isEmpty();
+    }
+
+    @Test
+    void presentOriginalFilePath(@TempDir final Path tmpDir) throws IOException {
+        final var originalFilePath = tmpDir.resolve("test.log");
+        Files.writeString(originalFilePath, "test");
+
+        final var finisher = TransformFinisher.newBuilder(inner, 100)
+            .withOriginalFilePath(originalFilePath)
+            .build();
+        assertThat(finisher.maybeOriginalFilePath()).isPresent();
+        assertThat(finisher.maybeOriginalFilePath().get()).hasContent("test");
     }
 
     @ParameterizedTest

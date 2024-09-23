@@ -413,6 +413,7 @@ public class RemoteStorageManager implements org.apache.kafka.server.log.remote.
                     remoteLogSegmentMetadata.segmentSizeInBytes()
                 )
                 .withRateLimitingBucket(rateLimitingBucket)
+                .withOriginalFilePath(logSegmentData.logSegment())
                 .build();
 
             try (final var sis = transformFinisher.toInputStream()) {
