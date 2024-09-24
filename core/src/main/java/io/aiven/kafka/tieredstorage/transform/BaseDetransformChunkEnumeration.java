@@ -36,7 +36,7 @@ import io.aiven.kafka.tieredstorage.Chunk;
  * <p>An empty list of chunks means no chunking has been applied to the incoming stream.
  */
 public class BaseDetransformChunkEnumeration implements DetransformChunkEnumeration {
-    private final InputStream inputStream;
+    final InputStream inputStream;
     private boolean inputStreamClosed = false;
     private final Iterator<Chunk> chunksIter;
     private final boolean isEmpty;

@@ -46,6 +46,10 @@ public class DetransformFinisher implements Enumeration<InputStream> {
     }
 
     public InputStream toInputStream() {
+        if (inner instanceof BaseDetransformChunkEnumeration) {
+            return ((BaseDetransformChunkEnumeration) inner).inputStream;
+        }
+
         return new SequenceInputStream(this);
     }
 }
