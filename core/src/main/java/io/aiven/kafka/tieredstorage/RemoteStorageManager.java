@@ -575,16 +575,22 @@ public class RemoteStorageManager implements org.apache.kafka.server.log.remote.
             throw new RuntimeException("Error fetching index from remote storage", e);
         }
 
-        DetransformChunkEnumeration detransformEnum = new BaseDetransformChunkEnumeration(in);
         final Optional<SegmentEncryptionMetadata> encryptionMetadata = segmentManifest.encryption();
-        if (encryptionMetadata.isPresent()) {
-            detransformEnum = new DecryptionChunkEnumeration(
-                detransformEnum,
-                encryptionMetadata.get().ivSize(),
-                encryptedChunk -> aesEncryptionProvider.decryptionCipher(encryptedChunk,
-                    encryptionMetadata.get())
-            );
+        if (encryptionMetadata.isEmpty()) {
+            try {
+                return in.readAllBytes();
+            } catch (final IOException e) {
+                throw new RuntimeException("Error reading index bytes", e);
+            }
         }
+
+        DetransformChunkEnumeration detransformEnum = new BaseDetransformChunkEnumeration(in);
+        detransformEnum = new DecryptionChunkEnumeration(
+            detransformEnum,
+            encryptionMetadata.get().ivSize(),
+            encryptedChunk -> aesEncryptionProvider.decryptionCipher(encryptedChunk,
+                encryptionMetadata.get())
+        );
         final var detransformFinisher = new DetransformFinisher(detransformEnum);
         try (final var is = detransformFinisher.toInputStream()) {
             return is.readAllBytes();

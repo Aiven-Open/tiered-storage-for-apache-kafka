@@ -53,6 +53,10 @@ public class DefaultChunkManager implements ChunkManager {
 
         final InputStream chunkContent = fetcher.fetch(objectKey, chunk.range());
 
+        if (manifest.encryption().isEmpty() && !manifest.compression()) {
+            return chunkContent;
+        }
+
         DetransformChunkEnumeration detransformEnum = new BaseDetransformChunkEnumeration(chunkContent, List.of(chunk));
         final Optional<SegmentEncryptionMetadata> encryptionMetadata = manifest.encryption();
         if (encryptionMetadata.isPresent()) {
