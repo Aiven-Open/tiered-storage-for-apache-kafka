@@ -83,7 +83,7 @@ subprojects {
     pitest {
         //adds dependency to org.pitest:pitest-junit5-plugin and sets "testPlugin" to "junit5"
         junit5PluginVersion = '1.2.0'
-        pitestVersion = '1.14.2'
+        pitestVersion = '1.16.3'
         targetClasses.add("io.aiven.kafka.tieredstorage.*")  //by default "${project.group}.*"
         targetTests.add("io.aiven.kafka.tieredstorage.*")  //by default "${project.group}.*"
         threads = Runtime.getRuntime().availableProcessors()

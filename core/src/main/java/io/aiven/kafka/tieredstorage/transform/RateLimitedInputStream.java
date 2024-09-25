@@ -32,7 +32,8 @@ import io.github.bucket4j.local.SynchronizationStrategy;
  */
 public class RateLimitedInputStream extends FilterInputStream {
     // default buffer size used by InputStream#DEFAULT_BUFFER_SIZE when transferring to output stream
-    static final int MIN_RATE = 8192;
+    // As of JDK 21, InputStream#DEFAULT_BUFFER_SIZE has been changed to 16384.
+    static final int MIN_RATE = Runtime.version().feature() >= 21 ? 16384 : 8192;
 
     final Bucket bucket;
 
