@@ -84,7 +84,8 @@ public class GcsStorage implements StorageBackend {
             }
             return blob.getSize();
         } catch (final IOException | BaseServiceException e) {
-            throw new StorageBackendException("Failed to upload " + key, e);
+            final var sanitized = SanitizedStorageExceptionHandler.sanitizeException(e);
+            throw new StorageBackendException("Failed to upload " + key, sanitized);
         }
     }
 
@@ -93,7 +94,8 @@ public class GcsStorage implements StorageBackend {
         try {
             storage.delete(this.bucketName, key.value());
         } catch (final BaseServiceException e) {
-            throw new StorageBackendException("Failed to delete " + key, e);
+            final var sanitized = SanitizedStorageExceptionHandler.sanitizeException(e);
+            throw new StorageBackendException("Failed to delete " + key, sanitized);
         }
     }
 
@@ -104,11 +106,12 @@ public class GcsStorage implements StorageBackend {
             final ReadChannel reader = blob.reader();
             return Channels.newInputStream(reader);
         } catch (final BaseServiceException e) {
+            final var sanitized = SanitizedStorageExceptionHandler.sanitizeException(e);
             if (e.getCode() == 404) {
                 // https://cloud.google.com/storage/docs/json_api/v1/status-codes#404_Not_Found
-                throw new KeyNotFoundException(this, key, e);
+                throw new KeyNotFoundException(this, key, sanitized);
             } else {
-                throw new StorageBackendException("Failed to fetch " + key, e);
+                throw new StorageBackendException("Failed to fetch " + key, sanitized);
             }
         }
     }
@@ -134,14 +137,15 @@ public class GcsStorage implements StorageBackend {
         } catch (final IOException e) {
             throw new StorageBackendException("Failed to fetch " + key, e);
         } catch (final BaseServiceException e) {
+            final var sanitized = SanitizedStorageExceptionHandler.sanitizeException(e);
             if (e.getCode() == 404) {
                 // https://cloud.google.com/storage/docs/json_api/v1/status-codes#404_Not_Found
-                throw new KeyNotFoundException(this, key, e);
+                throw new KeyNotFoundException(this, key, sanitized);
             } else if (e.getCode() == 416) {
                 // https://cloud.google.com/storage/docs/json_api/v1/status-codes#416_Requested_Range_Not_Satisfiable
-                throw new InvalidRangeException("Invalid range " + range, e);
+                throw new InvalidRangeException("Invalid range " + range, sanitized);
             } else {
-                throw new StorageBackendException("Failed to fetch " + key, e);
+                throw new StorageBackendException("Failed to fetch " + key, sanitized);
             }
         }
     }
