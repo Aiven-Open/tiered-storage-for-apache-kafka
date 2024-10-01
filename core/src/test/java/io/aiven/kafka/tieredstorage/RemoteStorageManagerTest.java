@@ -50,6 +50,7 @@ import static org.assertj.core.api.Assertions.assertThat;
 import static org.assertj.core.api.Assertions.assertThatThrownBy;
 import static org.junit.jupiter.params.provider.Arguments.arguments;
 import static org.mockito.ArgumentMatchers.any;
+import static org.mockito.ArgumentMatchers.anyBoolean;
 import static org.mockito.ArgumentMatchers.anyInt;
 import static org.mockito.Mockito.doCallRealMethod;
 import static org.mockito.Mockito.doThrow;
@@ -265,7 +266,7 @@ class RemoteStorageManagerTest {
         rsm = spy(rsm);
 
         // when first upload fails
-        doThrow(IOException.class).when(rsm).uploadSegmentLog(any(), any(), any());
+        doThrow(IOException.class).when(rsm).uploadSegmentLog(any(), any(), anyBoolean(), any(), any());
 
         assertThatThrownBy(() -> rsm.copyLogSegmentData(remoteLogSegmentMetadata, logSegmentData))
             .isInstanceOf(RemoteStorageException.class)
@@ -275,7 +276,7 @@ class RemoteStorageManagerTest {
         assertThat(remotePartitionPath).doesNotExist();
 
         // fallback to real method
-        doCallRealMethod().when(rsm).uploadSegmentLog(any(), any(), any());
+        doCallRealMethod().when(rsm).uploadSegmentLog(any(), any(), anyBoolean(), any(), any());
 
         // when second upload fails
         doThrow(IOException.class).when(rsm).uploadIndexes(any(), any(), any(), any());
@@ -291,7 +292,7 @@ class RemoteStorageManagerTest {
         doCallRealMethod().when(rsm).uploadIndexes(any(), any(), any(), any());
 
         // when third upload fails
-        doThrow(IOException.class).when(rsm).uploadManifest(any(), any(), any());
+        doThrow(IOException.class).when(rsm).uploadManifest(any(), any(), any(), anyBoolean(), any(), any());
 
         assertThatThrownBy(() -> rsm.copyLogSegmentData(remoteLogSegmentMetadata, logSegmentData))
             .isInstanceOf(RemoteStorageException.class)
@@ -301,7 +302,7 @@ class RemoteStorageManagerTest {
         assertThat(remotePartitionPath).doesNotExist();
 
         // fallback to real method
-        doCallRealMethod().when(rsm).uploadManifest(any(), any(), any());
+        doCallRealMethod().when(rsm).uploadManifest(any(), any(), any(), anyBoolean(), any(), any());
 
         // when all good
         rsm.copyLogSegmentData(remoteLogSegmentMetadata, logSegmentData);

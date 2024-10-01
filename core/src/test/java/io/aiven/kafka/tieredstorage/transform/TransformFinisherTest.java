@@ -17,6 +17,8 @@
 package io.aiven.kafka.tieredstorage.transform;
 
 import java.io.IOException;
+import java.nio.file.Files;
+import java.nio.file.Path;
 import java.util.Iterator;
 import java.util.List;
 
@@ -27,6 +29,7 @@ import io.aiven.kafka.tieredstorage.manifest.index.VariableSizeChunkIndex;
 
 import org.junit.jupiter.api.Test;
 import org.junit.jupiter.api.extension.ExtendWith;
+import org.junit.jupiter.api.io.TempDir;
 import org.junit.jupiter.params.ParameterizedTest;
 import org.junit.jupiter.params.provider.MethodSource;
 import org.mockito.Mock;
@@ -42,7 +45,8 @@ class TransformFinisherTest {
 
     @Test
     void getIndexBeforeUsing() {
-        final TransformFinisher finisher = new TransformFinisher(new FakeDataEnumerator(3), 7, null);
+        final TransformChunkEnumeration enumerator = new FakeDataEnumerator(3);
+        final TransformFinisher finisher = TransformFinisher.newBuilder(enumerator, 7).build();
         assertThatThrownBy(() -> finisher.chunkIndex())
             .isInstanceOf(IllegalStateException.class)
             .hasMessage("Chunk index was not built, was finisher used?");
@@ -50,23 +54,52 @@ class TransformFinisherTest {
 
     @Test
     void nullInnerEnumeration() {
-        assertThatThrownBy(() -> new TransformFinisher(null, 100, null))
+        assertThatThrownBy(() -> TransformFinisher.newBuilder(null, 100).build())
             .isInstanceOf(NullPointerException.class)
             .hasMessage("inner cannot be null");
     }
 
     @Test
     void negativeOriginalFileSize() {
-        assertThatThrownBy(() -> new TransformFinisher(inner, -1, null))
+        assertThatThrownBy(() -> TransformFinisher.newBuilder(inner, -1).build())
             .isInstanceOf(IllegalArgumentException.class)
             .hasMessage("originalFileSize must be non-negative, -1 given");
+    }
+
+    @Test
+    void nullOriginalFilePath() {
+        assertThatThrownBy(() ->
+            TransformFinisher.newBuilder(inner, 100)
+                .withOriginalFilePath(null)
+                .build())
+            .isInstanceOf(NullPointerException.class)
+            .hasMessage("originalFilePath cannot be null");
+    }
+
+    @Test
+    void emptyOriginalFilePath() {
+        final var finisher = TransformFinisher.newBuilder(inner, 100).build();
+        assertThat(finisher.maybeOriginalFilePath()).isEmpty();
+    }
+
+    @Test
+    void presentOriginalFilePath(@TempDir final Path tmpDir) throws IOException {
+        final var originalFilePath = tmpDir.resolve("test.log");
+        Files.writeString(originalFilePath, "test");
+
+        final var finisher = TransformFinisher.newBuilder(inner, 100)
+            .withOriginalFilePath(originalFilePath)
+            .build();
+        assertThat(finisher.maybeOriginalFilePath()).isPresent();
+        assertThat(finisher.maybeOriginalFilePath().get()).hasContent("test");
     }
 
     @ParameterizedTest
     @MethodSource("provideForBuildIndexAndReturnCorrectInputStreams")
     void buildIndexAndReturnCorrectInputStreams(final Integer transformedChunkSize,
                                                 final Class<ChunkIndex> indexType) throws IOException {
-        final TransformFinisher finisher = new TransformFinisher(new FakeDataEnumerator(transformedChunkSize), 7, null);
+        final TransformChunkEnumeration enumerator = new FakeDataEnumerator(transformedChunkSize);
+        final TransformFinisher finisher = TransformFinisher.newBuilder(enumerator, 7).build();
         assertThat(finisher.hasMoreElements()).isTrue();
         assertThat(finisher.nextElement().readAllBytes()).isEqualTo(new byte[] {0, 1, 2});
         assertThat(finisher.hasMoreElements()).isTrue();
