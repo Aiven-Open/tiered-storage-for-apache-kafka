@@ -42,6 +42,10 @@ storage/gcs/build/distributions/gcs-$(VERSION).tgz:
 storage/azure/build/distributions/azure-$(VERSION).tgz:
 	./gradlew build :storage:azure:distTar -x test -x integrationTest -x e2e:test
 
+.PHONY: docs
+docs:
+	./gradlew :docs:genConfigDocs
+
 test: build
 	./gradlew test -x e2e:test
 
