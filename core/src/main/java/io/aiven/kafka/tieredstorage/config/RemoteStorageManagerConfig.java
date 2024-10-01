@@ -41,9 +41,9 @@ import static org.apache.kafka.common.config.ConfigDef.Range.atLeast;
 import static org.apache.kafka.common.config.ConfigDef.ValidString.in;
 
 public class RemoteStorageManagerConfig extends AbstractConfig {
-    private static final String STORAGE_PREFIX = "storage.";
-    private static final String FETCH_INDEXES_CACHE_PREFIX = "fetch.indexes.cache.";
-    private static final String SEGMENT_MANIFEST_CACHE_PREFIX = "fetch.manifest.cache.";
+    public static final String STORAGE_PREFIX = "storage.";
+    public static final String FETCH_INDEXES_CACHE_PREFIX = "fetch.indexes.cache.";
+    public static final String SEGMENT_MANIFEST_CACHE_PREFIX = "fetch.manifest.cache.";
 
     private static final String STORAGE_BACKEND_CLASS_CONFIG = STORAGE_PREFIX + "backend.class";
     private static final String STORAGE_BACKEND_CLASS_DOC = "The storage backend implementation class";
@@ -55,28 +55,22 @@ public class RemoteStorageManagerConfig extends AbstractConfig {
     private static final String OBJECT_KEY_PREFIX_MASK_DOC = "Whether to mask path prefix in logs";
 
     private static final String CHUNK_SIZE_CONFIG = "chunk.size";
-    private static final String CHUNK_SIZE_DOC = "The chunk size of log files";
+    private static final String CHUNK_SIZE_DOC = "Segment files are chunked into smaller parts to allow for faster "
+        + "processing (e.g. encryption, compression) and for range-fetching. "
+        + "It is recommended to benchmark this value, starting with 4MiB.";
 
     private static final String COMPRESSION_ENABLED_CONFIG = "compression.enabled";
-    private static final String COMPRESSION_ENABLED_DOC = "Whether to enable compression";
+    private static final String COMPRESSION_ENABLED_DOC = "Segments can be further compressed to optimize storage "
+        + "usage. Disabled by default.";
 
     private static final String COMPRESSION_HEURISTIC_ENABLED_CONFIG = "compression.heuristic.enabled";
-    private static final String COMPRESSION_HEURISTIC_ENABLED_DOC = "Whether to use compression heuristics "
-        + "when compression is enabled";
+    private static final String COMPRESSION_HEURISTIC_ENABLED_DOC = "Only compress segments where native compression "
+        + "has not been enabled. This is currently validated by looking into the first batch header. "
+        + "Only enabled if " + COMPRESSION_ENABLED_CONFIG + " is enabled.";
 
     private static final String ENCRYPTION_CONFIG = "encryption.enabled";
-    private static final String ENCRYPTION_DOC = "Whether to enable encryption";
-    // TODO add possibility to pass keys as strings
-
-
-    public static final String METRICS_NUM_SAMPLES_CONFIG = CommonClientConfigs.METRICS_NUM_SAMPLES_CONFIG;
-    private static final String METRICS_NUM_SAMPLES_DOC = CommonClientConfigs.METRICS_NUM_SAMPLES_DOC;
-
-    public static final String METRICS_SAMPLE_WINDOW_MS_CONFIG = CommonClientConfigs.METRICS_SAMPLE_WINDOW_MS_CONFIG;
-    private static final String METRICS_SAMPLE_WINDOW_MS_DOC = CommonClientConfigs.METRICS_SAMPLE_WINDOW_MS_DOC;
-
-    public static final String METRICS_RECORDING_LEVEL_CONFIG = CommonClientConfigs.METRICS_RECORDING_LEVEL_CONFIG;
-    private static final String METRICS_RECORDING_LEVEL_DOC = CommonClientConfigs.METRICS_RECORDING_LEVEL_DOC;
+    private static final String ENCRYPTION_DOC = "Segments and indexes can be encrypted, so objects are not accessible "
+        + "by accessing the remote storage. Disabled by default.";
 
     private static final String CUSTOM_METADATA_FIELDS_INCLUDE_CONFIG = "custom.metadata.fields.include";
     private static final String CUSTOM_METADATA_FIELDS_INCLUDE_DOC = "Custom Metadata to be stored along "
@@ -88,14 +82,19 @@ public class RemoteStorageManagerConfig extends AbstractConfig {
         + "(therefore read from disk) per second. Rate limit must be equal or larger than 1 MiB/sec "
         + "as minimal upload throughput.";
 
-    private static final ConfigDef CONFIG;
+    public static final String METRICS_NUM_SAMPLES_CONFIG = CommonClientConfigs.METRICS_NUM_SAMPLES_CONFIG;
+    private static final String METRICS_NUM_SAMPLES_DOC = CommonClientConfigs.METRICS_NUM_SAMPLES_DOC;
 
-    static {
-        CONFIG = new ConfigDef();
+    public static final String METRICS_SAMPLE_WINDOW_MS_CONFIG = CommonClientConfigs.METRICS_SAMPLE_WINDOW_MS_CONFIG;
+    private static final String METRICS_SAMPLE_WINDOW_MS_DOC = CommonClientConfigs.METRICS_SAMPLE_WINDOW_MS_DOC;
 
-        // TODO checkers
+    public static final String METRICS_RECORDING_LEVEL_CONFIG = CommonClientConfigs.METRICS_RECORDING_LEVEL_CONFIG;
+    private static final String METRICS_RECORDING_LEVEL_DOC = CommonClientConfigs.METRICS_RECORDING_LEVEL_DOC;
 
-        CONFIG.define(
+    public static ConfigDef configDef() {
+        final ConfigDef configDef = new ConfigDef();
+
+        configDef.define(
             STORAGE_BACKEND_CLASS_CONFIG,
             ConfigDef.Type.CLASS,
             ConfigDef.NO_DEFAULT_VALUE,
@@ -103,7 +102,7 @@ public class RemoteStorageManagerConfig extends AbstractConfig {
             STORAGE_BACKEND_CLASS_DOC
         );
 
-        CONFIG.define(
+        configDef.define(
             OBJECT_KEY_PREFIX_CONFIG,
             ConfigDef.Type.STRING,
             "",
@@ -112,7 +111,7 @@ public class RemoteStorageManagerConfig extends AbstractConfig {
             OBJECT_KEY_PREFIX_DOC
         );
 
-        CONFIG.define(
+        configDef.define(
             OBJECT_KEY_PREFIX_MASK_CONFIG,
             ConfigDef.Type.BOOLEAN,
             false,
@@ -120,7 +119,7 @@ public class RemoteStorageManagerConfig extends AbstractConfig {
             OBJECT_KEY_PREFIX_MASK_DOC
         );
 
-        CONFIG.define(
+        configDef.define(
             CHUNK_SIZE_CONFIG,
             ConfigDef.Type.INT,
             ConfigDef.NO_DEFAULT_VALUE,
@@ -130,14 +129,14 @@ public class RemoteStorageManagerConfig extends AbstractConfig {
             CHUNK_SIZE_DOC
         );
 
-        CONFIG.define(
+        configDef.define(
             COMPRESSION_ENABLED_CONFIG,
             ConfigDef.Type.BOOLEAN,
             false,
             ConfigDef.Importance.HIGH,
             COMPRESSION_ENABLED_DOC
         );
-        CONFIG.define(
+        configDef.define(
             COMPRESSION_HEURISTIC_ENABLED_CONFIG,
             ConfigDef.Type.BOOLEAN,
             false,
@@ -145,7 +144,7 @@ public class RemoteStorageManagerConfig extends AbstractConfig {
             COMPRESSION_HEURISTIC_ENABLED_DOC
         );
 
-        CONFIG.define(
+        configDef.define(
             ENCRYPTION_CONFIG,
             ConfigDef.Type.BOOLEAN,
             false,
@@ -153,21 +152,21 @@ public class RemoteStorageManagerConfig extends AbstractConfig {
             ENCRYPTION_DOC
         );
 
-        CONFIG.define(
+        configDef.define(
             METRICS_SAMPLE_WINDOW_MS_CONFIG,
             ConfigDef.Type.LONG,
             30000,
             atLeast(1),
             ConfigDef.Importance.LOW,
             METRICS_SAMPLE_WINDOW_MS_DOC);
-        CONFIG.define(
+        configDef.define(
             METRICS_NUM_SAMPLES_CONFIG,
             ConfigDef.Type.INT,
             2,
             atLeast(1),
             ConfigDef.Importance.LOW,
             METRICS_NUM_SAMPLES_DOC);
-        CONFIG.define(
+        configDef.define(
             METRICS_RECORDING_LEVEL_CONFIG,
             ConfigDef.Type.STRING,
             Sensor.RecordingLevel.INFO.toString(),
@@ -177,14 +176,14 @@ public class RemoteStorageManagerConfig extends AbstractConfig {
             ConfigDef.Importance.LOW,
             METRICS_RECORDING_LEVEL_DOC);
 
-        CONFIG.define(CUSTOM_METADATA_FIELDS_INCLUDE_CONFIG,
+        configDef.define(CUSTOM_METADATA_FIELDS_INCLUDE_CONFIG,
             ConfigDef.Type.LIST,
             "",
             ConfigDef.ValidList.in(SegmentCustomMetadataField.names()),
             ConfigDef.Importance.LOW,
             CUSTOM_METADATA_FIELDS_INCLUDE_DOC);
 
-        CONFIG.define(
+        configDef.define(
             UPLOAD_RATE_LIMIT_BYTES_CONFIG,
             ConfigDef.Type.INT,
             null,
@@ -193,6 +192,7 @@ public class RemoteStorageManagerConfig extends AbstractConfig {
             ConfigDef.Importance.MEDIUM,
             UPLOAD_RATE_LIMIT_BYTES_DOC
         );
+        return configDef;
     }
 
     public OptionalInt uploadRateLimit() {
@@ -296,7 +296,7 @@ public class RemoteStorageManagerConfig extends AbstractConfig {
     private final EncryptionConfig encryptionConfig;
 
     public RemoteStorageManagerConfig(final Map<String, ?> props) {
-        super(CONFIG, props);
+        super(configDef(), props);
         encryptionConfig = encryptionEnabled() ? EncryptionConfig.create(props) : null;
         validate();
     }
