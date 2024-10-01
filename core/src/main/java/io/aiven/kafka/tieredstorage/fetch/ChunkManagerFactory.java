@@ -20,6 +20,7 @@ import java.util.Map;
 
 import org.apache.kafka.common.Configurable;
 
+import io.aiven.kafka.tieredstorage.config.ChunkManagerFactoryConfig;
 import io.aiven.kafka.tieredstorage.fetch.cache.ChunkCache;
 import io.aiven.kafka.tieredstorage.security.AesEncryptionProvider;
 import io.aiven.kafka.tieredstorage.storage.ObjectFetcher;

@@ -25,6 +25,8 @@ import java.util.concurrent.ForkJoinPool;
 import java.util.concurrent.TimeUnit;
 import java.util.concurrent.TimeoutException;
 
+import org.apache.kafka.common.config.ConfigDef;
+
 import io.aiven.kafka.tieredstorage.config.CacheConfig;
 import io.aiven.kafka.tieredstorage.manifest.SegmentManifest;
 import io.aiven.kafka.tieredstorage.metrics.CaffeineStatsCounter;
@@ -122,10 +124,14 @@ public class MemorySegmentManifestCache implements SegmentManifestCache {
 
     @Override
     public void configure(final Map<String, ?> configs) {
-        final var config = CacheConfig.newBuilder(configs)
+        final var config = new CacheConfig(configDef(), configs);
+        this.cache = buildCache(config);
+    }
+
+    public static ConfigDef configDef() {
+        return CacheConfig.defBuilder()
             .withDefaultSize(DEFAULT_MAX_SIZE)
             .withDefaultRetentionMs(DEFAULT_RETENTION_MS)
             .build();
-        this.cache = buildCache(config);
     }
 }

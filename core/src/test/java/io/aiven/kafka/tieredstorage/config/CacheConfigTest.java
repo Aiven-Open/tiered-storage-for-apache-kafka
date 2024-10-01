@@ -30,7 +30,7 @@ class CacheConfigTest {
 
     @Test
     void cacheUnboundedSize() {
-        final CacheConfig config = CacheConfig.newBuilder(Map.of("size", "-1")).build();
+        final CacheConfig config = new CacheConfig(CacheConfig.defBuilder().build(), Map.of("size", "-1"));
 
         assertThat(config.cacheSize()).isNotPresent();
         assertThat(config.cacheRetention()).hasValue(Duration.ofMinutes(10));
@@ -41,9 +41,10 @@ class CacheConfigTest {
 
     @Test
     void cacheUnboundedWithDefaultSize() {
-        final CacheConfig config = CacheConfig.newBuilder(Map.of())
-            .withDefaultSize(-1L)
-            .build();
+        final CacheConfig config = new CacheConfig(
+            CacheConfig.defBuilder().withDefaultSize(-1L).build(),
+            Map.of()
+        );
 
         assertThat(config.cacheSize()).isNotPresent();
         assertThat(config.cacheRetention()).hasValue(Duration.ofMinutes(10));
@@ -54,41 +55,48 @@ class CacheConfigTest {
 
     @Test
     void cacheSizeBounded() {
-        final CacheConfig config = CacheConfig.newBuilder(Map.of("size", "1024")).build();
+        final CacheConfig config = new CacheConfig(
+            CacheConfig.defBuilder().build(),
+            Map.of("size", "1024")
+        );
         assertThat(config.cacheSize()).hasValue(1024L);
     }
 
     @Test
     void cacheSizeBoundedWithDefaultSize() {
-        final CacheConfig config = CacheConfig.newBuilder(Map.of())
-            .withDefaultSize(1024L)
-            .build();
+        final CacheConfig config = new CacheConfig(
+            CacheConfig.defBuilder().withDefaultSize(1024L).build(),
+            Map.of()
+        );
         assertThat(config.cacheSize()).hasValue(1024L);
     }
 
     @Test
     void cacheSizeBoundedWithDefaultRetentionMs() {
-        final CacheConfig config = CacheConfig.newBuilder(Map.of())
-            .withDefaultSize(-1L)
-            .withDefaultRetentionMs(3_600_000L)
-            .build();
+        final CacheConfig config = new CacheConfig(
+            CacheConfig.defBuilder()
+                .withDefaultSize(-1L)
+                .withDefaultRetentionMs(3_600_000L)
+                .build(),
+            Map.of()
+        );
         assertThat(config.cacheRetention()).hasValue(Duration.ofHours(1));
     }
 
     @Test
     void invalidCacheSize() {
-        assertThatThrownBy(() -> CacheConfig.newBuilder(Map.of("size", "-2")).build())
+        assertThatThrownBy(() -> new CacheConfig(CacheConfig.defBuilder().build(), Map.of("size", "-2")))
             .isInstanceOf(ConfigException.class)
             .hasMessage("Invalid value -2 for configuration size: Value must be at least -1");
 
-        assertThatThrownBy(() -> CacheConfig.newBuilder(Map.of()).withDefaultSize(-2L).build())
+        assertThatThrownBy(() -> new CacheConfig(CacheConfig.defBuilder().withDefaultSize(-2L).build(), Map.of()))
             .isInstanceOf(ConfigException.class)
             .hasMessage("Invalid value -2 for configuration size: Value must be at least -1");
     }
 
     @Test
     void cacheSizeUnspecified() {
-        assertThatThrownBy(() -> CacheConfig.newBuilder(Map.of()).build())
+        assertThatThrownBy(() -> new CacheConfig(CacheConfig.defBuilder().build(), Map.of()))
             .isInstanceOf(ConfigException.class)
             .hasMessage("Missing required configuration \"size\" which has no default value.");
     }
@@ -99,9 +107,7 @@ class CacheConfigTest {
             "retention.ms", "-1",
             "size", "-1"
         );
-        final CacheConfig config = CacheConfig.newBuilder(
-            configs
-        ).build();
+        final CacheConfig config = new CacheConfig(CacheConfig.defBuilder().build(), configs);
         assertThat(config.cacheRetention()).isNotPresent();
     }
 
@@ -111,7 +117,7 @@ class CacheConfigTest {
             "retention.ms", "60000",
             "size", "-1"
         );
-        final CacheConfig config = CacheConfig.newBuilder(configs).build();
+        final CacheConfig config = new CacheConfig(CacheConfig.defBuilder().build(), configs);
         assertThat(config.cacheRetention()).hasValue(Duration.ofMillis(60000));
     }
 
@@ -121,19 +127,22 @@ class CacheConfigTest {
             "retention.ms", "-2",
             "size", "-1"
         );
-        assertThatThrownBy(() -> CacheConfig.newBuilder(configs).build())
+        assertThatThrownBy(() -> new CacheConfig(CacheConfig.defBuilder().build(), configs))
             .isInstanceOf(ConfigException.class)
             .hasMessage("Invalid value -2 for configuration retention.ms: Value must be at least -1");
     }
 
     @Test
     void setOtherConfigs() {
-        final CacheConfig config = CacheConfig.newBuilder(Map.of(
+        final CacheConfig config = new CacheConfig(
+            CacheConfig.defBuilder()
+                .withDefaultSize(-1L)
+                .build(), 
+            Map.of(
                 "thread.pool.size", 16,
                 "get.timeout.ms", Duration.ofSeconds(20).toMillis()
-            ))
-            .withDefaultSize(-1L)
-            .build();
+            )
+        );
         assertThat(config.threadPoolSize()).hasValue(16);
         assertThat(config.getTimeout()).hasSeconds(20);
     }

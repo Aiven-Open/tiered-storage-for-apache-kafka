@@ -21,8 +21,6 @@ import java.io.IOException;
 import java.io.InputStream;
 import java.util.Map;
 
-import org.apache.kafka.common.config.ConfigDef;
-
 import io.aiven.kafka.tieredstorage.config.ChunkCacheConfig;
 import io.aiven.kafka.tieredstorage.fetch.ChunkKey;
 import io.aiven.kafka.tieredstorage.fetch.ChunkManager;
@@ -64,7 +62,7 @@ public class MemoryChunkCache extends ChunkCache<byte[]> {
 
     @Override
     public void configure(final Map<String, ?> configs) {
-        final ChunkCacheConfig config = new ChunkCacheConfig(new ConfigDef(), configs);
+        final ChunkCacheConfig config = new ChunkCacheConfig(configs);
         this.cache = buildCache(config);
     }
 }

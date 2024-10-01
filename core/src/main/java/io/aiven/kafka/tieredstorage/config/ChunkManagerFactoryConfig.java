@@ -14,7 +14,7 @@
  * limitations under the License.
  */
 
-package io.aiven.kafka.tieredstorage.fetch;
+package io.aiven.kafka.tieredstorage.config;
 
 import java.util.Map;
 
@@ -23,30 +23,30 @@ import org.apache.kafka.common.config.ConfigDef;
 
 import io.aiven.kafka.tieredstorage.config.validators.Subclass;
 import io.aiven.kafka.tieredstorage.fetch.cache.ChunkCache;
+import io.aiven.kafka.tieredstorage.fetch.cache.DiskChunkCache;
+import io.aiven.kafka.tieredstorage.fetch.cache.MemoryChunkCache;
 
 public class ChunkManagerFactoryConfig extends AbstractConfig {
 
-    protected static final String FETCH_CHUNK_CACHE_PREFIX = "fetch.chunk.cache.";
+    public static final String FETCH_CHUNK_CACHE_PREFIX = "fetch.chunk.cache.";
     public static final String FETCH_CHUNK_CACHE_CONFIG = FETCH_CHUNK_CACHE_PREFIX + "class";
-    private static final String FETCH_CHUNK_CACHE_DOC = "The fetch chunk cache implementation";
+    private static final String FETCH_CHUNK_CACHE_DOC = "Chunk cache implementation. There are 2 implementations "
+        + "included: " + MemoryChunkCache.class.getName() + " and " + DiskChunkCache.class.getName();
 
-    private static final ConfigDef CONFIG;
-
-    static {
-        CONFIG = new ConfigDef();
-
-        CONFIG.define(
-            FETCH_CHUNK_CACHE_CONFIG,
-            ConfigDef.Type.CLASS,
-            null,
-            Subclass.of(ChunkCache.class),
-            ConfigDef.Importance.MEDIUM,
-            FETCH_CHUNK_CACHE_DOC
-        );
+    public static ConfigDef configDef() {
+        return new ConfigDef()
+            .define(
+                FETCH_CHUNK_CACHE_CONFIG,
+                ConfigDef.Type.CLASS,
+                null,
+                Subclass.of(ChunkCache.class),
+                ConfigDef.Importance.MEDIUM,
+                FETCH_CHUNK_CACHE_DOC
+            );
     }
 
     public ChunkManagerFactoryConfig(final Map<?, ?> originals) {
-        super(CONFIG, originals);
+        super(configDef(), originals);
     }
 
     @SuppressWarnings("unchecked")

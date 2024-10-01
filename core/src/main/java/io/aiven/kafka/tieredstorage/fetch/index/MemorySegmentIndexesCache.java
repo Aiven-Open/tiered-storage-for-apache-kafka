@@ -29,6 +29,7 @@ import java.util.concurrent.TimeUnit;
 import java.util.concurrent.TimeoutException;
 import java.util.function.Supplier;
 
+import org.apache.kafka.common.config.ConfigDef;
 import org.apache.kafka.server.log.remote.storage.RemoteStorageManager.IndexType;
 
 import io.aiven.kafka.tieredstorage.config.CacheConfig;
@@ -133,9 +134,13 @@ public class MemorySegmentIndexesCache implements SegmentIndexesCache {
 
     @Override
     public void configure(final Map<String, ?> configs) {
-        final var config = CacheConfig.newBuilder(configs)
+        final var config = new CacheConfig(configDef(), configs);
+        this.cache = buildCache(config);
+    }
+
+    public static ConfigDef configDef() {
+        return CacheConfig.defBuilder()
             .withDefaultSize(DEFAULT_MAX_SIZE_BYTES)
             .build();
-        this.cache = buildCache(config);
     }
 }
