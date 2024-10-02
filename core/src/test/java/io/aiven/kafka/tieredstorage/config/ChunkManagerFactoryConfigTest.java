@@ -14,7 +14,7 @@
  * limitations under the License.
  */
 
-package io.aiven.kafka.tieredstorage.fetch;
+package io.aiven.kafka.tieredstorage.config;
 
 import java.util.Map;
 

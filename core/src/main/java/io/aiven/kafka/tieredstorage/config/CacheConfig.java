@@ -38,59 +38,21 @@ public class CacheConfig extends AbstractConfig {
     private static final String CACHE_FETCH_TIMEOUT_MS_DOC = "When getting an object from the fetch, "
         + "how long to wait before timing out. Defaults to 10 sec.";
 
-    static final long CACHE_RETENTION_MS_DEFAULT = 600_000;
+    public static final long CACHE_RETENTION_MS_DEFAULT = 600_000;
 
-    private static ConfigDef configDef(
+    public CacheConfig(
         final ConfigDef configDef,
-        final Object defaultSize,
-        final long defaultRetentionMs
+        final Map<String, ?> props
     ) {
-        configDef.define(
-            CACHE_SIZE_CONFIG,
-            ConfigDef.Type.LONG,
-            defaultSize,
-            ConfigDef.Range.between(-1L, Long.MAX_VALUE),
-            ConfigDef.Importance.MEDIUM,
-            CACHE_SIZE_DOC
-        );
-        configDef.define(
-            CACHE_RETENTION_CONFIG,
-            ConfigDef.Type.LONG,
-            defaultRetentionMs,
-            ConfigDef.Range.between(-1L, Long.MAX_VALUE),
-            ConfigDef.Importance.MEDIUM,
-            CACHE_RETENTION_DOC
-        );
-        configDef.define(
-            CACHE_FETCH_THREAD_POOL_SIZE_CONFIG,
-            ConfigDef.Type.INT,
-            0,
-            ConfigDef.Range.between(0, 1024),
-            ConfigDef.Importance.LOW,
-            CACHE_FETCH_THREAD_POOL_SIZE_DOC
-        );
-        configDef.define(
-            CACHE_FETCH_TIMEOUT_MS_CONFIG,
-            ConfigDef.Type.LONG,
-            Duration.ofSeconds(10).toMillis(),
-            ConfigDef.Range.between(1, Long.MAX_VALUE),
-            ConfigDef.Importance.LOW,
-            CACHE_FETCH_TIMEOUT_MS_DOC
-        );
-        return configDef;
+        super(configDef, props);
     }
 
-    CacheConfig(
-        final ConfigDef configDef,
-        final Map<String, ?> props,
-        final Object defaultSize,
-        final long defaultRetentionMs
-    ) {
-        super(configDef(configDef, defaultSize, defaultRetentionMs), props);
+    public static DefBuilder defBuilder() {
+        return new DefBuilder();
     }
 
-    public static Builder newBuilder(final Map<String, ?> configs) {
-        return new Builder(configs);
+    public static DefBuilder defBuilder(final ConfigDef baseConfig) {
+        return new DefBuilder(baseConfig);
     }
 
     public Optional<Long> cacheSize() {
@@ -121,27 +83,64 @@ public class CacheConfig extends AbstractConfig {
         return Duration.ofMillis(getLong(CACHE_FETCH_TIMEOUT_MS_CONFIG));
     }
 
-    public static class Builder {
-        private final Map<String, ?> props;
+    public static class DefBuilder {
         private long defaultRetentionMs = CACHE_RETENTION_MS_DEFAULT;
         private Object maybeDefaultSize = NO_DEFAULT_VALUE;
 
-        public Builder(final Map<String, ?> props) {
-            this.props = props;
+        final ConfigDef configDef;
+
+        public DefBuilder() {
+            this.configDef = new ConfigDef();
         }
 
-        public Builder withDefaultSize(final long defaultSize) {
+        public DefBuilder(final ConfigDef baseConfig) {
+            this.configDef = baseConfig;
+        }
+
+        public DefBuilder withDefaultSize(final long defaultSize) {
             this.maybeDefaultSize = defaultSize;
             return this;
         }
 
-        public Builder withDefaultRetentionMs(final long retentionMs) {
+        public DefBuilder withDefaultRetentionMs(final long retentionMs) {
             this.defaultRetentionMs = retentionMs;
             return this;
         }
 
-        public CacheConfig build() {
-            return new CacheConfig(new ConfigDef(), props, maybeDefaultSize, defaultRetentionMs);
+        public ConfigDef build() {
+            configDef.define(
+                CACHE_SIZE_CONFIG,
+                ConfigDef.Type.LONG,
+                maybeDefaultSize,
+                ConfigDef.Range.between(-1L, Long.MAX_VALUE),
+                ConfigDef.Importance.MEDIUM,
+                CACHE_SIZE_DOC
+            );
+            configDef.define(
+                CACHE_RETENTION_CONFIG,
+                ConfigDef.Type.LONG,
+                defaultRetentionMs,
+                ConfigDef.Range.between(-1L, Long.MAX_VALUE),
+                ConfigDef.Importance.MEDIUM,
+                CACHE_RETENTION_DOC
+            );
+            configDef.define(
+                CACHE_FETCH_THREAD_POOL_SIZE_CONFIG,
+                ConfigDef.Type.INT,
+                0,
+                ConfigDef.Range.between(0, 1024),
+                ConfigDef.Importance.LOW,
+                CACHE_FETCH_THREAD_POOL_SIZE_DOC
+            );
+            configDef.define(
+                CACHE_FETCH_TIMEOUT_MS_CONFIG,
+                ConfigDef.Type.LONG,
+                Duration.ofSeconds(10).toMillis(),
+                ConfigDef.Range.between(1, Long.MAX_VALUE),
+                ConfigDef.Importance.LOW,
+                CACHE_FETCH_TIMEOUT_MS_DOC
+            );
+            return configDef;
         }
     }
 }

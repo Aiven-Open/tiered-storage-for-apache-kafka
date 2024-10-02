@@ -26,8 +26,8 @@ public class ChunkCacheConfig extends CacheConfig {
         "The amount of data that should be eagerly prefetched and cached";
     private static final int CACHE_PREFETCHING_SIZE_DEFAULT = 0; //TODO find out what it should be
 
-    private static ConfigDef addCacheConfigs(final ConfigDef configDef) {
-        configDef.define(
+    public static final ConfigDef configDef(final ConfigDef baseConfig) {
+        baseConfig.define(
             CACHE_PREFETCH_MAX_SIZE_CONFIG,
             ConfigDef.Type.INT,
             CACHE_PREFETCHING_SIZE_DEFAULT,
@@ -35,11 +35,17 @@ public class ChunkCacheConfig extends CacheConfig {
             ConfigDef.Importance.MEDIUM,
             CACHE_PREFETCH_MAX_SIZE_DOC
         );
-        return configDef;
+        return CacheConfig.defBuilder(baseConfig)
+            .withDefaultRetentionMs(ChunkCacheConfig.CACHE_RETENTION_MS_DEFAULT)
+            .build();
     }
 
     public ChunkCacheConfig(final ConfigDef configDef, final Map<String, ?> props) {
-        super(addCacheConfigs(configDef), props, ConfigDef.NO_DEFAULT_VALUE, CacheConfig.CACHE_RETENTION_MS_DEFAULT);
+        super(configDef, props);
+    }
+
+    public ChunkCacheConfig(final Map<String, ?> props) {
+        super(configDef(new ConfigDef()), props);
     }
 
     public int cachePrefetchingSize() {

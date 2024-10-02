@@ -34,16 +34,17 @@ public class DiskChunkCacheConfig extends ChunkCacheConfig {
     public static final String TEMP_CACHE_DIRECTORY = "temp";
     public static final String CACHE_DIRECTORY = "cache";
 
-    private static ConfigDef configDef() {
-        final ConfigDef configDef = new ConfigDef();
-        configDef.define(
-            CACHE_PATH_CONFIG,
-            ConfigDef.Type.STRING,
-            ConfigDef.NO_DEFAULT_VALUE,
-            ConfigDef.Importance.HIGH,
-            CACHE_PATH_DOC
+    public static ConfigDef configDef() {
+        return configDef(
+            new ConfigDef()
+                .define(
+                    CACHE_PATH_CONFIG,
+                    ConfigDef.Type.STRING,
+                    ConfigDef.NO_DEFAULT_VALUE,
+                    ConfigDef.Importance.HIGH,
+                    CACHE_PATH_DOC
+                )
         );
-        return configDef;
     }
 
     public DiskChunkCacheConfig(final Map<String, ?> props) {
