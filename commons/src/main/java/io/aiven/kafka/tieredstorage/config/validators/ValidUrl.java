@@ -43,4 +43,9 @@ public class ValidUrl implements ConfigDef.Validator {
             }
         }
     }
+
+    @Override
+    public String toString() {
+        return "Valid URL as defined in rfc2396";
+    }
 }

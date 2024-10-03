@@ -33,4 +33,9 @@ public class NonEmptyPassword implements ConfigDef.Validator {
             throw new ConfigException(name + " value must not be empty");
         }
     }
+
+    @Override
+    public String toString() {
+        return "Non-empty password text";
+    }
 }

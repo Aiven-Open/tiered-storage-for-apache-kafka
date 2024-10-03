@@ -181,5 +181,10 @@ class GcsStorageConfig extends AbstractConfig {
                 throw new ConfigException(name, value, "Value must be a multiple of 256 KiB (" + MULTIPLIER + " B)");
             }
         }
+
+        @Override
+        public String toString() {
+            return "[256 KiB...] values multiple of " + MULTIPLIER + " bytes";
+        }
     }
 }
