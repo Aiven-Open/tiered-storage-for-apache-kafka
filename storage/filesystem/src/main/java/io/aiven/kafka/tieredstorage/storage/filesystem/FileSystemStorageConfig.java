@@ -22,8 +22,7 @@ import java.util.Map;
 import org.apache.kafka.common.config.AbstractConfig;
 import org.apache.kafka.common.config.ConfigDef;
 
-class FileSystemStorageConfig extends AbstractConfig {
-    private static final ConfigDef CONFIG;
+public class FileSystemStorageConfig extends AbstractConfig {
 
     private static final String ROOT_CONFIG = "root";
     private static final String ROOT_DOC = "Root directory";
@@ -31,26 +30,26 @@ class FileSystemStorageConfig extends AbstractConfig {
     private static final String OVERWRITE_ENABLED_CONFIG = "overwrite.enabled";
     private static final String OVERWRITE_ENABLED_DOC = "Enable overwriting existing files";
 
-    static {
-        CONFIG = new ConfigDef();
-        CONFIG.define(
-            ROOT_CONFIG,
-            ConfigDef.Type.STRING,
-            ConfigDef.NO_DEFAULT_VALUE,
-            ConfigDef.Importance.HIGH,
-            ROOT_DOC
-        );
-        CONFIG.define(
-            OVERWRITE_ENABLED_CONFIG,
-            ConfigDef.Type.BOOLEAN,
-            false,
-            ConfigDef.Importance.MEDIUM,
-            OVERWRITE_ENABLED_DOC
-        );
+    public static final ConfigDef configDef() {
+        return new ConfigDef()
+            .define(
+                ROOT_CONFIG,
+                ConfigDef.Type.STRING,
+                ConfigDef.NO_DEFAULT_VALUE,
+                ConfigDef.Importance.HIGH,
+                ROOT_DOC
+            )
+            .define(
+                OVERWRITE_ENABLED_CONFIG,
+                ConfigDef.Type.BOOLEAN,
+                false,
+                ConfigDef.Importance.MEDIUM,
+                OVERWRITE_ENABLED_DOC
+            );
     }
 
     FileSystemStorageConfig(final Map<String, ?> props) {
-        super(CONFIG, props);
+        super(configDef(), props);
     }
 
     final Path root() {

@@ -54,10 +54,8 @@ public class AzureBlobStorageConfig extends AbstractConfig {
     static final int AZURE_UPLOAD_BLOCK_SIZE_MIN = 100 * 1024;
     static final int AZURE_UPLOAD_BLOCK_SIZE_MAX = Integer.MAX_VALUE;
 
-    private static final ConfigDef CONFIG;
-
-    static {
-        CONFIG = new ConfigDef()
+    public static final ConfigDef configDef() {
+        return new ConfigDef()
             .define(
                 AZURE_ACCOUNT_NAME_CONFIG,
                 ConfigDef.Type.STRING,
@@ -112,7 +110,7 @@ public class AzureBlobStorageConfig extends AbstractConfig {
     private ProxyConfig proxyConfig = null;
 
     public AzureBlobStorageConfig(final Map<String, ?> props) {
-        super(CONFIG, props);
+        super(configDef(), props);
         validate();
 
         final Map<String, ?> proxyProps = this.originalsWithPrefix(ProxyConfig.PROXY_PREFIX, true);
