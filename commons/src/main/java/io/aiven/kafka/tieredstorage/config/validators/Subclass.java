@@ -40,5 +40,9 @@ public class Subclass implements ConfigDef.Validator {
             throw new ConfigException(name + " should be a subclass of " + parentClass.getCanonicalName());
         }
     }
-
+        
+    @Override
+    public String toString() {
+        return "Any implementation of " + parentClass.getName();
+    }
 }

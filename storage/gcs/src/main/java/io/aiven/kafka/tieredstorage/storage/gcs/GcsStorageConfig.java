@@ -30,7 +30,7 @@ import io.aiven.kafka.tieredstorage.storage.proxy.ProxyConfig;
 
 import com.google.auth.Credentials;
 
-class GcsStorageConfig extends AbstractConfig {
+public class GcsStorageConfig extends AbstractConfig {
     static final String GCS_BUCKET_NAME_CONFIG = "gcs.bucket.name";
     private static final String GCS_BUCKET_NAME_DOC = "GCS bucket to store log segments";
 
@@ -58,10 +58,8 @@ class GcsStorageConfig extends AbstractConfig {
         + "Cannot be set together with \"" + GCP_CREDENTIALS_JSON_CONFIG + "\" "
         + "or \"" + GCP_CREDENTIALS_PATH_CONFIG + "\"";
 
-    private static final ConfigDef CONFIG;
-
-    static {
-        CONFIG = new ConfigDef()
+    public static final ConfigDef configDef() {
+        return new ConfigDef()
             .define(
                 GCS_BUCKET_NAME_CONFIG,
                 ConfigDef.Type.STRING,
@@ -108,7 +106,7 @@ class GcsStorageConfig extends AbstractConfig {
     private ProxyConfig proxyConfig = null;
 
     public GcsStorageConfig(final Map<String, ?> props) {
-        super(CONFIG, props);
+        super(configDef(), props);
         validate();
 
         final Map<String, ?> proxyProps = this.originalsWithPrefix(ProxyConfig.PROXY_PREFIX, true);
@@ -180,6 +178,11 @@ class GcsStorageConfig extends AbstractConfig {
             if (intValue % MULTIPLIER != 0) {
                 throw new ConfigException(name, value, "Value must be a multiple of 256 KiB (" + MULTIPLIER + " B)");
             }
+        }
+
+        @Override
+        public String toString() {
+            return "[256 KiB...] values multiple of " + MULTIPLIER + " bytes";
         }
     }
 }

@@ -10,3 +10,17 @@ jobs:
     - uses: actions/checkout@v3
     - name: Block Fixup Commit Merge
       uses: alexkappa/block-fixup-merge-action@v2
+
+    - name: Gen docs
+      run: make docs
+
+    - name: Check for uncommitted changes
+      run: |
+        if [[ -n $(git status -s) ]]; then
+          echo "There are uncommitted changes after the task:"
+          git status -s
+          exit 1
+        else
+          echo "No changes detected."
+        fi
+      shell: bash

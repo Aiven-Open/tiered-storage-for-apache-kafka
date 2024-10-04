@@ -44,5 +44,10 @@ public class Null implements ConfigDef.Validator {
             validator.ensureValid(name, value);
         }
     }
+
+    @Override
+    public String toString() {
+        return "null or " + validator.toString();
+    }
 }
 

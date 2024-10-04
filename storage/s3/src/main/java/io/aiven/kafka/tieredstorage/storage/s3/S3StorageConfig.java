@@ -90,10 +90,8 @@ public class S3StorageConfig extends AbstractConfig {
             + "It is disabled by default as Kafka already validates integrity of the files.";
 
 
-    private static final ConfigDef CONFIG;
-
-    static {
-        CONFIG = new ConfigDef()
+    public static ConfigDef configDef() {
+        return new ConfigDef()
             .define(
                 S3_BUCKET_NAME_CONFIG,
                 ConfigDef.Type.STRING,
@@ -177,7 +175,7 @@ public class S3StorageConfig extends AbstractConfig {
     }
 
     public S3StorageConfig(final Map<String, ?> props) {
-        super(CONFIG, props);
+        super(configDef(), props);
         validate();
     }
 
