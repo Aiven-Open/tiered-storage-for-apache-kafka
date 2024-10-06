@@ -31,6 +31,7 @@ import io.aiven.kafka.tieredstorage.config.validators.NonEmptyPassword;
 import io.aiven.kafka.tieredstorage.config.validators.Null;
 import io.aiven.kafka.tieredstorage.config.validators.Subclass;
 import io.aiven.kafka.tieredstorage.config.validators.ValidUrl;
+import io.aiven.kafka.tieredstorage.storage.proxy.ProxyConfig;
 
 import software.amazon.awssdk.auth.credentials.AwsBasicCredentials;
 import software.amazon.awssdk.auth.credentials.AwsCredentials;
@@ -174,9 +175,16 @@ public class S3StorageConfig extends AbstractConfig {
             );
     }
 
+    private ProxyConfig proxyConfig = null;
+
     public S3StorageConfig(final Map<String, ?> props) {
         super(configDef(), props);
         validate();
+
+        final Map<String, ?> proxyProps = this.originalsWithPrefix(ProxyConfig.PROXY_PREFIX, true);
+        if (!proxyProps.isEmpty()) {
+            this.proxyConfig = new ProxyConfig(proxyProps);
+        }
     }
 
     private void validate() {
@@ -196,6 +204,10 @@ public class S3StorageConfig extends AbstractConfig {
                 + AWS_CREDENTIALS_PROVIDER_CLASS_CONFIG
                 + ". If both are null, default S3 credentials provider is used.");
         }
+    }
+
+    ProxyConfig proxyConfig() {
+        return proxyConfig;
     }
 
     Region region() {
