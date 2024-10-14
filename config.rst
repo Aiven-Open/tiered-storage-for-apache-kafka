@@ -1,6 +1,9 @@
 =================
-RemoteStorageManagerConfig
+Core components
 =================
+-----------------
+RemoteStorageManagerConfig
+-----------------
 ``chunk.size``
   Segment files are chunked into smaller parts to allow for faster processing (e.g. encryption, compression) and for range-fetching. It is recommended to benchmark this value, starting with 4MiB.
 
@@ -91,9 +94,9 @@ RemoteStorageManagerConfig
   * Importance: low
 
 
-=================
+-----------------
 SegmentManifestCacheConfig
-=================
+-----------------
 Under ``fetch.manifest.cache.``
 
 ``retention.ms``
@@ -129,9 +132,9 @@ Under ``fetch.manifest.cache.``
   * Importance: low
 
 
-=================
+-----------------
 SegmentIndexesCacheConfig
-=================
+-----------------
 Under ``fetch.indexes.cache.``
 
 ``retention.ms``
@@ -167,9 +170,9 @@ Under ``fetch.indexes.cache.``
   * Importance: low
 
 
-=================
+-----------------
 ChunkManagerFactoryConfig
-=================
+-----------------
 ``fetch.chunk.cache.class``
   Chunk cache implementation. There are 2 implementations included: io.aiven.kafka.tieredstorage.fetch.cache.MemoryChunkCache and io.aiven.kafka.tieredstorage.fetch.cache.DiskChunkCache
 
@@ -179,9 +182,9 @@ ChunkManagerFactoryConfig
   * Importance: medium
 
 
-=================
+-----------------
 MemoryChunkCacheConfig
-=================
+-----------------
 Under ``fetch.chunk.cache.``
 
 ``size``
@@ -224,9 +227,9 @@ Under ``fetch.chunk.cache.``
   * Importance: low
 
 
-=================
+-----------------
 DiskChunkCacheConfig
-=================
+-----------------
 Under ``fetch.chunk.cache.``
 
 ``path``

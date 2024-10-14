@@ -21,6 +21,7 @@ import java.util.List;
 import org.apache.kafka.common.MetricNameTemplate;
 
 public class MetricRegistry {
+    public static final String METRIC_CONTEXT = "aiven.kafka.server.tieredstorage.s3";
     static final String METRIC_GROUP = "s3-client-metrics";
     static final String GET_OBJECT_REQUESTS = "get-object-requests";
     static final String GET_OBJECT_REQUESTS_RATE = GET_OBJECT_REQUESTS + "-rate";

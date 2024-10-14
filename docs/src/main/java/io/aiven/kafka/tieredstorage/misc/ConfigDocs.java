@@ -39,30 +39,32 @@ import static io.aiven.kafka.tieredstorage.config.RemoteStorageManagerConfig.STO
  **/
 public class ConfigDocs {
     public static void main(final String[] args) {
-        printSectionTitle("RemoteStorageManagerConfig");
+        printSectionTitle("Core components");
+
+        printSubsectionTitle("RemoteStorageManagerConfig");
         final var rsmConfigDef = RemoteStorageManagerConfig.configDef();
         System.out.println(rsmConfigDef.toEnrichedRst());
 
-        printSectionTitle("SegmentManifestCacheConfig");
+        printSubsectionTitle("SegmentManifestCacheConfig");
         System.out.println("Under ``" + SEGMENT_MANIFEST_CACHE_PREFIX + "``\n");
         final var segmentManifestCacheDef = MemorySegmentManifestCache.configDef();
         System.out.println(segmentManifestCacheDef.toEnrichedRst());
 
-        printSectionTitle("SegmentIndexesCacheConfig");
+        printSubsectionTitle("SegmentIndexesCacheConfig");
         System.out.println("Under ``" + FETCH_INDEXES_CACHE_PREFIX + "``\n");
         final var segmentIndexesCacheDef = MemorySegmentIndexesCache.configDef();
         System.out.println(segmentIndexesCacheDef.toEnrichedRst());
 
-        printSectionTitle("ChunkManagerFactoryConfig");
+        printSubsectionTitle("ChunkManagerFactoryConfig");
         final var chunkCacheFactoryDef = ChunkManagerFactoryConfig.configDef();
         System.out.println(chunkCacheFactoryDef.toEnrichedRst());
 
-        printSectionTitle("MemoryChunkCacheConfig");
+        printSubsectionTitle("MemoryChunkCacheConfig");
         System.out.println("Under ``" + FETCH_CHUNK_CACHE_PREFIX + "``\n");
         final var memChunkCacheDef = ChunkCacheConfig.configDef(new ConfigDef());
         System.out.println(memChunkCacheDef.toEnrichedRst());
 
-        printSectionTitle("DiskChunkCacheConfig");
+        printSubsectionTitle("DiskChunkCacheConfig");
         System.out.println("Under ``" + FETCH_CHUNK_CACHE_PREFIX + "``\n");
         final var diskChunkCacheDef = DiskChunkCacheConfig.configDef();
         System.out.println(diskChunkCacheDef.toEnrichedRst());

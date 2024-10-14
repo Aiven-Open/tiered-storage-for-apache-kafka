@@ -21,6 +21,7 @@ import java.util.List;
 import org.apache.kafka.common.MetricNameTemplate;
 
 public class ThreadPoolMonitorMetricsRegistry {
+    public static final String METRIC_CONFIG = "aiven.kafka.server.tieredstorage.thread-pool";
 
     static final String ACTIVE_THREADS = "active-thread-count";
     private static final String ACTIVE_THREADS_TOTAL = ACTIVE_THREADS + "-total";

@@ -47,8 +47,8 @@ import com.github.benmanes.caffeine.cache.Scheduler;
 import com.github.benmanes.caffeine.cache.Weigher;
 
 public abstract class ChunkCache<T> implements ChunkManager, Configurable {
-    private static final String METRIC_GROUP = "chunk-cache-metrics";
-    private static final String THREAD_POOL_METRIC_GROUP = "chunk-cache-thread-pool-metrics";
+    public static final String METRIC_GROUP = "chunk-cache-metrics";
+    public static final String THREAD_POOL_METRIC_GROUP = "chunk-cache-thread-pool-metrics";
 
     private final ChunkManager chunkManager;
     private ExecutorService executor;

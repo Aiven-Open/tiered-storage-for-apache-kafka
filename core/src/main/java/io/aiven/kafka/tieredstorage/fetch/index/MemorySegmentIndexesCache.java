@@ -50,8 +50,8 @@ public class MemorySegmentIndexesCache implements SegmentIndexesCache {
     private static final Logger log = LoggerFactory.getLogger(MemorySegmentIndexesCache.class);
 
     private static final long DEFAULT_MAX_SIZE_BYTES = 10 * 1024 * 1024;
-    private static final String METRIC_GROUP = "segment-indexes-cache-metrics";
-    private static final String THREAD_POOL_METRIC_GROUP = "segment-indexes-cache-thread-pool-metrics";
+    public static final String METRIC_GROUP = "segment-indexes-cache-metrics";
+    public static final String THREAD_POOL_METRIC_GROUP = "segment-indexes-cache-thread-pool-metrics";
 
     private final CaffeineStatsCounter statsCounter = new CaffeineStatsCounter(METRIC_GROUP);
 

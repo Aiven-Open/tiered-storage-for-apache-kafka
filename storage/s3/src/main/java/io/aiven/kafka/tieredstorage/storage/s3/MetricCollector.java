@@ -82,6 +82,7 @@ import static io.aiven.kafka.tieredstorage.storage.s3.MetricRegistry.GET_OBJECT_
 import static io.aiven.kafka.tieredstorage.storage.s3.MetricRegistry.IO_ERRORS;
 import static io.aiven.kafka.tieredstorage.storage.s3.MetricRegistry.IO_ERRORS_RATE_METRIC_NAME;
 import static io.aiven.kafka.tieredstorage.storage.s3.MetricRegistry.IO_ERRORS_TOTAL_METRIC_NAME;
+import static io.aiven.kafka.tieredstorage.storage.s3.MetricRegistry.METRIC_CONTEXT;
 import static io.aiven.kafka.tieredstorage.storage.s3.MetricRegistry.OTHER_ERRORS;
 import static io.aiven.kafka.tieredstorage.storage.s3.MetricRegistry.OTHER_ERRORS_RATE_METRIC_NAME;
 import static io.aiven.kafka.tieredstorage.storage.s3.MetricRegistry.OTHER_ERRORS_TOTAL_METRIC_NAME;
@@ -123,7 +124,7 @@ public class MetricCollector implements MetricPublisher {
 
         metrics = new org.apache.kafka.common.metrics.Metrics(
             new MetricConfig(), List.of(reporter), Time.SYSTEM,
-            new KafkaMetricsContext("aiven.kafka.server.tieredstorage.s3")
+            new KafkaMetricsContext(METRIC_CONTEXT)
         );
         final Sensor getObjectRequestsSensor = createRequestsSensor(
             GET_OBJECT_REQUESTS,

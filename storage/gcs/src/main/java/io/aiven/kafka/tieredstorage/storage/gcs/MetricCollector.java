@@ -38,6 +38,7 @@ import com.google.api.client.http.HttpResponseInterceptor;
 import com.google.cloud.ServiceOptions;
 import com.google.cloud.http.HttpTransportOptions;
 
+import static io.aiven.kafka.tieredstorage.storage.gcs.MetricRegistry.METRIC_CONTEXT;
 import static io.aiven.kafka.tieredstorage.storage.gcs.MetricRegistry.OBJECT_DELETE;
 import static io.aiven.kafka.tieredstorage.storage.gcs.MetricRegistry.OBJECT_DELETE_RATE_METRIC_NAME;
 import static io.aiven.kafka.tieredstorage.storage.gcs.MetricRegistry.OBJECT_DELETE_TOTAL_METRIC_NAME;
@@ -92,7 +93,7 @@ public class MetricCollector {
 
         metrics = new org.apache.kafka.common.metrics.Metrics(
             new MetricConfig(), List.of(reporter), Time.SYSTEM,
-            new KafkaMetricsContext("aiven.kafka.server.tieredstorage.gcs")
+            new KafkaMetricsContext(METRIC_CONTEXT)
         );
 
         getObjectMetadataRequests = createSensor(
