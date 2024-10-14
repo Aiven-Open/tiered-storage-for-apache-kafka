@@ -16,6 +16,7 @@
 
 package io.aiven.kafka.tieredstorage.metrics;
 
+import java.util.List;
 import java.util.Map;
 
 import org.apache.kafka.common.MetricNameTemplate;
@@ -251,5 +252,71 @@ public class MetricsRegistry {
 
     static Map<String, String> objectTypeTags(final ObjectKeyFactory.Suffix suffix) {
         return Map.of(TAG_NAME_OBJECT_TYPE, suffix.value);
+    }
+
+    public Iterable<MetricNameTemplate> all() {
+        return List.of(
+            // segment copy
+            segmentCopyTimeAvg,
+            segmentCopyTimeAvgByTopic,
+            segmentCopyTimeAvgByTopicPartition,
+            segmentCopyTimeMax,
+            segmentCopyTimeMaxByTopic,
+            segmentCopyTimeMaxByTopicPartition,
+            // segment delete
+            segmentDeleteRequestsRate,
+            segmentDeleteRequestsRateByTopic,
+            segmentDeleteRequestsRateByTopicPartition,
+            segmentDeleteRequestsTotal,
+            segmentDeleteRequestsTotalByTopic,
+            segmentDeleteRequestsTotalByTopicPartition,
+            segmentDeleteBytesTotal,
+            segmentDeleteBytesTotalByTopic,
+            segmentDeleteBytesTotalByTopicPartition,
+            segmentDeleteTimeAvg,
+            segmentDeleteTimeAvgByTopic,
+            segmentDeleteTimeAvgByTopicPartition,
+            segmentDeleteTimeMax,
+            segmentDeleteTimeMaxByTopic,
+            segmentDeleteTimeMaxByTopicPartition,
+            segmentDeleteErrorsRate,
+            segmentDeleteErrorsRateByTopic,
+            segmentDeleteErrorsRateByTopicPartition,
+            segmentDeleteErrorsTotal,
+            segmentDeleteErrorsTotalByTopic,
+            segmentDeleteErrorsTotalByTopicPartition,
+            // segment fetch
+            segmentFetchRequestedBytesRate,
+            segmentFetchRequestedBytesRateByTopic,
+            segmentFetchRequestedBytesRateByTopicPartition,
+            segmentFetchRequestedBytesTotal,
+            segmentFetchRequestedBytesTotalByTopic,
+            segmentFetchRequestedBytesTotalByTopicPartition,
+            // object upload
+            objectUploadRequestsRate,
+            objectUploadRequestsRateByTopic,
+            objectUploadRequestsRateByTopicPartition,
+            objectUploadRequestsRateByObjectType,
+            objectUploadRequestsRateByTopicAndObjectType,
+            objectUploadRequestsRateByTopicPartitionAndObjectType,
+            objectUploadRequestsTotal,
+            objectUploadRequestsTotalByTopic,
+            objectUploadRequestsTotalByTopicPartition,
+            objectUploadRequestsTotalByObjectType,
+            objectUploadRequestsTotalByTopicAndObjectType,
+            objectUploadRequestsTotalByTopicPartitionAndObjectType,
+            objectUploadBytesRate,
+            objectUploadBytesRateByTopic,
+            objectUploadBytesRateByTopicPartition,
+            objectUploadBytesRateByObjectType,
+            objectUploadBytesRateByTopicAndObjectType,
+            objectUploadBytesRateByTopicPartitionAndObjectType,
+            objectUploadBytesTotal,
+            objectUploadBytesTotalByTopic,
+            objectUploadBytesTotalByTopicPartition,
+            objectUploadBytesTotalByObjectType,
+            objectUploadBytesTotalByTopicAndObjectType,
+            objectUploadBytesTotalByTopicPartitionAndObjectType
+        );
     }
 }
