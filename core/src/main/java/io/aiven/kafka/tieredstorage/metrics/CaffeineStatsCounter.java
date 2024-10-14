@@ -34,6 +34,17 @@ import com.github.benmanes.caffeine.cache.RemovalCause;
 import com.github.benmanes.caffeine.cache.stats.CacheStats;
 import com.github.benmanes.caffeine.cache.stats.StatsCounter;
 
+import static io.aiven.kafka.tieredstorage.metrics.CaffeineMetricsRegistry.CACHE_EVICTION;
+import static io.aiven.kafka.tieredstorage.metrics.CaffeineMetricsRegistry.CACHE_EVICTION_WEIGHT;
+import static io.aiven.kafka.tieredstorage.metrics.CaffeineMetricsRegistry.CACHE_HITS;
+import static io.aiven.kafka.tieredstorage.metrics.CaffeineMetricsRegistry.CACHE_LOAD_FAILURE;
+import static io.aiven.kafka.tieredstorage.metrics.CaffeineMetricsRegistry.CACHE_LOAD_FAILURE_TIME;
+import static io.aiven.kafka.tieredstorage.metrics.CaffeineMetricsRegistry.CACHE_LOAD_SUCCESS;
+import static io.aiven.kafka.tieredstorage.metrics.CaffeineMetricsRegistry.CACHE_LOAD_SUCCESS_TIME;
+import static io.aiven.kafka.tieredstorage.metrics.CaffeineMetricsRegistry.CACHE_MISSES;
+import static io.aiven.kafka.tieredstorage.metrics.CaffeineMetricsRegistry.CACHE_SIZE;
+import static io.aiven.kafka.tieredstorage.metrics.CaffeineMetricsRegistry.METRIC_CONTEXT;
+
 /**
  * Records cache metrics managed by Caffeine {@code Cache#stats}.
  *
@@ -43,29 +54,6 @@ import com.github.benmanes.caffeine.cache.stats.StatsCounter;
  * <a href="https://github.com/micrometer-metrics/micrometer/blob/main/micrometer-core/src/main/java/io/micrometer/core/instrument/binder/cache/CaffeineStatsCounter.java">Micrometer</a>
  */
 public class CaffeineStatsCounter implements StatsCounter {
-
-    static final String CACHE_HITS = "cache-hits";
-    static final String CACHE_HITS_TOTAL = CACHE_HITS + "-total";
-    static final String CACHE_MISSES = "cache-misses";
-    static final String CACHE_MISSES_TOTAL = CACHE_MISSES + "-total";
-    static final String CACHE_LOAD = "cache-load";
-    static final String CACHE_LOAD_SUCCESS = CACHE_LOAD + "-success";
-    static final String CACHE_LOAD_SUCCESS_TOTAL = CACHE_LOAD_SUCCESS + "-total";
-    static final String CACHE_LOAD_SUCCESS_TIME = CACHE_LOAD_SUCCESS + "-time";
-    static final String CACHE_LOAD_SUCCESS_TIME_TOTAL = CACHE_LOAD_SUCCESS_TIME + "-total";
-    static final String CACHE_LOAD_FAILURE = CACHE_LOAD + "-failure";
-    static final String CACHE_LOAD_FAILURE_TOTAL = CACHE_LOAD_FAILURE + "-total";
-    static final String CACHE_LOAD_FAILURE_TIME = CACHE_LOAD_FAILURE + "-time";
-    static final String CACHE_LOAD_FAILURE_TIME_TOTAL = CACHE_LOAD_FAILURE_TIME + "-total";
-
-    static final String CACHE_EVICTION = "cache-eviction";
-    static final String CACHE_EVICTION_TOTAL = CACHE_EVICTION + "-total";
-    static final String CACHE_EVICTION_WEIGHT = CACHE_EVICTION + "-weight";
-    static final String CACHE_EVICTION_WEIGHT_TOTAL = CACHE_EVICTION_WEIGHT + "-total";
-
-    static final String CACHE_SIZE = "cache-size";
-    static final String CACHE_SIZE_TOTAL = CACHE_SIZE + "-total";
-
     private final org.apache.kafka.common.metrics.Metrics metrics;
 
     private final LongAdder cacheHitCount;
@@ -78,7 +66,7 @@ public class CaffeineStatsCounter implements StatsCounter {
     private final LongAdder cacheEvictionWeightTotal;
     private final ConcurrentHashMap<RemovalCause, LongAdder> cacheEvictionCountByCause;
     private final ConcurrentHashMap<RemovalCause, LongAdder> cacheEvictionWeightByCause;
-    private final String groupName;
+    private final CaffeineMetricsRegistry metricsRegistry;
 
     public CaffeineStatsCounter(final String groupName) {
         cacheHitCount = new LongAdder();
@@ -90,8 +78,6 @@ public class CaffeineStatsCounter implements StatsCounter {
         cacheEvictionCountTotal = new LongAdder();
         cacheEvictionWeightTotal = new LongAdder();
 
-        this.groupName = groupName;
-
         cacheEvictionCountByCause = new ConcurrentHashMap<>();
         Arrays.stream(RemovalCause.values()).forEach(cause -> cacheEvictionCountByCause.put(cause, new LongAdder()));
 
@@ -102,42 +88,84 @@ public class CaffeineStatsCounter implements StatsCounter {
 
         metrics = new org.apache.kafka.common.metrics.Metrics(
             new MetricConfig(), List.of(reporter), Time.SYSTEM,
-            new KafkaMetricsContext("aiven.kafka.server.tieredstorage.cache")
+            new KafkaMetricsContext(METRIC_CONTEXT)
         );
 
-        initSensor(CACHE_HITS, CACHE_HITS_TOTAL, cacheHitCount);
-        initSensor(CACHE_MISSES, CACHE_MISSES_TOTAL, cacheMissCount);
-        initSensor(CACHE_LOAD_SUCCESS, CACHE_LOAD_SUCCESS_TOTAL, cacheLoadSuccessCount);
-        initSensor(CACHE_LOAD_SUCCESS_TIME, CACHE_LOAD_SUCCESS_TIME_TOTAL, cacheLoadSuccessTimeTotal);
-        initSensor(CACHE_LOAD_FAILURE, CACHE_LOAD_FAILURE_TOTAL, cacheLoadFailureCount);
-        initSensor(CACHE_LOAD_FAILURE_TIME, CACHE_LOAD_FAILURE_TIME_TOTAL, cacheLoadFailureTimeTotal);
-        initSensor(CACHE_EVICTION, CACHE_EVICTION_TOTAL, cacheEvictionCountTotal);
+        metricsRegistry = new CaffeineMetricsRegistry(groupName);
+        initSensor(
+            metricsRegistry.cacheHitsMetricName,
+            CACHE_HITS,
+            cacheHitCount
+        );
+        initSensor(
+            metricsRegistry.cacheMissesMetricName,
+            CACHE_MISSES,
+            cacheMissCount
+        );
+        initSensor(
+            metricsRegistry.cacheLoadSuccessMetricName,
+            CACHE_LOAD_SUCCESS,
+            cacheLoadSuccessCount
+        );
+        initSensor(
+            metricsRegistry.cacheLoadSuccessTimeMetricName,
+            CACHE_LOAD_SUCCESS_TIME,
+            cacheLoadSuccessTimeTotal
+        );
+        initSensor(
+            metricsRegistry.cacheLoadFailureMetricName,
+            CACHE_LOAD_FAILURE,
+            cacheLoadFailureCount
+        );
+        initSensor(
+            metricsRegistry.cacheLoadFailureTimeMetricName,
+            CACHE_LOAD_FAILURE_TIME,
+            cacheLoadFailureTimeTotal
+        );
+        initSensor(
+            metricsRegistry.cacheEvictionMetricName,
+            CACHE_EVICTION,
+            cacheEvictionCountTotal
+        );
         Arrays.stream(RemovalCause.values()).forEach(cause ->
-            initSensor("cause." + cause.name() + "." + CACHE_EVICTION, CACHE_EVICTION_TOTAL,
-                cacheEvictionCountByCause.get(cause), () -> Map.of("cause", cause.name()), "cause")
+            initSensor(
+                metricsRegistry.cacheEvictionByCauseMetricName,
+                "cause." + cause.name() + "." + CACHE_EVICTION,
+                cacheEvictionCountByCause.get(cause),
+                () -> Map.of("cause", cause.name())
+            )
         );
 
-        initSensor(CACHE_EVICTION_WEIGHT, CACHE_EVICTION_WEIGHT_TOTAL, cacheEvictionWeightTotal);
+        initSensor(
+            metricsRegistry.cacheEvictionWeightMetricName,
+            CACHE_EVICTION_WEIGHT,
+            cacheEvictionWeightTotal
+        );
 
         Arrays.stream(RemovalCause.values()).forEach(cause ->
-            initSensor("cause." + cause.name() + "." + CACHE_EVICTION, CACHE_EVICTION_WEIGHT_TOTAL,
-                cacheEvictionWeightByCause.get(cause), () -> Map.of("cause", cause.name()), "cause")
+            initSensor(
+                metricsRegistry.cacheEvictionWeightByCauseMetricName,
+                "cause." + cause.name() + "." + CACHE_EVICTION,
+                cacheEvictionWeightByCause.get(cause),
+                () -> Map.of("cause", cause.name())
+            )
         );
     }
 
-    private void initSensor(final String sensorName,
-                            final String metricName,
-                            final LongAdder value,
-                            final Supplier<Map<String, String>> tagsSupplier,
-                            final String... tagNames) {
-        final var name = new MetricNameTemplate(metricName, groupName, "", tagNames);
+    private void initSensor(
+        final MetricNameTemplate metricNameTemplate,
+        final String sensorName,
+        final LongAdder value,
+        final Supplier<Map<String, String>> tagsSupplier
+    ) {
         new SensorProvider(metrics, sensorName, tagsSupplier)
-            .with(name, new MeasurableValue(value::sum))
+            .with(metricNameTemplate, new MeasurableValue(value::sum))
             .get();
     }
 
-    private void initSensor(final String sensorName, final String metricName, final LongAdder value) {
-        initSensor(sensorName, metricName, value, Collections::emptyMap);
+    private void initSensor(final MetricNameTemplate metricNameTemplate, final String sensorName,
+                            final LongAdder value) {
+        initSensor(metricNameTemplate, sensorName, value, Collections::emptyMap);
     }
 
     @Override
@@ -193,9 +221,8 @@ public class CaffeineStatsCounter implements StatsCounter {
      * @param sizeSupplier operation from cache to provide cache size value
      */
     public void registerSizeMetric(final Supplier<Long> sizeSupplier) {
-        final var name = new MetricNameTemplate(CACHE_SIZE_TOTAL, groupName, "");
         new SensorProvider(metrics, CACHE_SIZE)
-            .with(name, new MeasurableValue(sizeSupplier))
+            .with(metricsRegistry.cacheSizeTotalMetricName, new MeasurableValue(sizeSupplier))
             .get();
     }
 
