@@ -35,6 +35,7 @@ import io.aiven.kafka.tieredstorage.ObjectKeyFactory;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
+import static io.aiven.kafka.tieredstorage.metrics.MetricsRegistry.METRIC_CONTEXT;
 import static io.aiven.kafka.tieredstorage.metrics.MetricsRegistry.OBJECT_UPLOAD;
 import static io.aiven.kafka.tieredstorage.metrics.MetricsRegistry.OBJECT_UPLOAD_BYTES;
 import static io.aiven.kafka.tieredstorage.metrics.MetricsRegistry.SEGMENT_COPY_TIME;
@@ -69,7 +70,7 @@ public class Metrics {
             metricConfig,
             List.of(reporter),
             time,
-            new KafkaMetricsContext("aiven.kafka.server.tieredstorage")
+            new KafkaMetricsContext(METRIC_CONTEXT)
         );
 
         metricsRegistry = new MetricsRegistry();
