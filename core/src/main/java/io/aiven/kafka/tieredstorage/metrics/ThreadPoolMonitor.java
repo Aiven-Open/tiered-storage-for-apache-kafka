@@ -28,24 +28,18 @@ import org.apache.kafka.common.metrics.MetricConfig;
 import org.apache.kafka.common.metrics.Metrics;
 import org.apache.kafka.common.utils.Time;
 
+import static io.aiven.kafka.tieredstorage.metrics.ThreadPoolMonitorMetricsRegistry.ACTIVE_THREADS;
+import static io.aiven.kafka.tieredstorage.metrics.ThreadPoolMonitorMetricsRegistry.PARALLELISM;
+import static io.aiven.kafka.tieredstorage.metrics.ThreadPoolMonitorMetricsRegistry.POOL_SIZE;
+import static io.aiven.kafka.tieredstorage.metrics.ThreadPoolMonitorMetricsRegistry.QUEUED_TASK_COUNT;
+import static io.aiven.kafka.tieredstorage.metrics.ThreadPoolMonitorMetricsRegistry.RUNNING_THREADS;
+import static io.aiven.kafka.tieredstorage.metrics.ThreadPoolMonitorMetricsRegistry.STEAL_TASK_COUNT;
+
 public class ThreadPoolMonitor {
     // only fork-join pool is supported; but could be extended to other fixed-sized pools
     final ForkJoinPool pool;
     private final Metrics metrics;
     String groupName;
-
-    private static final String ACTIVE_THREADS = "active-thread-count";
-    private static final String ACTIVE_THREADS_TOTAL = ACTIVE_THREADS + "-total";
-    private static final String RUNNING_THREADS = "running-thread-count";
-    private static final String RUNNING_THREADS_TOTAL = RUNNING_THREADS + "-total";
-    private static final String POOL_SIZE = "pool-size";
-    private static final String POOL_SIZE_TOTAL = POOL_SIZE + "-total";
-    private static final String PARALLELISM = "parallelism";
-    private static final String PARALLELISM_TOTAL = PARALLELISM + "-total";
-    private static final String QUEUED_TASK_COUNT = "queued-task-count";
-    private static final String QUEUED_TASK_COUNT_TOTAL = QUEUED_TASK_COUNT + "-total";
-    private static final String STEAL_TASK_COUNT = "steal-task-count";
-    private static final String STEAL_TASK_COUNT_TOTAL = STEAL_TASK_COUNT + "-total";
 
     public ThreadPoolMonitor(final String groupName, final ExecutorService pool) {
         this.groupName = groupName;
@@ -59,19 +53,18 @@ public class ThreadPoolMonitor {
             new MetricConfig(), List.of(reporter), Time.SYSTEM,
             new KafkaMetricsContext("aiven.kafka.server.tieredstorage.thread-pool")
         );
-
-        registerSensor(ACTIVE_THREADS_TOTAL, ACTIVE_THREADS, this::activeThreadCount);
-        registerSensor(RUNNING_THREADS_TOTAL, RUNNING_THREADS, this::runningThreadCount);
-        registerSensor(POOL_SIZE_TOTAL, POOL_SIZE, this::poolSize);
-        registerSensor(PARALLELISM_TOTAL, PARALLELISM, this::parallelism);
-        registerSensor(QUEUED_TASK_COUNT_TOTAL, QUEUED_TASK_COUNT, this::queuedTaskCount);
-        registerSensor(STEAL_TASK_COUNT_TOTAL, STEAL_TASK_COUNT, this::stealTaskCount);
+        final var metricsRegistry = new ThreadPoolMonitorMetricsRegistry(groupName);
+        registerSensor(metricsRegistry.activeThreadsTotalMetricName, ACTIVE_THREADS, this::activeThreadCount);
+        registerSensor(metricsRegistry.runningThreadsTotalMetricName, RUNNING_THREADS, this::runningThreadCount);
+        registerSensor(metricsRegistry.poolSizeTotalMetricName, POOL_SIZE, this::poolSize);
+        registerSensor(metricsRegistry.parallelismTotalMetricName, PARALLELISM, this::parallelism);
+        registerSensor(metricsRegistry.queuedTaskCountTotalMetricName, QUEUED_TASK_COUNT, this::queuedTaskCount);
+        registerSensor(metricsRegistry.stealTaskCountTotalMetricName, STEAL_TASK_COUNT, this::stealTaskCount);
     }
 
-    void registerSensor(final String metricName, final String sensorName, final Supplier<Long> supplier) {
-        final var name = new MetricNameTemplate(metricName, groupName, "");
+    void registerSensor(final MetricNameTemplate metricName, final String sensorName, final Supplier<Long> supplier) {
         new SensorProvider(metrics, sensorName)
-            .with(name, new MeasurableValue(supplier))
+            .with(metricName, new MeasurableValue(supplier))
             .get();
     }
 
