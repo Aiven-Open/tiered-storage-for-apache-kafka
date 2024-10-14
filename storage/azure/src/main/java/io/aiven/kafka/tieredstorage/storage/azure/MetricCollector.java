@@ -53,6 +53,7 @@ import static io.aiven.kafka.tieredstorage.storage.azure.MetricRegistry.BLOCK_LI
 import static io.aiven.kafka.tieredstorage.storage.azure.MetricRegistry.BLOCK_UPLOAD;
 import static io.aiven.kafka.tieredstorage.storage.azure.MetricRegistry.BLOCK_UPLOAD_RATE_METRIC_NAME;
 import static io.aiven.kafka.tieredstorage.storage.azure.MetricRegistry.BLOCK_UPLOAD_TOTAL_METRIC_NAME;
+import static io.aiven.kafka.tieredstorage.storage.azure.MetricRegistry.METRIC_CONTEXT;
 
 public class MetricCollector {
 
@@ -66,7 +67,7 @@ public class MetricCollector {
 
         final Metrics metrics = new Metrics(
             new MetricConfig(), List.of(reporter), Time.SYSTEM,
-            new KafkaMetricsContext("aiven.kafka.server.tieredstorage.azure")
+            new KafkaMetricsContext(METRIC_CONTEXT)
         );
         policy = new MetricsPolicy(metrics, pathPattern());
     }

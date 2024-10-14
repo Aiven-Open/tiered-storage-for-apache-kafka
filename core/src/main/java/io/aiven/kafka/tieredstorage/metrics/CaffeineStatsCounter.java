@@ -43,6 +43,7 @@ import static io.aiven.kafka.tieredstorage.metrics.CaffeineMetricsRegistry.CACHE
 import static io.aiven.kafka.tieredstorage.metrics.CaffeineMetricsRegistry.CACHE_LOAD_SUCCESS_TIME;
 import static io.aiven.kafka.tieredstorage.metrics.CaffeineMetricsRegistry.CACHE_MISSES;
 import static io.aiven.kafka.tieredstorage.metrics.CaffeineMetricsRegistry.CACHE_SIZE;
+import static io.aiven.kafka.tieredstorage.metrics.CaffeineMetricsRegistry.METRIC_CONTEXT;
 
 /**
  * Records cache metrics managed by Caffeine {@code Cache#stats}.
@@ -87,7 +88,7 @@ public class CaffeineStatsCounter implements StatsCounter {
 
         metrics = new org.apache.kafka.common.metrics.Metrics(
             new MetricConfig(), List.of(reporter), Time.SYSTEM,
-            new KafkaMetricsContext("aiven.kafka.server.tieredstorage.cache")
+            new KafkaMetricsContext(METRIC_CONTEXT)
         );
 
         metricsRegistry = new CaffeineMetricsRegistry(groupName);

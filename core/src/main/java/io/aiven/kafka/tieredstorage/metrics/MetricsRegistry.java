@@ -25,7 +25,7 @@ import org.apache.kafka.common.TopicPartition;
 import io.aiven.kafka.tieredstorage.ObjectKeyFactory;
 
 public class MetricsRegistry {
-
+    public static final String METRIC_CONTEXT = "aiven.kafka.server.tieredstorage";
     static final String METRIC_GROUP = "remote-storage-manager-metrics";
     static final String TAG_NAME_OBJECT_TYPE = "object-type";
     static final String[] OBJECT_TYPE_TAG_NAMES = {TAG_NAME_OBJECT_TYPE};

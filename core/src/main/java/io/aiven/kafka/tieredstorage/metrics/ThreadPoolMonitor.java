@@ -29,6 +29,7 @@ import org.apache.kafka.common.metrics.Metrics;
 import org.apache.kafka.common.utils.Time;
 
 import static io.aiven.kafka.tieredstorage.metrics.ThreadPoolMonitorMetricsRegistry.ACTIVE_THREADS;
+import static io.aiven.kafka.tieredstorage.metrics.ThreadPoolMonitorMetricsRegistry.METRIC_CONFIG;
 import static io.aiven.kafka.tieredstorage.metrics.ThreadPoolMonitorMetricsRegistry.PARALLELISM;
 import static io.aiven.kafka.tieredstorage.metrics.ThreadPoolMonitorMetricsRegistry.POOL_SIZE;
 import static io.aiven.kafka.tieredstorage.metrics.ThreadPoolMonitorMetricsRegistry.QUEUED_TASK_COUNT;
@@ -51,7 +52,7 @@ public class ThreadPoolMonitor {
         final JmxReporter reporter = new JmxReporter();
         metrics = new org.apache.kafka.common.metrics.Metrics(
             new MetricConfig(), List.of(reporter), Time.SYSTEM,
-            new KafkaMetricsContext("aiven.kafka.server.tieredstorage.thread-pool")
+            new KafkaMetricsContext(METRIC_CONFIG)
         );
         final var metricsRegistry = new ThreadPoolMonitorMetricsRegistry(groupName);
         registerSensor(metricsRegistry.activeThreadsTotalMetricName, ACTIVE_THREADS, this::activeThreadCount);

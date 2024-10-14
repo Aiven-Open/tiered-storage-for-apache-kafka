@@ -21,6 +21,7 @@ import java.util.List;
 import org.apache.kafka.common.MetricNameTemplate;
 
 public class CaffeineMetricsRegistry {
+    public static final String METRIC_CONTEXT = "aiven.kafka.server.tieredstorage.cache";
 
     static final String CACHE_HITS = "cache-hits";
     static final String CACHE_HITS_TOTAL = CACHE_HITS + "-total";

@@ -21,6 +21,7 @@ import java.util.List;
 import org.apache.kafka.common.MetricNameTemplate;
 
 public class MetricRegistry {
+    public static final String METRIC_CONTEXT = "aiven.kafka.server.tieredstorage.azure";
     static final String METRIC_GROUP = "azure-blob-storage-client-metrics";
     static final String BLOB_DELETE = "blob-delete";
     static final String BLOB_DELETE_RATE = BLOB_DELETE + "-rate";
