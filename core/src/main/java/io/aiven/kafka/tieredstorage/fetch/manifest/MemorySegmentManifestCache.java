@@ -46,8 +46,8 @@ import org.slf4j.LoggerFactory;
 
 public class MemorySegmentManifestCache implements SegmentManifestCache {
     private static final Logger log = LoggerFactory.getLogger(MemorySegmentManifestCache.class);
-    private static final String METRIC_GROUP = "segment-manifest-cache-metrics";
-    private static final String THREAD_POOL_METRIC_GROUP = "segment-manifest-cache-thread-pool-metrics";
+    public static final String METRIC_GROUP = "segment-manifest-cache-metrics";
+    public static final String THREAD_POOL_METRIC_GROUP = "segment-manifest-cache-thread-pool-metrics";
     private static final long DEFAULT_MAX_SIZE = 1000L;
     private static final long DEFAULT_RETENTION_MS = 3_600_000;
 
