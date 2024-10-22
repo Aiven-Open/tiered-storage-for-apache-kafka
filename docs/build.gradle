@@ -28,6 +28,6 @@ dependencies {
 
 tasks.register('genConfigDocs', JavaExec) {
     classpath = sourceSets.main.runtimeClasspath
-    mainClass = 'io.aiven.kafka.tieredstorage.misc.ConfigDocs'
-    standardOutput = new File("config.rst").newOutputStream()
+    mainClass = 'io.aiven.kafka.tieredstorage.misc.ConfigsDocs'
+    standardOutput = new File("docs/configs.rst").newOutputStream()
 }
