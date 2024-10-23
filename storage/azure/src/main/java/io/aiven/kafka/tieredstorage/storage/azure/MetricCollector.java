@@ -38,22 +38,38 @@ import com.azure.core.http.HttpResponse;
 import com.azure.core.http.policy.HttpPipelinePolicy;
 import reactor.core.publisher.Mono;
 
-public class MetricCollector {
-    private final org.apache.kafka.common.metrics.Metrics metrics;
+import static io.aiven.kafka.tieredstorage.storage.azure.MetricRegistry.BLOB_DELETE;
+import static io.aiven.kafka.tieredstorage.storage.azure.MetricRegistry.BLOB_DELETE_RATE_METRIC_NAME;
+import static io.aiven.kafka.tieredstorage.storage.azure.MetricRegistry.BLOB_DELETE_TOTAL_METRIC_NAME;
+import static io.aiven.kafka.tieredstorage.storage.azure.MetricRegistry.BLOB_GET;
+import static io.aiven.kafka.tieredstorage.storage.azure.MetricRegistry.BLOB_GET_RATE_METRIC_NAME;
+import static io.aiven.kafka.tieredstorage.storage.azure.MetricRegistry.BLOB_GET_TOTAL_METRIC_NAME;
+import static io.aiven.kafka.tieredstorage.storage.azure.MetricRegistry.BLOB_UPLOAD;
+import static io.aiven.kafka.tieredstorage.storage.azure.MetricRegistry.BLOB_UPLOAD_RATE_METRIC_NAME;
+import static io.aiven.kafka.tieredstorage.storage.azure.MetricRegistry.BLOB_UPLOAD_TOTAL_METRIC_NAME;
+import static io.aiven.kafka.tieredstorage.storage.azure.MetricRegistry.BLOCK_LIST_UPLOAD;
+import static io.aiven.kafka.tieredstorage.storage.azure.MetricRegistry.BLOCK_LIST_UPLOAD_RATE_METRIC_NAME;
+import static io.aiven.kafka.tieredstorage.storage.azure.MetricRegistry.BLOCK_LIST_UPLOAD_TOTAL_METRIC_NAME;
+import static io.aiven.kafka.tieredstorage.storage.azure.MetricRegistry.BLOCK_UPLOAD;
+import static io.aiven.kafka.tieredstorage.storage.azure.MetricRegistry.BLOCK_UPLOAD_RATE_METRIC_NAME;
+import static io.aiven.kafka.tieredstorage.storage.azure.MetricRegistry.BLOCK_UPLOAD_TOTAL_METRIC_NAME;
+import static io.aiven.kafka.tieredstorage.storage.azure.MetricRegistry.METRIC_CONTEXT;
 
-    private static final String METRIC_GROUP = "azure-blob-storage-client-metrics";
+public class MetricCollector {
 
     final AzureBlobStorageConfig config;
+    final MetricsPolicy policy;
 
-    MetricCollector(final AzureBlobStorageConfig config) {
+    public MetricCollector(final AzureBlobStorageConfig config) {
         this.config = config;
 
         final JmxReporter reporter = new JmxReporter();
 
-        metrics = new org.apache.kafka.common.metrics.Metrics(
+        final Metrics metrics = new Metrics(
             new MetricConfig(), List.of(reporter), Time.SYSTEM,
-            new KafkaMetricsContext("aiven.kafka.server.tieredstorage.azure")
+            new KafkaMetricsContext(METRIC_CONTEXT)
         );
+        policy = new MetricsPolicy(metrics, pathPattern());
     }
 
     Pattern pathPattern() {
@@ -64,7 +80,7 @@ public class MetricCollector {
     }
 
     MetricsPolicy policy() {
-        return new MetricsPolicy(metrics, pathPattern());
+        return policy;
     }
 
     static class MetricsPolicy implements HttpPipelinePolicy {
@@ -83,17 +99,41 @@ public class MetricCollector {
         MetricsPolicy(final Metrics metrics, final Pattern pathPattern) {
             this.metrics = metrics;
             this.pathPattern = pathPattern;
-            this.deleteBlobRequests = createSensor("blob-delete");
-            this.uploadBlobRequests = createSensor("blob-upload");
-            this.uploadBlockRequests = createSensor("block-upload");
-            this.uploadBlockListRequests = createSensor("block-list-upload");
-            this.getBlobRequests = createSensor("blob-get");
+            this.deleteBlobRequests = createSensor(
+                BLOB_DELETE,
+                BLOB_DELETE_RATE_METRIC_NAME,
+                BLOB_DELETE_TOTAL_METRIC_NAME
+            );
+            this.uploadBlobRequests = createSensor(
+                BLOB_UPLOAD,
+                BLOB_UPLOAD_RATE_METRIC_NAME,
+                BLOB_UPLOAD_TOTAL_METRIC_NAME
+            );
+            this.uploadBlockRequests = createSensor(
+                BLOCK_UPLOAD,
+                BLOCK_UPLOAD_RATE_METRIC_NAME,
+                BLOCK_UPLOAD_TOTAL_METRIC_NAME
+            );
+            this.uploadBlockListRequests = createSensor(
+                BLOCK_LIST_UPLOAD,
+                BLOCK_LIST_UPLOAD_RATE_METRIC_NAME,
+                BLOCK_LIST_UPLOAD_TOTAL_METRIC_NAME
+            );
+            this.getBlobRequests = createSensor(
+                BLOB_GET,
+                BLOB_GET_RATE_METRIC_NAME,
+                BLOB_GET_TOTAL_METRIC_NAME
+            );
         }
 
-        private Sensor createSensor(final String name) {
+        private Sensor createSensor(
+            final String name,
+            final MetricNameTemplate rateMetricName,
+            final MetricNameTemplate totalMetricName
+        ) {
             return new SensorProvider(metrics, name)
-                .with(new MetricNameTemplate(name + "-rate", METRIC_GROUP, ""), new Rate())
-                .with(new MetricNameTemplate(name + "-total", METRIC_GROUP, ""), new CumulativeCount())
+                .with(rateMetricName, new Rate())
+                .with(totalMetricName, new CumulativeCount())
                 .get();
         }
 
