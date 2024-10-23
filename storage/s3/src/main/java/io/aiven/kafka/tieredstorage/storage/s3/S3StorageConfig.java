@@ -63,9 +63,11 @@ public class S3StorageConfig extends AbstractConfig {
     static final int S3_MULTIPART_UPLOAD_PART_SIZE_DEFAULT = S3_MULTIPART_UPLOAD_PART_SIZE_MIN;
 
     private static final String S3_API_CALL_TIMEOUT_CONFIG = "s3.api.call.timeout";
-    private static final String S3_API_CALL_TIMEOUT_DOC = "AWS S3 API call timeout in milliseconds";
+    private static final String S3_API_CALL_TIMEOUT_DOC = "AWS S3 API call timeout in milliseconds, "
+        + "including all retries";
     private static final String S3_API_CALL_ATTEMPT_TIMEOUT_CONFIG = "s3.api.call.attempt.timeout";
-    private static final String S3_API_CALL_ATTEMPT_TIMEOUT_DOC = "AWS S3 API call attempt timeout in milliseconds";
+    private static final String S3_API_CALL_ATTEMPT_TIMEOUT_DOC = "AWS S3 API call attempt "
+        + "(single retry) timeout in milliseconds";
     public static final String AWS_CREDENTIALS_PROVIDER_CLASS_CONFIG = "aws.credentials.provider.class";
     private static final String AWS_CREDENTIALS_PROVIDER_CLASS_DOC = "AWS credentials provider. "
         + "If not set, AWS SDK uses the default "
