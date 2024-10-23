@@ -455,7 +455,7 @@ S3StorageConfig
   * Importance: low
 
 ``s3.api.call.attempt.timeout``
-  AWS S3 API call attempt timeout in milliseconds
+  AWS S3 API call attempt (single retry) timeout in milliseconds
 
   * Type: long
   * Default: null
@@ -463,7 +463,7 @@ S3StorageConfig
   * Importance: low
 
 ``s3.api.call.timeout``
-  AWS S3 API call timeout in milliseconds
+  AWS S3 API call timeout in milliseconds, including all retries
 
   * Type: long
   * Default: null
