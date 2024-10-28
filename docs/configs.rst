@@ -376,7 +376,7 @@ AzureBlobStorageStorageConfig
   * Importance: medium
 
 ``gcs.resumable.upload.chunk.size``
-  The chunk size for resumable upload. Must be a multiple of 256 KiB (256 x 1024 bytes). Larger chunk sizes typically make uploads faster, but requires bigger memory buffers. The recommended minimum is 8 MiB. The default is 15 MiB.
+  The chunk size for resumable upload. Must be a multiple of 256 KiB (256 x 1024 bytes). Larger chunk sizes typically make uploads faster, but requires bigger memory buffers. The recommended minimum is 8 MiB. The default is 15 MiB, `dictated by the GCS SDK <https://cloud.google.com/storage/docs/resumable-uploads#java>`_ when we set it to null.
 
   * Type: int
   * Default: null
