@@ -24,7 +24,6 @@ all: clean build test
 
 clean:
 	./gradlew clean
-	rm -f docs/*.rst
 
 checkstyle:
 	./gradlew checkstyleMain checkstyleTest checkstyleIntegrationTest
@@ -44,12 +43,8 @@ storage/azure/build/distributions/azure-$(VERSION).tgz:
 	./gradlew build :storage:azure:distTar -x test -x integrationTest -x e2e:test
 
 .PHONY: docs
-docs: config.rst metrics.rst
-
-config.rst:
-	./gradlew :docs:genConfigDocs
-
-metrics.rst:
+docs:
+	./gradlew :docs:genConfigsDocs
 	./gradlew :docs:genMetricsDocs
 
 test: build
