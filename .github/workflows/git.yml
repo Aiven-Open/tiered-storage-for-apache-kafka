@@ -14,11 +14,12 @@ jobs:
     - name: Gen docs
       run: make docs
 
-    - name: Check for uncommitted changes
+    - name: Check for uncommitted documentation changes
       run: |
         if [[ -n $(git status -s) ]]; then
           echo "There are uncommitted changes after the task:"
           git status -s
+          echo "Update the documentation on the proper *Config.java and commit generated docs"
           exit 1
         else
           echo "No changes detected."

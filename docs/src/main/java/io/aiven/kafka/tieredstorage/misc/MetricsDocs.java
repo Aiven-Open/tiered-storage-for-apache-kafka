@@ -32,62 +32,65 @@ import io.aiven.kafka.tieredstorage.metrics.CaffeineMetricsRegistry;
 import io.aiven.kafka.tieredstorage.metrics.MetricsRegistry;
 import io.aiven.kafka.tieredstorage.metrics.ThreadPoolMonitorMetricsRegistry;
 
+import static java.lang.System.out;
+
 public class MetricsDocs {
     public static void main(final String[] args) {
         printSectionTitle("Core components metrics");
-        System.out.println();
+        out.println(".. Generated from MetricRegistry classes by " + MetricsDocs.class.getCanonicalName());
+        out.println();
         printSubsectionTitle("RemoteStorageManager metrics");
-        System.out.println();
-        System.out.println(toRstTable(MetricsRegistry.METRIC_CONTEXT, new MetricsRegistry().all()));
+        out.println();
+        out.println(toRstTable(MetricsRegistry.METRIC_CONTEXT, new MetricsRegistry().all()));
 
-        System.out.println();
+        out.println();
         printSubsectionTitle("SegmentManifestCache metrics");
-        System.out.println();
-        System.out.println(toRstTable(
+        out.println();
+        out.println(toRstTable(
             CaffeineMetricsRegistry.METRIC_CONTEXT,
             new CaffeineMetricsRegistry(MemorySegmentManifestCache.METRIC_GROUP).all()));
-        System.out.println();
-        System.out.println(toRstTable(
+        out.println();
+        out.println(toRstTable(
             ThreadPoolMonitorMetricsRegistry.METRIC_CONFIG,
             new ThreadPoolMonitorMetricsRegistry(MemorySegmentManifestCache.THREAD_POOL_METRIC_GROUP).all()));
 
-        System.out.println();
+        out.println();
         printSubsectionTitle("SegmentIndexesCache metrics");
-        System.out.println(toRstTable(
+        out.println(toRstTable(
             CaffeineMetricsRegistry.METRIC_CONTEXT,
             new CaffeineMetricsRegistry(MemorySegmentIndexesCache.METRIC_GROUP).all()));
-        System.out.println(toRstTable(
+        out.println(toRstTable(
             ThreadPoolMonitorMetricsRegistry.METRIC_CONFIG,
             new ThreadPoolMonitorMetricsRegistry(MemorySegmentIndexesCache.THREAD_POOL_METRIC_GROUP).all()));
-        System.out.println();
+        out.println();
         printSubsectionTitle("ChunkCache metrics");
-        System.out.println();
-        System.out.println(toRstTable(
+        out.println();
+        out.println(toRstTable(
             CaffeineMetricsRegistry.METRIC_CONTEXT,
             new CaffeineMetricsRegistry(ChunkCache.METRIC_GROUP).all()));
-        System.out.println();
-        System.out.println(toRstTable(
+        out.println();
+        out.println(toRstTable(
             ThreadPoolMonitorMetricsRegistry.METRIC_CONFIG,
             new ThreadPoolMonitorMetricsRegistry(ChunkCache.THREAD_POOL_METRIC_GROUP).all()));
 
-        System.out.println();
+        out.println();
         printSectionTitle("Storage Backend metrics");
-        System.out.println();
+        out.println();
         printSubsectionTitle("AzureBlobStorage metrics");
-        System.out.println();
-        System.out.println(toRstTable(
+        out.println();
+        out.println(toRstTable(
             io.aiven.kafka.tieredstorage.storage.azure.MetricRegistry.METRIC_CONTEXT,
             new io.aiven.kafka.tieredstorage.storage.azure.MetricRegistry().all()));
-        System.out.println();
+        out.println();
         printSubsectionTitle("GcsStorage metrics");
-        System.out.println();
-        System.out.println(toRstTable(
+        out.println();
+        out.println(toRstTable(
             io.aiven.kafka.tieredstorage.storage.gcs.MetricRegistry.METRIC_CONTEXT,
             new io.aiven.kafka.tieredstorage.storage.gcs.MetricRegistry().all()));
-        System.out.println();
+        out.println();
         printSubsectionTitle("S3Storage metrics");
-        System.out.println();
-        System.out.println(toRstTable(
+        out.println();
+        out.println(toRstTable(
             io.aiven.kafka.tieredstorage.storage.s3.MetricRegistry.METRIC_CONTEXT,
             new io.aiven.kafka.tieredstorage.storage.s3.MetricRegistry().all()));
     }
@@ -181,13 +184,13 @@ public class MetricsDocs {
     }
 
     static void printSectionTitle(final String title) {
-        System.out.println("=================\n"
+        out.println("=================\n"
             + title + "\n"
             + "=================");
     }
 
     static void printSubsectionTitle(final String title) {
-        System.out.println("-----------------\n"
+        out.println("-----------------\n"
             + title + "\n"
             + "-----------------");
     }

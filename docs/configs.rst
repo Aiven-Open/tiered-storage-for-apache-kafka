@@ -1,6 +1,8 @@
 =================
 Core components
 =================
+.. Generated from *Config.java classes by io.aiven.kafka.tieredstorage.misc.ConfigsDocs
+
 -----------------
 RemoteStorageManagerConfig
 -----------------
@@ -94,6 +96,7 @@ RemoteStorageManagerConfig
   * Importance: low
 
 
+
 -----------------
 SegmentManifestCacheConfig
 -----------------
@@ -130,6 +133,7 @@ Under ``fetch.manifest.cache.``
   * Default: 0
   * Valid Values: [0,...,1024]
   * Importance: low
+
 
 
 -----------------
@@ -170,6 +174,7 @@ Under ``fetch.indexes.cache.``
   * Importance: low
 
 
+
 -----------------
 ChunkManagerFactoryConfig
 -----------------
@@ -180,6 +185,7 @@ ChunkManagerFactoryConfig
   * Default: null
   * Valid Values: Any implementation of io.aiven.kafka.tieredstorage.fetch.cache.ChunkCache
   * Importance: medium
+
 
 
 -----------------
@@ -225,6 +231,7 @@ Under ``fetch.chunk.cache.``
   * Default: 0
   * Valid Values: [0,...,1024]
   * Importance: low
+
 
 
 -----------------
@@ -276,6 +283,7 @@ Under ``fetch.chunk.cache.``
   * Default: 0
   * Valid Values: [0,...,1024]
   * Importance: low
+
 
 
 =================
@@ -342,6 +350,7 @@ AzureBlobStorageStorageConfig
   * Importance: low
 
 
+
 -----------------
 AzureBlobStorageStorageConfig
 -----------------
@@ -390,6 +399,7 @@ AzureBlobStorageStorageConfig
   * Default: null
   * Valid Values: Valid URL as defined in rfc2396
   * Importance: low
+
 
 
 -----------------
@@ -486,10 +496,11 @@ S3StorageConfig
   * Importance: low
 
 
+
 -----------------
 FilesystemStorageConfig
 -----------------
-> Only for development/testing purposes
+.. Only for development/testing purposes
 ``root``
   Root directory
 
@@ -502,5 +513,6 @@ FilesystemStorageConfig
   * Type: boolean
   * Default: false
   * Importance: medium
+
 
 

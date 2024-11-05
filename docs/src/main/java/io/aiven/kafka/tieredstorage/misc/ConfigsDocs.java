@@ -33,6 +33,7 @@ import static io.aiven.kafka.tieredstorage.config.ChunkManagerFactoryConfig.FETC
 import static io.aiven.kafka.tieredstorage.config.RemoteStorageManagerConfig.FETCH_INDEXES_CACHE_PREFIX;
 import static io.aiven.kafka.tieredstorage.config.RemoteStorageManagerConfig.SEGMENT_MANIFEST_CACHE_PREFIX;
 import static io.aiven.kafka.tieredstorage.config.RemoteStorageManagerConfig.STORAGE_PREFIX;
+import static java.lang.System.out;
 
 /**
  * Gather all config definitions across the project and generate a documentation page
@@ -40,64 +41,76 @@ import static io.aiven.kafka.tieredstorage.config.RemoteStorageManagerConfig.STO
 public class ConfigsDocs {
     public static void main(final String[] args) {
         printSectionTitle("Core components");
+        out.println(".. Generated from *Config.java classes by " + ConfigsDocs.class.getCanonicalName());
+        out.println();
 
         printSubsectionTitle("RemoteStorageManagerConfig");
         final var rsmConfigDef = RemoteStorageManagerConfig.configDef();
-        System.out.println(rsmConfigDef.toEnrichedRst());
+        out.println(rsmConfigDef.toEnrichedRst());
+        out.println();
 
         printSubsectionTitle("SegmentManifestCacheConfig");
-        System.out.println("Under ``" + SEGMENT_MANIFEST_CACHE_PREFIX + "``\n");
+        out.println("Under ``" + SEGMENT_MANIFEST_CACHE_PREFIX + "``\n");
         final var segmentManifestCacheDef = MemorySegmentManifestCache.configDef();
-        System.out.println(segmentManifestCacheDef.toEnrichedRst());
+        out.println(segmentManifestCacheDef.toEnrichedRst());
+        out.println();
 
         printSubsectionTitle("SegmentIndexesCacheConfig");
-        System.out.println("Under ``" + FETCH_INDEXES_CACHE_PREFIX + "``\n");
+        out.println("Under ``" + FETCH_INDEXES_CACHE_PREFIX + "``\n");
         final var segmentIndexesCacheDef = MemorySegmentIndexesCache.configDef();
-        System.out.println(segmentIndexesCacheDef.toEnrichedRst());
+        out.println(segmentIndexesCacheDef.toEnrichedRst());
+        out.println();
 
         printSubsectionTitle("ChunkManagerFactoryConfig");
         final var chunkCacheFactoryDef = ChunkManagerFactoryConfig.configDef();
-        System.out.println(chunkCacheFactoryDef.toEnrichedRst());
+        out.println(chunkCacheFactoryDef.toEnrichedRst());
+        out.println();
 
         printSubsectionTitle("MemoryChunkCacheConfig");
-        System.out.println("Under ``" + FETCH_CHUNK_CACHE_PREFIX + "``\n");
+        out.println("Under ``" + FETCH_CHUNK_CACHE_PREFIX + "``\n");
         final var memChunkCacheDef = ChunkCacheConfig.configDef(new ConfigDef());
-        System.out.println(memChunkCacheDef.toEnrichedRst());
+        out.println(memChunkCacheDef.toEnrichedRst());
+        out.println();
 
         printSubsectionTitle("DiskChunkCacheConfig");
-        System.out.println("Under ``" + FETCH_CHUNK_CACHE_PREFIX + "``\n");
+        out.println("Under ``" + FETCH_CHUNK_CACHE_PREFIX + "``\n");
         final var diskChunkCacheDef = DiskChunkCacheConfig.configDef();
-        System.out.println(diskChunkCacheDef.toEnrichedRst());
+        out.println(diskChunkCacheDef.toEnrichedRst());
+        out.println();
 
         printSectionTitle("Storage Backends");
-        System.out.println("Under ``" + STORAGE_PREFIX + "``\n");
+        out.println("Under ``" + STORAGE_PREFIX + "``\n");
 
         printSubsectionTitle("AzureBlobStorageStorageConfig");
         final var azBlobStorageConfigDef = AzureBlobStorageConfig.configDef();
-        System.out.println(azBlobStorageConfigDef.toEnrichedRst());
+        out.println(azBlobStorageConfigDef.toEnrichedRst());
+        out.println();
 
         printSubsectionTitle("AzureBlobStorageStorageConfig");
         final var googleCloudConfigDef = GcsStorageConfig.configDef();
-        System.out.println(googleCloudConfigDef.toEnrichedRst());
+        out.println(googleCloudConfigDef.toEnrichedRst());
+        out.println();
 
         printSubsectionTitle("S3StorageConfig");
         final var s3StorageConfigDef = S3StorageConfig.configDef();
-        System.out.println(s3StorageConfigDef.toEnrichedRst());
-        
+        out.println(s3StorageConfigDef.toEnrichedRst());
+        out.println();
+
         printSubsectionTitle("FilesystemStorageConfig");
-        System.out.println("> Only for development/testing purposes");
+        out.println(".. Only for development/testing purposes");
         final var fsStorageConfigDef = FileSystemStorageConfig.configDef();
-        System.out.println(fsStorageConfigDef.toEnrichedRst());
+        out.println(fsStorageConfigDef.toEnrichedRst());
+        out.println();
     }
 
     static void printSectionTitle(final String title) {
-        System.out.println("=================\n"
+        out.println("=================\n"
             + title + "\n"
             + "=================");
     }
 
     static void printSubsectionTitle(final String title) {
-        System.out.println("-----------------\n"
+        out.println("-----------------\n"
             + title + "\n"
             + "-----------------");
     }
