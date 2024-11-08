@@ -1,6 +1,7 @@
 =================
 Core components metrics
 =================
+.. Generated from MetricRegistry classes by io.aiven.kafka.tieredstorage.misc.MetricsDocs
 
 -----------------
 RemoteStorageManager metrics

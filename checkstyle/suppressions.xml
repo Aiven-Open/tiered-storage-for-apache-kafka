@@ -39,5 +39,6 @@
     <suppress checks="JavaNCSSCheck" files="MetricsRegistry.java"/>
     <suppress checks="JavaNCSSCheck" files="RemoteStorageManagerMetricsTest.java"/>
     <suppress checks="JavaNCSSCheck" files="SingleBrokerTest.java"/>
+    <suppress checks="JavaNCSSCheck" files=".*Docs\.java"/>
     <suppress checks="NPathComplexity" files="CredentialsBuilder.java"/>
 </suppressions>

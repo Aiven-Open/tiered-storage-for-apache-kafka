@@ -42,7 +42,9 @@ public class GcsStorageConfig extends AbstractConfig {
     private static final String GCS_RESUMABLE_UPLOAD_CHUNK_SIZE_DOC = "The chunk size for resumable upload. "
         + "Must be a multiple of 256 KiB (256 x 1024 bytes). "
         + "Larger chunk sizes typically make uploads faster, but requires bigger memory buffers. "
-        + "The recommended minimum is 8 MiB. The default is 15 MiB.";
+        + "The recommended minimum is 8 MiB. The default is 15 MiB, "
+        + "`dictated by the GCS SDK <https://cloud.google.com/storage/docs/resumable-uploads#java>`_ "
+        + "when we set it to null.";
 
     static final String GCP_CREDENTIALS_JSON_CONFIG = "gcs.credentials.json";
     static final String GCP_CREDENTIALS_PATH_CONFIG = "gcs.credentials.path";
