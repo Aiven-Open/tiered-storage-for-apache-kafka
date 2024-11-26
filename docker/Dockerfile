@@ -49,9 +49,9 @@ RUN cd /tiered-storage-for-apache-kafka/azure \
     && rm azure-${_VERSION}.tgz
 
 # Installing JMX exporter agent
-ARG JMX_EXPORTER_VERSION=0.18.0
+ARG JMX_EXPORTER_VERSION=1.0.1
 RUN mkdir -p /opt/prometheus/jmx-exporter
-RUN wget https://repo1.maven.org/maven2/io/prometheus/jmx/jmx_prometheus_javaagent/${JMX_EXPORTER_VERSION}/jmx_prometheus_javaagent-${JMX_EXPORTER_VERSION}.jar \
+RUN wget https://repo.maven.apache.org/maven2/io/prometheus/jmx/jmx_prometheus_javaagent/${JMX_EXPORTER_VERSION}/jmx_prometheus_javaagent-${JMX_EXPORTER_VERSION}.jar \
     -O /opt/prometheus/jmx-exporter/jmx_prometheus_javaagent-${JMX_EXPORTER_VERSION}.jar
 COPY docker/kafka-jmx-exporter.yml /opt/prometheus/jmx-exporter/.
 ENV KAFKA_OPTS="-javaagent:/opt/prometheus/jmx-exporter/jmx_prometheus_javaagent-${JMX_EXPORTER_VERSION}.jar=7001:/opt/prometheus/jmx-exporter/kafka-jmx-exporter.yml"
