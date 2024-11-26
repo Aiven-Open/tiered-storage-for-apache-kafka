@@ -15,9 +15,9 @@
 ##
 
 # Base image based 3.8.0 + minor changes unrelated to TS included on this branch:
-# https://github.com/apache/kafka/compare/3.8...aiven:kafka:3.8.0-2024-07-30
+# https://github.com/apache/kafka/compare/3.8...aiven:kafka:3.8.1-2024-11-21
 # See commits and Dockerfile for more details on base image
-FROM docker.io/aivenoy/kafka:3.8.0-2024-07-30
+FROM docker.io/aivenoy/kafka:3.8.1-2024-11-21
 
 ARG _VERSION
 
