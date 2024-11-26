@@ -54,7 +54,7 @@ RUN mkdir -p /opt/prometheus/jmx-exporter
 RUN wget https://repo1.maven.org/maven2/io/prometheus/jmx/jmx_prometheus_javaagent/${JMX_EXPORTER_VERSION}/jmx_prometheus_javaagent-${JMX_EXPORTER_VERSION}.jar \
     -O /opt/prometheus/jmx-exporter/jmx_prometheus_javaagent-${JMX_EXPORTER_VERSION}.jar
 COPY docker/kafka-jmx-exporter.yml /opt/prometheus/jmx-exporter/.
-ENV KAFKA_OPTS="-javaagent:/opt/prometheus/jmx-exporter/jmx_prometheus_javaagent-${JMX_EXPORTER_VERSION}.jar=7000:/opt/prometheus/jmx-exporter/kafka-jmx-exporter.yml"
+ENV KAFKA_OPTS="-javaagent:/opt/prometheus/jmx-exporter/jmx_prometheus_javaagent-${JMX_EXPORTER_VERSION}.jar=7001:/opt/prometheus/jmx-exporter/kafka-jmx-exporter.yml"
 
 # Restore the user.
 USER appuser
