@@ -32,9 +32,11 @@ import io.aiven.kafka.tieredstorage.storage.KeyNotFoundException;
 import io.aiven.kafka.tieredstorage.storage.ObjectKey;
 import io.aiven.kafka.tieredstorage.storage.StorageBackendException;
 
+import io.aiven.kafka.tieredstorage.util.RemoteEnumeration;
+import io.github.bucket4j.Bucket;
 import org.apache.commons.io.input.BoundedInputStream;
 
-public class FetchChunkEnumeration implements Enumeration<InputStream> {
+public class FetchChunkEnumeration extends RemoteEnumeration {
     private final ChunkManager chunkManager;
     private final ObjectKey objectKey;
     private final SegmentManifest manifest;
@@ -54,12 +56,12 @@ public class FetchChunkEnumeration implements Enumeration<InputStream> {
     public FetchChunkEnumeration(final ChunkManager chunkManager,
                                  final ObjectKey objectKey,
                                  final SegmentManifest manifest,
-                                 final BytesRange range) {
+                                 final BytesRange range, final Bucket rateLimitingBucket) {
+        super(rateLimitingBucket);
         this.chunkManager = Objects.requireNonNull(chunkManager, "chunkManager cannot be null");
         this.objectKey = Objects.requireNonNull(objectKey, "objectKey cannot be null");
         this.manifest = Objects.requireNonNull(manifest, "manifest cannot be null");
         this.range = Objects.requireNonNull(range, "range cannot be null");
-
         this.chunkIndex = manifest.chunkIndex();
 
         if (range.isEmpty()) {
@@ -148,7 +150,7 @@ public class FetchChunkEnumeration implements Enumeration<InputStream> {
     }
 
     public InputStream toInputStream() {
-        return new LazySequenceInputStream(this);
+        return maybeToRateLimitedInputStream(new LazySequenceInputStream(this));
     }
 
     public void close() {
