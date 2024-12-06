@@ -56,7 +56,22 @@ public class FetchChunkEnumeration extends RemoteEnumeration {
     public FetchChunkEnumeration(final ChunkManager chunkManager,
                                  final ObjectKey objectKey,
                                  final SegmentManifest manifest,
-                                 final BytesRange range, final Bucket rateLimitingBucket) {
+                                 final BytesRange range) {
+        this(chunkManager,objectKey,manifest,range,null);
+    }
+
+    /**
+     * @param chunkManager provides chunk input to fetch from
+     * @param objectKey    required by chunkManager
+     * @param manifest     provides to index to build response from
+     * @param range        original offset range start/end position
+     * @param rateLimitingBucket        rate limiting bucket
+     */
+    public FetchChunkEnumeration(final ChunkManager chunkManager,
+                                 final ObjectKey objectKey,
+                                 final SegmentManifest manifest,
+                                 final BytesRange range,
+                                final Bucket rateLimitingBucket) {
         super(rateLimitingBucket);
         this.chunkManager = Objects.requireNonNull(chunkManager, "chunkManager cannot be null");
         this.objectKey = Objects.requireNonNull(objectKey, "objectKey cannot be null");
