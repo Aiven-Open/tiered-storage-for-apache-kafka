@@ -35,5 +35,4 @@ public abstract class RemoteEnumeration implements Enumeration<InputStream> {
 		return new RateLimitedInputStream(delegated, rateLimitingBucket);
 	}
 
-
 }

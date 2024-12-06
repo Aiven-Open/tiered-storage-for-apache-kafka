@@ -19,7 +19,6 @@ package io.aiven.kafka.tieredstorage.fetch;
 import java.io.IOException;
 import java.io.InputStream;
 import java.io.SequenceInputStream;
-import java.util.Enumeration;
 import java.util.List;
 import java.util.NoSuchElementException;
 import java.util.Objects;
