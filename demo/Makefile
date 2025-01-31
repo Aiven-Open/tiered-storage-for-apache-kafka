@@ -31,7 +31,7 @@ local_retention_ms=1000 # 1 second
 .PHONY: create_topic_by_size_ts
 create_topic_by_size_ts:
 	docker exec -e KAFKA_OPTS= $(kafka_container) \
-		kafka-topics \
+		/opt/kafka/bin/kafka-topics.sh \
 		--bootstrap-server $(bootstrap_server) \
 		--create \
 		--config remote.storage.enable=true \
@@ -46,7 +46,7 @@ create_topic_by_size_ts:
 .PHONY: create_topic_by_time_ts
 create_topic_by_time_ts:
 	docker exec -e KAFKA_OPTS= $(kafka_container) \
-		kafka-topics \
+		/opt/kafka/bin/kafka-topics.sh \
 		--bootstrap-server $(bootstrap_server) \
 		--create \
 		--config remote.storage.enable=true \
@@ -60,7 +60,7 @@ create_topic_by_time_ts:
 .PHONY: create_topic_by_size_no_ts
 create_topic_by_size_no_ts:
 	docker exec -e KAFKA_OPTS= $(kafka_container) \
-		kafka-topics \
+		/opt/kafka/bin/kafka-topics.sh \
 		--bootstrap-server $(bootstrap_server) \
 		--create \
 		--config retention.ms=-1 \
@@ -73,7 +73,7 @@ create_topic_by_size_no_ts:
 .PHONY: create_topic_by_time_no_ts
 create_topic_by_time_no_ts:
 	docker exec -e KAFKA_OPTS= $(kafka_container) \
-		kafka-topics \
+		/opt/kafka/bin/kafka-topics.sh \
 		--bootstrap-server $(bootstrap_server) \
 		--create \
 		--config segment.bytes=$(segment) \
@@ -89,7 +89,7 @@ throughput = 1000
 .PHONY: fill_topic
 fill_topic:
 	docker exec -e KAFKA_OPTS= $(kafka_container) \
-		kafka-producer-perf-test --producer-props bootstrap.servers=$(bootstrap_server) \
+		/opt/kafka/bin/kafka-producer-perf-test.sh --producer-props bootstrap.servers=$(bootstrap_server) \
 		--topic $(topic) \
 		--num-records $(num_records) \
 		--record-size $(record_size) \
@@ -114,6 +114,13 @@ run_gcs_fake_gcs_server:
 .PHONY: run_azure_blob_azurite
 run_azure_blob_azurite:
 	docker compose -f compose-azure-blob-azurite.yml up
+
+docker_volume:
+	cd .. && ./gradlew copyDistFiles
+
+.PHONY: run_kraft_s3_minio
+run_kraft_s3_minio: docker_volume
+	cd kraft-s3-minio && docker compose up
 
 .PHONY: clean
 clean:
@@ -161,7 +168,7 @@ kcat_opts =
 .PHONY: consume
 consume:
 	docker run --rm --network=host edenhill/kcat:1.7.1 \
-		-b $(bootstrap_server_host) -C -t $(topic) -c $(consume) -o $(offset) -e -f '%t-%p-%o\n' $(kcat_opts)
+		-b $(bootstrap_server_host) -C -t $(topic) -c $(consume) -o beginning -e -f '%t-%p-%o\n' $(kcat_opts)
 
 .env:
 	echo "AWS_ACCESS_KEY_ID=" > .env
