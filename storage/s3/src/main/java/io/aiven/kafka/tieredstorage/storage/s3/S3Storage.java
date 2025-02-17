@@ -18,6 +18,8 @@ package io.aiven.kafka.tieredstorage.storage.s3;
 
 import java.io.IOException;
 import java.io.InputStream;
+import java.util.ArrayList;
+import java.util.List;
 import java.util.Map;
 import java.util.Set;
 import java.util.stream.Collectors;
@@ -35,12 +37,15 @@ import software.amazon.awssdk.services.s3.S3Client;
 import software.amazon.awssdk.services.s3.model.Delete;
 import software.amazon.awssdk.services.s3.model.DeleteObjectRequest;
 import software.amazon.awssdk.services.s3.model.DeleteObjectsRequest;
+import software.amazon.awssdk.services.s3.model.DeleteObjectsResponse;
 import software.amazon.awssdk.services.s3.model.GetObjectRequest;
 import software.amazon.awssdk.services.s3.model.ObjectIdentifier;
 
 public class S3Storage implements StorageBackend {
+    private static final int MAX_DELETE_OBJECTS = 1000;
 
-    private S3Client s3Client;
+    S3Client s3Client;
+
     private String bucketName;
     private int partSize;
 
@@ -80,18 +85,37 @@ public class S3Storage implements StorageBackend {
 
     @Override
     public void delete(final Set<ObjectKey> keys) throws StorageBackendException {
-        try {
-            final Set<ObjectIdentifier> ids = keys.stream()
+        final List<ObjectKey> objectKeys = new ArrayList<>(keys);
+
+        for (int i = 0; i < objectKeys.size(); i += MAX_DELETE_OBJECTS) {
+            final var batch = objectKeys.subList(
+                i,
+                Math.min(i + MAX_DELETE_OBJECTS, objectKeys.size())
+            );
+
+            final List<ObjectIdentifier> objectIds = batch.stream()
                 .map(k -> ObjectIdentifier.builder().key(k.value()).build())
-                .collect(Collectors.toSet());
-            final Delete delete = Delete.builder().objects(ids).build();
+                .collect(Collectors.toList());
+            final Delete deleteObjects = Delete.builder().objects(objectIds).build();
             final DeleteObjectsRequest deleteObjectsRequest = DeleteObjectsRequest.builder()
                 .bucket(bucketName)
-                .delete(delete)
+                .delete(deleteObjects)
                 .build();
-            s3Client.deleteObjects(deleteObjectsRequest);
-        } catch (final SdkClientException e) {
-            throw new StorageBackendException("Failed to delete keys " + keys, e);
+
+            try {
+                final DeleteObjectsResponse response = s3Client.deleteObjects(deleteObjectsRequest);
+
+                if (!response.errors().isEmpty()) {
+                    final StringBuilder errorMsg = new StringBuilder("Failed to delete keys: ");
+                    response.errors()
+                        .forEach(e ->
+                            errorMsg.append(String.format("%s (%s: %s), ", e.key(), e.code(), e.message()))
+                        );
+                    throw new StorageBackendException(errorMsg.toString());
+                }
+            } catch (final SdkClientException e) {
+                throw new StorageBackendException(String.format("Failed to delete batch with keys: %s", batch), e);
+            }
         }
     }
 
