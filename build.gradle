@@ -254,6 +254,15 @@ tasks.distTar {
     duplicatesStrategy DuplicatesStrategy.EXCLUDE
 }
 
+tasks.register('copyDistFiles', Copy) {
+    from tarTree(tasks.distTar.outputs.files.singleFile)
+    into layout.buildDirectory.dir('docker')
+    doFirst {
+        delete layout.buildDirectory.dir('docker')
+    }
+    dependsOn tasks.distTar
+}
+
 tasks.register('validateDependencies') {
     doLast {
         def dependencyVersions = [:]

@@ -95,11 +95,17 @@ You can also see the remote data in https://s3.console.aws.amazon.com/s3/buckets
 
 ### MinIO S3 as remote storage: `compose-s3-minio.yml`
 
+> [!NOTE]
+> There is a KRaft version of this scenario in `compose-kraft-s3-minio.yml`.
+> The steps are the same, it just requires the binaries to placed at a different location.
+> The `make` commands will take care of this.
+
 This scenario uses `S3Storage` with MinIO S3 as the remote storage.
 
 ```bash
 # Start the compose
 make run_s3_minio
+# or make run_kraft_s3_minio
 
 # Create the topic with any variation
 make create_topic_by_size_ts
