@@ -1,0 +1,94 @@
+##
+# Copyright 2023 Aiven Oy
+#
+# Licensed under the Apache License, Version 2.0 (the "License");
+# you may not use this file except in compliance with the License.
+# You may obtain a copy of the License at
+#
+# http://www.apache.org/licenses/LICENSE-2.0
+#
+# Unless required by applicable law or agreed to in writing, software
+# distributed under the License is distributed on an "AS IS" BASIS,
+# WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
+# See the License for the specific language governing permissions and
+# limitations under the License.
+##
+services:
+  kafka:
+    build: ./kraft-s3-minio/
+    container_name: "kafka-ts"
+    depends_on:
+      - minio
+    ports:
+      - "9092:9092"
+    environment:
+      CLUSTER_ID: "4L6g3nShT-eMCtK--X86sw"
+      KAFKA_PROCESS_ROLES: "broker,controller"
+      KAFKA_NODE_ID: 1
+      KAFKA_CONTROLLER_QUORUM_VOTERS: "1@kafka:29093"
+      KAFKA_LISTENER_SECURITY_PROTOCOL_MAP: "CONTROLLER:PLAINTEXT,PLAINTEXT:PLAINTEXT,PLAINTEXT_HOST:PLAINTEXT"
+      KAFKA_ADVERTISED_LISTENERS: "PLAINTEXT_HOST://localhost:9092,PLAINTEXT://kafka:29092"
+      KAFKA_LISTENERS: "CONTROLLER://:29093,PLAINTEXT_HOST://:9092,PLAINTEXT://:29092"
+      KAFKA_INTER_BROKER_LISTENER_NAME: "PLAINTEXT"
+      KAFKA_CONTROLLER_LISTENER_NAMES: "CONTROLLER"
+      KAFKA_OFFSETS_TOPIC_REPLICATION_FACTOR: 1
+      KAFKA_OFFSETS_TOPIC_NUM_PARTITIONS: 1
+      KAFKA_GROUP_INITIAL_REBALANCE_DELAY_MS: 0
+      KAFKA_TRANSACTION_STATE_LOG_REPLICATION_FACTOR: 1
+      KAFKA_TRANSACTION_STATE_LOG_MIN_ISR: 1
+      KAFKA_AUTO_CREATE_TOPICS_ENABLE: false
+      # Increase Tiered Storage log level
+      KAFKA_LOG4J_LOGGERS: "io.aiven.kafka.tieredstorage=DEBUG"
+      # Tweak retention checking
+      KAFKA_LOG_RETENTION_CHECK_INTERVAL_MS: 10000
+      # Enable Tiered Storage
+      KAFKA_REMOTE_LOG_STORAGE_SYSTEM_ENABLE: true
+      KAFKA_REMOTE_LOG_MANAGER_TASK_INTERVAL_MS: 5000
+      # Remote metadata manager
+      KAFKA_REMOTE_LOG_METADATA_MANAGER_CLASS_NAME: "org.apache.kafka.server.log.remote.metadata.storage.TopicBasedRemoteLogMetadataManager"
+      KAFKA_REMOTE_LOG_METADATA_MANAGER_LISTENER_NAME: "PLAINTEXT"
+      KAFKA_RLMM_CONFIG_REMOTE_LOG_METADATA_TOPIC_REPLICATION_FACTOR: 1
+      # Remote storage manager
+      KAFKA_REMOTE_LOG_STORAGE_MANAGER_CLASS_PATH: "/tiered-storage-for-apache-kafka/core/*:/tiered-storage-for-apache-kafka/s3/*"
+      KAFKA_REMOTE_LOG_STORAGE_MANAGER_CLASS_NAME: "io.aiven.kafka.tieredstorage.RemoteStorageManager"
+      KAFKA_RSM_CONFIG_CHUNK_SIZE: 4194304 # 4 MiB
+      KAFKA_RSM_CONFIG_FETCH_CHUNK_CACHE_CLASS: "io.aiven.kafka.tieredstorage.fetch.cache.DiskChunkCache"
+      KAFKA_RSM_CONFIG_FETCH_CHUNK_CACHE_PATH: /var/lib/kafka/tiered-storage-cache
+      KAFKA_RSM_CONFIG_FETCH_CHUNK_CACHE_SIZE: 1073741824 # 1 GiB
+      KAFKA_RSM_CONFIG_FETCH_CHUNK_CACHE_PREFETCH_MAX_SIZE: 16777216 # 16 MiB
+      KAFKA_RSM_CONFIG_FETCH_CHUNK_CACHE_RETENTION_MS: 600000 # 600000 ms
+      KAFKA_RSM_CONFIG_CUSTOM_METADATA_FIELDS_INCLUDE: "REMOTE_SIZE"
+      # Storage backend
+      KAFKA_RSM_CONFIG_KEY_PREFIX: "tiered-storage-demo/"
+      KAFKA_RSM_CONFIG_STORAGE_BACKEND_CLASS: "io.aiven.kafka.tieredstorage.storage.s3.S3Storage"
+      KAFKA_RSM_CONFIG_STORAGE_S3_ENDPOINT_URL: "http://minio:9000"
+      KAFKA_RSM_CONFIG_STORAGE_S3_BUCKET_NAME: "test-bucket"
+      KAFKA_RSM_CONFIG_STORAGE_S3_REGION: "us-east-1"
+      KAFKA_RSM_CONFIG_STORAGE_S3_PATH_STYLE_ACCESS_ENABLED: true
+      KAFKA_RSM_CONFIG_STORAGE_AWS_ACCESS_KEY_ID: "minioadmin"
+      KAFKA_RSM_CONFIG_STORAGE_AWS_SECRET_ACCESS_KEY: "minioadmin"
+    volumes:
+      # These paths depend on gradle copyDistFiles task run on root directory
+      - ./../build/docker/tiered-storage-for-apache-kafka-0.0.1-SNAPSHOT:/tiered-storage-for-apache-kafka/core
+      - ./../storage/s3/build/docker/s3-0.0.1-SNAPSHOT:/tiered-storage-for-apache-kafka/s3
+      - ./../storage/s3/build/docker/gcs-0.0.1-SNAPSHOT:/tiered-storage-for-apache-kafka/gcs
+      - ./../storage/s3/build/docker/azure-0.0.1-SNAPSHOT:/tiered-storage-for-apache-kafka/azure
+
+  minio:
+    image: quay.io/minio/minio
+    ports:
+      - "9000:9000"
+      - "9090:9090"
+    command: server /data --console-address ":9090"
+
+  minio-createbucket:
+    image: quay.io/minio/mc
+    restart: "no"
+    depends_on:
+      - minio
+    entrypoint: >
+      /bin/sh -c "
+      /usr/bin/mc config host add local http://minio:9000 minioadmin minioadmin;
+      /usr/bin/mc mb local/test-bucket;
+      exit 0;
+      "

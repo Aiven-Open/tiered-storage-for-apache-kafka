@@ -15,7 +15,6 @@
 ##
 
 kafka_container=kafka-ts
-bootstrap_server=kafka:29092
 bootstrap_server_host=localhost:9092
 
 # Topic defaults
@@ -28,11 +27,13 @@ local_retention_bytes=1
 retention_ms=360000000 # 100 hours
 local_retention_ms=1000 # 1 second
 
+kafka_image=apache/kafka:3.9.0
+
 .PHONY: create_topic_by_size_ts
 create_topic_by_size_ts:
-	docker exec -e KAFKA_OPTS= $(kafka_container) \
-		kafka-topics \
-		--bootstrap-server $(bootstrap_server) \
+	docker run --network host $(kafka_image) \
+		/opt/kafka/bin/kafka-topics.sh \
+		--bootstrap-server $(bootstrap_server_host) \
 		--create \
 		--config remote.storage.enable=true \
 		--config retention.ms=-1 \
@@ -45,9 +46,9 @@ create_topic_by_size_ts:
 
 .PHONY: create_topic_by_time_ts
 create_topic_by_time_ts:
-	docker exec -e KAFKA_OPTS= $(kafka_container) \
-		kafka-topics \
-		--bootstrap-server $(bootstrap_server) \
+	docker run --network host $(kafka_image) \
+		/opt/kafka/bin/kafka-topics.sh \
+		--bootstrap-server $(bootstrap_server_host) \
 		--create \
 		--config remote.storage.enable=true \
 		--config segment.bytes=$(segment) \
@@ -59,9 +60,9 @@ create_topic_by_time_ts:
 
 .PHONY: create_topic_by_size_no_ts
 create_topic_by_size_no_ts:
-	docker exec -e KAFKA_OPTS= $(kafka_container) \
-		kafka-topics \
-		--bootstrap-server $(bootstrap_server) \
+	docker run --network host $(kafka_image) \
+		/opt/kafka/bin/kafka-topics.sh \
+		--bootstrap-server $(bootstrap_server_host) \
 		--create \
 		--config retention.ms=-1 \
 		--config segment.bytes=$(segment) \
@@ -72,9 +73,9 @@ create_topic_by_size_no_ts:
 
 .PHONY: create_topic_by_time_no_ts
 create_topic_by_time_no_ts:
-	docker exec -e KAFKA_OPTS= $(kafka_container) \
-		kafka-topics \
-		--bootstrap-server $(bootstrap_server) \
+	docker run --network host $(kafka_image) \
+		/opt/kafka/bin/kafka-topics.sh \
+		--bootstrap-server $(bootstrap_server_host) \
 		--create \
 		--config segment.bytes=$(segment) \
 		--config retention.ms=$(retention_ms) \
@@ -88,8 +89,9 @@ throughput = 1000
 
 .PHONY: fill_topic
 fill_topic:
-	docker exec -e KAFKA_OPTS= $(kafka_container) \
-		kafka-producer-perf-test --producer-props bootstrap.servers=$(bootstrap_server) \
+	docker run --network host $(kafka_image) \
+		/opt/kafka/bin/kafka-producer-perf-test.sh \
+		--producer-props bootstrap.servers=$(bootstrap_server_host) \
 		--topic $(topic) \
 		--num-records $(num_records) \
 		--record-size $(record_size) \
@@ -115,6 +117,13 @@ run_gcs_fake_gcs_server:
 run_azure_blob_azurite:
 	docker compose -f compose-azure-blob-azurite.yml up
 
+docker_volume:
+	cd .. && ./gradlew copyDistFiles
+
+.PHONY: run_kraft_s3_minio
+run_kraft_s3_minio: docker_volume
+	docker compose -f compose-kraft-s3-minio.yml up
+
 .PHONY: clean
 clean:
 	docker compose -f compose-local-fs.yml down
@@ -122,6 +131,7 @@ clean:
 	docker compose -f compose-s3-minio.yml down
 	docker compose -f compose-gcs-fake-gcs-server.yml down
 	docker compose -f compose-azure-blob-azurite.yml down
+	docker compose -f compose-kraft-s3-minio.yml down
 
 .PHONY: show_local_data
 show_local_data:
@@ -139,7 +149,7 @@ show_remote_data_s3_aws:
 
 .PHONY: show_remote_data_s3_minio
 show_remote_data_s3_minio:
-	docker run --rm --network=host --entrypoint /usr/bin/bash quay.io/minio/mc \
+	docker run --rm --network host --entrypoint /usr/bin/bash quay.io/minio/mc \
 		-c "mc alias set mycloud http://localhost:9000 minioadmin minioadmin && mc ls --recursive mycloud/test-bucket | grep $(topic)"
 
 .PHONY: show_remote_data_gcs_fake_gcs_server
@@ -148,7 +158,7 @@ show_remote_data_gcs_fake_gcs_server:
 
 .PHONY: show_remote_data_azurite
 show_remote_data_azurite:
-	docker run --rm --network=host mcr.microsoft.com/azure-cli \
+	docker run --rm --network host mcr.microsoft.com/azure-cli \
 		az storage blob list --container-name test-container \
 		--account-name devstoreaccount1 \
 		--account-key Eby8vdM02xNOcqFlqUwJPLlmEtlCDXJ1OUzFT50uSRZ6IFsuFq2UVErCz4I6tq/K1SZFPTOtr/KBHBeksoGMGw== \
@@ -160,7 +170,7 @@ kcat_opts =
 # kcat_opts = "-X fetch.wait.max.ms=100"
 .PHONY: consume
 consume:
-	docker run --rm --network=host edenhill/kcat:1.7.1 \
+	docker run --rm --network host edenhill/kcat:1.7.1 \
 		-b $(bootstrap_server_host) -C -t $(topic) -c $(consume) -o $(offset) -e -f '%t-%p-%o\n' $(kcat_opts)
 
 .env:
