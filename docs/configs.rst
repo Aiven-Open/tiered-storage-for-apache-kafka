@@ -111,7 +111,7 @@ Under ``fetch.manifest.cache.``
   * Importance: medium
 
 ``size``
-  Cache size in bytes, where "-1" represents unbounded cache
+  The maximum number of entries in the cache, where "-1" represents an unbounded cache.
 
   * Type: long
   * Default: 1000
