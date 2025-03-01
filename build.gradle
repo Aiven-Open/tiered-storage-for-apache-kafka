@@ -101,7 +101,7 @@ subprojects {
 
         junitVersion = "5.11.4"
 
-        junitPlatformVersion = "1.11.4"
+        junitPlatformVersion = "1.12.0"
 
         mockitoVersion = "5.15.2"
 
