@@ -27,7 +27,7 @@ import static org.apache.kafka.common.config.ConfigDef.NO_DEFAULT_VALUE;
 
 public class CacheConfig extends AbstractConfig {
     private static final String CACHE_SIZE_CONFIG = "size";
-    private static final String CACHE_SIZE_DOC = "Cache size in bytes, where \"-1\" represents unbounded cache";
+    static final String CACHE_SIZE_DOC = "Cache size in bytes, where \"-1\" represents unbounded cache";
     private static final String CACHE_RETENTION_CONFIG = "retention.ms";
     private static final String CACHE_RETENTION_DOC = "Cache retention time ms, "
         + "where \"-1\" represents infinite retention";
@@ -86,6 +86,7 @@ public class CacheConfig extends AbstractConfig {
     public static class DefBuilder {
         private long defaultRetentionMs = CACHE_RETENTION_MS_DEFAULT;
         private Object maybeDefaultSize = NO_DEFAULT_VALUE;
+        private String sizeDoc = CACHE_SIZE_DOC;
 
         final ConfigDef configDef;
 
@@ -107,6 +108,11 @@ public class CacheConfig extends AbstractConfig {
             return this;
         }
 
+        public DefBuilder withSizeDoc(final String sizeDoc) {
+            this.sizeDoc = sizeDoc;
+            return this;
+        }
+
         public ConfigDef build() {
             configDef.define(
                 CACHE_SIZE_CONFIG,
@@ -114,7 +120,7 @@ public class CacheConfig extends AbstractConfig {
                 maybeDefaultSize,
                 ConfigDef.Range.between(-1L, Long.MAX_VALUE),
                 ConfigDef.Importance.MEDIUM,
-                CACHE_SIZE_DOC
+                sizeDoc
             );
             configDef.define(
                 CACHE_RETENTION_CONFIG,
