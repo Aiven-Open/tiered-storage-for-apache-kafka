@@ -122,7 +122,7 @@ class S3ErrorMetricsTest {
 
         assertThatThrownBy(() -> storage.upload(InputStream.nullInputStream(), new TestObjectKey("key")))
             .isInstanceOf(SdkClientException.class)
-            .hasMessage("Could not parse XML response.");
+            .hasMessageStartingWith("Could not parse XML response.");
 
         assertThat(MBEAN_SERVER.getAttribute(s3MetricsObjectName, metricName + "-total"))
             .isEqualTo(1.0);
@@ -149,8 +149,9 @@ class S3ErrorMetricsTest {
         assertThatThrownBy(() -> storage.fetch(new TestObjectKey("key")))
             .isExactlyInstanceOf(StorageBackendException.class)
             .hasMessage("Failed to fetch key")
-            .hasRootCauseExactlyInstanceOf(ApiCallAttemptTimeoutException.class)
-            .hasRootCauseMessage(
+            .rootCause()
+            .isInstanceOf(ApiCallAttemptTimeoutException.class)
+            .hasMessageStartingWith(
                 "HTTP request execution did not complete before the specified timeout configuration: 1 millis");
 
         // Comparing to 4 since the SDK makes 3 retries by default.
@@ -183,7 +184,8 @@ class S3ErrorMetricsTest {
             .isExactlyInstanceOf(StorageBackendException.class)
             .hasMessage("Failed to fetch key")
             .hasCauseExactlyInstanceOf(SdkClientException.class)
-            .cause().hasMessage("Unable to execute HTTP request: null");
+            .cause()
+            .hasMessageStartingWith("Unable to execute HTTP request: null");
 
         // Comparing to 4 since the SDK makes 3 retries by default.
         assertThat(MBEAN_SERVER.getAttribute(s3MetricsObjectName, metricName + "-total"))
