@@ -19,6 +19,7 @@ package io.aiven.kafka.tieredstorage.config;
 import java.time.Duration;
 import java.util.Map;
 
+import org.apache.kafka.common.config.ConfigDef;
 import org.apache.kafka.common.config.ConfigException;
 
 import org.junit.jupiter.api.Test;
@@ -145,5 +146,15 @@ class CacheConfigTest {
         );
         assertThat(config.threadPoolSize()).hasValue(16);
         assertThat(config.getTimeout()).hasSeconds(20);
+    }
+
+    @Test
+    void setCustomSizeDoc() {
+        final ConfigDef build = CacheConfig.defBuilder()
+            .withSizeDoc("test")
+            .build();
+        assertThat(build.configKeys().get("size").documentation)
+            .isNotEqualTo(CacheConfig.CACHE_SIZE_DOC)
+            .isEqualTo("test");
     }
 }

@@ -132,6 +132,7 @@ public class MemorySegmentManifestCache implements SegmentManifestCache {
         return CacheConfig.defBuilder()
             .withDefaultSize(DEFAULT_MAX_SIZE)
             .withDefaultRetentionMs(DEFAULT_RETENTION_MS)
+            .withSizeDoc("The maximum number of entries in the cache, where `-1` represents an unbounded cache.")
             .build();
     }
 }
