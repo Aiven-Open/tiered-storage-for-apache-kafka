@@ -298,6 +298,20 @@ subprojects {
             }
         }
     }
+
+    // Skip test fixtures from distribution archives
+    afterEvaluate { proj ->
+        // Skip test fixtures from distributions
+        proj.distributions.all {
+            contents {
+                // Exclude any test fixtures JARs from the distribution
+                exclude { element ->
+                    element.file.name.contains('test-fixtures')
+                    element.file.name.contains('sources')
+                }
+            }
+        }
+    }
 }
 
 distributions {
@@ -375,38 +389,28 @@ def modulesToPublish = [
         ':storage:azure',
 ]
 
-// Include root project in the list if needed
-// modulesToPublish.add(0, ':')  // Uncomment this line if you want to include root project
-
-// Register the task first
+// Define and configure the publishToSonatype task
 tasks.register("publishToSonatype") {
     description = 'Publishes selected modules to Sonatype repository'
     group = 'publishing'
+    dependsOn(tasks.named("distTar"))
 
     doFirst {
         println "Publishing selected modules to Sonatype..."
     }
 }
 
-// Add the dependency on distTar
-tasks.named("publishToSonatype") {
-    dependsOn(tasks.named("distTar"))
-}
-
-// Configure the task after all projects have been evaluated
+// Configure task dependencies after all projects are evaluated
 gradle.projectsEvaluated {
     tasks.named("publishToSonatype") {
         modulesToPublish.each { modulePath ->
             def moduleProject = modulePath == ':' ? rootProject : project(modulePath)
-            def taskName = modulePath == ':' ?
-                    'publishMavenPublicationToSonatypeRepository' :
-                    'publishMavenJavaPublicationToSonatypeRepository'
+            def taskName = "${moduleProject.path}:publish${modulePath == ':' ? 'Maven' : 'MavenJava'}PublicationToSonatypeRepository"
 
-            def publishTask = moduleProject.tasks.findByName(taskName)
-            if (publishTask) {
-                dependsOn publishTask
-                println "Added ${moduleProject.path}:${taskName}"
-            } else {
+            try {
+                dependsOn(taskName)
+                println "Added $taskName"
+            } catch (Exception e) {
                 println "Warning: Publication task not found for ${modulePath}"
             }
         }
