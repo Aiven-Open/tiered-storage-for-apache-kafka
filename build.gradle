@@ -58,6 +58,7 @@ subprojects {
     apply plugin: 'info.solidsoft.pitest'
 
     apply plugin: "maven-publish"
+    apply plugin: "signing"
 
     repositories {
         // Use Maven Central for resolving dependencies.
@@ -224,12 +225,75 @@ subprojects {
     }
 
     publishing {
+        repositories {
+            maven {
+                name="sonatype"
+
+                def releasesRepoUrl = "https://oss.sonatype.org/service/local/staging/deploy/maven2"
+                def snapshotsRepoUrl = "https://oss.sonatype.org/content/repositories/snapshots"
+                url = version.endsWith('SNAPSHOT') ? snapshotsRepoUrl : releasesRepoUrl
+
+                credentials(PasswordCredentials)
+            }
+        }
         publications {
             mavenJava(MavenPublication) {
                 from components.java
+
+                pom {
+                    url = "https://github.com/Aiven-Open/tiered-storage-for-apache-kafka"
+                    organization {
+                        name = "Aiven Oy"
+                        url = "https://aiven.io"
+                    }
+
+                    licenses {
+                        license {
+                            name = "Apache 2.0"
+                            url = "http://www.apache.org/licenses/LICENSE-2.0"
+                            distribution = "repo"
+                        }
+                    }
+
+                    developers {
+                        developer {
+                            id = 'aiven'
+                            name = 'Aiven Opensource'
+                            email = 'opensource@aiven.io'
+                        }
+                    }
+
+                    scm {
+                        connection = 'scm:git:git://github.com:Aiven-Open/tiered-storage-for-apache-kafka.git'
+                        developerConnection = 'scm:git:ssh://github.com:Aiven-Open/tiered-storage-for-apache-kafka.git'
+                        url = 'https://github.com/Aiven-Open/tiered-storage-for-apache-kafka'
+                    }
+                }
+
                 afterEvaluate {
                     groupId = "io.aiven"
                     artifactId = "tiered-storage-for-apache-kafka-${archivesBaseName}"
+                }
+            }
+        }
+
+        signing {
+            sign publishing.publications.mavenJava
+            useGpgCmd()
+            // Some issue in the plugin:
+            // GPG outputs already armored signatures. The plugin also does armoring for `asc` files.
+            // This results in double armored signatures, i.e. garbage.
+            // Override the signature type provider to use unarmored output for `asc` files, which works well with GPG.
+            signatureTypes = new AbstractSignatureTypeProvider() {
+                {
+                    BinarySignatureType binary = new BinarySignatureType() {
+                        @Override
+                        String getExtension() {
+                            return "asc"
+                        }
+                    }
+                    register(binary)
+                    setDefaultType(binary.getExtension())
                 }
             }
         }
@@ -299,3 +363,52 @@ tasks.register('validateDependencies') {
 //tasks.named("check") {
 //    dependsOn(tasks.named("validateDependencies"))
 //}
+
+// Define the list of modules to be published
+def modulesToPublish = [
+        ':commons',
+        ':core',
+        ':storage:core',
+        ':storage:filesystem',
+        ':storage:s3',
+        ':storage:gcs',
+        ':storage:azure',
+]
+
+// Include root project in the list if needed
+// modulesToPublish.add(0, ':')  // Uncomment this line if you want to include root project
+
+// Register the task first
+tasks.register("publishToSonatype") {
+    description = 'Publishes selected modules to Sonatype repository'
+    group = 'publishing'
+
+    doFirst {
+        println "Publishing selected modules to Sonatype..."
+    }
+}
+
+// Add the dependency on distTar
+tasks.named("publishToSonatype") {
+    dependsOn(tasks.named("distTar"))
+}
+
+// Configure the task after all projects have been evaluated
+gradle.projectsEvaluated {
+    tasks.named("publishToSonatype") {
+        modulesToPublish.each { modulePath ->
+            def moduleProject = modulePath == ':' ? rootProject : project(modulePath)
+            def taskName = modulePath == ':' ?
+                    'publishMavenPublicationToSonatypeRepository' :
+                    'publishMavenJavaPublicationToSonatypeRepository'
+
+            def publishTask = moduleProject.tasks.findByName(taskName)
+            if (publishTask) {
+                dependsOn publishTask
+                println "Added ${moduleProject.path}:${taskName}"
+            } else {
+                println "Warning: Publication task not found for ${modulePath}"
+            }
+        }
+    }
+}
