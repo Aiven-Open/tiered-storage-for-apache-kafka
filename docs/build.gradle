@@ -29,13 +29,27 @@ dependencies {
 tasks.register('genConfigsDocs', JavaExec) {
     classpath = sourceSets.main.runtimeClasspath
     mainClass = 'io.aiven.kafka.tieredstorage.misc.ConfigsDocs'
-    standardOutput = new File("docs/configs.rst").newOutputStream()
+
+    // Define the outputs formally
+    outputs.file("$projectDir/configs.rst")
+
+    // Set up the output in the execution phase, not configuration, and avoid removing on clean
+    doFirst {
+        standardOutput = new File("$projectDir/configs.rst").newOutputStream()
+    }
 }
 
 tasks.register('genMetricsDocs', JavaExec) {
     classpath = sourceSets.main.runtimeClasspath
     mainClass = 'io.aiven.kafka.tieredstorage.misc.MetricsDocs'
-    standardOutput = new File("docs/metrics.rst").newOutputStream()
+
+    // Define the outputs formally
+    outputs.file("$projectDir/metrics.rst")
+
+    // Set up the output in the execution phase, not configuration, and avoid removing on clean
+    doFirst {
+        standardOutput = new File("$projectDir/metrics.rst").newOutputStream()
+    }
 }
 
 tasks.named('compileJava') {
