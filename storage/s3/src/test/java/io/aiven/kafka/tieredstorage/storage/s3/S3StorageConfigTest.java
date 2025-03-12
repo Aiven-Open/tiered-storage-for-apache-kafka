@@ -254,8 +254,8 @@ class S3StorageConfigTest {
                 "s3.storage.class", "WrongStorageClass"
         )))
                 .isInstanceOf(ConfigException.class)
-                .hasMessage("Invalid value WrongStorageClass for configuration s3.storage.class: " +
-                        "String must be one of: STANDARD, REDUCED_REDUNDANCY, STANDARD_IA, ONEZONE_IA, " +
-                        "INTELLIGENT_TIERING, GLACIER, DEEP_ARCHIVE, OUTPOSTS, GLACIER_IR, SNOW, EXPRESS_ONEZONE");
+                .hasMessage("Invalid value WrongStorageClass for configuration s3.storage.class: "
+                        + "String must be one of: STANDARD, REDUCED_REDUNDANCY, STANDARD_IA, ONEZONE_IA, "
+                        + "INTELLIGENT_TIERING, GLACIER, DEEP_ARCHIVE, OUTPOSTS, GLACIER_IR, SNOW, EXPRESS_ONEZONE");
     }
 }
