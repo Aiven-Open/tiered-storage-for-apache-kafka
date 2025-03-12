@@ -37,6 +37,7 @@ import software.amazon.awssdk.services.s3.model.CompletedMultipartUpload;
 import software.amazon.awssdk.services.s3.model.CompletedPart;
 import software.amazon.awssdk.services.s3.model.CreateMultipartUploadRequest;
 import software.amazon.awssdk.services.s3.model.CreateMultipartUploadResponse;
+import software.amazon.awssdk.services.s3.model.StorageClass;
 import software.amazon.awssdk.services.s3.model.UploadPartRequest;
 import software.amazon.awssdk.services.s3.model.UploadPartResponse;
 
@@ -64,17 +65,16 @@ public class S3MultiPartOutputStream extends OutputStream {
     private boolean closed;
     private long processedBytes;
 
-
     public S3MultiPartOutputStream(final String bucketName,
                                    final ObjectKey key,
                                    final int partSize,
                                    final S3Client client){
-        this(bucketName, key, S3StorageConfig.S3_STORAGE_CLASS_DEFAULT, partSize, client);
+        this(bucketName, key, StorageClass.STANDARD, partSize, client);
     }
 
     public S3MultiPartOutputStream(final String bucketName,
                                    final ObjectKey key,
-                                   final String storageClass,
+                                   final StorageClass storageClass,
                                    final int partSize,
                                    final S3Client client) {
         this.bucketName = bucketName;

@@ -126,7 +126,7 @@ public class S3StorageConfig extends AbstractConfig {
                 S3_STORAGE_CLASS_DEFAULT,
                 ConfigDef.ValidString.in(StorageClass.knownValues()
                         .stream().map(Object::toString).toArray(String[]::new)),
-                ConfigDef.Importance.MEDIUM,
+                ConfigDef.Importance.LOW,
                 S3_STORAGE_CLASS_DOC)
             .define(
                 S3_PATH_STYLE_ENABLED_CONFIG,
@@ -271,8 +271,8 @@ public class S3StorageConfig extends AbstractConfig {
         return getString(S3_BUCKET_NAME_CONFIG);
     }
 
-    public String storageClass() {
-        return getString(S3_STORAGE_CLASS_CONFIG);
+    public StorageClass storageClass() {
+        return StorageClass.valueOf(getString(S3_STORAGE_CLASS_CONFIG));
     }
 
     public Boolean pathStyleAccessEnabled() {
