@@ -124,7 +124,8 @@ public class S3StorageConfig extends AbstractConfig {
                 S3_STORAGE_CLASS_CONFIG,
                 ConfigDef.Type.STRING,
                 S3_STORAGE_CLASS_DEFAULT,
-                ConfigDef.ValidString.in(StorageClass.knownValues().stream().map(Object::toString).toArray(String[]::new)),
+                ConfigDef.ValidString.in(StorageClass.knownValues()
+                        .stream().map(Object::toString).toArray(String[]::new)),
                 ConfigDef.Importance.MEDIUM,
                 S3_STORAGE_CLASS_DOC)
             .define(
