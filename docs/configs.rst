@@ -449,6 +449,14 @@ S3StorageConfig
   * Valid Values: [5242880,...,2147483647]
   * Importance: medium
 
+``s3.storage.class``
+  S3 storage class to store log segments
+
+  * Type: string
+  * Default: STANDARD
+  * Valid Values: [STANDARD, REDUCED_REDUNDANCY, STANDARD_IA, ONEZONE_IA, INTELLIGENT_TIERING, GLACIER, DEEP_ARCHIVE, OUTPOSTS, GLACIER_IR, SNOW, EXPRESS_ONEZONE]
+  * Importance: medium
+
 ``aws.certificate.check.enabled``
   This property is used to enable SSL certificate checking for AWS services. When set to "false", the SSL certificate checking for AWS services will be bypassed. Use with caution and always only in a test environment, as disabling certificate lead the storage to be vulnerable to man-in-the-middle attacks.
 
