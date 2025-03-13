@@ -42,6 +42,7 @@ import software.amazon.awssdk.services.s3.model.CompleteMultipartUploadResponse;
 import software.amazon.awssdk.services.s3.model.CompletedPart;
 import software.amazon.awssdk.services.s3.model.CreateMultipartUploadRequest;
 import software.amazon.awssdk.services.s3.model.CreateMultipartUploadResponse;
+import software.amazon.awssdk.services.s3.model.StorageClass;
 import software.amazon.awssdk.services.s3.model.UploadPartRequest;
 import software.amazon.awssdk.services.s3.model.UploadPartResponse;
 
@@ -64,6 +65,8 @@ class S3MultiPartOutputStreamTest {
     S3Client mockedS3;
 
     @Captor
+    ArgumentCaptor<CreateMultipartUploadRequest> createMultipartUploadRequest;
+    @Captor
     ArgumentCaptor<CompleteMultipartUploadRequest> completeMultipartUploadRequestCaptor;
     @Captor
     ArgumentCaptor<AbortMultipartUploadRequest> abortMultipartUploadRequestCaptor;
@@ -78,6 +81,21 @@ class S3MultiPartOutputStreamTest {
     void setUp() {
         when(mockedS3.createMultipartUpload(any(CreateMultipartUploadRequest.class)))
             .thenReturn(newInitiateMultipartUploadResult());
+    }
+
+    @Test
+    void completeMultipartUploadWithDefaultStorageClass() {
+        new S3MultiPartOutputStream(BUCKET_NAME, FILE_KEY, 1, mockedS3);
+        verify(mockedS3).createMultipartUpload(createMultipartUploadRequest.capture());
+        assertCreateMultipartUploadRequest(createMultipartUploadRequest.getValue(), StorageClass.STANDARD);
+    }
+
+    @Test
+    void completeMultipartUploadWithNonDefaultStorageClass() {
+        final StorageClass nonDefaultStorageClass = StorageClass.STANDARD_IA;
+        new S3MultiPartOutputStream(BUCKET_NAME, FILE_KEY, nonDefaultStorageClass, 1, mockedS3);
+        verify(mockedS3).createMultipartUpload(createMultipartUploadRequest.capture());
+        assertCreateMultipartUploadRequest(createMultipartUploadRequest.getValue(), nonDefaultStorageClass);
     }
 
     @Test
@@ -449,6 +467,13 @@ class S3MultiPartOutputStreamTest {
 
     private static UploadPartResponse newUploadPartResponse(final String etag) {
         return UploadPartResponse.builder().eTag(etag).build();
+    }
+
+    private static void assertCreateMultipartUploadRequest(final CreateMultipartUploadRequest request,
+                                                           final StorageClass expectedStorageClass) {
+        assertThat(request.bucket()).isEqualTo(BUCKET_NAME);
+        assertThat(request.key()).isEqualTo(FILE_KEY.value());
+        assertThat(request.storageClass()).isEqualTo(expectedStorageClass);
     }
 
     private static void assertUploadPartRequest(final UploadPartRequest uploadPartRequest,

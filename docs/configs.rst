@@ -495,6 +495,14 @@ S3StorageConfig
   * Default: null
   * Importance: low
 
+``s3.storage.class``
+  Defines which storage class to use when uploading objects
+
+  * Type: string
+  * Default: STANDARD
+  * Valid Values: [STANDARD, REDUCED_REDUNDANCY, STANDARD_IA, ONEZONE_IA, INTELLIGENT_TIERING, GLACIER, DEEP_ARCHIVE, OUTPOSTS, GLACIER_IR, SNOW, EXPRESS_ONEZONE]
+  * Importance: low
+
 
 
 -----------------
