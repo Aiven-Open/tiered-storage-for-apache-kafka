@@ -51,7 +51,7 @@ public class S3StorageConfig extends AbstractConfig {
     private static final String S3_REGION_DOC = "AWS region where S3 bucket is placed";
 
     public static final String S3_STORAGE_CLASS_CONFIG = "s3.storage.class";
-    private static final String S3_STORAGE_CLASS_DOC = "S3 storage class to store log segments";
+    private static final String S3_STORAGE_CLASS_DOC = "Defines which storage class to use when uploading objects";
     static final String S3_STORAGE_CLASS_DEFAULT = StorageClass.STANDARD.toString();
 
     static final String S3_PATH_STYLE_ENABLED_CONFIG = "s3.path.style.access.enabled";
