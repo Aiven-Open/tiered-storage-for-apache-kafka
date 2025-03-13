@@ -496,7 +496,7 @@ S3StorageConfig
   * Importance: low
 
 ``s3.storage.class``
-  S3 storage class to store log segments
+  Defines which storage class to use when uploading objects
 
   * Type: string
   * Default: STANDARD
