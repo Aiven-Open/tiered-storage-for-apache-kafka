@@ -87,7 +87,7 @@ public class S3MultiPartOutputStream extends OutputStream {
         this.partBuffer = ByteBuffer.allocate(partSize);
     }
 
-    private String createMultipartUploadRequest(String bucketName, ObjectKey key, StorageClass storageClass, S3Client client) {
+    private String createMultipartUploadRequest() {
         final CreateMultipartUploadRequest initialRequest = CreateMultipartUploadRequest.builder().bucket(bucketName)
             .storageClass(storageClass)
             .key(key.value()).build();
@@ -125,7 +125,7 @@ public class S3MultiPartOutputStream extends OutputStream {
 
                 if (!partBuffer.hasRemaining()) {
                     if (uploadId == null){
-                        uploadId = createMultipartUploadRequest(bucketName, key, storageClass, client);
+                        uploadId = createMultipartUploadRequest();
                     }
                     partBuffer.position(0);
                     partBuffer.limit(partSize);
