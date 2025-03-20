@@ -147,7 +147,10 @@ public class GcsStorage implements StorageBackend {
     }
 
     private Blob getBlob(final ObjectKey key) throws KeyNotFoundException {
-        // Unfortunately, it seems Google will do two a separate (HEAD-like) call to get blob metadata.
+        // Unfortunately, it seems Google will do two a separate (HEAD-like) call to get blob metadata first
+        // and then the actual download:
+        // > Cloud Storage client libraries might use two or more operations to perform a task.
+        // Source: https://cloud.google.com/storage/pricing
         // Since the blobs are immutable in tiered storage, we can consider caching them locally
         // to avoid the extra round trip.
         final Blob blob = storage.get(this.bucketName, key.value());
