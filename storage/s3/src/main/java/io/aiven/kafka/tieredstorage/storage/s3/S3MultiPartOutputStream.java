@@ -37,6 +37,7 @@ import software.amazon.awssdk.services.s3.model.CompletedMultipartUpload;
 import software.amazon.awssdk.services.s3.model.CompletedPart;
 import software.amazon.awssdk.services.s3.model.CreateMultipartUploadRequest;
 import software.amazon.awssdk.services.s3.model.CreateMultipartUploadResponse;
+import software.amazon.awssdk.services.s3.model.PutObjectRequest;
 import software.amazon.awssdk.services.s3.model.StorageClass;
 import software.amazon.awssdk.services.s3.model.UploadPartRequest;
 import software.amazon.awssdk.services.s3.model.UploadPartResponse;
@@ -57,9 +58,10 @@ public class S3MultiPartOutputStream extends OutputStream {
     private final ByteBuffer partBuffer;
     private final String bucketName;
     private final ObjectKey key;
+    private StorageClass storageClass;
     final int partSize;
 
-    private final String uploadId;
+    private String uploadId;
     private final List<CompletedPart> completedParts = new ArrayList<>();
 
     private boolean closed;
@@ -79,15 +81,19 @@ public class S3MultiPartOutputStream extends OutputStream {
                                    final S3Client client) {
         this.bucketName = bucketName;
         this.key = key;
+        this.storageClass = storageClass;
         this.client = client;
         this.partSize = partSize;
         this.partBuffer = ByteBuffer.allocate(partSize);
+    }
+
+    private String createMultipartUploadRequest(String bucketName, ObjectKey key, StorageClass storageClass, S3Client client) {
         final CreateMultipartUploadRequest initialRequest = CreateMultipartUploadRequest.builder().bucket(bucketName)
             .storageClass(storageClass)
             .key(key.value()).build();
         final CreateMultipartUploadResponse initiateResult = client.createMultipartUpload(initialRequest);
         log.debug("Create new multipart upload request: {}", initiateResult.uploadId());
-        this.uploadId = initiateResult.uploadId();
+        return initiateResult.uploadId();
     }
 
     @Override
@@ -118,6 +124,9 @@ public class S3MultiPartOutputStream extends OutputStream {
                 inputBuffer.position(positionAfterCopying);
 
                 if (!partBuffer.hasRemaining()) {
+                    if (uploadId == null){
+                        uploadId = createMultipartUploadRequest(bucketName, key, storageClass, client);
+                    }
                     partBuffer.position(0);
                     partBuffer.limit(partSize);
                     flushBuffer(partBuffer.slice(), partSize);
@@ -140,11 +149,20 @@ public class S3MultiPartOutputStream extends OutputStream {
                     partBuffer.limit(lastPosition);
                     flushBuffer(partBuffer.slice(), lastPosition);
                 } catch (final RuntimeException e) {
-                    log.error("Failed to upload last part {}, aborting transaction", uploadId, e);
-                    abortUpload();
+                    if (uploadId != null) {
+                        log.error("Failed to upload last part {}, aborting transaction", uploadId, e);
+                        abortUpload();
+                    } else {
+                        log.error("Failed to upload the file {}", key, e);
+                    }
                     throw new IOException(e);
                 }
             }
+
+            if(uploadId != null){
+                return;
+            }
+
             if (!completedParts.isEmpty()) {
                 try {
                     completeUpload();
@@ -158,6 +176,15 @@ public class S3MultiPartOutputStream extends OutputStream {
                 abortUpload();
             }
         }
+    }
+
+    private void uploadAsSingleFile(final InputStream inputStream, final int availableSize) {
+        final PutObjectRequest putObjectRequest = PutObjectRequest.builder().bucket(bucketName)
+            .storageClass(storageClass)
+            .key(key.value()).build();
+        final RequestBody requestBody = RequestBody.fromInputStream(inputStream, availableSize);
+        client.putObject(putObjectRequest, requestBody);
+        closed = true;
     }
 
     public boolean isClosed() {
@@ -189,10 +216,14 @@ public class S3MultiPartOutputStream extends OutputStream {
     }
 
     private void flushBuffer(final ByteBuffer buffer,
-                             final int actualPartSize) {
+                             final int actualPartSize ) {
         try (final InputStream in = new ByteBufferInputStream(buffer)) {
             processedBytes += actualPartSize;
-            uploadPart(in, actualPartSize);
+            if (uploadId != null){
+                uploadPart(in, actualPartSize);
+            } else {
+                uploadAsSingleFile(in, actualPartSize);
+            }
         } catch (final IOException e) {
             throw new RuntimeException(e);
         }
