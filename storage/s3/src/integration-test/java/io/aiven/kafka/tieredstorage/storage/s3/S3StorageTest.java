@@ -16,6 +16,7 @@
 
 package io.aiven.kafka.tieredstorage.storage.s3;
 
+import java.io.ByteArrayInputStream;
 import java.io.IOException;
 import java.util.List;
 import java.util.Map;
@@ -26,6 +27,7 @@ import java.util.stream.IntStream;
 import io.aiven.kafka.tieredstorage.storage.BaseStorageTest;
 import io.aiven.kafka.tieredstorage.storage.ObjectKey;
 import io.aiven.kafka.tieredstorage.storage.StorageBackend;
+import io.aiven.kafka.tieredstorage.storage.StorageBackendException;
 import io.aiven.kafka.tieredstorage.storage.TestObjectKey;
 import io.aiven.kafka.tieredstorage.storage.TestUtils;
 
@@ -39,13 +41,17 @@ import org.mockito.Mockito;
 import org.testcontainers.containers.localstack.LocalStackContainer;
 import org.testcontainers.junit.jupiter.Container;
 import org.testcontainers.junit.jupiter.Testcontainers;
+import org.testcontainers.shaded.org.apache.commons.lang3.RandomStringUtils;
 import software.amazon.awssdk.auth.credentials.AwsBasicCredentials;
 import software.amazon.awssdk.auth.credentials.StaticCredentialsProvider;
+import software.amazon.awssdk.core.sync.RequestBody;
 import software.amazon.awssdk.regions.Region;
 import software.amazon.awssdk.services.s3.S3Client;
 import software.amazon.awssdk.services.s3.model.CreateBucketRequest;
+import software.amazon.awssdk.services.s3.model.CreateMultipartUploadRequest;
 import software.amazon.awssdk.services.s3.model.DeleteObjectsRequest;
 import software.amazon.awssdk.services.s3.model.ObjectIdentifier;
+import software.amazon.awssdk.services.s3.model.PutObjectRequest;
 
 import static org.assertj.core.api.Assertions.assertThat;
 
@@ -109,6 +115,38 @@ public class S3StorageTest extends BaseStorageTest {
         try (final var os = ((S3Storage) storage()).s3OutputStream(new TestObjectKey("test"))) {
             assertThat(os.partSize).isEqualTo(PART_SIZE);
         }
+    }
+
+    @Test
+    void testUploadANewFileWithBigSize() throws StorageBackendException, IOException {
+        final String content = generateFileContentWithSizeOverPartLimit();
+        uploadContentAsFileAndVerify(content);
+    }
+
+    private static String generateFileContentWithSizeOverPartLimit() {
+        return RandomStringUtils.randomAlphabetic(PART_SIZE + 1);
+    }
+
+    @Test
+    void testUploadRequestAsSingleFile() throws Exception {
+        final S3Storage storage = (S3Storage) storage();
+        storage.s3Client = Mockito.spy(storage.s3Client);
+
+        final String content = "AABBBBAA";
+        storage.upload(new ByteArrayInputStream(content.getBytes()), TOPIC_PARTITION_SEGMENT_KEY);
+        Mockito.verify(storage.s3Client, Mockito.times(1))
+            .putObject(Mockito.any(PutObjectRequest.class), Mockito.any(RequestBody.class));
+    }
+
+    @Test
+    void testUploadRequestAsMultiPart() throws Exception {
+        final S3Storage storage = (S3Storage) storage();
+        storage.s3Client = Mockito.spy(storage.s3Client);
+
+        final String content = generateFileContentWithSizeOverPartLimit();
+        storage.upload(new ByteArrayInputStream(content.getBytes()), TOPIC_PARTITION_SEGMENT_KEY);
+        Mockito.verify(storage.s3Client, Mockito.times(1))
+            .createMultipartUpload(Mockito.any(CreateMultipartUploadRequest.class));
     }
 
     @Test
