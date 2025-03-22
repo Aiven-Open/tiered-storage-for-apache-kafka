@@ -171,7 +171,7 @@ class S3StorageMetricsTest {
             .asInstanceOf(DOUBLE)
             .isGreaterThan(0.0);
         assertThat(MBEAN_SERVER.getAttribute(segmentCopyPerSecName, "create-multipart-upload-requests-total"))
-            .isEqualTo(2.0);
+            .isEqualTo(1.0);
         assertThat(MBEAN_SERVER.getAttribute(segmentCopyPerSecName, "create-multipart-upload-time-avg"))
             .asInstanceOf(DOUBLE)
             .isGreaterThan(0.0);
@@ -205,9 +205,9 @@ class S3StorageMetricsTest {
 
         assertThat(MBEAN_SERVER.getAttribute(segmentCopyPerSecName, "abort-multipart-upload-requests-rate"))
             .asInstanceOf(DOUBLE)
-            .isGreaterThan(0.0);
+            .isEqualTo(0.0);
         assertThat(MBEAN_SERVER.getAttribute(segmentCopyPerSecName, "abort-multipart-upload-requests-total"))
-            .isEqualTo(1.0);
+            .isEqualTo(0.0);
         assertThat(MBEAN_SERVER.getAttribute(segmentCopyPerSecName, "abort-multipart-upload-time-avg"))
             .asInstanceOf(DOUBLE)
             .isGreaterThan(0.0);

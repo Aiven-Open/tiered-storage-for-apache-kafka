@@ -64,6 +64,10 @@ public abstract class BaseStorageTest {
     @Test
     void testUploadANewFile() throws StorageBackendException, IOException {
         final String content = "content";
+        uploadContentAsFileAndVerify(content);
+    }
+
+    protected void uploadContentAsFileAndVerify(final String content) throws StorageBackendException, IOException {
         final ByteArrayInputStream in = new ByteArrayInputStream(content.getBytes());
         final long size = storage().upload(in, TOPIC_PARTITION_SEGMENT_KEY);
         assertThat(size).isEqualTo(content.length());
