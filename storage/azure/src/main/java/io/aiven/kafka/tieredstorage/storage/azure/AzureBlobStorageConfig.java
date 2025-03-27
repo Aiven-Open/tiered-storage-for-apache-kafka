@@ -49,8 +49,10 @@ public class AzureBlobStorageConfig extends AbstractConfig {
         + "Cannot be used together with azure.account.name, azure.account.key, and azure.endpoint.url";
 
     static final String AZURE_UPLOAD_BLOCK_SIZE_CONFIG = "azure.upload.block.size";
-    private static final String AZURE_UPLOAD_BLOCK_SIZE_DOC = "Size of blocks to use when uploading objects to Azure";
-    static final int AZURE_UPLOAD_BLOCK_SIZE_DEFAULT = 5 * 1024 * 1024; // 5MiB
+    private static final String AZURE_UPLOAD_BLOCK_SIZE_DOC = "Size of blocks to use when uploading objects to Azure. "
+        + "The smaller the block size, the more calls to Azure are needed to upload a file; increasing costs. "
+        + "The higher the block size, the more memory is needed to buffer the block.";
+    static final int AZURE_UPLOAD_BLOCK_SIZE_DEFAULT = 25 * 1024 * 1024; // 25MiB
     static final int AZURE_UPLOAD_BLOCK_SIZE_MIN = 100 * 1024;
     static final int AZURE_UPLOAD_BLOCK_SIZE_MAX = Integer.MAX_VALUE;
 
@@ -103,7 +105,7 @@ public class AzureBlobStorageConfig extends AbstractConfig {
                 ConfigDef.Type.INT,
                 AZURE_UPLOAD_BLOCK_SIZE_DEFAULT,
                 ConfigDef.Range.between(AZURE_UPLOAD_BLOCK_SIZE_MIN, AZURE_UPLOAD_BLOCK_SIZE_MAX),
-                ConfigDef.Importance.MEDIUM,
+                ConfigDef.Importance.HIGH,
                 AZURE_UPLOAD_BLOCK_SIZE_DOC);
     }
 
