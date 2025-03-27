@@ -60,7 +60,7 @@ public class GcsStorageConfig extends AbstractConfig {
         + "Cannot be set together with \"" + GCP_CREDENTIALS_JSON_CONFIG + "\" "
         + "or \"" + GCP_CREDENTIALS_PATH_CONFIG + "\"";
 
-    public static final ConfigDef configDef() {
+    public static ConfigDef configDef() {
         return new ConfigDef()
             .define(
                 GCS_BUCKET_NAME_CONFIG,

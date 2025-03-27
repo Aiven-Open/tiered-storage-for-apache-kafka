@@ -54,7 +54,7 @@ public class AzureBlobStorageConfig extends AbstractConfig {
     static final int AZURE_UPLOAD_BLOCK_SIZE_MIN = 100 * 1024;
     static final int AZURE_UPLOAD_BLOCK_SIZE_MAX = Integer.MAX_VALUE;
 
-    public static final ConfigDef configDef() {
+    public static ConfigDef configDef() {
         return new ConfigDef()
             .define(
                 AZURE_ACCOUNT_NAME_CONFIG,
