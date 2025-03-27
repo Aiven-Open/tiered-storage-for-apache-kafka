@@ -49,7 +49,7 @@ class AzureBlobStorageConfigTest {
         assertThat(config.sasToken()).isNull();
         assertThat(config.endpointUrl()).isNull();
         assertThat(config.connectionString()).isNull();
-        assertThat(config.uploadBlockSize()).isEqualTo(5 * 1024 * 1024);
+        assertThat(config.uploadBlockSize()).isEqualTo(25 * 1024 * 1024);
     }
 
     @Test

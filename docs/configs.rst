@@ -309,6 +309,14 @@ AzureBlobStorageStorageConfig
   * Valid Values: null or non-empty string
   * Importance: high
 
+``azure.upload.block.size``
+  Size of blocks to use when uploading objects to Azure. The smaller the block size, the more calls to Azure are needed to upload a file; increasing costs. The higher the block size, the more memory is needed to buffer the block.
+
+  * Type: int
+  * Default: 26214400
+  * Valid Values: [102400,...,2147483647]
+  * Importance: high
+
 ``azure.account.key``
   Azure account key
 
@@ -331,14 +339,6 @@ AzureBlobStorageStorageConfig
   * Type: password
   * Default: null
   * Valid Values: null or Non-empty password text
-  * Importance: medium
-
-``azure.upload.block.size``
-  Size of blocks to use when uploading objects to Azure
-
-  * Type: int
-  * Default: 5242880
-  * Valid Values: [102400,...,2147483647]
   * Importance: medium
 
 ``azure.endpoint.url``
@@ -385,10 +385,10 @@ AzureBlobStorageStorageConfig
   * Importance: medium
 
 ``gcs.resumable.upload.chunk.size``
-  The chunk size for resumable upload. Must be a multiple of 256 KiB (256 x 1024 bytes). Larger chunk sizes typically make uploads faster, but requires bigger memory buffers. The recommended minimum is 8 MiB. The default is 15 MiB, `dictated by the GCS SDK <https://cloud.google.com/storage/docs/resumable-uploads#java>`_ when we set it to null.
+  The chunk size for resumable upload. Must be a multiple of 256 KiB (256 x 1024 bytes). Larger chunk sizes typically make uploads faster, but requires bigger memory buffers. The recommended minimum for GCS is 8 MiB. The SDK default is 15 MiB, `see <https://cloud.google.com/storage/docs/resumable-uploads#java>`_. The smaller the chunk size, the more calls to GCS are needed to upload a file; increasing costs. The higher the chunk size, the more memory is needed to buffer the chunk.
 
   * Type: int
-  * Default: null
+  * Default: 26214400
   * Valid Values: [256 KiB...] values multiple of 262144 bytes
   * Importance: medium
 
@@ -442,10 +442,10 @@ S3StorageConfig
   * Importance: medium
 
 ``s3.multipart.upload.part.size``
-  Size of parts in bytes to use when uploading. All parts but the last one will have this size. Valid values: between 5MiB and 2GiB
+  Size of parts in bytes to use when uploading. All parts but the last one will have this size. The smaller the part size, the more calls to S3 are needed to upload a file; increasing costs. The higher the part size, the more memory is needed to buffer the part. Valid values: between 5MiB and 2GiB
 
   * Type: int
-  * Default: 5242880
+  * Default: 26214400
   * Valid Values: [5242880,...,2147483647]
   * Importance: medium
 

@@ -29,7 +29,6 @@ import software.amazon.awssdk.auth.credentials.StaticCredentialsProvider;
 import software.amazon.awssdk.regions.Region;
 import software.amazon.awssdk.services.s3.model.StorageClass;
 
-import static io.aiven.kafka.tieredstorage.storage.s3.S3StorageConfig.S3_MULTIPART_UPLOAD_PART_SIZE_DEFAULT;
 import static org.assertj.core.api.Assertions.assertThat;
 import static org.assertj.core.api.Assertions.assertThatThrownBy;
 
@@ -51,7 +50,7 @@ class S3StorageConfigTest {
         assertThat(config.bucketName()).isEqualTo(BUCKET_NAME);
         assertThat(config.credentialsProvider()).isNull();
         assertThat(config.pathStyleAccessEnabled()).isNull();
-        assertThat(config.uploadPartSize()).isEqualTo(S3_MULTIPART_UPLOAD_PART_SIZE_DEFAULT);
+        assertThat(config.uploadPartSize()).isEqualTo(25 * 1024 * 1024);
         assertThat(config.storageClass()).isEqualTo(StorageClass.STANDARD);
         assertThat(config.certificateCheckEnabled()).isTrue();
         assertThat(config.checksumCheckEnabled()).isFalse();
