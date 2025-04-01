@@ -23,7 +23,6 @@ import java.nio.ByteBuffer;
 import java.util.ArrayList;
 import java.util.List;
 
-import org.apache.kafka.common.utils.ByteBufferInputStream;
 
 import io.aiven.kafka.tieredstorage.storage.ObjectKey;
 
@@ -233,7 +232,7 @@ public class S3UploadOutputStream extends OutputStream {
     private void flushBuffer(final ByteBuffer buffer,
                              final int actualPartSize,
                              final boolean multiPartUpload) {
-        try (final InputStream in = new ByteBufferInputStream(buffer)) {
+        try (final InputStream in = new ByteBufferMarkableInputStream(buffer)) {
             processedBytes += actualPartSize;
             if (multiPartUpload){
                 uploadPart(in, actualPartSize);
