@@ -232,6 +232,8 @@ public class S3UploadOutputStream extends OutputStream {
     private void flushBuffer(final ByteBuffer buffer,
                              final int actualPartSize,
                              final boolean multiPartUpload) {
+        //When building the retry request for fail or computing checksum for request body,
+        //It needs the input stream supporting marking and resetting so that it can be read again.
         try (final InputStream in = new ByteBufferMarkableInputStream(buffer)) {
             processedBytes += actualPartSize;
             if (multiPartUpload){
