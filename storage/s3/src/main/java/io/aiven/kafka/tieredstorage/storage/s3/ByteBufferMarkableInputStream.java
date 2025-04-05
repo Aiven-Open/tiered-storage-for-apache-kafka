@@ -22,7 +22,8 @@ import java.util.Objects;
 
 /**
  * Wraps a {@link ByteBuffer} for access via the {@link InputStream} API.
- * It supports marking and resetting operations.
+ * Its implement refers to {@link org.apache.kafka.common.utils.ByteBufferInputStream}
+ * but with marking and resetting operations added.
  */
 public class ByteBufferMarkableInputStream extends InputStream {
     private final ByteBuffer byteBuffer;
