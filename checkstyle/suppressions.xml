@@ -18,6 +18,7 @@
         "-//Checkstyle//DTD SuppressionFilter Configuration 1.2//EN"
         "https://checkstyle.org/dtds/suppressions_1_2.dtd">
 <suppressions>
+    <suppress checks="RegexpHeader" files="ByteBufferMarkableInputStream.java"/>
     <suppress checks="AbbreviationAsWordInName" files="DataKeyAndAADEqualsTest"/>
     <suppress checks="ClassDataAbstractionCoupling" files=".*Test\.java"/>
     <suppress checks="ClassFanOutComplexity" files=".*Test\.java"/>

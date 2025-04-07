@@ -20,9 +20,11 @@ import javax.management.MBeanServer;
 import javax.management.MalformedObjectNameException;
 import javax.management.ObjectName;
 
-import java.io.InputStream;
+import java.io.ByteArrayInputStream;
+import java.io.IOException;
 import java.lang.management.ManagementFactory;
 import java.util.Map;
+import java.util.Random;
 
 import io.aiven.kafka.tieredstorage.storage.StorageBackendException;
 import io.aiven.kafka.tieredstorage.storage.TestObjectKey;
@@ -44,6 +46,9 @@ import software.amazon.awssdk.services.s3.model.S3Exception;
 import static com.github.tomakehurst.wiremock.client.WireMock.aResponse;
 import static com.github.tomakehurst.wiremock.client.WireMock.any;
 import static com.github.tomakehurst.wiremock.client.WireMock.anyUrl;
+import static com.github.tomakehurst.wiremock.client.WireMock.delete;
+import static com.github.tomakehurst.wiremock.client.WireMock.post;
+import static com.github.tomakehurst.wiremock.client.WireMock.put;
 import static com.github.tomakehurst.wiremock.client.WireMock.stubFor;
 import static com.github.tomakehurst.wiremock.common.ContentTypes.CONTENT_TYPE;
 import static org.apache.http.entity.ContentType.APPLICATION_XML;
@@ -59,6 +64,8 @@ class S3ErrorMetricsTest {
     private static final String BUCKET_NAME = "test-bucket";
     private S3Storage storage;
     private ObjectName s3MetricsObjectName;
+    private final Random random = new Random();
+    private static final int UPLOAD_PART_SIZE = 25 * 1024 * 1024;
 
     @BeforeEach
     void setUp() throws MalformedObjectNameException {
@@ -68,12 +75,59 @@ class S3ErrorMetricsTest {
 
     @ParameterizedTest
     @CsvSource({
-        HttpStatusCode.INTERNAL_SERVER_ERROR + ", server-errors",
-        HttpStatusCode.THROTTLING + ", throttling-errors",
+        HttpStatusCode.INTERNAL_SERVER_ERROR + "," + (UPLOAD_PART_SIZE + 1) + ", server-errors",
+        HttpStatusCode.INTERNAL_SERVER_ERROR + "," + (UPLOAD_PART_SIZE - 1) + ", server-errors",
+        HttpStatusCode.THROTTLING + "," + (UPLOAD_PART_SIZE + 1) + ", throttling-errors",
+        HttpStatusCode.THROTTLING + "," + (UPLOAD_PART_SIZE - 1) + ", throttling-errors",
     })
     void testS3ServerExceptions(final int statusCode,
+                                final int uploadFileSize,
                                 final String metricName,
                                 final WireMockRuntimeInfo wmRuntimeInfo) throws Exception {
+        final Map<String, Object> configs = Map.of(
+            "s3.bucket.name", BUCKET_NAME,
+            "s3.region", Region.US_EAST_1.id(),
+            "s3.endpoint.url", wmRuntimeInfo.getHttpBaseUrl(),
+            "s3.path.style.access.enabled", "true",
+            "aws.credentials.provider.class", AnonymousCredentialsProvider.class.getName(),
+            "s3.multipart.upload.part.size", UPLOAD_PART_SIZE
+        );
+        storage.configure(configs);
+
+        stubFor(any(anyUrl())
+            .willReturn(aResponse().withStatus(statusCode)
+                .withHeader(CONTENT_TYPE, APPLICATION_XML.getMimeType())
+                .withBody(String.format(ERROR_RESPONSE_TEMPLATE, statusCode))));
+
+        uploadAndVerifyResult(uploadFileSize, statusCode, metricName);
+    }
+
+    private void uploadAndVerifyResult(final int uploadFileSize,
+                                       final int statusCode,
+                                       final String metricName) throws Exception {
+        try (final ByteArrayInputStream inputStream = newInputStreamWithSize(uploadFileSize)) {
+            final StorageBackendException storageBackendException = catchThrowableOfType(
+                StorageBackendException.class,
+                () -> storage.upload(inputStream, new TestObjectKey("key"))
+            );
+            assertThat(storageBackendException.getCause())
+                .isInstanceOf(IOException.class)
+                .cause()
+                .isInstanceOf(S3Exception.class)
+                .extracting(e -> ((S3Exception) e).statusCode())
+                .isEqualTo(statusCode);
+        }
+
+        // Comparing to 4 since the SDK makes 3 retries by default.
+        assertThat(MBEAN_SERVER.getAttribute(s3MetricsObjectName, metricName + "-total"))
+            .isEqualTo(4.0);
+        assertThat(MBEAN_SERVER.getAttribute(s3MetricsObjectName, metricName + "-rate"))
+            .asInstanceOf(DOUBLE)
+            .isGreaterThan(0.0);
+    }
+
+    @Test
+    void testS3ServerExceptionsWhenUploadPartFail(final WireMockRuntimeInfo wmRuntimeInfo) throws Exception {
         final Map<String, Object> configs = Map.of(
             "s3.bucket.name", BUCKET_NAME,
             "s3.region", Region.US_EAST_1.id(),
@@ -83,22 +137,33 @@ class S3ErrorMetricsTest {
         );
         storage.configure(configs);
 
-        stubFor(any(anyUrl())
-            .willReturn(aResponse().withStatus(statusCode)
+        //stub with success response for the CreateMultipartUpload: POST /{Key}?uploads
+        final String responseString = "<InitiateMultipartUploadResult>"
+                                    + "<UploadId>testUploadId</UploadId>"
+                                    + "</InitiateMultipartUploadResult>";
+        stubFor(post(anyUrl())
+            .willReturn(aResponse().withStatus(HttpStatusCode.OK)
                 .withHeader(CONTENT_TYPE, APPLICATION_XML.getMimeType())
-                .withBody(String.format(ERROR_RESPONSE_TEMPLATE, statusCode))));
-        final S3Exception s3Exception = catchThrowableOfType(
-            () -> storage.upload(InputStream.nullInputStream(), new TestObjectKey("key")),
-            S3Exception.class);
+                .withBody(responseString)));
 
-        assertThat(s3Exception.statusCode()).isEqualTo(statusCode);
+        //stub with error for the UploadPart: PUT /{Key}?partNumber=PartNumber&uploadId={Upload}
+        final int errorStatusCode = HttpStatusCode.INTERNAL_SERVER_ERROR;
+        stubFor(put(anyUrl())
+            .willReturn(aResponse().withStatus(errorStatusCode)
+                .withHeader(CONTENT_TYPE, APPLICATION_XML.getMimeType())
+                .withBody(String.format(ERROR_RESPONSE_TEMPLATE, errorStatusCode))));
 
-        // Comparing to 4 since the SDK makes 3 retries by default.
-        assertThat(MBEAN_SERVER.getAttribute(s3MetricsObjectName, metricName + "-total"))
-            .isEqualTo(4.0);
-        assertThat(MBEAN_SERVER.getAttribute(s3MetricsObjectName, metricName + "-rate"))
-            .asInstanceOf(DOUBLE)
-            .isGreaterThan(0.0);
+        //stub with success response for the AbortMultipartUpload: DELETE /{Key}?uploadId={Upload}
+        stubFor(delete(anyUrl())
+            .willReturn(aResponse().withStatus(HttpStatusCode.OK)));
+
+        uploadAndVerifyResult(UPLOAD_PART_SIZE + 1, errorStatusCode, "server-errors");
+    }
+
+    private ByteArrayInputStream newInputStreamWithSize(final int size) {
+        final byte[] buffer = new byte[size];
+        random.nextBytes(buffer);
+        return new ByteArrayInputStream(buffer);
     }
 
     @Test
@@ -120,9 +185,10 @@ class S3ErrorMetricsTest {
                 .withHeader(CONTENT_TYPE, APPLICATION_XML.getMimeType())
                 .withBody("unparsable_xml")));
 
-        assertThatThrownBy(() -> storage.upload(InputStream.nullInputStream(), new TestObjectKey("key")))
-            .isInstanceOf(SdkClientException.class)
-            .hasMessageStartingWith("Could not parse XML response.");
+        final ByteArrayInputStream inputStream = newInputStreamWithSize(UPLOAD_PART_SIZE + 1);
+        assertThatThrownBy(() -> storage.upload(inputStream, new TestObjectKey("key")))
+            .isInstanceOf(StorageBackendException.class)
+            .hasMessageStartingWith("Failed to upload key");
 
         assertThat(MBEAN_SERVER.getAttribute(s3MetricsObjectName, metricName + "-total"))
             .isEqualTo(1.0);
