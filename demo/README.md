@@ -56,7 +56,7 @@ For this scenario you need to have:
 The easiest way to pass these to Kafka and the plugin is using an environment file. Generate one with `make .env` and then set:
 ```
 AWS_ACCESS_KEY_ID=<access key ID>
-AWS_SECRET_KEY=<secret access key>
+AWS_SECRET_ACCESS_KEY=<secret access key>
 KAFKA_RSM_CONFIG_STORAGE_S3_BUCKET_NAME=<bucket name>`
 KAFKA_RSM_CONFIG_STORAGE_S3_REGION=<bucket region>`
 ```
