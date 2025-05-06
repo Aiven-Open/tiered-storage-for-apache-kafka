@@ -175,7 +175,7 @@ consume:
 
 .env:
 	echo "AWS_ACCESS_KEY_ID=" > .env
-	echo "AWS_SECRET_KEY=" >> .env
+	echo "AWS_SECRET_ACCESS_KEY=" >> .env
 	echo "KAFKA_RSM_CONFIG_STORAGE_S3_BUCKET_NAME=" >> .env
 	echo "KAFKA_RSM_CONFIG_STORAGE_S3_REGION=" >> .env
 
