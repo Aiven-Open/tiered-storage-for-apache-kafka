@@ -50,7 +50,7 @@ make consume
 This scenario uses `S3Storage` with the real AWS S3 as the remote storage.
 
 For this scenario you need to have:
-1. Valid AWS S3 credentials (e.g. `AWS_ACCESS_KEY_ID` and `AWS_SECRET_KEY`).
+1. Valid AWS S3 credentials (e.g. `AWS_ACCESS_KEY_ID` and `AWS_SECRET_ACCESS_KEY`).
 2. A test bucket.
 
 The easiest way to pass these to Kafka and the plugin is using an environment file. Generate one with `make .env` and then set:
