@@ -16,16 +16,33 @@
 
 package io.aiven.kafka.tieredstorage.config;
 
+import java.nio.ByteBuffer;
 import java.nio.file.Path;
 import java.util.HashMap;
+import java.util.List;
 import java.util.Map;
+import java.util.stream.Stream;
 
 import org.apache.kafka.common.config.ConfigException;
+import org.apache.kafka.common.header.Headers;
 
+import io.aiven.kafka.tieredstorage.iceberg.StructureProvider;
+import io.aiven.kafka.tieredstorage.manifest.SegmentFormat;
 import io.aiven.kafka.tieredstorage.metadata.SegmentCustomMetadataField;
 import io.aiven.kafka.tieredstorage.storage.StorageBackend;
 
+import io.confluent.kafka.schemaregistry.ParsedSchema;
+import org.apache.iceberg.Table;
+import org.apache.iceberg.catalog.Catalog;
+import org.apache.iceberg.catalog.Namespace;
+import org.apache.iceberg.catalog.TableIdentifier;
+import org.junit.jupiter.api.Nested;
 import org.junit.jupiter.api.Test;
+import org.junit.jupiter.params.ParameterizedTest;
+import org.junit.jupiter.params.provider.Arguments;
+import org.junit.jupiter.params.provider.MethodSource;
+import org.junit.jupiter.params.provider.NullSource;
+import org.junit.jupiter.params.provider.ValueSource;
 
 import static org.assertj.core.api.Assertions.assertThat;
 import static org.assertj.core.api.Assertions.assertThatThrownBy;
@@ -40,6 +57,7 @@ class RemoteStorageManagerConfigTest {
                 "chunk.size", "123"
             )
         );
+        assertThat(config.segmentFormat()).isEqualTo(SegmentFormat.KAFKA);
         assertThat(config.storage()).isInstanceOf(StorageBackend.class);
         assertThat(config.chunkSize()).isEqualTo(123);
         assertThat(config.compressionEnabled()).isFalse();
@@ -51,6 +69,47 @@ class RemoteStorageManagerConfigTest {
         assertThat(config.keyPrefixMask()).isFalse();
         assertThat(config.customMetadataKeysIncluded()).isEmpty();
         assertThat(config.uploadRateLimit()).isEmpty();
+        assertThat(config.structureProvider()).isNull();
+        assertThat(config.icebergCatalog()).isNull();
+    }
+
+    @ParameterizedTest
+    @MethodSource("validSegmentFormatArgs")
+    void validSegmentFormat(final String format, final SegmentFormat expectedFormat) {
+        final Map<String, String> conf = new HashMap<>(
+            Map.of(
+                "storage.backend.class", NoopStorageBackend.class.getCanonicalName(),
+                "chunk.size", "123"
+            )
+        );
+        if (format != null) {
+            conf.put("segment.format", format);
+        }
+        final var config = new RemoteStorageManagerConfig(conf);
+        assertThat(config.segmentFormat()).isEqualTo(expectedFormat);
+    }
+
+    static Stream<Arguments> validSegmentFormatArgs() {
+        return Stream.of(
+            Arguments.of("kafka", SegmentFormat.KAFKA),
+            Arguments.of("iceberg", SegmentFormat.ICEBERG),
+            Arguments.of(null, SegmentFormat.KAFKA)
+        );
+    }
+
+    @ParameterizedTest
+    @ValueSource(strings = {"KafkA", "aaa"})
+    void invalidSegmentFormat(final String format) {
+        final Map<String, String> config = Map.of(
+            "storage.backend.class", NoopStorageBackend.class.getCanonicalName(),
+            "chunk.size", "123",
+            "segment.format", format
+        );
+        final String expectedErrorMessage = String.format(
+            "Invalid value %s for configuration segment.format: String must be one of: kafka, iceberg", format);
+        assertThatThrownBy(() -> new RemoteStorageManagerConfig(config))
+            .isInstanceOf(ConfigException.class)
+            .hasMessage(expectedErrorMessage);
     }
 
     @Test
@@ -328,5 +387,169 @@ class RemoteStorageManagerConfigTest {
             )
         );
         assertThat(config.uploadRateLimit()).hasValue(limit);
+    }
+
+    @Nested
+    class StructureProviders {
+        @Test
+        void structureProvider() {
+            final var config = new RemoteStorageManagerConfig(
+                Map.of(
+                    "storage.backend.class", NoopStorageBackend.class.getCanonicalName(),
+                    "chunk.size", "123",
+                    "structure.provider.class", TestStructureProvider.class.getTypeName(),
+                    "structure.provider.a", "aaa",
+                    "structure.provider.a.b", "123",
+                    "structure.provider.a.b.c", "true"
+                )
+            );
+            final StructureProvider structureProvider = config.structureProvider();
+            assertThat(structureProvider).isInstanceOf(TestStructureProvider.class);
+            assertThat(structureProvider)
+                .extracting(o -> ((TestStructureProvider) o).configs)
+                .isEqualTo(Map.of(
+                    "class", TestStructureProvider.class.getTypeName(),
+                    "a", "aaa",
+                    "a.b", "123",
+                    "a.b.c", "true"
+                ));
+        }
+
+        public static class TestStructureProvider implements StructureProvider {
+            Map<String, Object> configs;
+
+            @SuppressWarnings("unchecked")
+            @Override
+            public void configure(final Map<String, ?> configs) {
+                this.configs = (Map<String, Object>) configs;
+            }
+
+            @Override
+            public ParsedSchema getSchemaById(final int schemaId) {
+                return null;
+            }
+
+            @Override
+            public ByteBuffer serializeKey(final String topic, final Headers headers, final Object value) {
+                return ByteBuffer.allocate(0);
+            }
+
+            @Override
+            public ByteBuffer serializeValue(final String topic, final Headers headers, final Object record) {
+                return ByteBuffer.allocate(0);
+            }
+
+            @Override
+            public Object deserializeKey(final String topic, final Headers headers, final byte[] data) {
+                return null;
+            }
+
+            @Override
+            public Object deserializeValue(final String topic, final Headers headers, final byte[] data) {
+                return null;
+            }
+        }
+    }
+
+    @Nested
+    class Iceberg {
+        @Test
+        void namespaceDefined() {
+            final var config = new RemoteStorageManagerConfig(
+                Map.of(
+                    "storage.backend.class", NoopStorageBackend.class.getCanonicalName(),
+                    "chunk.size", "123",
+                    "iceberg.namespace", "test"
+                )
+            );
+            assertThat(config.icebergNamespace()).isEqualTo(Namespace.of("test"));
+        }
+
+        @Test
+        void namespaceNotDefined() {
+            final var config = new RemoteStorageManagerConfig(
+                Map.of(
+                    "storage.backend.class", NoopStorageBackend.class.getCanonicalName(),
+                    "chunk.size", "123"
+                )
+            );
+            assertThat(config.icebergNamespace()).isEqualTo(Namespace.empty());
+        }
+
+        @Test
+        void catalogInitialized() {
+            final var config = new RemoteStorageManagerConfig(
+                Map.of(
+                    "storage.backend.class", NoopStorageBackend.class.getCanonicalName(),
+                    "chunk.size", "123",
+                    "iceberg.catalog.class", TestIcebergCatalog.class.getTypeName(),
+                    "iceberg.catalog.a", "aaa",
+                    "iceberg.catalog.a.b", "123",
+                    "iceberg.catalog.a.b.c", "true"
+                )
+            );
+            final Catalog catalog = config.icebergCatalog();
+            assertThat(catalog).isInstanceOf(TestIcebergCatalog.class);
+            assertThat(catalog)
+                .extracting(o -> ((TestIcebergCatalog) o).configs)
+                .isEqualTo(Map.of(
+                    "class", TestIcebergCatalog.class.getTypeName(),
+                    "a", "aaa",
+                    "a.b", "123",
+                    "a.b.c", "true"
+                ));
+        }
+
+        public static class TestIcebergCatalog implements Catalog {
+            Map<String, String> configs;
+
+            @Override
+            public void initialize(final String name, final Map<String, String> properties) {
+                this.configs = properties;
+            }
+
+            @Override
+            public List<TableIdentifier> listTables(final Namespace namespace) {
+                return List.of();
+            }
+
+            @Override
+            public boolean dropTable(final TableIdentifier identifier, final boolean purge) {
+                return false;
+            }
+
+            @Override
+            public void renameTable(final TableIdentifier from, final TableIdentifier to) {
+
+            }
+
+            @Override
+            public Table loadTable(final TableIdentifier identifier) {
+                return null;
+            }
+        }
+
+        @ParameterizedTest
+        @NullSource
+        @MethodSource
+        void catalogNonStringConfigsAreNotAllowed(final Object value) {
+            final Map<String, Object> configs = new HashMap<>(Map.of(
+                "storage.backend.class", NoopStorageBackend.class.getCanonicalName(),
+                "chunk.size", "123",
+                "iceberg.catalog.class", TestIcebergCatalog.class.getTypeName()
+            ));
+            configs.put("iceberg.catalog.a", value);
+            final var config = new RemoteStorageManagerConfig(configs);
+            assertThatThrownBy(config::icebergCatalog)
+                .isInstanceOf(ConfigException.class)
+                .hasMessage("Unknown type of a KV pair in Iceberg config: a %s", value);
+        }
+
+        static Stream<Arguments> catalogNonStringConfigsAreNotAllowed() {
+            return Stream.of(
+                Arguments.of(123),
+                Arguments.of(12.3)
+            );
+        }
     }
 }

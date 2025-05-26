@@ -66,11 +66,19 @@ subprojects {
         flatDir {
             dirs rootProject.file('lib')
         }
+        // TODO remove when we reorganize structure providers
+        // ---
+        // The following repo is needed only for the structure providers.
+        // Keep this in mind when extracting them into a separate project.
+        maven {
+            url "https://packages.confluent.io/maven"
+        }
+        // ---
     }
 
     java {
-        sourceCompatibility = JavaVersion.VERSION_11
-        targetCompatibility = JavaVersion.VERSION_11
+        sourceCompatibility = JavaVersion.VERSION_17
+        targetCompatibility = JavaVersion.VERSION_17
 
         withJavadocJar()
         withSourcesJar()
@@ -106,9 +114,9 @@ subprojects {
 
         mockitoVersion = "5.17.0"
 
-        slf4jVersion = "1.7.36"
+        slf4jVersion = "2.0.13"
 
-        kafkaVersion = "3.6.0"
+        kafkaVersion = "3.8.0"
 
         assertJVersion = "3.27.3"
 

@@ -1,5 +1,5 @@
 /*
- * Copyright 2021 Aiven Oy
+ * Copyright 2025 Aiven Oy
  *
  * Licensed under the Apache License, Version 2.0 (the "License");
  * you may not use this file except in compliance with the License.
@@ -14,15 +14,9 @@
  * limitations under the License.
  */
 
-rootProject.name = 'tiered-storage-for-apache-kafka'
-include 'core'
-include 'storage'
-include 'storage:core'
-include 'storage:filesystem'
-include 'storage:azure'
-include 'storage:gcs'
-include 'storage:s3'
-include 'e2e'
-include 'commons'
-include 'docs'
-include 'benchmarks'
+package io.aiven.kafka.tieredstorage;
+
+@FunctionalInterface
+interface UploadMetricReporter {
+    void report(final ObjectKeyFactory.Suffix suffix, final long bytes);
+}

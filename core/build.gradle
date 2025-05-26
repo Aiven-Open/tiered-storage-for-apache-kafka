@@ -27,6 +27,12 @@ ext {
     caffeineVersion = "3.2.0"
 
     zstdVersion = "1.5.7-4"
+
+    icebergVersion = "1.9.2"
+
+    parquetVersion = "1.15.2"
+
+    hadoopVersion = "3.4.1"
 }
 
 dependencies {
@@ -56,4 +62,63 @@ dependencies {
 
     testImplementation "com.github.luben:zstd-jni:$zstdVersion"
     integrationTestImplementation sourceSets.test.output
+
+    // ---
+    // The following dependencies are needed only for the structure providers.
+    // Keep this in mind when extracting them into a separate project.
+    implementation("io.confluent:kafka-avro-serializer:8.0.0") {
+        exclude group: "org.slf4j"
+        exclude group: 'org.apache.kafka', module: 'kafka-clients'
+        exclude group: 'com.fasterxml.jackson.core', module: 'jackson-databind'
+        exclude group: 'com.fasterxml.jackson.core', module: 'jackson-annotations'
+        exclude group: 'com.fasterxml.jackson.core', module: 'jackson-core'
+        exclude group: 'com.fasterxml.jackson.core', module: 'jackson-bom'
+    }
+    // ---
+
+    // ---
+    // The following dependencies are needed for Iceberg.
+    // Keep this in mind when extracting them into a separate project.
+
+    // Contains the Catalog interface.
+    implementation "org.apache.iceberg:iceberg-api:$icebergVersion"
+
+    // Contains a bunch of catalog implementations.
+    implementation "org.apache.iceberg:iceberg-core:$icebergVersion"
+
+    compileOnly "org.apache.kafka:kafka-storage:$kafkaVersion"
+
+    implementation "org.apache.iceberg:iceberg-data:$icebergVersion"
+    implementation "org.apache.iceberg:iceberg-aws:$icebergVersion"
+    implementation "org.apache.iceberg:iceberg-parquet:$icebergVersion"
+    implementation("org.apache.parquet:parquet-column:$parquetVersion") {
+        exclude group: 'org.slf4j'
+    }
+    implementation("org.apache.hadoop:hadoop-common:$hadoopVersion") {
+        exclude group: 'log4j'
+        exclude group: 'org.slf4j'
+        exclude group: 'ch.qos.reload4j'
+        exclude group: 'org.apache.avro', module: 'avro'
+        exclude group: 'com.google.guava'
+        exclude group: 'com.google.protobuf'
+        exclude group: 'org.apache.curator'
+        exclude group: 'org.apache.zookeeper'
+        exclude group: 'org.apache.kerby'
+        exclude group: 'org.apache.hadoop', module: 'hadoop-auth'
+        exclude group: 'org.apache.commons', module: 'commons-configuration2'
+        exclude group: 'org.apache.hadoop.thirdparty', module: 'hadoop-shaded-protobuf_3_7'
+        exclude group: 'org.eclipse.jetty'
+        exclude group: "io.netty"
+    }
+    implementation("org.apache.hadoop:hadoop-mapreduce-client-core:$hadoopVersion"){
+        exclude group: 'org.apache.avro'
+        exclude group: 'org.slf4j'
+        exclude group: "io.netty"
+        exclude group: "org.jline"
+        exclude group: "commons-cli"
+        exclude group: 'ch.qos.reload4j'
+        exclude group: "org.apache.hadoop", module: "hdfs-client"
+        exclude group: "org.eclipse.jetty"
+        exclude group: "org.eclipse.jetty.websocket"
+    }
 }

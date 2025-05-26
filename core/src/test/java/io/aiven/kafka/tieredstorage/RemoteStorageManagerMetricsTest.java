@@ -225,6 +225,8 @@ class RemoteStorageManagerMetricsTest {
         try (@SuppressWarnings("unused") final var storage = mockConstruction(
             FileSystemStorage.class,
             (mock, context) -> {
+                doThrow(testException).when(mock).fetch(any());
+                doThrow(testException).when(mock).fetch(any(), any());
                 doThrow(testException).when(mock).upload(any(), any());
                 doThrow(testException).when(mock).delete(anySet());
             }
