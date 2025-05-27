@@ -24,7 +24,9 @@ dependencies {
     integrationTestImplementation("software.amazon.awssdk:s3:$awsSdkVersion") {
         exclude group: "org.slf4j"
     }
-    integrationTestImplementation "com.google.cloud:google-cloud-storage:$gcpSdkVersion"
+    integrationTestImplementation ("com.google.cloud:google-cloud-storage:$gcpSdkVersion") {
+        exclude group: "org.slf4j"
+    }
 
     integrationTestImplementation "org.testcontainers:junit-jupiter:$testcontainersVersion"
     integrationTestImplementation "org.testcontainers:kafka:$testcontainersVersion"
