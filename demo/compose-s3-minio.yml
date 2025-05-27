@@ -87,7 +87,7 @@ services:
       - minio
     entrypoint: >
       /bin/sh -c "
-      /usr/bin/mc config host add local http://minio:9000 minioadmin minioadmin;
+      /usr/bin/mc alias local http://minio:9000 minioadmin minioadmin;
       /usr/bin/mc mb local/test-bucket;
       exit 0;
       "
