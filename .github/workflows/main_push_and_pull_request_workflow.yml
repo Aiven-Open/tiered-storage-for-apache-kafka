@@ -57,4 +57,11 @@ jobs:
         timeout-minutes: 30
         run: make E2E_TEST=${{ matrix.test }} e2e_test
 
+      - name: Upload e2e tests reports
+        uses: actions/upload-artifact@v4
+        if: always()
+        with:
+          name: test-reports-e2e-${{ matrix.test }}-${{ matrix.java-version }}
+          path: '**/build/reports/tests/**'
+
       # TODO: publish docker image
