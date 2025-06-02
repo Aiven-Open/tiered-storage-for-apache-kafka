@@ -100,7 +100,7 @@ subprojects {
     ext {
         // Keep empty lines between versions to avoid conflicts on mass update (e.g. Dependabot).
 
-        junitVersion = "5.12.2"
+        junitVersion = "5.13.0"
 
         junitPlatformVersion = "1.12.0"
 
