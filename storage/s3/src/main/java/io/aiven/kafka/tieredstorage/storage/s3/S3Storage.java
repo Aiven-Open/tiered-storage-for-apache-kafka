@@ -72,8 +72,8 @@ public class S3Storage implements StorageBackend {
         return out.processedBytes();
     }
 
-    S3MultiPartOutputStream s3OutputStream(final ObjectKey key) {
-        return new S3MultiPartOutputStream(bucketName, key, storageClass, partSize, s3Client);
+    S3UploadOutputStream s3OutputStream(final ObjectKey key) {
+        return new S3UploadOutputStream(bucketName, key, storageClass, partSize, s3Client);
     }
 
     @Override
