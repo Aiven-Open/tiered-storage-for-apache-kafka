@@ -101,40 +101,51 @@ class MemorySegmentManifestCacheMetricsTest {
 
         cache.get(OBJECT_KEY_PATH);
 
-        // Then the following metrics should be available
-        assertThat(MBEAN_SERVER.getAttribute(objectName, "cache-hits-total"))
-            .isEqualTo(1.0);
-        assertThat(MBEAN_SERVER.getAttribute(objectName, "cache-misses-total"))
-            .isEqualTo(1.0);
-        assertThat(MBEAN_SERVER.getAttribute(objectName, "cache-load-success-time-total"))
-            .asInstanceOf(DOUBLE)
-            .isGreaterThan(0);
-
-        // when using cache loader, load success seem to be only the missed loads (hits do not count)
-        assertThat(MBEAN_SERVER.getAttribute(objectName, "cache-load-success-total"))
-            .isEqualTo(1.0);
-        assertThat(MBEAN_SERVER.getAttribute(objectName, "cache-load-failure-time-total"))
-            .isEqualTo(0.0);
-
-        assertThat(MBEAN_SERVER.getAttribute(objectName, "cache-load-failure-total"))
-            .isEqualTo(0.0);
-
-        assertThat(MBEAN_SERVER.getAttribute(objectName, "cache-eviction-total"))
-            .isEqualTo(0.0);
-        assertThat(MBEAN_SERVER.getAttribute(objectName, "cache-eviction-weight-total"))
-            .isEqualTo(0.0);
-
         final var threadPoolObjectName =
             new ObjectName("aiven.kafka.server.tieredstorage.thread-pool:type="
                 + "segment-manifest-cache-thread-pool-metrics");
 
-        // The following assertions are relaxed, just to show that metrics are collected
-        assertThat(MBEAN_SERVER.getAttribute(threadPoolObjectName, "parallelism-total"))
-            .isEqualTo(4.0);
-        // approximation to completed tasks
-        assertThat(MBEAN_SERVER.getAttribute(threadPoolObjectName, "steal-task-count-total"))
-            .asInstanceOf(DOUBLE)
-            .isGreaterThanOrEqualTo(0.0);
+        await()
+            .atMost(Duration.ofSeconds(1))
+            .untilAsserted(() -> {
+                // Then the following metrics should be available
+                assertThat(MBEAN_SERVER.getAttribute(objectName, "cache-hits-total"))
+                    .isEqualTo(1.0);
+                assertThat(MBEAN_SERVER.getAttribute(objectName, "cache-misses-total"))
+                    .isEqualTo(1.0);
+                assertThat(MBEAN_SERVER.getAttribute(objectName, "cache-load-success-time-total"))
+                    .asInstanceOf(DOUBLE)
+                    .isGreaterThan(0);
+
+                // when using cache loader, load success seem to be only the missed loads (hits do not count)
+                assertThat(MBEAN_SERVER.getAttribute(objectName, "cache-load-success-total"))
+                    .isEqualTo(1.0);
+                assertThat(MBEAN_SERVER.getAttribute(objectName, "cache-load-failure-time-total"))
+                    .isEqualTo(0.0);
+
+                assertThat(MBEAN_SERVER.getAttribute(objectName, "cache-load-failure-total"))
+                    .isEqualTo(0.0);
+
+                assertThat(MBEAN_SERVER.getAttribute(objectName, "cache-eviction-total"))
+                    .isEqualTo(0.0);
+                assertThat(MBEAN_SERVER.getAttribute(objectName, "cache-eviction-weight-total"))
+                    .isEqualTo(0.0);
+
+                // The following assertions are relaxed, just to show that metrics are collected
+                assertThat(MBEAN_SERVER.getAttribute(threadPoolObjectName, "parallelism-total"))
+                    .isEqualTo(4.0);
+                // approximation to completed tasks
+                assertThat(MBEAN_SERVER.getAttribute(threadPoolObjectName, "steal-task-count-total"))
+                    .asInstanceOf(DOUBLE)
+                    .isGreaterThanOrEqualTo(0.0);
+                // The following assertions are relaxed, just to show that metrics are collected
+                assertThat(MBEAN_SERVER.getAttribute(threadPoolObjectName, "parallelism-total"))
+                    .isEqualTo(4.0);
+                // approximation to completed tasks
+                assertThat(MBEAN_SERVER.getAttribute(threadPoolObjectName, "steal-task-count-total"))
+                    .asInstanceOf(DOUBLE)
+                    .isGreaterThanOrEqualTo(0.0);
+            });
         // wait for thread-pool to drain queued tasks
         await()
             .atMost(Duration.ofSeconds(5))

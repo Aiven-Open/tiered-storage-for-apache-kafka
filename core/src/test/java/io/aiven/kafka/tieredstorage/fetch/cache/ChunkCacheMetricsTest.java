@@ -114,39 +114,49 @@ class ChunkCacheMetricsTest {
 
         chunkCache.getChunk(OBJECT_KEY_PATH, segmentManifest, 0);
 
-        // Then the following metrics should be available
-        assertThat(MBEAN_SERVER.getAttribute(objectName, "cache-hits-total"))
-            .isEqualTo(1.0);
-        assertThat(MBEAN_SERVER.getAttribute(objectName, "cache-misses-total"))
-            .isEqualTo(1.0);
-        assertThat(MBEAN_SERVER.getAttribute(objectName, "cache-load-success-time-total"))
-            .asInstanceOf(DOUBLE)
-            .isGreaterThan(0);
-
-        // compute is considered as load success regardless if present or not
-        assertThat(MBEAN_SERVER.getAttribute(objectName, "cache-load-success-total"))
-            .isEqualTo(2.0);
-        assertThat(MBEAN_SERVER.getAttribute(objectName, "cache-load-failure-time-total"))
-            .isEqualTo(0.0);
-
-        assertThat(MBEAN_SERVER.getAttribute(objectName, "cache-load-failure-total"))
-            .isEqualTo(0.0);
-
-        assertThat(MBEAN_SERVER.getAttribute(objectName, "cache-eviction-total"))
-            .isEqualTo(0.0);
-        assertThat(MBEAN_SERVER.getAttribute(objectName, "cache-eviction-weight-total"))
-            .isEqualTo(0.0);
-
         final var threadPoolObjectName =
             new ObjectName("aiven.kafka.server.tieredstorage.thread-pool:type=chunk-cache-thread-pool-metrics");
+        // Then the following metrics should be available
+        await()
+            .atMost(Duration.ofSeconds(1)).untilAsserted(() -> {
+                assertThat(MBEAN_SERVER.getAttribute(objectName, "cache-hits-total"))
+                    .isEqualTo(1.0);
+                assertThat(MBEAN_SERVER.getAttribute(objectName, "cache-misses-total"))
+                    .isEqualTo(1.0);
+                assertThat(MBEAN_SERVER.getAttribute(objectName, "cache-load-success-time-total"))
+                    .asInstanceOf(DOUBLE)
+                    .isGreaterThan(0);
 
-        // The following assertions are relaxed, just to show that metrics are collected
-        assertThat(MBEAN_SERVER.getAttribute(threadPoolObjectName, "parallelism-total"))
-            .isEqualTo(4.0);
-        // approximation to completed tasks
-        assertThat(MBEAN_SERVER.getAttribute(threadPoolObjectName, "steal-task-count-total"))
-            .asInstanceOf(DOUBLE)
-            .isGreaterThanOrEqualTo(0.0);
+                // compute is considered as load success regardless if present or not
+                assertThat(MBEAN_SERVER.getAttribute(objectName, "cache-load-success-total"))
+                    .isEqualTo(2.0);
+                assertThat(MBEAN_SERVER.getAttribute(objectName, "cache-load-failure-time-total"))
+                    .isEqualTo(0.0);
+
+                assertThat(MBEAN_SERVER.getAttribute(objectName, "cache-load-failure-total"))
+                    .isEqualTo(0.0);
+
+                assertThat(MBEAN_SERVER.getAttribute(objectName, "cache-eviction-total"))
+                    .isEqualTo(0.0);
+                assertThat(MBEAN_SERVER.getAttribute(objectName, "cache-eviction-weight-total"))
+                    .isEqualTo(0.0);
+
+                // The following assertions are relaxed, just to show that metrics are collected
+                assertThat(MBEAN_SERVER.getAttribute(threadPoolObjectName, "parallelism-total"))
+                    .isEqualTo(4.0);
+                // approximation to completed tasks
+                assertThat(MBEAN_SERVER.getAttribute(threadPoolObjectName, "steal-task-count-total"))
+                    .asInstanceOf(DOUBLE)
+                    .isGreaterThanOrEqualTo(0.0);
+                // wait for thread-pool to drain queued tasks
+                // The following assertions are relaxed, just to show that metrics are collected
+                assertThat(MBEAN_SERVER.getAttribute(threadPoolObjectName, "parallelism-total"))
+                    .isEqualTo(4.0);
+                // approximation to completed tasks
+                assertThat(MBEAN_SERVER.getAttribute(threadPoolObjectName, "steal-task-count-total"))
+                    .asInstanceOf(DOUBLE)
+                    .isGreaterThanOrEqualTo(0.0);
+            });
         // wait for thread-pool to drain queued tasks
         await()
             .atMost(Duration.ofSeconds(5))
