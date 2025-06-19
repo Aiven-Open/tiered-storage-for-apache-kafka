@@ -26,6 +26,9 @@ Extract the core library and selected storage library to the same or different d
 
 **Step 2. Configure the brokers**:
 
+> [!NOTE]
+> For Remote Log Metadata Manager (RLMM) and further Tiered Storage configurations, see https://kafka.apache.org/documentation/#tieredstorageconfigs
+
 ```properties
 # ----- Enable tiered storage at the broker level -----
 
@@ -246,7 +249,20 @@ Even though, multipart transactions are aborted when an exception happens while 
 there's a chance that initiated transactions are not completed or aborted (e.g. broker process is killed) and incomplete part uploads hang without completing a transaction.
 For these scenarios, is recommended to set a bucket lifecycle policy to periodically abort incomplete multipart uploads: <https://docs.aws.amazon.com/AmazonS3/latest/userguide/mpu-abort-incomplete-mpu-lifecycle-config.html>
 
-### Ranged queries
+### Fetching
+
+Serving fetch requests from remote storage is done by running a task and wait on the result to return results to the customer.
+The default timeout for this task is 500ms. This may not be enough in some cases and lead to the cancellation of the task:
+
+```
+org.apache.kafka.common.KafkaException: org.apache.kafka.server.log.remote.storage.RemoteStorageException: java.lang.RuntimeException: java.lang.InterruptedException
+...
+```
+
+This can be configured with [`remote.fetch.max.wait.ms`](https://kafka.apache.org/documentation/#brokerconfigs_remote.fetch.max.wait.ms).
+Increasing this value will allow the remote fetch to complete and return results, at the cost of increasing the fetch latency.
+
+#### Ranged queries
 
 The plugin uses ranged queries to access records on remote log segment.
 Based on the [chunking](#chunking), the plugin will use the chunk position to get a range from the uploaded log segment.
