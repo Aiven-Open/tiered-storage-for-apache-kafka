@@ -124,6 +124,22 @@ class Socks5ProxyAuthenticatorTest {
         auth.addCredentials(HOSTNAME, 100, USERNAME, PASSWORD);
         assertThatThrownBy(() -> auth.addCredentials(HOSTNAME, 100, "other", "other"))
             .isExactlyInstanceOf(RuntimeException.class)
-            .hasMessage("Credentials already registered for this host ans port");
+            .hasMessage("Credentials already registered for this host and port");
+    }
+
+    @Test
+    void addingSameCredentialsMultipleTimesShouldBeAllowed() {
+        final var auth = new Socks5ProxyAuthenticator();
+        auth.addCredentials(HOSTNAME, 100, USERNAME, PASSWORD);
+        auth.addCredentials(HOSTNAME, 100, USERNAME, PASSWORD);
+
+        final var result = auth.requestPasswordAuthenticationInstance(
+            HOSTNAME, null, 100, "SOCKS5", null, null, null, Authenticator.RequestorType.SERVER);
+        assertThat(result)
+            .extracting(PasswordAuthentication::getUserName)
+            .isEqualTo(USERNAME);
+        assertThat(result)
+            .extracting(PasswordAuthentication::getPassword)
+            .isEqualTo(PASSWORD.toCharArray());
     }
 }

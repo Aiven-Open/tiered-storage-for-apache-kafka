@@ -19,6 +19,7 @@ package io.aiven.kafka.tieredstorage.storage.proxy;
 import java.net.Authenticator;
 import java.net.InetSocketAddress;
 import java.net.PasswordAuthentication;
+import java.util.Arrays;
 import java.util.HashMap;
 import java.util.Objects;
 
@@ -63,8 +64,13 @@ public class Socks5ProxyAuthenticator extends Authenticator {
 
         // InetSocketAddress is just a tuple holder in this case, so we avoid hostname resolution.
         final InetSocketAddress hostAndPort = InetSocketAddress.createUnresolved(host, port);
-        if (credentials.containsKey(hostAndPort)) {
-            throw new RuntimeException("Credentials already registered for this host ans port");
+        final PasswordAuthentication existingAuth = credentials.get(hostAndPort);
+        if (existingAuth != null) {
+            // Allow the same credentials to keep the thing idempotent.
+            if (!existingAuth.getUserName().equals(username)
+                || !Arrays.equals(existingAuth.getPassword(), password.toCharArray())) {
+                throw new RuntimeException("Credentials already registered for this host and port");
+            }
         } else {
             credentials.put(hostAndPort, new PasswordAuthentication(username, password.toCharArray()));
         }
