@@ -1,6 +1,8 @@
 # Iceberg Topics for Apache Kafka
 Written by: Ivan Yurchenko, Anatolii Popov, Filip Yonov 
 
+[Discussion](https://github.com/Aiven-Open/tiered-storage-for-apache-kafka/discussions/717).
+
 ## Background
 
 Apache Kafka has become the standard substrate for building streaming applications. In parallel, Apache Iceberg has emerged as the de-facto open table format for data lake workloads, providing a well-specified metadata model, atomic commits, hidden partitioning, and safe schema evolution across a broad set of query engines.
