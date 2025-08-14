@@ -1,0 +1,149 @@
+services:
+  # Kafka broker with RSM plugin
+  kafka:
+    image: apache/kafka:4.0.0
+    restart: unless-stopped
+    networks:
+      iceberg_demo:
+    healthcheck:
+      test: [ "CMD-SHELL", "/opt/kafka/bin/kafka-topics.sh --bootstrap-server kafka:9092 --list" ]
+      interval: 5s
+      timeout: 20s
+      retries: 20
+    ports:
+      - "9092:9092"
+    volumes:
+      - ./plugin:/home/appuser/plugin
+    environment:
+      CLUSTER_ID: "4L6g3nShT-eMCtK--X86sw"
+      KAFKA_PROCESS_ROLES: "broker,controller"
+      KAFKA_NODE_ID: 1
+      KAFKA_CONTROLLER_QUORUM_VOTERS: "1@kafka:9093"
+      KAFKA_LISTENER_SECURITY_PROTOCOL_MAP: "CONTROLLER:PLAINTEXT,PLAINTEXT:PLAINTEXT,PLAINTEXT_HOST:PLAINTEXT"
+      KAFKA_ADVERTISED_LISTENERS: "PLAINTEXT_HOST://localhost:9092,PLAINTEXT://kafka:19092"
+      KAFKA_LISTENERS: "CONTROLLER://:9093,PLAINTEXT_HOST://:9092,PLAINTEXT://:19092"
+      KAFKA_INTER_BROKER_LISTENER_NAME: "PLAINTEXT"
+      KAFKA_CONTROLLER_LISTENER_NAMES: "CONTROLLER"
+      KAFKA_OFFSETS_TOPIC_REPLICATION_FACTOR: 1
+      KAFKA_GROUP_INITIAL_REBALANCE_DELAY_MS: 0
+      KAFKA_TRANSACTION_STATE_LOG_MIN_ISR: 1
+      KAFKA_TRANSACTION_STATE_LOG_REPLICATION_FACTOR: 1
+      KAFKA_RLMM_CONFIG_REMOTE_LOG_METADATA_TOPIC_REPLICATION_FACTOR: 1
+      KAFKA_REMOTE_LOG_STORAGE_SYSTEM_ENABLE: "true"
+      KAFKA_REMOTE_LOG_METADATA_MANAGER_LISTENER_NAME: "PLAINTEXT"
+      KAFKA_REMOTE_LOG_STORAGE_MANAGER_CLASS_PATH: "/home/appuser/plugin/*"
+      KAFKA_REMOTE_LOG_STORAGE_MANAGER_CLASS_NAME: "io.aiven.kafka.tieredstorage.RemoteStorageManager"
+      KAFKA_RSM_CONFIG_CHUNK_SIZE: 4194304 # 4 MiB
+      # In future won't be needed.
+      KAFKA_RSM_CONFIG_STORAGE_BACKEND_CLASS: "io.aiven.kafka.tieredstorage.storage.filesystem.FileSystemStorage"
+      KAFKA_RSM_CONFIG_STORAGE_ROOT: "/tmp"
+      KAFKA_REMOTE_LOG_MANAGER_TASK_INTERVAL_MS: "5000"
+      KAFKA_LOG_RETENTION_CHECK_INTERVAL_MS: "5000"
+#      KAFKA_RSM_CONFIG_SCHEMA_REGISTRY_URL: "http://karapace:8081"
+#      KAFKA_RSM_CONFIG_CATALOG_URL: "http://rest:8181"
+#      KAFKA_RSM_CONFIG_S3_ENDPOINT: "http://minio:9000"
+
+  # Karapace schema registry
+  karapace:
+    image: ghcr.io/aiven-open/karapace:4.1.1
+    restart: unless-stopped
+    networks:
+      iceberg_demo:
+    ports:
+      - "8081:8081"
+    depends_on:
+      kafka:
+        condition: service_healthy
+    entrypoint:
+      - /bin/bash
+      - /opt/karapace/start.sh
+      - registry
+    environment:
+      KARAPACE_ADVERTISED_HOSTNAME: localhost
+      KARAPACE_BOOTSTRAP_URI: kafka:19092
+      KARAPACE_PORT: 8081
+      KARAPACE_HOST: 0.0.0.0
+      KARAPACE_CLIENT_ID: karapace-schema-registry-1
+      KARAPACE_GROUP_ID: karapace-schema-registry
+      KARAPACE_MASTER_ELECTION_STRATEGY: highest
+      KARAPACE_MASTER_ELIGIBILITY: true
+      KARAPACE_TOPIC_NAME: _schemas
+      KARAPACE_LOG_LEVEL: INFO
+      KARAPACE_COMPATIBILITY: FULL
+      KARAPACE_KAFKA_SCHEMA_READER_STRICT_MODE: false
+      KARAPACE_KAFKA_RETRIABLE_ERRORS_SILENCED: true
+
+  # Minio as S3
+  minio:
+    image: minio/minio
+    container_name: minio
+    environment:
+      - MINIO_ROOT_USER=admin
+      - MINIO_ROOT_PASSWORD=password
+      - MINIO_DOMAIN=minio
+    networks:
+      iceberg_demo:
+        aliases:
+          - warehouse.minio
+    ports:
+      - 9001:9001
+      - 9000:9000
+    command: ["server", "/data", "--console-address", ":9001"]
+  mc:
+    depends_on:
+      - minio
+    image: minio/mc
+    container_name: mc
+    networks:
+      iceberg_demo:
+    environment:
+      - AWS_ACCESS_KEY_ID=admin
+      - AWS_SECRET_ACCESS_KEY=password
+      - AWS_REGION=us-east-1
+    entrypoint: >
+      /bin/sh -c "
+      until (/usr/bin/mc config host add minio http://minio:9000 admin password) do echo '...waiting...' && sleep 1; done;
+      /usr/bin/mc rm -r --force minio/warehouse;
+      /usr/bin/mc mb minio/warehouse;
+      /usr/bin/mc anonymous set public minio/warehouse;
+      tail -f /dev/null
+      "
+
+  # Iceberg REST catalog
+  rest:
+    image: apache/iceberg-rest-fixture
+    networks:
+      iceberg_demo:
+    ports:
+      - 8181:8181
+    environment:
+      - AWS_ACCESS_KEY_ID=admin
+      - AWS_SECRET_ACCESS_KEY=password
+      - AWS_REGION=us-east-1
+      - CATALOG_WAREHOUSE=s3://warehouse/
+      - CATALOG_IO__IMPL=org.apache.iceberg.aws.s3.S3FileIO
+      - CATALOG_S3_ENDPOINT=http://minio:9000
+
+  # Spark
+  spark:
+    image: tabulario/spark-iceberg
+    networks:
+      iceberg_demo:
+    depends_on:
+      - rest
+      - minio
+    volumes:
+#      - ./warehouse:/home/iceberg/warehouse
+      - ./notebooks:/home/iceberg/notebooks/notebooks
+    environment:
+      - AWS_ACCESS_KEY_ID=admin
+      - AWS_SECRET_ACCESS_KEY=password
+      - AWS_REGION=us-east-1
+    ports:
+      - 8888:8888
+      - 8080:8080
+      - 10000:10000
+      - 10001:10001
+
+networks:
+  iceberg_demo:
