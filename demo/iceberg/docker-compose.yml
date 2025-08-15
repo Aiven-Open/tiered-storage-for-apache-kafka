@@ -39,9 +39,19 @@ services:
       KAFKA_RSM_CONFIG_STORAGE_ROOT: "/tmp"
       KAFKA_REMOTE_LOG_MANAGER_TASK_INTERVAL_MS: "5000"
       KAFKA_LOG_RETENTION_CHECK_INTERVAL_MS: "5000"
-#      KAFKA_RSM_CONFIG_SCHEMA_REGISTRY_URL: "http://karapace:8081"
-#      KAFKA_RSM_CONFIG_CATALOG_URL: "http://rest:8181"
-#      KAFKA_RSM_CONFIG_S3_ENDPOINT: "http://minio:9000"
+      # Iceberg configuration.
+      KAFKA_RSM_CONFIG_STRUCTURE_PROVIDER_CLASS: "io.aiven.kafka.tieredstorage.iceberg.AvroSchemaRegistryStructureProvider"
+      KAFKA_RSM_CONFIG_STRUCTURE_PROVIDER_SERDE_SCHEMA_REGISTRY_URL: "http://karapace:8081"
+      KAFKA_RSM_CONFIG_SEGMENT_FORMAT: "iceberg"
+      KAFKA_RSM_CONFIG_ICEBERG_NAMESPACE: "default"
+      KAFKA_RSM_CONFIG_ICEBERG_CATALOG_CLASS: "org.apache.iceberg.rest.RESTCatalog"
+      KAFKA_RSM_CONFIG_ICEBERG_CATALOG_URI: "http://rest:8181"
+      "KAFKA_RSM_CONFIG_ICEBERG_CATALOG_IO-IMPL": "org.apache.iceberg.aws.s3.S3FileIO"
+      KAFKA_RSM_CONFIG_ICEBERG_CATALOG_WAREHOUSE: "s3://warehouse/"
+      KAFKA_RSM_CONFIG_ICEBERG_CATALOG_S3_ENDPOINT: "http://minio:9000"
+      "KAFKA_RSM_CONFIG_ICEBERG_CATALOG_S3_ACCESS-KEY-ID": "admin"
+      "KAFKA_RSM_CONFIG_ICEBERG_CATALOG_S3_SECRET-ACCESS-KEY": "password"
+      KAFKA_RSM_CONFIG_ICEBERG_CATALOG_CLIENT_REGION: "us-east-1"
 
   # Karapace schema registry
   karapace:
