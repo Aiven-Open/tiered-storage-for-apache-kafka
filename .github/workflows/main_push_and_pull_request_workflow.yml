@@ -8,7 +8,7 @@ jobs:
   build:
     strategy:
       matrix:
-        java-version: [ 11, 17, 21 ]
+        java-version: [ 17, 21 ]
     name: Build on ${{ matrix.runs-on }} with jdk ${{ matrix.java-version }}
     runs-on: ubuntu-latest
     steps:
@@ -40,7 +40,7 @@ jobs:
   e2e_test:
     strategy:
       matrix:
-        java-version: [ 11 ]
+        java-version: [ 17 ]
         test: [ 'LocalSystem', 'S3', 'Gcs', 'Azure' ]
     name: E2E tests for ${{ matrix.test }}  with jdk ${{ matrix.java-version }}
     runs-on: ubuntu-latest
