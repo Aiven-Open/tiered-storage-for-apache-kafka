@@ -83,9 +83,9 @@ public class Clients {
     }
 
     private static void produce() {
-        try (final KafkaProducer<GenericData.Record, GenericData.Record> producer = new KafkaProducer<>(Map.of(
+        try (final KafkaProducer<Object, GenericData.Record> producer = new KafkaProducer<>(Map.of(
             "bootstrap.servers", BOOTSTRAP_SERVER,
-            "key.serializer", ByteArraySerializer.class.getCanonicalName(),
+            "key.serializer", KafkaAvroSerializer.class.getCanonicalName(),
             "value.serializer", KafkaAvroSerializer.class.getCanonicalName(),
             "schema.registry.url", SCHEMA_REGISTRY_URL
         ))) {
@@ -103,7 +103,7 @@ public class Clients {
                     .set("birthdate", person.getBirthdate().toString())
                     .set("comments", person.getComments())
                     .build();
-                producer.send(new ProducerRecord<>(TOPIC_NAME, 0, Time.SYSTEM.milliseconds(), null, value));
+                producer.send(new ProducerRecord<>(TOPIC_NAME, 0, Time.SYSTEM.milliseconds(), new byte[1], value));
             }
             producer.flush();
         }

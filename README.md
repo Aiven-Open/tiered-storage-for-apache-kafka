@@ -9,7 +9,7 @@ The project follows the API specifications according to the latest version of [K
 
 ## NEW! Iceberg mode 🧊🎉
 
-The Iceberg mode was added recently. It's currenly in the "alpha" stage, but could already be explored. Please have a look at the [whitepaper](iceberg_whitepaper.md).
+The Iceberg mode was added recently. It's currenly in the "alpha" stage, but could already be explored. Please have a look at the [whitepaper](iceberg_whitepaper.md) and [demo](demo/iceberg/README.md).
 
 ## References
 

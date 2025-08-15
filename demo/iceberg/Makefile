@@ -1,10 +1,9 @@
 .PHONY: plugin
 plugin:
-	cd ../../ && ./gradlew :core:distTar
-	cd ../../ && ./gradlew :storage:core:distTar
-	cd ../../ && ./gradlew :storage:filesystem:distTar
 	rm -r plugin || true
 	mkdir -p plugin
-	tar -xf ../../core/build/distributions/core-0.0.1-SNAPSHOT.tgz -C plugin --strip-components=1
-	tar -xf ../../storage/core/build/distributions/core-0.0.1-SNAPSHOT.tgz -C plugin --strip-components=1
-	tar -xf ../../storage/filesystem/build/distributions/filesystem-0.0.1-SNAPSHOT.tgz -C plugin --strip-components=1
+	../../gradlew -p ../../ :core:distTar :storage:core:distTar :storage:filesystem:distTar :storage:s3:distTar
+	tar -xf ../../core/build/distributions/core-1.1.0-SNAPSHOT.tgz -C plugin --strip-components=1
+	tar -xf ../../storage/core/build/distributions/core-1.1.0-SNAPSHOT.tgz -C plugin --strip-components=1
+	tar -xf ../../storage/filesystem/build/distributions/filesystem-1.1.0-SNAPSHOT.tgz -C plugin --strip-components=1
+	tar -xf ../../storage/s3/build/distributions/s3-1.1.0-SNAPSHOT.tgz -C plugin --strip-components=1
