@@ -48,6 +48,35 @@ RemoteStorageManagerConfig
   * Valid Values: non-null string
   * Importance: high
 
+``iceberg.catalog.class``
+  The Iceberg catalog implementation class
+
+  * Type: class
+  * Default: null
+  * Importance: medium
+
+``iceberg.namespace``
+  The Iceberg namespace
+
+  * Type: string
+  * Default: null
+  * Importance: medium
+
+``segment.format``
+  The format of the segment
+
+  * Type: string
+  * Default: kafka
+  * Valid Values: [kafka, iceberg]
+  * Importance: medium
+
+``structure.provider.class``
+  The structure provider implementation class
+
+  * Type: class
+  * Default: null
+  * Importance: medium
+
 ``upload.rate.limit.bytes.per.second``
   Upper bound on bytes to upload (therefore read from disk) per second. Rate limit must be equal or larger than 1 MiB/sec as minimal upload throughput.
 

@@ -7,6 +7,10 @@ Currently, AWS S3, Google Cloud Storage, and Azure Blob Storage are supported.
 
 The project follows the API specifications according to the latest version of [KIP-405: Kafka Tiered Storage](https://cwiki.apache.org/confluence/x/KJDQBQ).
 
+## NEW! Iceberg mode 🧊🎉
+
+The Iceberg mode was added recently. It's currenly in the "alpha" stage, but could already be explored. Please have a look at the [whitepaper](iceberg_whitepaper.md).
+
 ## References
 
 - [Configuration](./docs/configs.rst)

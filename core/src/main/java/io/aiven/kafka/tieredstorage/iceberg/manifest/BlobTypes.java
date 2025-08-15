@@ -1,5 +1,5 @@
 /*
- * Copyright 2021 Aiven Oy
+ * Copyright 2025 Aiven Oy
  *
  * Licensed under the Apache License, Version 2.0 (the "License");
  * you may not use this file except in compliance with the License.
@@ -14,15 +14,13 @@
  * limitations under the License.
  */
 
-rootProject.name = 'tiered-storage-for-apache-kafka'
-include 'core'
-include 'storage'
-include 'storage:core'
-include 'storage:filesystem'
-include 'storage:azure'
-include 'storage:gcs'
-include 'storage:s3'
-include 'e2e'
-include 'commons'
-include 'docs'
-include 'benchmarks'
+package io.aiven.kafka.tieredstorage.iceberg.manifest;
+
+interface BlobTypes {
+    String OFFSET_INDEX = "aiven-tiered-storage-offset-index";
+    String TIMESTAMP_INDEX = "aiven-tiered-storage-timestamp-index";
+    String PRODUCER_SNAPSHOT_INDEX = "aiven-tiered-storage-producer-snapshot-index";
+    String TRANSACTION_INDEX = "aiven-tiered-storage-transaction-index";
+    String LEADER_EPOCH_INDEX = "aiven-tiered-storage-leader-epoch-index";
+    String FILE_LIST = "aiven-tiered-storage-file-list";
+}
