@@ -31,7 +31,6 @@ import io.aiven.kafka.tieredstorage.manifest.SegmentFormat;
 import io.aiven.kafka.tieredstorage.metadata.SegmentCustomMetadataField;
 import io.aiven.kafka.tieredstorage.storage.StorageBackend;
 
-import io.confluent.kafka.schemaregistry.ParsedSchema;
 import org.apache.iceberg.Table;
 import org.apache.iceberg.catalog.Catalog;
 import org.apache.iceberg.catalog.Namespace;
@@ -425,7 +424,7 @@ class RemoteStorageManagerConfigTest {
             }
 
             @Override
-            public ParsedSchema getSchemaById(final int schemaId) {
+            public SchemaAndId getSchemaById(final Integer schemaId) {
                 return null;
             }
 

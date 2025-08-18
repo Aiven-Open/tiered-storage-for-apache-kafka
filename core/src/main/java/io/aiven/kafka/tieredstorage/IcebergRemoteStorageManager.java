@@ -30,7 +30,6 @@ import java.util.Optional;
 import java.util.Set;
 
 import org.apache.kafka.common.header.Header;
-import org.apache.kafka.common.record.FileLogInputStream;
 import org.apache.kafka.common.record.Record;
 import org.apache.kafka.common.record.RecordBatch;
 import org.apache.kafka.common.utils.ByteBufferInputStream;
@@ -61,8 +60,6 @@ import io.aiven.kafka.tieredstorage.metadata.SegmentCustomMetadataSerde;
 import io.aiven.kafka.tieredstorage.storage.BytesRange;
 import io.aiven.kafka.tieredstorage.storage.ObjectKey;
 
-import io.confluent.kafka.schemaregistry.ParsedSchema;
-import io.confluent.kafka.schemaregistry.client.rest.exceptions.RestClientException;
 import org.apache.avro.Schema;
 import org.apache.avro.generic.GenericData;
 import org.apache.iceberg.AppendFiles;
@@ -81,6 +78,8 @@ import org.apache.iceberg.io.OutputFile;
 import org.apache.iceberg.parquet.Parquet;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
+
+import static io.aiven.kafka.tieredstorage.iceberg.StructureProvider.SchemaAndId;
 
 public class IcebergRemoteStorageManager extends InternalRemoteStorageManager {
     private static final Logger LOG = LoggerFactory.getLogger(IcebergRemoteStorageManager.class);
@@ -198,10 +197,10 @@ public class IcebergRemoteStorageManager extends InternalRemoteStorageManager {
 
             for (final var batch : segment.log().batches()) {
                 for (final Record record : batch) {
-                    final ParsedRecord parsedRecord = extractRecordData(batch, record, topicName);
+                    final ParsedRecord parsedRecord = extractRecordData(record, topicName);
 
-                    keySchemaId = parsedRecord.keySchemaId();
-                    valueSchemaId = parsedRecord.valueSchemaId();
+                    keySchemaId = parsedRecord.key().schemaId();
+                    valueSchemaId = parsedRecord.value().schemaId();
 
                     if (writer == null) {
                         final TableIdentifier tableIdentifier = TableIdentifier.of(icebergNamespace, topicName);
@@ -226,70 +225,66 @@ public class IcebergRemoteStorageManager extends InternalRemoteStorageManager {
     }
 
     private ParsedRecord extractRecordData(
-        final FileLogInputStream.FileChannelRecordBatch batch,
         final Record record,
         final String topicName) throws Exception {
 
-        final byte[] rawKey = new byte[record.keySize()];
-        record.key().get(rawKey);
-        final byte[] rawValue = new byte[record.valueSize()];
-        record.value().get(rawValue);
+        final Deserialized deserializedKey = getDeserializedKey(record, topicName);
+        final Deserialized deserializedValue = getDeserializedValue(record, topicName);
 
-        final SchemaAndId keySchema = getSchema(rawKey);
-        final SchemaAndId valueSchema = getSchema(rawValue);
-
-        final Object keyRecord = structureProvider.deserializeKey(topicName, null, rawKey);
-        final Object valueRecord = structureProvider.deserializeValue(topicName, null, rawValue);
-
-        final Schema recordSchema = RowSchema.createRowSchema(keySchema.schema, valueSchema.schema);
+        final Schema recordSchema = RowSchema.createRowSchema(
+                deserializedKey.schema,
+                deserializedValue.schema);
 
         return new ParsedRecord(
             record.offset(),
             record.timestamp(),
-            keySchema.schemaId,
-            rawKey,
-            keyRecord,
-            valueSchema.schemaId,
-            rawValue,
-            valueRecord,
+            deserializedKey,
+            deserializedValue,
             recordSchema,
             record.headers()
         );
     }
 
+    private Deserialized getDeserializedKey(final Record record, final String topicName) throws IOException {
+        if (record.hasKey()) {
+            final byte[] rawKey = new byte[record.keySize()];
+            record.key().get(rawKey);
+            final Integer schemaId = getSchemaId(rawKey);
+            final SchemaAndId<Schema> schema = structureProvider.getSchemaById(schemaId);
+            final Object keyRecord = structureProvider.deserializeKey(topicName, null, rawKey);
+            return new Deserialized(rawKey, keyRecord, schema.schemaId(), schema.schema());
+        } else {
+            final SchemaAndId<Schema> schema = structureProvider.getSchemaById(null);
+            return new Deserialized(null, null, null, schema.schema());
+        }
+    }
+
+    private Deserialized getDeserializedValue(final Record record, final String topicName) throws IOException {
+        if (record.hasValue()) {
+            final byte[] rawValue = new byte[record.valueSize()];
+            record.value().get(rawValue);
+            final Integer schemaId = getSchemaId(rawValue);
+            final SchemaAndId<Schema> schema = structureProvider.getSchemaById(schemaId);
+            final Object valueRecord = structureProvider.deserializeValue(topicName, null, rawValue);
+            return new Deserialized(rawValue, valueRecord, schema.schemaId(), schema.schema());
+        } else {
+            final SchemaAndId<Schema> schema = structureProvider.getSchemaById(null);
+            return new Deserialized(null, null, null, schema.schema());
+        }
+    }
+
+    private record Deserialized(byte[] raw, Object record, Integer schemaId, Schema schema) {
+    }
+
     private record ParsedRecord(
         long recordOffset,
         long recordTimestamp,
-        Integer keySchemaId,
-        byte[] rawKey,
-        Object keyRecord,
-        Integer valueSchemaId,
-        byte[] rawValue,
-        Object valueRecord,
+        Deserialized key,
+        Deserialized value,
         Schema recordSchema,
         Header[] headers
     ) {
     }
-
-    private SchemaAndId getSchema(final byte[] value) throws IOException {
-        final int schemaId = getSchemaId(value);
-        ParsedSchema schema = null;
-        try {
-            schema = structureProvider.getSchemaById(schemaId);
-        } catch (final RestClientException ignore) {
-            //writing raw value if schema is not found
-        }
-
-        if (schema == null) {
-            return new SchemaAndId(Schema.createUnion(Schema.create(Schema.Type.BYTES),
-                Schema.create(Schema.Type.NULL)), schemaId);
-        } else {
-            return new SchemaAndId(Schema.createUnion((Schema) schema.rawSchema(), Schema.create(Schema.Type.NULL)),
-                schemaId);
-        }
-    }
-
-    private record SchemaAndId(Schema schema, Integer schemaId) { }
 
     private void writeRecordToIceberg(
         final IcebergWriter writer,
@@ -316,15 +311,15 @@ public class IcebergRemoteStorageManager extends InternalRemoteStorageManager {
 
         final GenericData.Record finalRecord = new GenericData.Record(parsedRecord.recordSchema());
         finalRecord.put("kafka", kafkaPart);
-        if (parsedRecord.keyRecord() != null) {
-            finalRecord.put("key", parsedRecord.keyRecord());
+        if (parsedRecord.key().record() != null) {
+            finalRecord.put("key", parsedRecord.key().record());
         } else {
-            finalRecord.put("key_raw", parsedRecord.rawKey);
+            finalRecord.put("key_raw", parsedRecord.key().raw());
         }
-        if (parsedRecord.keyRecord() != null) {
-            finalRecord.put("value", parsedRecord.valueRecord());
+        if (parsedRecord.value().record() != null) {
+            finalRecord.put("value", parsedRecord.value().record());
         } else {
-            finalRecord.put("value_raw", parsedRecord.rawValue);
+            finalRecord.put("value_raw", parsedRecord.value().raw());
         }
         finalRecord.put("headers", Arrays.asList(parsedRecord.headers()));
 
@@ -374,19 +369,12 @@ public class IcebergRemoteStorageManager extends InternalRemoteStorageManager {
                 new RecordBatchGrouper(new MultiFileReader(remoteFilePaths, dataFileMetadata -> {
                     final FileIO io = table.io();
 
-                    final Schema valueSchema;
-                    final Schema keySchema;
-                    try {
-                        keySchema =
-                            (Schema) structureProvider.getSchemaById(dataFileMetadata.keySchemaId()).rawSchema();
-                        valueSchema =
-                            (Schema) structureProvider.getSchemaById(dataFileMetadata.valueSchemaId()).rawSchema();
+                    final SchemaAndId<Schema> keySchema =
+                            structureProvider.getSchemaById(dataFileMetadata.keySchemaId());
+                    final SchemaAndId<Schema> valueSchema =
+                        structureProvider.getSchemaById(dataFileMetadata.valueSchemaId());
 
-                    } catch (final RestClientException e) {
-                        throw new RuntimeException(e);
-                    }
-
-                    final Schema recordSchema = RowSchema.createRowSchema(keySchema, valueSchema);
+                    final Schema recordSchema = RowSchema.createRowSchema(keySchema.schema(), valueSchema.schema());
 
                     return Parquet.read(io.newInputFile(dataFileMetadata.location()))
                         .project(table.schema())
