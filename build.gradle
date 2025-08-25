@@ -237,8 +237,8 @@ subprojects {
             maven {
                 name="sonatype"
 
-                def releasesRepoUrl = "https://oss.sonatype.org/service/local/staging/deploy/maven2"
-                def snapshotsRepoUrl = "https://oss.sonatype.org/content/repositories/snapshots"
+                def releasesRepoUrl = "https://ossrh-staging-api.central.sonatype.com/service/local/staging/deploy/maven2/"
+                def snapshotsRepoUrl = "https://ossrh-staging-api.central.sonatype.com/content/repositories/snapshots/"
                 url = version.endsWith('SNAPSHOT') ? snapshotsRepoUrl : releasesRepoUrl
 
                 credentials(PasswordCredentials)
@@ -249,6 +249,8 @@ subprojects {
                 from components.java
 
                 pom {
+                    name = 'Aiven Tiered storage for Apache Kafka'
+                    description = 'Aiven Tiered storage for Apache Kafka'
                     url = "https://github.com/Aiven-Open/tiered-storage-for-apache-kafka"
                     organization {
                         name = "Aiven Oy"
