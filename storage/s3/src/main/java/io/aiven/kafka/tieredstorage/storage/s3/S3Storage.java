@@ -50,6 +50,7 @@ public class S3Storage implements StorageBackend {
     private String bucketName;
     private StorageClass storageClass;
     private int partSize;
+    private boolean contentMd5Enabled; // 新增字段
 
     @Override
     public void configure(final Map<String, ?> configs) {
@@ -58,6 +59,7 @@ public class S3Storage implements StorageBackend {
         this.bucketName = config.bucketName();
         this.storageClass = config.storageClass();
         this.partSize = config.uploadPartSize();
+        this.contentMd5Enabled = config.contentMd5Enabled(); // 读取配置
     }
 
     @Override
@@ -89,25 +91,28 @@ public class S3Storage implements StorageBackend {
     @Override
     public void delete(final Set<ObjectKey> keys) throws StorageBackendException {
         final List<ObjectKey> objectKeys = new ArrayList<>(keys);
-
         for (int i = 0; i < objectKeys.size(); i += MAX_DELETE_OBJECTS) {
             final var batch = objectKeys.subList(
                 i,
                 Math.min(i + MAX_DELETE_OBJECTS, objectKeys.size())
             );
-
             final List<ObjectIdentifier> objectIds = batch.stream()
                 .map(k -> ObjectIdentifier.builder().key(k.value()).build())
                 .collect(Collectors.toList());
             final Delete deleteObjects = Delete.builder().objects(objectIds).build();
-            final DeleteObjectsRequest deleteObjectsRequest = DeleteObjectsRequest.builder()
+            DeleteObjectsRequest.Builder deleteObjectsRequestBuilder = DeleteObjectsRequest.builder()
                 .bucket(bucketName)
-                .delete(deleteObjects)
-                .build();
-
+                .delete(deleteObjects);
+            // 新增：根据配置加Content-MD5（通过overrideConfiguration加header）
+            if (contentMd5Enabled) {
+                String contentMd5 = S3DeleteUtils.computeDeleteObjectsContentMd5(objectIds);
+                deleteObjectsRequestBuilder = deleteObjectsRequestBuilder.overrideConfiguration(
+                    b -> b.putHeader("Content-MD5", contentMd5)
+                );
+            }
+            final DeleteObjectsRequest deleteObjectsRequest = deleteObjectsRequestBuilder.build();
             try {
                 final DeleteObjectsResponse response = s3Client.deleteObjects(deleteObjectsRequest);
-
                 if (!response.errors().isEmpty()) {
                     final StringBuilder errorMsg = new StringBuilder("Failed to delete keys: ");
                     response.errors()

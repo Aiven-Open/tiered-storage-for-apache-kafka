@@ -99,6 +99,8 @@ public class S3StorageConfig extends AbstractConfig {
             + "When set to \"false\", there will be no validation. "
             + "It is disabled by default as Kafka already validates integrity of the files.";
 
+    public static final String CONTENT_MD5_ENABLED_CONFIG = "s3.compatibility.content-md5.enabled";
+    private static final String CONTENT_MD5_ENABLED_DOC = "Whether to generate and send Content-MD5 header for DeleteObjects requests. Default: false.";
 
     public static ConfigDef configDef() {
         return new ConfigDef()
@@ -189,7 +191,13 @@ public class S3StorageConfig extends AbstractConfig {
                 false,
                 ConfigDef.Importance.MEDIUM,
                 AWS_CHECKSUM_CHECK_ENABLED_DOC
-            );
+            )
+            .define(
+                CONTENT_MD5_ENABLED_CONFIG,
+                ConfigDef.Type.BOOLEAN,
+                false,
+                ConfigDef.Importance.LOW,
+                CONTENT_MD5_ENABLED_DOC);
     }
 
     public S3StorageConfig(final Map<String, ?> props) {
@@ -283,6 +291,10 @@ public class S3StorageConfig extends AbstractConfig {
 
     public int uploadPartSize() {
         return getInt(S3_MULTIPART_UPLOAD_PART_SIZE_CONFIG);
+    }
+
+    public boolean contentMd5Enabled() {
+        return this.getBoolean(CONTENT_MD5_ENABLED_CONFIG);
     }
 
     URI s3ServiceEndpoint() {
