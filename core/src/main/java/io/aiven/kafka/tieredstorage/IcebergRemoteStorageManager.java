@@ -326,8 +326,13 @@ public class IcebergRemoteStorageManager extends InternalRemoteStorageManager {
         } else {
             finalRecord.put("value_raw", parsedRecord.rawValue);
         }
-        finalRecord.put("headers", Arrays.asList(parsedRecord.headers()));
-
+        finalRecord.put("headers",
+                Arrays.stream(parsedRecord.headers()).map(header -> {
+                    final GenericData.Record record = new GenericData.Record(RowSchema.HEADER);
+                    record.put(RowSchema.Fields.HEADER_KEY, header.key());
+                    record.put(RowSchema.Fields.HEADER_VALUE, header.value());
+                    return record;
+                }).toList());
         writer.write(finalRecord);
     }
 
