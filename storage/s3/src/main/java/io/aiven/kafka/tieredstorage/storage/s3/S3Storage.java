@@ -59,7 +59,7 @@ public class S3Storage implements StorageBackend {
         this.bucketName = config.bucketName();
         this.storageClass = config.storageClass();
         this.partSize = config.uploadPartSize();
-        this.contentMd5Enabled = config.contentMd5Enabled(); // 读取配置
+        this.contentMd5Enabled = config.contentMd5Enabled();
     }
 
     @Override
