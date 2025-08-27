@@ -19,10 +19,10 @@ package io.aiven.kafka.tieredstorage.storage.s3;
 import software.amazon.awssdk.services.s3.model.ObjectIdentifier;
 
 import java.nio.charset.StandardCharsets;
-import java.security.MessageDigest;
 import java.util.Base64;
 import java.util.List;
 import java.util.Objects;
+import java.security.MessageDigest;
 
 /**
  * Helper utilities for S3 delete operations.
