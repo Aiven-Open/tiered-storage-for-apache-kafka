@@ -16,8 +16,8 @@
 
 package io.aiven.kafka.tieredstorage.storage.s3;
 
-import java.security.MessageDigest;
 import java.nio.charset.StandardCharsets;
+import java.security.MessageDigest;
 import java.util.Base64;
 import java.util.List;
 import java.util.Objects;
