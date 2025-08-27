@@ -105,7 +105,7 @@ public class S3Storage implements StorageBackend {
                 .delete(deleteObjects);
             // 新增：根据配置加Content-MD5（通过overrideConfiguration加header）
             if (contentMd5Enabled) {
-                String contentMd5 = S3DeleteUtils.computeDeleteObjectsContentMd5(objectIds);
+                final String contentMd5 = S3DeleteUtils.computeDeleteObjectsContentMd5(objectIds);
                 deleteObjectsRequestBuilder = deleteObjectsRequestBuilder.overrideConfiguration(
                     b -> b.putHeader("Content-MD5", contentMd5)
                 );

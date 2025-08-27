@@ -15,24 +15,28 @@
  */
 package io.aiven.kafka.tieredstorage.storage.s3;
 
+import software.amazon.awssdk.services.s3.model.ObjectIdentifier;
+
 import java.nio.charset.StandardCharsets;
 import java.security.MessageDigest;
 import java.util.Base64;
 import java.util.List;
 import java.util.Objects;
-import software.amazon.awssdk.services.s3.model.ObjectIdentifier;
 
 /**
  * Helper utilities for S3 delete operations.
- *
  * Package-private helper to build Delete XML and compute Content-MD5 for DeleteObjects requests.
  */
 final class S3DeleteUtils {
-    private S3DeleteUtils() {}
+
+    private S3DeleteUtils() {
+    }
 
     // Escape XML special characters for the Key element.
     static String escapeXml(String s) {
-        if (s == null) return "";
+        if (s == null) {
+            return "";
+        }
         // Order matters: ampersand first.
         return s.replace("&", "&amp;")
                 .replace("<", "&lt;")
@@ -48,7 +52,7 @@ final class S3DeleteUtils {
     static String computeDeleteObjectsContentMd5(final List<ObjectIdentifier> objectIdentifiers) {
         Objects.requireNonNull(objectIdentifiers, "objectIdentifiers must not be null");
 
-        StringBuilder sb = new StringBuilder();
+        final StringBuilder sb = new StringBuilder();
         sb.append("<Delete>");
         for (ObjectIdentifier id : objectIdentifiers) {
             sb.append("<Object><Key>")
@@ -57,10 +61,10 @@ final class S3DeleteUtils {
         }
         sb.append("</Delete>");
 
-        byte[] xmlBytes = sb.toString().getBytes(StandardCharsets.UTF_8);
+        final byte[] xmlBytes = sb.toString().getBytes(StandardCharsets.UTF_8);
         try {
-            MessageDigest md = MessageDigest.getInstance("MD5");
-            byte[] digest = md.digest(xmlBytes);
+            final MessageDigest md = MessageDigest.getInstance("MD5");
+            final byte[] digest = md.digest(xmlBytes);
             return Base64.getEncoder().encodeToString(digest);
         } catch (Exception e) {
             throw new RuntimeException("Failed to compute MD5 for Delete XML", e);
