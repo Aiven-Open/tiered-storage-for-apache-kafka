@@ -509,6 +509,13 @@ S3StorageConfig
   * Valid Values: null or [1,...,9223372036854775807]
   * Importance: low
 
+``s3.compatibility.content-md5.enabled``
+  Whether to generate and send Content-MD5 header for DeleteObjects requests. Default: false.
+
+  * Type: boolean
+  * Default: false
+  * Importance: low
+
 ``s3.endpoint.url``
   Custom S3 endpoint URL. To be used with custom S3-compatible backends (e.g. minio).
 
