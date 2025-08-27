@@ -100,8 +100,8 @@ public class S3StorageConfig extends AbstractConfig {
             + "It is disabled by default as Kafka already validates integrity of the files.";
 
     public static final String CONTENT_MD5_ENABLED_CONFIG = "s3.compatibility.content-md5.enabled";
-    private static final String CONTENT_MD5_ENABLED_DOC = "Whether to generate and send Content-MD5 header for " +
-            "DeleteObjects requests. Default: false.";
+    private static final String CONTENT_MD5_ENABLED_DOC = "Whether to generate and send Content-MD5 header for "
+            + "DeleteObjects requests. Default: false.";
 
     public static ConfigDef configDef() {
         return new ConfigDef()

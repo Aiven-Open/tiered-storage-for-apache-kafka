@@ -13,15 +13,16 @@
  * See the License for the specific language governing permissions and
  * limitations under the License.
  */
+
 package io.aiven.kafka.tieredstorage.storage.s3;
 
 import software.amazon.awssdk.services.s3.model.ObjectIdentifier;
 
-import java.nio.charset.StandardCharsets;
 import java.security.MessageDigest;
 import java.util.Base64;
 import java.util.List;
 import java.util.Objects;
+import java.nio.charset.StandardCharsets;
 
 /**
  * Helper utilities for S3 delete operations.
@@ -33,7 +34,7 @@ final class S3DeleteUtils {
     }
 
     // Escape XML special characters for the Key element.
-    static String escapeXml(String s) {
+    static String escapeXml(final String s) {
         if (s == null) {
             return "";
         }
@@ -54,7 +55,7 @@ final class S3DeleteUtils {
 
         final StringBuilder sb = new StringBuilder();
         sb.append("<Delete>");
-        for (ObjectIdentifier id : objectIdentifiers) {
+        for (final ObjectIdentifier id : objectIdentifiers) {
             sb.append("<Object><Key>")
                     .append(escapeXml(id.key()))
                     .append("</Key></Object>");
@@ -66,7 +67,7 @@ final class S3DeleteUtils {
             final MessageDigest md = MessageDigest.getInstance("MD5");
             final byte[] digest = md.digest(xmlBytes);
             return Base64.getEncoder().encodeToString(digest);
-        } catch (Exception e) {
+        } catch (final Exception e) {
             throw new RuntimeException("Failed to compute MD5 for Delete XML", e);
         }
     }
