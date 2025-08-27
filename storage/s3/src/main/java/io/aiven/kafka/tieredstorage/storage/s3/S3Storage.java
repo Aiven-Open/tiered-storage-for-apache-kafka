@@ -50,7 +50,7 @@ public class S3Storage implements StorageBackend {
     private String bucketName;
     private StorageClass storageClass;
     private int partSize;
-    private boolean contentMd5Enabled; // 新增字段
+    private boolean contentMd5Enabled;
 
     @Override
     public void configure(final Map<String, ?> configs) {
@@ -59,7 +59,7 @@ public class S3Storage implements StorageBackend {
         this.bucketName = config.bucketName();
         this.storageClass = config.storageClass();
         this.partSize = config.uploadPartSize();
-        this.contentMd5Enabled = config.contentMd5Enabled(); // 读取配置
+        this.contentMd5Enabled = config.contentMd5Enabled();
     }
 
     @Override
