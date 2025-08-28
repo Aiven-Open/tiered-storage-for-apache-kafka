@@ -76,6 +76,15 @@ public class S3StorageConfig extends AbstractConfig {
     private static final String S3_API_CALL_ATTEMPT_TIMEOUT_CONFIG = "s3.api.call.attempt.timeout";
     private static final String S3_API_CALL_ATTEMPT_TIMEOUT_DOC = "AWS S3 API call attempt "
         + "(single retry) timeout in milliseconds";
+    public static final String S3_LEGACY_MD5_PLUGIN_ENABLED_CONFIG = "s3.legacy.md5.plugin.enabled";
+    private static final String S3_LEGACY_MD5_PLUGIN_ENABLED_DOC=
+        "This property is used to enable legacy MD5 plugin. "
+            + "AWS SDK version 2.30.0 introduced integrity protections that are not backward compatible. "
+            + "It is disabled by default since newer version of S3-compatible storages have support "
+            + "for these new integrity protections. It should be enabled when there is a need to access "
+            + "older S3-compatible object storages that depend on the legacy MD5 checksum.";
+
+
     public static final String AWS_CREDENTIALS_PROVIDER_CLASS_CONFIG = "aws.credentials.provider.class";
     private static final String AWS_CREDENTIALS_PROVIDER_CLASS_DOC = "AWS credentials provider. "
         + "If not set, AWS SDK uses the default "
@@ -189,6 +198,12 @@ public class S3StorageConfig extends AbstractConfig {
                 false,
                 ConfigDef.Importance.MEDIUM,
                 AWS_CHECKSUM_CHECK_ENABLED_DOC
+            )
+            .define(S3_LEGACY_MD5_PLUGIN_ENABLED_CONFIG,
+                ConfigDef.Type.BOOLEAN,
+                false,
+                ConfigDef.Importance.MEDIUM,
+                S3_LEGACY_MD5_PLUGIN_ENABLED_DOC
             );
     }
 
@@ -301,5 +316,9 @@ public class S3StorageConfig extends AbstractConfig {
         } else {
             return null;
         }
+    }
+
+    public boolean legacyMd5PluginEnabled() {
+        return getBoolean(S3_LEGACY_MD5_PLUGIN_ENABLED_CONFIG);
     }
 }

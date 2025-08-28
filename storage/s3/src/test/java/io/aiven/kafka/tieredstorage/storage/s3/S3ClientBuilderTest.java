@@ -22,7 +22,9 @@ import java.util.Map;
 
 import org.junit.jupiter.api.Test;
 import software.amazon.awssdk.auth.credentials.EnvironmentVariableCredentialsProvider;
+import software.amazon.awssdk.core.interceptor.ExecutionInterceptor;
 import software.amazon.awssdk.regions.Region;
+import software.amazon.awssdk.services.s3.internal.handlers.LegacyMd5ExecutionInterceptor;
 
 import static org.assertj.core.api.Assertions.assertThat;
 
@@ -45,6 +47,9 @@ class S3ClientBuilderTest {
             .allSatisfy(metricPublisher -> assertThat(metricPublisher).isInstanceOf(MetricCollector.class));
         assertThat(clientConfiguration.overrideConfiguration().apiCallTimeout()).isEmpty();
         assertThat(clientConfiguration.overrideConfiguration().apiCallAttemptTimeout()).isEmpty();
+        assertThat(clientConfiguration.overrideConfiguration().toBuilder().executionInterceptors())
+            .extracting(ExecutionInterceptor::getClass)
+            .doesNotHaveAnyElementsOfTypes(LegacyMd5ExecutionInterceptor.class);
     }
 
     @Test
@@ -132,5 +137,20 @@ class S3ClientBuilderTest {
         assertThat(clientConfiguration.overrideConfiguration().apiCallTimeout()).hasValue(Duration.ofMillis(5000));
         assertThat(clientConfiguration.overrideConfiguration().apiCallAttemptTimeout())
             .hasValue(Duration.ofMillis(1000));
+    }
+
+    @Test
+    void withLegacyMd5Enabled() {
+        final var configs = Map.of(
+                "s3.bucket.name", "b",
+                "s3.region", TEST_REGION.id(),
+                "s3.legacy.md5.plugin.enabled", true
+        );
+        final var config = new S3StorageConfig(configs);
+        final var s3Client = S3ClientBuilder.build(config);
+        final var clientConfiguration = s3Client.serviceClientConfiguration();
+        assertThat(clientConfiguration.overrideConfiguration().toBuilder().executionInterceptors())
+                .extracting(ExecutionInterceptor::getClass)
+                .doesNotHaveAnyElementsOfTypes(LegacyMd5ExecutionInterceptor.class);
     }
 }
