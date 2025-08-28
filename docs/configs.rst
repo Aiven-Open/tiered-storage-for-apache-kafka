@@ -470,6 +470,13 @@ S3StorageConfig
   * Valid Values: Non-empty password text
   * Importance: medium
 
+``s3.legacy.md5.plugin.enabled``
+  This property is used to enable legacy MD5 plugin. AWS SDK version 2.30.0 introduced integrity protections that are not backward compatible. It is disabled by default since newer version of S3-compatible storages have support for these new integrity protections. It should be enabled when there is a need to access older S3-compatible object storages that depend on the legacy MD5 checksum.
+
+  * Type: boolean
+  * Default: false
+  * Importance: medium
+
 ``s3.multipart.upload.part.size``
   Size of parts in bytes to use when uploading. All parts but the last one will have this size. The smaller the part size, the more calls to S3 are needed to upload a file; increasing costs. The higher the part size, the more memory is needed to buffer the part. Valid values: between 5MiB and 2GiB
 
@@ -529,7 +536,7 @@ S3StorageConfig
 
   * Type: string
   * Default: STANDARD
-  * Valid Values: [STANDARD, REDUCED_REDUNDANCY, STANDARD_IA, ONEZONE_IA, INTELLIGENT_TIERING, GLACIER, DEEP_ARCHIVE, OUTPOSTS, GLACIER_IR, SNOW, EXPRESS_ONEZONE]
+  * Valid Values: [STANDARD, REDUCED_REDUNDANCY, STANDARD_IA, ONEZONE_IA, INTELLIGENT_TIERING, GLACIER, DEEP_ARCHIVE, OUTPOSTS, GLACIER_IR, SNOW, EXPRESS_ONEZONE, FSX_OPENZFS]
   * Importance: low
 
 
