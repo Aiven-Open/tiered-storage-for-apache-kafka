@@ -99,6 +99,7 @@ subprojects {
         outputFormats.addAll('XML', 'HTML')
         mutators.add('ALL')
         exportLineCoverage = true
+        addJUnitPlatformLauncher = false
         if (project.name in ['storage']) {
             failWhenNoMutations = false
         }
