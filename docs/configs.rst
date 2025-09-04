@@ -381,7 +381,7 @@ AzureBlobStorageStorageConfig
 
 
 -----------------
-AzureBlobStorageStorageConfig
+GoogleCloudStorageStorageConfig
 -----------------
 ``gcs.bucket.name``
   GCS bucket to store log segments
