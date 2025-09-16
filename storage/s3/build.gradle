@@ -28,6 +28,8 @@ dependencies {
     }
     implementation ("software.amazon.awssdk:s3:$awsSdkVersion") {excludeFromAWSDeps(it)}
     runtimeOnly ("software.amazon.awssdk:sts:$awsSdkVersion") {excludeFromAWSDeps(it)}
+    // TODO: Needed for Iceberg. We need to figure out how to manage Iceberg-specific dependencies.
+    runtimeOnly ("software.amazon.awssdk:kms:$awsSdkVersion") {excludeFromAWSDeps(it)}
 
     implementation project(':commons')
 
