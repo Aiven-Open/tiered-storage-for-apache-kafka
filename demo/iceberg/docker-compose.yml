@@ -134,26 +134,86 @@ services:
       - CATALOG_IO__IMPL=org.apache.iceberg.aws.s3.S3FileIO
       - CATALOG_S3_ENDPOINT=http://minio:9000
 
-  # Spark
-  spark:
-    image: tabulario/spark-iceberg:3.5.5_1.8.1
-    networks:
-      iceberg_demo:
-    depends_on:
-      - rest
-      - minio
-    volumes:
-#      - ./warehouse:/home/iceberg/warehouse
-      - ./notebooks:/home/iceberg/notebooks/notebooks
+  # PostgreSQL for Nimtable
+  nimtable-db:
+    image: postgres:15
+    container_name: nimtable-db
+    ports:
+      - "5433:5432"
     environment:
+      POSTGRES_DB: nimtable
+      POSTGRES_USER: nimtable_user
+      POSTGRES_PASSWORD: password
+    tmpfs:
+      - /var/lib/postgresql/data
+    healthcheck:
+      test: [ "CMD-SHELL", "pg_isready -U nimtable_user -d nimtable" ]
+      interval: 3s
+      timeout: 5s
+      retries: 3
+      start_period: 10s
+    networks:
+      - iceberg_demo
+
+  # Nimtable
+  nimtable:
+    image: ghcr.io/nimtable/nimtable:nightly
+    container_name: nimtable
+    ports:
+      - "8182:8182"
+    environment:
+      - JAVA_OPTS=-Xmx2g -Xms512m
+      - AWS_REGION=us-east-1
       - AWS_ACCESS_KEY_ID=admin
       - AWS_SECRET_ACCESS_KEY=password
-      - AWS_REGION=us-east-1
+    configs:
+      - source: nimtable_config
+        target: /nimtable/config.yaml
+    depends_on:
+      nimtable-db:
+        condition: service_healthy
+    networks:
+      - iceberg_demo
+
+  # Nimtable Web UI
+  nimtable-web:
+    image: ghcr.io/nimtable/nimtable-web:nightly
+    container_name: nimtable-web
     ports:
-      - 8888:8888
-      - 8080:8080
-      - 10000:10000
-      - 10001:10001
+      - "3000:3000"
+    environment:
+      - JAVA_API_URL=http://nimtable:8182
+      - DATABASE_URL=postgresql://nimtable_user:password@nimtable-db:5432/nimtable
+      - JWT_SECRET=demo-secret-key
+      - ADMIN_USERNAME=admin
+      - ADMIN_PASSWORD=admin
+    depends_on:
+      - nimtable
+      - nimtable-db
+    networks:
+      - iceberg_demo
+
+configs:
+  nimtable_config:
+    content: |
+      server:
+        port: 8182
+        host: 0.0.0.0
+      database:
+        url: jdbc:postgresql://nimtable-db:5432/nimtable
+        username: nimtable_user
+        password: password
+      catalogs:
+        - name: rest
+          type: rest
+          uri: http://rest:8181
+          warehouse: warehouse
+          io-impl: org.apache.iceberg.aws.s3.S3FileIO
+          s3.endpoint: http://minio:9000
+          s3.access-key-id: admin
+          s3.secret-access-key: password
+          s3.region: us-east-1
+          s3.path-style-access: true
 
 networks:
   iceberg_demo:
