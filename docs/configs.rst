@@ -462,8 +462,23 @@ S3StorageConfig
   * Default: false
   * Importance: medium
 
+``aws.credentials.file``
+  This property is used to define a file where credentials are defined. The file might be updated during process life cycle, and the credentials will be reloaded from the file.
+
+  * Type: string
+  * Default: null
+  * Importance: medium
+
 ``aws.secret.access.key``
   AWS secret access key. To be used when static credentials are provided.
+
+  * Type: password
+  * Default: null
+  * Valid Values: Non-empty password text
+  * Importance: medium
+
+``aws.session.token``
+  The AWS session token. Retrieved from an AWS token service, used for authenticating that this user has received temporary permission to access some resource.
 
   * Type: password
   * Default: null
