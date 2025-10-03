@@ -542,6 +542,47 @@ S3StorageConfig
 
 
 -----------------
+OciStorageConfig
+-----------------
+``oci.bucket.name``
+  oci bucket to store log segments
+
+  * Type: string
+  * Valid Values: non-empty string
+  * Importance: high
+
+``oci.namespace.name``
+  oci namespace which the bucket belongs to
+
+  * Type: string
+  * Valid Values: non-empty string
+  * Importance: high
+
+``oci.region``
+  OCI region where the bucket is placed
+
+  * Type: string
+  * Importance: high
+
+``oci.multipart.upload.part.size``
+  Size of parts in bytes to use when uploading. All parts but the last one will have this size. The smaller the part size, the more calls to oci are needed to upload a file; increasing costs. The higher the part size, the more memory is needed to buffer the part. Valid values: between 5MiB and 2GiB
+
+  * Type: int
+  * Default: 26214400
+  * Valid Values: [5242880,...,2147483647]
+  * Importance: medium
+
+``oci.storage.tier``
+  Defines which storage tier to use when uploading objects
+
+  * Type: string
+  * Default: UnknownEnumValue
+  * Valid Values: [Standard, InfrequentAccess, Archive, UnknownEnumValue]
+  * Importance: medium
+
+
+
+-----------------
 FilesystemStorageConfig
 -----------------
 .. Only for development/testing purposes

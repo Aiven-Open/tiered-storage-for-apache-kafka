@@ -14,10 +14,7 @@
  * limitations under the License.
  */
 
-package io.aiven.kafka.tieredstorage.storage.s3;
-
-import org.slf4j.Logger;
-import org.slf4j.LoggerFactory;
+package io.aiven.kafka.tieredstorage.storage.upload;
 
 import java.io.IOException;
 import java.io.InputStream;
@@ -26,11 +23,15 @@ import java.nio.ByteBuffer;
 import java.util.ArrayList;
 import java.util.List;
 
+import org.slf4j.Logger;
+import org.slf4j.LoggerFactory;
+
 /**
+ * Enable uploads to object storage (such as S3) when the total size is unknown.
+ * Feed input bytes to multiple parts or as a single file for upload.
  *
- * Enable uploads to object storage (such as s3) with unknown size by feeding input bytes to multiple parts or single file and upload.
- *
- * <p>Requires object storage client and starts a multipart transaction when sending file over upload part size. Do not reuse.
+ * <p>Requires an object storage client and starts a multipart transaction when sending file over upload part size.
+ * Do not reuse.
  *
  * <p>{@link AbstractUploadOutputStream} is not thread-safe.
  */
@@ -41,7 +42,7 @@ public abstract class AbstractUploadOutputStream<T> extends OutputStream {
     private final ByteBuffer partBuffer;
     private final String bucketName;
     private final String key;
-    final int partSize;
+    private final int partSize;
 
     private String uploadId;
     private final List<T> completedParts = new ArrayList<>();
@@ -159,13 +160,19 @@ public abstract class AbstractUploadOutputStream<T> extends OutputStream {
      * Upload the {@code size} of {@code inputStream} as one whole single file to object storage.
      * The caller of this method should be responsible for closing the inputStream.
      */
-    protected abstract void uploadAsSingleFile(final String bucket, final String key, final InputStream inputStream, final int size);
+    protected abstract void uploadAsSingleFile(final String bucketName,
+                                               final String key,
+                                               final InputStream inputStream,
+                                               final int size);
 
     public boolean isClosed() {
         return closed;
     }
 
-    protected abstract void completeUpload(List<T> completedParts, String bucketName, String key, String uploadId);
+    protected abstract void completeUpload(List<T> completedParts,
+                                           String bucketName,
+                                           String key,
+                                           String uploadId);
 
     protected abstract void abortUpload(String bucketName, String key, String uploadId);
 
@@ -185,13 +192,23 @@ public abstract class AbstractUploadOutputStream<T> extends OutputStream {
     }
 
     private void uploadPart(final InputStream in, final int actualPartSize) {
-        final T completedPart = _uploadPart(this.bucketName, this.key, this.uploadId, completedParts.size() + 1, in, actualPartSize);
+        final int partNumber = completedParts.size() + 1;
+        final T completedPart = _uploadPart(this.bucketName, this.key, this.uploadId, partNumber, in, actualPartSize);
         completedParts.add(completedPart);
     }
 
-    protected abstract T _uploadPart(String bucket, String key, String uploadId, int partNumber, final InputStream in, final int actualPartSize);
+    protected abstract T _uploadPart(final String bucketName,
+                                     final String key,
+                                     final String uploadId,
+                                     final int partNumber,
+                                     final InputStream in,
+                                     final int actualPartSize);
 
-    long processedBytes() {
+    public long processedBytes() {
         return processedBytes;
+    }
+
+    public int partSize() {
+        return partSize;
     }
 }

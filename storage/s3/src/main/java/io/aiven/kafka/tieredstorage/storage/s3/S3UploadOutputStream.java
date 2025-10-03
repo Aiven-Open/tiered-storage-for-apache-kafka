@@ -19,8 +19,8 @@ package io.aiven.kafka.tieredstorage.storage.s3;
 import java.io.InputStream;
 import java.util.List;
 
-
 import io.aiven.kafka.tieredstorage.storage.ObjectKey;
+import io.aiven.kafka.tieredstorage.storage.upload.AbstractUploadOutputStream;
 
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
@@ -36,7 +36,6 @@ import software.amazon.awssdk.services.s3.model.PutObjectRequest;
 import software.amazon.awssdk.services.s3.model.StorageClass;
 import software.amazon.awssdk.services.s3.model.UploadPartRequest;
 import software.amazon.awssdk.services.s3.model.UploadPartResponse;
-
 
 public class S3UploadOutputStream extends AbstractUploadOutputStream<CompletedPart> {
 
@@ -63,7 +62,7 @@ public class S3UploadOutputStream extends AbstractUploadOutputStream<CompletedPa
     }
 
     @Override
-    protected String createMultipartUploadRequest(String bucketName, String key) {
+    protected String createMultipartUploadRequest(final String bucketName, final String key) {
         final CreateMultipartUploadRequest initialRequest = CreateMultipartUploadRequest.builder().bucket(bucketName)
                 .storageClass(storageClass)
                 .key(key).build();
@@ -72,7 +71,10 @@ public class S3UploadOutputStream extends AbstractUploadOutputStream<CompletedPa
         return initiateResult.uploadId();
     }
 
-    protected void uploadAsSingleFile(final String bucketName, final String key, final InputStream inputStream, final int size) {
+    protected void uploadAsSingleFile(final String bucketName,
+                                      final String key,
+                                      final InputStream inputStream,
+                                      final int size) {
         final PutObjectRequest putObjectRequest = PutObjectRequest.builder().bucket(bucketName)
             .storageClass(storageClass)
             .key(key)
@@ -82,7 +84,12 @@ public class S3UploadOutputStream extends AbstractUploadOutputStream<CompletedPa
     }
 
     @Override
-    protected CompletedPart _uploadPart(String bucketName, String key, String uploadId, int partNumber, final InputStream in, final int actualPartSize) {
+    protected CompletedPart _uploadPart(final String bucketName,
+                                        final String key,
+                                        final String uploadId,
+                                        final int partNumber,
+                                        final InputStream in,
+                                        final int actualPartSize) {
         final UploadPartRequest uploadPartRequest =
                 UploadPartRequest.builder()
                         .bucket(bucketName)
@@ -100,7 +107,7 @@ public class S3UploadOutputStream extends AbstractUploadOutputStream<CompletedPa
     }
 
     @Override
-    protected void abortUpload(String bucketName, String key, String uploadId) {
+    protected void abortUpload(final String bucketName, final String key, final String uploadId) {
         final var request = AbortMultipartUploadRequest.builder()
                 .bucket(bucketName)
                 .key(key)
@@ -110,7 +117,10 @@ public class S3UploadOutputStream extends AbstractUploadOutputStream<CompletedPa
     }
 
     @Override
-    protected void completeUpload(List<CompletedPart> completedParts, String bucketName, String key, String uploadId) {
+    protected void completeUpload(final List<CompletedPart> completedParts,
+                                  final String bucketName,
+                                  final String key,
+                                  final String uploadId) {
         final CompletedMultipartUpload completedMultipartUpload = CompletedMultipartUpload.builder()
             .parts(completedParts)
             .build();

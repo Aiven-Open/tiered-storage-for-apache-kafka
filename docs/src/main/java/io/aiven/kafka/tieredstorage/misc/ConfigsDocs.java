@@ -27,6 +27,7 @@ import io.aiven.kafka.tieredstorage.fetch.manifest.MemorySegmentManifestCache;
 import io.aiven.kafka.tieredstorage.storage.azure.AzureBlobStorageConfig;
 import io.aiven.kafka.tieredstorage.storage.filesystem.FileSystemStorageConfig;
 import io.aiven.kafka.tieredstorage.storage.gcs.GcsStorageConfig;
+import io.aiven.kafka.tieredstorage.storage.oci.OciStorageConfig;
 import io.aiven.kafka.tieredstorage.storage.s3.S3StorageConfig;
 
 import static io.aiven.kafka.tieredstorage.config.ChunkManagerFactoryConfig.FETCH_CHUNK_CACHE_PREFIX;
@@ -94,6 +95,11 @@ public class ConfigsDocs {
         printSubsectionTitle("S3StorageConfig");
         final var s3StorageConfigDef = S3StorageConfig.configDef();
         out.println(s3StorageConfigDef.toEnrichedRst());
+        out.println();
+
+        printSubsectionTitle("OciStorageConfig");
+        final var ociStorageConfigDef = OciStorageConfig.configDef();
+        out.println(ociStorageConfigDef.toEnrichedRst());
         out.println();
 
         printSubsectionTitle("FilesystemStorageConfig");

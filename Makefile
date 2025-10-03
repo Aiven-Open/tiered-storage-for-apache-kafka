@@ -28,13 +28,16 @@ clean:
 checkstyle:
 	./gradlew checkstyleMain checkstyleTest checkstyleIntegrationTest
 
-build: build/distributions/tiered-storage-for-apache-kafka-$(VERSION).tgz storage/s3/build/distributions/s3-$(VERSION).tgz storage/gcs/build/distributions/gcs-$(VERSION).tgz storage/azure/build/distributions/azure-$(VERSION).tgz
+build: build/distributions/tiered-storage-for-apache-kafka-$(VERSION).tgz storage/s3/build/distributions/s3-$(VERSION).tgz storage/oci/build/distributions/oci-$(VERSION).tgz storage/gcs/build/distributions/gcs-$(VERSION).tgz storage/azure/build/distributions/azure-$(VERSION).tgz
 
 build/distributions/tiered-storage-for-apache-kafka-$(VERSION).tgz:
 	./gradlew build distTar -x test -x integrationTest
 
 storage/s3/build/distributions/s3-$(VERSION).tgz:
 	./gradlew build :storage:s3:distTar -x test -x integrationTest
+
+storage/oci/build/distributions/oci-$(VERSION).tgz:
+	./gradlew build :storage:oci:distTar -x test -x integrationTest
 
 storage/gcs/build/distributions/gcs-$(VERSION).tgz:
 	./gradlew build :storage:gcs:distTar -x test -x integrationTest

@@ -21,6 +21,7 @@ dependencies {
     implementation "org.apache.kafka:kafka-clients:$kafkaVersion"
     implementation project(":core")
     implementation project(":storage:s3")
+    implementation project(":storage:oci")
     implementation project(":storage:gcs")
     implementation project(":storage:azure")
     implementation project(":storage:filesystem")
