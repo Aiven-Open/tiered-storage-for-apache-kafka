@@ -35,6 +35,7 @@ import io.aiven.kafka.tieredstorage.config.validators.ValidUrl;
 import software.amazon.awssdk.auth.credentials.AwsBasicCredentials;
 import software.amazon.awssdk.auth.credentials.AwsCredentials;
 import software.amazon.awssdk.auth.credentials.AwsCredentialsProvider;
+import software.amazon.awssdk.auth.credentials.AwsSessionCredentials;
 import software.amazon.awssdk.auth.credentials.StaticCredentialsProvider;
 import software.amazon.awssdk.regions.Region;
 import software.amazon.awssdk.services.s3.model.StorageClass;
@@ -95,6 +96,15 @@ public class S3StorageConfig extends AbstractConfig {
     public static final String AWS_SECRET_ACCESS_KEY_CONFIG = "aws.secret.access.key";
     private static final String AWS_SECRET_ACCESS_KEY_DOC = "AWS secret access key. "
         + "To be used when static credentials are provided.";
+    public static final String AWS_SESSION_TOKEN_CONFIG = "aws.session.token";
+    private static final String AWS_SESSION_TOKEN_DOC = "The AWS session token. "
+        + "Retrieved from an AWS token service, used for authenticating that this user has"
+        + " received temporary permission to access some resource.";
+    public static final String AWS_CREDENTIALS_FILE_CONFIG = "aws.credentials.file";
+    private static final String AWS_CREDENTIALS_FILE_DOC =
+        "This property is used to define a file where credentials are defined. "
+            + "The file might be updated during process life cycle, "
+            + "and the credentials will be reloaded from the file.";
     public static final String AWS_CERTIFICATE_CHECK_ENABLED_CONFIG = "aws.certificate.check.enabled";
     private static final String AWS_CERTIFICATE_CHECK_ENABLED_DOC =
         "This property is used to enable SSL certificate checking for AWS services. "
@@ -187,6 +197,20 @@ public class S3StorageConfig extends AbstractConfig {
                 new NonEmptyPassword(),
                 ConfigDef.Importance.MEDIUM,
                 AWS_SECRET_ACCESS_KEY_DOC)
+            .define(
+                AWS_SESSION_TOKEN_CONFIG,
+                ConfigDef.Type.PASSWORD,
+                null,
+                new NonEmptyPassword(),
+                ConfigDef.Importance.MEDIUM,
+                AWS_SESSION_TOKEN_DOC)
+            .define(
+                AWS_CREDENTIALS_FILE_CONFIG,
+                ConfigDef.Type.STRING,
+                null,
+                ConfigDef.Importance.MEDIUM,
+                AWS_CREDENTIALS_FILE_DOC
+            )
             .define(AWS_CERTIFICATE_CHECK_ENABLED_CONFIG,
                 ConfigDef.Type.BOOLEAN,
                 true,
@@ -227,7 +251,21 @@ public class S3StorageConfig extends AbstractConfig {
                 + AWS_ACCESS_KEY_ID_CONFIG + " and " + AWS_SECRET_ACCESS_KEY_CONFIG
                 + " must be set together, or a custom provider class "
                 + AWS_CREDENTIALS_PROVIDER_CLASS_CONFIG
-                + ". If both are null, default S3 credentials provider is used.");
+                + ".");
+        }
+        if (getClass(AWS_CREDENTIALS_PROVIDER_CLASS_CONFIG) != null
+            && getString(AWS_CREDENTIALS_FILE_CONFIG) != null) {
+            throw new ConfigException("Both '"
+                + AWS_CREDENTIALS_FILE_CONFIG + "'' and '"
+                + AWS_CREDENTIALS_PROVIDER_CLASS_CONFIG
+                + "' cannot be defined together");
+        }
+        if (getPassword(AWS_ACCESS_KEY_ID_CONFIG) != null
+            && getString(AWS_CREDENTIALS_FILE_CONFIG) != null) {
+            throw new ConfigException("Both '"
+                + AWS_CREDENTIALS_FILE_CONFIG + "'' and static credential pair '"
+                + AWS_ACCESS_KEY_ID_CONFIG + "' and '" + AWS_SECRET_ACCESS_KEY_CONFIG
+                + "' cannot be defined together");
         }
     }
 
@@ -250,11 +288,21 @@ public class S3StorageConfig extends AbstractConfig {
             getPassword(AWS_ACCESS_KEY_ID_CONFIG) != null
                 && getPassword(AWS_SECRET_ACCESS_KEY_CONFIG) != null;
         if (credentialsProvided) {
+            if (getPassword(AWS_SESSION_TOKEN_CONFIG) != null) {
+                final AwsCredentials credentials =  AwsSessionCredentials.create(
+                    getPassword(AWS_ACCESS_KEY_ID_CONFIG).value(),
+                    getPassword(AWS_SECRET_ACCESS_KEY_CONFIG).value(),
+                    getPassword(AWS_SESSION_TOKEN_CONFIG).value()
+                );
+                return StaticCredentialsProvider.create(credentials);
+            }
             final AwsCredentials staticCredentials = AwsBasicCredentials.create(
                 getPassword(AWS_ACCESS_KEY_ID_CONFIG).value(),
                 getPassword(AWS_SECRET_ACCESS_KEY_CONFIG).value()
             );
             return StaticCredentialsProvider.create(staticCredentials);
+        } else if (getString(AWS_CREDENTIALS_FILE_CONFIG) != null) {
+            return new S3RotatingCredentialsProvider(getString(AWS_CREDENTIALS_FILE_CONFIG));
         } else if (Objects.isNull(providerClass)) {
             return null; // to use S3 default provider chain. no public constructor
         } else if (StaticCredentialsProvider.class.isAssignableFrom(providerClass)) {
