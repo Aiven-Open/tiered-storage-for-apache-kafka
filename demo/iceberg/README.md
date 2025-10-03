@@ -26,4 +26,10 @@ It will create the `people` topic and fill it with some Avro records.
 
 Wait until the broker uploads some segments to the remote storage.
 
-Now you can explore and query the Iceberg table using the [Nimtable](http://localhost:3000/data/tables/table? catalog=rest&namespace=default&table=people) and observe uploaded files in [Minio](http://localhost:9001/browser/warehouse).
+Now you can explore and query the Iceberg table using the [Nimtable](http://localhost:3000/data/tables/table?catalog=rest&namespace=default&table=people) (admin:admin) and observe uploaded files in [Minio](http://localhost:9001/browser/warehouse).
+
+```sql
+SELECT * 
+  FROM `rest`.`default`.`people`
+ LIMIT 100
+```
