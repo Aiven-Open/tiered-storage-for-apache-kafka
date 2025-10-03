@@ -66,11 +66,19 @@ subprojects {
         flatDir {
             dirs rootProject.file('lib')
         }
+        // TODO remove when we reorganize structure providers
+        // ---
+        // The following repo is needed only for the structure providers.
+        // Keep this in mind when extracting them into a separate project.
+        maven {
+            url "https://packages.confluent.io/maven"
+        }
+        // ---
     }
 
     java {
-        sourceCompatibility = JavaVersion.VERSION_11
-        targetCompatibility = JavaVersion.VERSION_11
+        sourceCompatibility = JavaVersion.VERSION_17
+        targetCompatibility = JavaVersion.VERSION_17
 
         withJavadocJar()
         withSourcesJar()
@@ -91,6 +99,7 @@ subprojects {
         outputFormats.addAll('XML', 'HTML')
         mutators.add('ALL')
         exportLineCoverage = true
+        addJUnitPlatformLauncher = false
         if (project.name in ['storage']) {
             failWhenNoMutations = false
         }
@@ -100,35 +109,35 @@ subprojects {
     ext {
         // Keep empty lines between versions to avoid conflicts on mass update (e.g. Dependabot).
 
-        junitVersion = "5.12.0"
+        junitVersion = "5.13.4"
 
-        junitPlatformVersion = "1.12.0"
+        junitPlatformVersion = "6.0.0"
 
-        mockitoVersion = "5.15.2"
+        mockitoVersion = "5.20.0"
 
-        slf4jVersion = "1.7.36"
+        slf4jVersion = "2.0.13"
 
-        kafkaVersion = "3.6.0"
+        kafkaVersion = "3.8.0"
 
         assertJVersion = "3.27.3"
 
-        apacheCommonsIOVersion = "2.18.0"
+        apacheCommonsIOVersion = "2.19.0"
 
-        jacksonVersion = "2.18.2"
+        jacksonVersion = "2.20.0"
 
         awaitilityVersion = "4.3.0"
 
-        awsSdkVersion = "2.30.31"
+        awsSdkVersion = "2.34.7"
 
-        gcpSdkVersion = "2.45.0"
+        gcpSdkVersion = "2.58.0"
 
         azureSdkVersion = "1.2.28"
 
-        testcontainersVersion = "1.20.5"
+        testcontainersVersion = "1.21.1"
 
         testcontainersFakeGcsServerVersion = "0.2.0"
 
-        bucket4jVersion = "8.13.1"
+        bucket4jVersion = "8.14.0"
     }
 
     dependencies {
@@ -229,8 +238,8 @@ subprojects {
             maven {
                 name="sonatype"
 
-                def releasesRepoUrl = "https://oss.sonatype.org/service/local/staging/deploy/maven2"
-                def snapshotsRepoUrl = "https://oss.sonatype.org/content/repositories/snapshots"
+                def releasesRepoUrl = "https://ossrh-staging-api.central.sonatype.com/service/local/staging/deploy/maven2/"
+                def snapshotsRepoUrl = "https://ossrh-staging-api.central.sonatype.com/content/repositories/snapshots/"
                 url = version.endsWith('SNAPSHOT') ? snapshotsRepoUrl : releasesRepoUrl
 
                 credentials(PasswordCredentials)
@@ -241,6 +250,8 @@ subprojects {
                 from components.java
 
                 pom {
+                    name = 'Aiven Tiered storage for Apache Kafka'
+                    description = 'Aiven Tiered storage for Apache Kafka'
                     url = "https://github.com/Aiven-Open/tiered-storage-for-apache-kafka"
                     organization {
                         name = "Aiven Oy"

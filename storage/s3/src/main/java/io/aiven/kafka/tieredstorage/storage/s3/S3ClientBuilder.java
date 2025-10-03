@@ -22,6 +22,7 @@ import software.amazon.awssdk.auth.credentials.AwsCredentialsProvider;
 import software.amazon.awssdk.core.internal.http.loader.DefaultSdkHttpClientBuilder;
 import software.amazon.awssdk.http.SdkHttpConfigurationOption;
 import software.amazon.awssdk.regions.Region;
+import software.amazon.awssdk.services.s3.LegacyMd5Plugin;
 import software.amazon.awssdk.services.s3.S3Client;
 import software.amazon.awssdk.utils.AttributeMap;
 
@@ -62,6 +63,11 @@ class S3ClientBuilder {
             c.apiCallTimeout(config.apiCallTimeout());
             c.apiCallAttemptTimeout(config.apiCallAttemptTimeout());
         });
+
+        if (config.legacyMd5PluginEnabled()){
+            s3ClientBuilder.addPlugin(LegacyMd5Plugin.create());
+        }
+
         return s3ClientBuilder.build();
     }
 }

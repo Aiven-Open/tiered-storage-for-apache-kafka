@@ -1,0 +1,21 @@
+Configuration:
+  Properties:
+    Property:
+      - name: "logPattern"
+        value: "[%d] %p %m (%c)%n"
+
+  # Appenders configuration
+  # See: https://logging.apache.org/log4j/2.x/manual/appenders.html
+  Appenders:
+    Console:
+      name: STDOUT
+      PatternLayout:
+        pattern: "${logPattern}"
+
+  # Loggers configuration
+  # See: https://logging.apache.org/log4j/2.x/manual/configuration.html#configuring-loggers
+  Loggers:
+    Root:
+      level: INFO
+      AppenderRef:
+        - ref: STDOUT

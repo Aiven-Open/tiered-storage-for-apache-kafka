@@ -7,6 +7,10 @@ Currently, AWS S3, Google Cloud Storage, and Azure Blob Storage are supported.
 
 The project follows the API specifications according to the latest version of [KIP-405: Kafka Tiered Storage](https://cwiki.apache.org/confluence/x/KJDQBQ).
 
+## NEW! Iceberg mode 🧊🎉
+
+The Iceberg mode was added recently. It's currenly in the "alpha" stage, but could already be explored. Please have a look at the [whitepaper](iceberg_whitepaper.md) and [demo](demo/iceberg/README.md).
+
 ## References
 
 - [Configuration](./docs/configs.rst)
@@ -25,6 +29,9 @@ and object storage-specific libraries (`azure-<version>.tgz`, `gcs-<version>.tgz
 Extract the core library and selected storage library to the same or different directories.
 
 **Step 2. Configure the brokers**:
+
+> [!NOTE]
+> For Remote Log Metadata Manager (RLMM) and further Tiered Storage configurations, see https://kafka.apache.org/documentation/#tieredstorageconfigs
 
 ```properties
 # ----- Enable tiered storage at the broker level -----
@@ -234,20 +241,32 @@ This means that there is not control on how fast a single segment would be uploa
 
 The plugin rate-limit is complementary to Tiered Storage Quotas.
 
-#### S3 Multi-part Uploads
+#### Multi-part Uploads
 
 When uploading processed segments and indexes, multipart upload is used to put files on the storage back-end (e.g. AWS S3).
 
 > [!IMPORTANT]
-> To control the amount of upload part requests that are executed per segment, each storage back-end has a size configuration.
-> Consider increasing this value (e.g. 10x) to reduce the number of requests, and therefore its costs 
-> (default: minimum part size, e.g. `rsm.config.storage.s3.multipart.upload.part.size` for S3 is 5 MiB)
+> To control the amount of upload part requests that are executed per segment, each storage back-end has a PUT size configuration.
+> (default: minimum part size, e.g. `rsm.config.storage.s3.multipart.upload.part.size`[for S3 is 25 MiB](./docs/configs.rst#storage-backends))
 
 Even though, multipart transactions are aborted when an exception happens while processing, 
 there's a chance that initiated transactions are not completed or aborted (e.g. broker process is killed) and incomplete part uploads hang without completing a transaction.
 For these scenarios, is recommended to set a bucket lifecycle policy to periodically abort incomplete multipart uploads: <https://docs.aws.amazon.com/AmazonS3/latest/userguide/mpu-abort-incomplete-mpu-lifecycle-config.html>
 
-### Ranged queries
+### Fetching
+
+Serving fetch requests from remote storage is done by running a task and wait on the result to return results to the customer.
+The default timeout for this task is 500ms. This may not be enough in some cases and lead to the cancellation of the task:
+
+```
+org.apache.kafka.common.KafkaException: org.apache.kafka.server.log.remote.storage.RemoteStorageException: java.lang.RuntimeException: java.lang.InterruptedException
+...
+```
+
+This can be configured with [`remote.fetch.max.wait.ms`](https://kafka.apache.org/documentation/#brokerconfigs_remote.fetch.max.wait.ms).
+Increasing this value will allow the remote fetch to complete and return results, at the cost of increasing the fetch latency.
+
+#### Ranged queries
 
 The plugin uses ranged queries to access records on remote log segment.
 Based on the [chunking](#chunking), the plugin will use the chunk position to get a range from the uploaded log segment.

@@ -95,7 +95,7 @@ public class S3MinioSingleBrokerTest extends SingleBrokerTest {
 
     private static void createBucket(final String minioServerUrl) {
         final String cmd =
-            "/usr/bin/mc config host add local "
+            "/usr/bin/mc alias set local "
                 + minioServerUrl + " " + ACCESS_KEY_ID + " " + SECRET_ACCESS_KEY + " --api s3v4 &&"
                 + "/usr/bin/mc mb local/test-bucket;\n";
 

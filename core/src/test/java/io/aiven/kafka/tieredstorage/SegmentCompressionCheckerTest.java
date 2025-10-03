@@ -21,7 +21,7 @@ import java.io.IOException;
 import java.nio.ByteBuffer;
 import java.nio.file.Path;
 
-import org.apache.kafka.common.record.CompressionType;
+import org.apache.kafka.common.compress.Compression;
 import org.apache.kafka.common.record.FileRecords;
 import org.apache.kafka.common.record.MemoryRecords;
 import org.apache.kafka.common.record.MemoryRecordsBuilder;
@@ -56,7 +56,7 @@ class SegmentCompressionCheckerTest {
         try (final FileRecords records = FileRecords.open(file, false, 100000, true);
              final MemoryRecordsBuilder builder = MemoryRecords.builder(
                  ByteBuffer.allocate(1024),
-                 CompressionType.NONE,
+                 Compression.NONE,
                  TimestampType.CREATE_TIME,
                  0)) {
             builder.append(0L, "key-0".getBytes(), "value-0".getBytes());
@@ -80,14 +80,14 @@ class SegmentCompressionCheckerTest {
     }
 
     @ParameterizedTest
-    @CsvSource({"NONE,false", "ZSTD,true"})
-    void shouldReturnCompressedWhenEnabled(final CompressionType compressionType, final boolean result)
+    @CsvSource({"none,false", "zstd,true"})
+    void shouldReturnCompressedWhenEnabled(final String compressionType, final boolean result)
         throws InvalidRecordBatchException, IOException {
         final File file = dir.resolve("segment.log").toFile();
         try (final FileRecords records = FileRecords.open(file, false, 100000, true);
              final MemoryRecordsBuilder builder = MemoryRecords.builder(
                  ByteBuffer.allocate(1024),
-                 compressionType,
+                 Compression.of(compressionType).build(),
                  TimestampType.CREATE_TIME,
                  0)) {
             builder.append(0L, "key-0".getBytes(), "value-0".getBytes());
@@ -99,21 +99,21 @@ class SegmentCompressionCheckerTest {
     }
 
     @ParameterizedTest
-    @CsvSource({"NONE,ZSTD,false", "ZSTD,NONE,true"})
-    void shouldReturnCompressedWhenCompressionChanges(final CompressionType firstCompressionType,
-                                                      final CompressionType nextCompressionType,
+    @CsvSource({"none,zstd,false", "zstd,none,true"})
+    void shouldReturnCompressedWhenCompressionChanges(final String firstCompressionType,
+                                                      final String nextCompressionType,
                                                       final boolean result)
         throws InvalidRecordBatchException, IOException {
         final File file = dir.resolve("segment.log").toFile();
         try (final FileRecords records = FileRecords.open(file, false, 100000, true);
              final MemoryRecordsBuilder b1 = MemoryRecords.builder(
                  ByteBuffer.allocate(1024),
-                 firstCompressionType,
+                 Compression.of(firstCompressionType).build(),
                  TimestampType.CREATE_TIME,
                  0);
              final MemoryRecordsBuilder b2 = MemoryRecords.builder(
                  ByteBuffer.allocate(1024),
-                 nextCompressionType,
+                 Compression.of(nextCompressionType).build(),
                  TimestampType.CREATE_TIME,
                  0)) {
             b1.append(0L, "key-0".getBytes(), "value-0".getBytes());

@@ -46,7 +46,7 @@ class GcsStorageConfigTest {
         final GcsStorageConfig config = new GcsStorageConfig(configs);
         assertThat(config.bucketName()).isEqualTo(bucketName);
         assertThat(config.endpointUrl()).isNull();
-        assertThat(config.resumableUploadChunkSize()).isNull();
+        assertThat(config.resumableUploadChunkSize()).isEqualTo(25 * 1024 * 1024);
 
         final GoogleCredentials mockCredentials = GoogleCredentials.newBuilder().build();
         try (final MockedStatic<GoogleCredentials> googleCredentialsMockedStatic =
