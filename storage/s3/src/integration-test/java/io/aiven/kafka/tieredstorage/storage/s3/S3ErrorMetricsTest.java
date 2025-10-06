@@ -89,7 +89,8 @@ class S3ErrorMetricsTest {
                                 final int uploadFileSize,
                                 final String metricName,
                                 final WireMockRuntimeInfo wmRuntimeInfo) throws Exception {
-        log.info("test start with parameter: statusCode={}, uploadFileSize={}, metric={}", statusCode, uploadFileSize , metricName);
+        log.info("test start with parameter: statusCode={}, uploadFileSize={}, metric={}",
+                statusCode, uploadFileSize, metricName);
         final Map<String, Object> configs = Map.of(
             "s3.bucket.name", BUCKET_NAME,
             "s3.region", Region.US_EAST_1.id(),
@@ -106,7 +107,8 @@ class S3ErrorMetricsTest {
                 .withBody(String.format(ERROR_RESPONSE_TEMPLATE, statusCode))));
 
         uploadAndVerifyResult(uploadFileSize, statusCode, metricName);
-        log.info("test end with parameter: statusCode={}, uploadFileSize={}, metric={}", statusCode, uploadFileSize , metricName);
+        log.info("test end with parameter: statusCode={}, "
+                + "uploadFileSize={}, metric={}", statusCode, uploadFileSize, metricName);
 
     }
 
@@ -118,11 +120,13 @@ class S3ErrorMetricsTest {
                 StorageBackendException.class,
                 () -> storage.upload(inputStream, new TestObjectKey("key"))
             );
-            log.info("test run with parameter: statusCode={}, uploadFileSize={}, metric={}", statusCode, uploadFileSize , metricName);
+            log.info("test run with parameter: statusCode={}, "
+                    + "uploadFileSize={}, metric={}", statusCode, uploadFileSize, metricName);
             log.info("storageBackendException={}", storageBackendException);
             log.info("getCause={}", storageBackendException.getCause());
             log.info("getCauseCause={}", storageBackendException.getCause().getCause());
-            log.info("getCauseCause={}", ((S3Exception) storageBackendException.getCause().getCause()).statusCode());
+            log.info("getCauseCause={}",
+                    ((S3Exception) storageBackendException.getCause().getCause()).statusCode());
             log.error("exception={}", storageBackendException);
 
             assertThat(storageBackendException.getCause())
