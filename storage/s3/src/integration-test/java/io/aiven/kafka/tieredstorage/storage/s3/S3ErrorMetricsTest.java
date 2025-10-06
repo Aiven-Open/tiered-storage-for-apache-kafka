@@ -36,6 +36,8 @@ import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.Test;
 import org.junit.jupiter.params.ParameterizedTest;
 import org.junit.jupiter.params.provider.CsvSource;
+import org.slf4j.Logger;
+import org.slf4j.LoggerFactory;
 import software.amazon.awssdk.auth.credentials.AnonymousCredentialsProvider;
 import software.amazon.awssdk.core.exception.ApiCallAttemptTimeoutException;
 import software.amazon.awssdk.core.exception.SdkClientException;
@@ -51,6 +53,7 @@ import static com.github.tomakehurst.wiremock.client.WireMock.post;
 import static com.github.tomakehurst.wiremock.client.WireMock.put;
 import static com.github.tomakehurst.wiremock.client.WireMock.stubFor;
 import static com.github.tomakehurst.wiremock.common.ContentTypes.CONTENT_TYPE;
+import static io.aiven.kafka.tieredstorage.storage.s3.MetricCollector.log;
 import static org.apache.http.entity.ContentType.APPLICATION_XML;
 import static org.assertj.core.api.Assertions.assertThat;
 import static org.assertj.core.api.Assertions.assertThatThrownBy;
@@ -59,6 +62,9 @@ import static org.assertj.core.api.InstanceOfAssertFactories.DOUBLE;
 
 @WireMockTest
 class S3ErrorMetricsTest {
+
+    private static final Logger log = LoggerFactory.getLogger(S3ErrorMetricsTest.class);
+
     private static final String ERROR_RESPONSE_TEMPLATE = "<Error><Code>%s</Code></Error>";
     private static final MBeanServer MBEAN_SERVER = ManagementFactory.getPlatformMBeanServer();
     private static final String BUCKET_NAME = "test-bucket";
@@ -84,6 +90,7 @@ class S3ErrorMetricsTest {
                                 final int uploadFileSize,
                                 final String metricName,
                                 final WireMockRuntimeInfo wmRuntimeInfo) throws Exception {
+        log.info("test start with parameter: statusCode={}, uploadFileSize={}, metric={}", statusCode, uploadFileSize , metricName);
         final Map<String, Object> configs = Map.of(
             "s3.bucket.name", BUCKET_NAME,
             "s3.region", Region.US_EAST_1.id(),
@@ -100,6 +107,8 @@ class S3ErrorMetricsTest {
                 .withBody(String.format(ERROR_RESPONSE_TEMPLATE, statusCode))));
 
         uploadAndVerifyResult(uploadFileSize, statusCode, metricName);
+        log.info("test end with parameter: statusCode={}, uploadFileSize={}, metric={}", statusCode, uploadFileSize , metricName);
+
     }
 
     private void uploadAndVerifyResult(final int uploadFileSize,
@@ -110,6 +119,13 @@ class S3ErrorMetricsTest {
                 StorageBackendException.class,
                 () -> storage.upload(inputStream, new TestObjectKey("key"))
             );
+            log.info("test run with parameter: statusCode={}, uploadFileSize={}, metric={}", statusCode, uploadFileSize , metricName);
+            log.info("storageBackendException={}", storageBackendException);
+            log.info("getCause={}", storageBackendException.getCause());
+            log.info("getCauseCause={}", storageBackendException.getCause().getCause());
+            log.info("getCauseCause={}", ((S3Exception) storageBackendException.getCause().getCause()).statusCode());
+            log.error("exception={}", storageBackendException);
+
             assertThat(storageBackendException.getCause())
                 .isInstanceOf(IOException.class)
                 .cause()
