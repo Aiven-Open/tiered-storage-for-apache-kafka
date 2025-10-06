@@ -127,7 +127,9 @@ class S3ErrorMetricsTest {
             log.info("getCauseCause={}", storageBackendException.getCause().getCause());
             log.info("getCauseCause={}",
                     ((S3Exception) storageBackendException.getCause().getCause()).statusCode());
-            log.error("exception={}", storageBackendException);
+            log.error("exception for: " + storageBackendException.getMessage(), storageBackendException);
+            System.err.println(storageBackendException);
+            storageBackendException.printStackTrace();
 
             assertThat(storageBackendException.getCause())
                 .isInstanceOf(IOException.class)
