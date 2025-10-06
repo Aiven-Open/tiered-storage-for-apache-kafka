@@ -89,6 +89,8 @@ class S3ErrorMetricsTest {
                                 final int uploadFileSize,
                                 final String metricName,
                                 final WireMockRuntimeInfo wmRuntimeInfo) throws Exception {
+        System.out.println("test start with statusCode: " + statusCode + ", uploadFileSize: "
+                + uploadFileSize + ", metricName: " + metricName);
         log.info("test start with parameter: statusCode={}, uploadFileSize={}, metric={}",
                 statusCode, uploadFileSize, metricName);
         final Map<String, Object> configs = Map.of(
@@ -109,7 +111,8 @@ class S3ErrorMetricsTest {
         uploadAndVerifyResult(uploadFileSize, statusCode, metricName);
         log.info("test end with parameter: statusCode={}, "
                 + "uploadFileSize={}, metric={}", statusCode, uploadFileSize, metricName);
-
+        System.out.println("test end with statusCode: " + statusCode + ", uploadFileSize: "
+                + uploadFileSize + ", metricName: " + metricName);
     }
 
     private void uploadAndVerifyResult(final int uploadFileSize,
