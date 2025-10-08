@@ -321,7 +321,7 @@ Storage Backends
 Under ``storage.``
 
 -----------------
-AzureBlobStorageStorageConfig
+AzureBlobStorageConfig
 -----------------
 ``azure.container.name``
   Azure container to store log segments
@@ -381,7 +381,7 @@ AzureBlobStorageStorageConfig
 
 
 -----------------
-AzureBlobStorageStorageConfig
+GcsStorageConfig
 -----------------
 ``gcs.bucket.name``
   GCS bucket to store log segments

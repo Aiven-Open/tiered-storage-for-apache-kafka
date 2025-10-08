@@ -81,12 +81,12 @@ public class ConfigsDocs {
         printSectionTitle("Storage Backends");
         out.println("Under ``" + STORAGE_PREFIX + "``\n");
 
-        printSubsectionTitle("AzureBlobStorageStorageConfig");
+        printSubsectionTitle("AzureBlobStorageConfig");
         final var azBlobStorageConfigDef = AzureBlobStorageConfig.configDef();
         out.println(azBlobStorageConfigDef.toEnrichedRst());
         out.println();
 
-        printSubsectionTitle("AzureBlobStorageStorageConfig");
+        printSubsectionTitle("GcsStorageConfig");
         final var googleCloudConfigDef = GcsStorageConfig.configDef();
         out.println(googleCloudConfigDef.toEnrichedRst());
         out.println();
