@@ -82,29 +82,39 @@ public abstract class ChunkCache<T> implements ChunkManager, Configurable {
         final AtomicReference<InputStream> result = new AtomicReference<>();
         try {
             return cache.asMap()
-                .compute(chunkKey, (key, val) -> CompletableFuture.supplyAsync(() -> {
-                    if (val == null) {
-                        statsCounter.recordMiss();
-                        try {
-                            final InputStream chunk =
-                                chunkManager.getChunk(objectKey, manifest, chunkId);
-                            final T t = this.cacheChunk(chunkKey, chunk);
-                            result.getAndSet(cachedChunkToInputStream(t));
-                            return t;
-                        } catch (final StorageBackendException | IOException e) {
-                            throw new CompletionException(e);
+                .compute(chunkKey, (key, val) -> {
+                    final CompletableFuture<T> future = CompletableFuture.supplyAsync(() -> {
+                        if (val == null) {
+                            statsCounter.recordMiss();
+                            try {
+                                final InputStream chunk =
+                                        chunkManager.getChunk(objectKey, manifest, chunkId);
+                                final T t = this.cacheChunk(chunkKey, chunk);
+                                result.getAndSet(cachedChunkToInputStream(t));
+                                return t;
+                            } catch (final StorageBackendException | IOException e) {
+                                throw new CompletionException(e);
+                            }
+                        } else {
+                            statsCounter.recordHit();
+                            try {
+                                final T cachedChunk = val.get();
+                                result.getAndSet(cachedChunkToInputStream(cachedChunk));
+                                return cachedChunk;
+                            } catch (final InterruptedException | ExecutionException e) {
+                                throw new CompletionException(e);
+                            }
                         }
-                    } else {
-                        statsCounter.recordHit();
-                        try {
-                            final T cachedChunk = val.get();
-                            result.getAndSet(cachedChunkToInputStream(cachedChunk));
-                            return cachedChunk;
-                        } catch (final InterruptedException | ExecutionException e) {
-                            throw new CompletionException(e);
+                    }, executor);
+
+                    future.whenComplete((r, ex) -> {
+                        if (ex != null) {
+                            cache.asMap().remove(key, future);
                         }
-                    }
-                }, executor))
+                    });
+
+                    return future;
+                })
                 .thenApplyAsync(t -> result.get())
                 .get(getTimeout.toMillis(), TimeUnit.MILLISECONDS);
         } catch (final ExecutionException e) {
