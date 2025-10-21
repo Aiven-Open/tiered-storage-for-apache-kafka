@@ -62,7 +62,11 @@ public class S3RotatingCredentialsProvider implements AwsCredentialsProvider, Au
 
         this.watchService = initializeWatchService();
 
-        this.scheduledExecutorService = Executors.newSingleThreadScheduledExecutor();
+        this.scheduledExecutorService = Executors.newSingleThreadScheduledExecutor(r -> {
+            final Thread t = new Thread(r, "s3-credentials-watcher");
+            t.setDaemon(true);
+            return t;
+        });
 
         final AtomicReference<WatchKey> watchKeyReference = new AtomicReference<>(subscribeToCredentialChanges());
         scheduledExecutorService.scheduleWithFixedDelay(() -> {

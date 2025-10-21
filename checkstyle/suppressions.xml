@@ -36,11 +36,13 @@
     <suppress checks="ClassFanOutComplexity" files="MemorySegmentIndexesCache"/>
     <suppress checks="ClassFanOutComplexity" files="MemorySegmentManifestCache"/>
     <suppress checks="ClassFanOutComplexity" files="AzureBlobStorage.java"/>
+    <suppress checks="ClassFanOutComplexity" files="GcsStorage.java"/>
     <suppress checks="ClassFanOutComplexity" files="ParquetAvroValueReaders.java"/>
     <suppress checks="ClassFanOutComplexity" files="RecordConverter.java"/>
     <suppress checks="ClassDataAbstractionCoupling" files="CaffeineStatsCounter.java"/>
     <suppress checks="ClassDataAbstractionCoupling" files="BatchEnumeration.java"/>
     <suppress checks="ClassDataAbstractionCoupling" files="BatchEnumeration.java"/>
+    <suppress checks="ClassDataAbstractionCoupling" files="GcsStorageConfig.java"/>
     <suppress checks="ClassDataAbstractionCoupling" files="S3StorageConfig.java"/>
     <suppress checks="ClassDataAbstractionCoupling" files="RemoteStorageManager.java"/>
     <suppress checks="ClassDataAbstractionCoupling" files="Metrics.java"/>
