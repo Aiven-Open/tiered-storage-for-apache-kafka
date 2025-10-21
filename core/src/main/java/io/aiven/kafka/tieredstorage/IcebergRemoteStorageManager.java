@@ -473,4 +473,8 @@ public class IcebergRemoteStorageManager extends InternalRemoteStorageManager {
     public void deleteLogSegmentData(final RemoteLogSegmentMetadata remoteLogSegmentMetadata) {
         //No-op for now, considering that Iceberg further manages the data.
     }
+
+    @Override
+    public void close() throws IOException {
+    }
 }

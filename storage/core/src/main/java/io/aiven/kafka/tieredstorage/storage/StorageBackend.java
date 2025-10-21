@@ -16,7 +16,9 @@
 
 package io.aiven.kafka.tieredstorage.storage;
 
+import java.io.Closeable;
+
 import org.apache.kafka.common.Configurable;
 
-public interface StorageBackend extends Configurable, ObjectUploader, ObjectFetcher, ObjectDeleter {
+public interface StorageBackend extends Configurable, ObjectUploader, ObjectFetcher, ObjectDeleter, Closeable {
 }
