@@ -16,6 +16,7 @@
 
 package io.aiven.kafka.tieredstorage.storage.gcs;
 
+import java.io.Closeable;
 import java.io.IOException;
 import java.util.List;
 import java.util.regex.Pattern;
@@ -55,7 +56,7 @@ import static io.aiven.kafka.tieredstorage.storage.gcs.MetricRegistry.RESUMABLE_
 import static io.aiven.kafka.tieredstorage.storage.gcs.MetricRegistry.RESUMABLE_UPLOAD_INITIATE_RATE_METRIC_NAME;
 import static io.aiven.kafka.tieredstorage.storage.gcs.MetricRegistry.RESUMABLE_UPLOAD_INITIATE_TOTAL_METRIC_NAME;
 
-public class MetricCollector {
+public class MetricCollector implements Closeable {
     private final org.apache.kafka.common.metrics.Metrics metrics;
 
     /**
@@ -180,5 +181,10 @@ public class MetricCollector {
                 };
             }
         };
+    }
+
+    @Override
+    public void close() throws IOException  {
+        metrics.close();
     }
 }

@@ -144,7 +144,7 @@ public class S3Storage implements StorageBackend {
             if (range.isEmpty()) {
                 return InputStream.nullInputStream();
             }
-            
+
             final GetObjectRequest getRequest = GetObjectRequest.builder()
                 .bucket(bucketName)
                 .key(key.value())
@@ -175,5 +175,12 @@ public class S3Storage implements StorageBackend {
             + "bucketName='" + bucketName + '\''
             + ", partSize=" + partSize
             + '}';
+    }
+
+    @Override
+    public void close() throws IOException {
+        if (s3Client != null) {
+            s3Client.close();
+        }
     }
 }

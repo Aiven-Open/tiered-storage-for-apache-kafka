@@ -16,6 +16,7 @@
 
 package io.aiven.kafka.tieredstorage;
 
+import java.io.Closeable;
 import java.io.InputStream;
 import java.util.Objects;
 import java.util.Optional;
@@ -31,7 +32,7 @@ import io.aiven.kafka.tieredstorage.storage.BytesRange;
 
 import org.slf4j.Logger;
 
-abstract class InternalRemoteStorageManager {
+abstract class InternalRemoteStorageManager implements Closeable {
     protected final Logger log;
     protected final Time time;
 

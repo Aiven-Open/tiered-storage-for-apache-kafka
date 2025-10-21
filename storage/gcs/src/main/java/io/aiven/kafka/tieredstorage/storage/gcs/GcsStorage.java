@@ -41,6 +41,7 @@ import com.google.cloud.storage.StorageOptions;
 public class GcsStorage implements StorageBackend {
     private Storage storage;
     private String bucketName;
+    private MetricCollector metricCollector;
     private Integer resumableUploadChunkSize;
 
     @Override
@@ -61,9 +62,10 @@ public class GcsStorage implements StorageBackend {
             }
         }
 
+        metricCollector = new MetricCollector();
         final StorageOptions.Builder builder = StorageOptions.newBuilder()
             .setCredentials(config.credentials())
-            .setTransportOptions(new MetricCollector().httpTransportOptions(httpTransportOptionsBuilder));
+            .setTransportOptions(metricCollector.httpTransportOptions(httpTransportOptionsBuilder));
         if (config.endpointUrl() != null) {
             builder.setHost(config.endpointUrl());
         }
@@ -158,6 +160,13 @@ public class GcsStorage implements StorageBackend {
             throw new KeyNotFoundException(this, key);
         }
         return blob;
+    }
+
+    @Override
+    public void close() throws IOException {
+        if (metricCollector != null) {
+            metricCollector.close();
+        }
     }
 
     @Override

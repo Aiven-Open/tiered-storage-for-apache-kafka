@@ -16,6 +16,7 @@
 
 package io.aiven.kafka.tieredstorage;
 
+import java.io.IOException;
 import java.io.InputStream;
 import java.util.Map;
 import java.util.Objects;
@@ -187,7 +188,15 @@ public class RemoteStorageManager implements org.apache.kafka.server.log.remote.
     }
 
     @Override
-    public void close() {
-        metrics.close();
+    public void close() throws IOException {
+        if (metrics != null) {
+            metrics.close();
+        }
+        if (kafkaRsm != null) {
+            kafkaRsm.close();
+        }
+        if (icebergRsm != null) {
+            icebergRsm.close();
+        }
     }
 }

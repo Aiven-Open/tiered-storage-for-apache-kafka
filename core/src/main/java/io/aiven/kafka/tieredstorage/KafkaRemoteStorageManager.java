@@ -87,6 +87,7 @@ import io.github.bucket4j.Bucket;
 import org.slf4j.Logger;
 
 class KafkaRemoteStorageManager extends InternalRemoteStorageManager {
+    private final StorageBackend storage;
     private final ObjectFetcher fetcher;
     private final ObjectUploader uploader;
     private final ObjectDeleter deleter;
@@ -114,7 +115,7 @@ class KafkaRemoteStorageManager extends InternalRemoteStorageManager {
     ) {
         super(log, time, config);
 
-        final StorageBackend storage = config.storage();
+        this.storage = config.storage();
         this.fetcher = storage;
         this.uploader = storage;
         this.deleter = storage;
@@ -148,7 +149,7 @@ class KafkaRemoteStorageManager extends InternalRemoteStorageManager {
             .findFirst()
             .orElse(null);
 
-        this.segmentManifestCache = new MemorySegmentManifestCache(config.storage(), mapper);
+        this.segmentManifestCache = new MemorySegmentManifestCache(storage, mapper);
         this.segmentManifestCache.configure(config.segmentManifestCacheConfigs());
     }
 
@@ -615,5 +616,10 @@ class KafkaRemoteStorageManager extends InternalRemoteStorageManager {
             segmentKey = objectKeyFactory.key(remoteLogSegmentMetadata, suffix);
         }
         return segmentKey;
+    }
+
+    @Override
+    public void close() throws IOException {
+        storage.close();
     }
 }
