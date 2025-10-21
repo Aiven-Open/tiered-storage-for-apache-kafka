@@ -149,7 +149,7 @@ class KafkaRemoteStorageManager extends InternalRemoteStorageManager {
             .findFirst()
             .orElse(null);
 
-        this.segmentManifestCache = new MemorySegmentManifestCache(config.storage(), mapper);
+        this.segmentManifestCache = new MemorySegmentManifestCache(storage, mapper);
         this.segmentManifestCache.configure(config.segmentManifestCacheConfigs());
     }
 
