@@ -122,8 +122,6 @@ public class ReloadableCredentialsProvider implements AutoCloseable {
         final Credentials oldCredentials = currentCredentials.getAndSet(newCredentials);
 
         if (oldCredentials == null || !oldCredentials.equals(newCredentials)) {
-            System.out.println("Old credentials: " + oldCredentials);
-            System.out.println("New credentials: " + newCredentials);
             LOGGER.info("GCS credentials have been reloaded successfully");
             if (credentialsUpdateCallback != null) {
                 try {
