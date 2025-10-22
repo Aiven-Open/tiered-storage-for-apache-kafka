@@ -16,6 +16,7 @@
 
 package io.aiven.kafka.tieredstorage.iceberg;
 
+import java.io.IOException;
 import java.nio.ByteBuffer;
 import java.util.List;
 import java.util.Map;
@@ -23,7 +24,9 @@ import java.util.Map;
 import org.apache.kafka.common.errors.SerializationException;
 import org.apache.kafka.common.header.internals.RecordHeaders;
 
+import io.confluent.kafka.schemaregistry.avro.AvroSchema;
 import io.confluent.kafka.schemaregistry.client.MockSchemaRegistryClient;
+import io.confluent.kafka.schemaregistry.client.rest.exceptions.RestClientException;
 import org.apache.avro.Schema;
 import org.apache.avro.generic.GenericData;
 import org.junit.jupiter.api.BeforeEach;
@@ -86,5 +89,30 @@ class AvroSchemaRegistryStructureProviderTest {
         assertThatThrownBy(() -> structureProvider.serializeValue(TEST_TOPIC, headers, record))
                 .isInstanceOf(SerializationException.class)
                 .hasMessageContaining("Error retrieving Avro schema");
+    }
+
+    @Test
+    void shouldFindValidSchemaById() throws RestClientException, IOException {
+        final int schemaId = schemaRegistryClient.register(TEST_TOPIC + "-value", new AvroSchema(
+                TEST_SCHEMA));
+
+        final StructureProvider.SchemaAndId<Schema> schemaAndId = structureProvider.getSchemaById(schemaId);
+
+        assertThat(schemaAndId.schemaId()).isEqualTo(schemaId);
+        assertThat(schemaAndId.schema().getType()).isEqualTo(Schema.Type.UNION);
+        assertThat(schemaAndId.schema().getTypes()).containsExactlyInAnyOrder(Schema.create(Schema.Type.NULL),
+                TEST_SCHEMA);
+    }
+
+    @Test
+    void shouldCreateBytesSchemaWhenSchemaNotFound() throws IOException {
+        structureProvider.configure(Map.of(
+                "serde.schema.registry.url", "http://127.0.0.1:8081"
+        ));
+        final StructureProvider.SchemaAndId<Schema> schemaAndId = structureProvider.getSchemaById(1);
+
+        assertThat(schemaAndId.schema().getType()).isEqualTo(Schema.Type.UNION);
+        assertThat(schemaAndId.schema().getTypes()).containsExactlyInAnyOrder(Schema.create(Schema.Type.NULL),
+                Schema.create(Schema.Type.BYTES));
     }
 }
