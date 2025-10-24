@@ -14,3 +14,74 @@
  * limitations under the License.
  */
 
+subprojects { subproject ->
+    tasks.register("validateDeps") {
+        doLast {
+            def depVersions = [:]
+
+            subproject.configurations.findAll {
+                it.name == 'runtimeClasspath'
+            }.forEach { config ->
+                if (config.canBeResolved) {
+                    try {
+                        config.resolvedConfiguration.lenientConfiguration.allModuleDependencies.each { dep ->
+                            dep.moduleArtifacts.each { artifact ->
+                                def groupId = artifact.moduleVersion.id.group
+                                def artifactId = artifact.moduleVersion.id.name
+                                def version = artifact.moduleVersion.id.version
+                                def key = "${groupId}:${artifactId}".toString()
+
+                                depVersions[key] = version
+                            }
+
+                        }
+                    } catch (Exception e) {
+                        println "Couldn't resolve configuration ${config.name}: ${e.message}"
+                    }
+                }
+            }
+
+            // Validate transient dependencies between storage modules and core deps
+            def coreDeps = [project(":core"), project(":commons")]
+            def conflictsFound = false
+
+            coreDeps.forEach { prj ->
+                def configs = prj.configurations.findAll {
+                    it.name == 'runtimeClasspath'
+                }
+                configs.each { config ->
+                    if (config.canBeResolved) {
+                        try {
+                            config.resolvedConfiguration.lenientConfiguration.allModuleDependencies.each { dep ->
+                                dep.moduleArtifacts.each { artifact ->
+                                    def groupId = artifact.moduleVersion.id.group
+                                    def artifactId = artifact.moduleVersion.id.name
+                                    def version = artifact.moduleVersion.id.version
+                                    def key = "${groupId}:${artifactId}".toString()
+
+                                    if (depVersions.containsKey(key)) {
+                                        if (depVersions[key] != version) {
+                                            println "Conflict found on ${subproject.name} for ${key}: ${depVersions[key]} vs ${version}"
+                                            conflictsFound = true
+                                        }
+                                    } else {
+                                        depVersions[key] = version
+                                    }
+                                }
+
+                            }
+                        } catch (Exception e) {
+                            println "Couldn't resolve configuration ${config.name}: ${e.message}"
+                        }
+                    }
+                }
+            }
+
+            assert !conflictsFound: "Dependency conflicts found!"
+        }
+    }
+
+    tasks.named("check") {
+        dependsOn(tasks.named("validateDeps"))
+    }
+}
