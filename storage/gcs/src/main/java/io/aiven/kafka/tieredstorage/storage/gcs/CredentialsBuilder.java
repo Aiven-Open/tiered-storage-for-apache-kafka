@@ -25,9 +25,13 @@ import java.nio.file.Paths;
 import java.util.Objects;
 import java.util.stream.Stream;
 
+import com.fasterxml.jackson.databind.JsonNode;
+import com.fasterxml.jackson.databind.ObjectMapper;
 import com.google.auth.Credentials;
+import com.google.auth.oauth2.AccessToken;
 import com.google.auth.oauth2.GoogleCredentials;
 import com.google.cloud.NoCredentials;
+
 
 final class CredentialsBuilder {
     private CredentialsBuilder() {
@@ -89,19 +93,33 @@ final class CredentialsBuilder {
         }
     }
 
+    private static GoogleCredentials getCredentialsFromBytes(final byte[] credentialsBytes) throws IOException {
+        try (final InputStream byteStream = new ByteArrayInputStream(credentialsBytes)) {
+            final ObjectMapper mapper = new ObjectMapper();
+            final JsonNode jsonNode = mapper.readTree(byteStream);
+
+            if (jsonNode.isObject() && jsonNode.has("type") && "access_token".equals(jsonNode.get("type").asText())
+                && jsonNode.has("access_token")) {
+                final AccessToken accessToken = AccessToken.newBuilder().setTokenValue(
+                    jsonNode.get("access_token").asText()).build();
+                return GoogleCredentials.create(accessToken);
+            }
+        }
+
+        try (final InputStream byteStream = new ByteArrayInputStream(credentialsBytes)) {
+            return GoogleCredentials.fromStream(byteStream);
+        }
+    }
+
     private static GoogleCredentials getCredentialsFromPath(final String credentialsPath) throws IOException {
         try (final InputStream stream = Files.newInputStream(Paths.get(credentialsPath))) {
-            return GoogleCredentials.fromStream(stream);
+            return getCredentialsFromBytes(stream.readAllBytes());
         } catch (final IOException e) {
             throw new IOException("Failed to read GCS credentials from " + credentialsPath, e);
         }
     }
 
     private static GoogleCredentials getCredentialsFromJson(final String credentialsJson) throws IOException {
-        try (final InputStream stream = new ByteArrayInputStream(credentialsJson.getBytes(StandardCharsets.UTF_8))) {
-            return GoogleCredentials.fromStream(stream);
-        } catch (final IOException e) {
-            throw new IOException("Failed to read credentials from JSON string", e);
-        }
+        return getCredentialsFromBytes(credentialsJson.getBytes(StandardCharsets.UTF_8));
     }
 }
