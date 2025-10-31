@@ -406,7 +406,7 @@ GcsStorageConfig
   * Importance: medium
 
 ``gcs.credentials.path``
-  The path to a GCP credentials file. Cannot be set together with "gcs.credentials.json" or "gcs.credentials.default"
+  The path to a GCP credentials file. This can be standard GCP credentials format, or JSON with a single `access_token` field. Cannot be set together with "gcs.credentials.json" or "gcs.credentials.default"
 
   * Type: string
   * Default: null
