@@ -27,6 +27,7 @@ dependencies {
         exclude group: 'org.codehaus.mojo', module: 'animal-sniffer-annotations'
         exclude group: 'com.google.guava', module: 'listenablefuture'
     }
+    implementation "com.fasterxml.jackson.core:jackson-databind:$jacksonVersion"
 
     implementation project(":commons")
 
