@@ -32,7 +32,7 @@ ext {
 
     parquetVersion = "1.15.2"
 
-    hadoopVersion = "3.4.1"
+    hadoopVersion = "3.4.2"
 }
 
 dependencies {
