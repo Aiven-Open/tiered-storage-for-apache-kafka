@@ -22,7 +22,7 @@ archivesBaseName = "core"
 ext {
     // Keep empty lines between versions to avoid conflicts on mass update (e.g. Dependabot).
 
-    bouncyCastleVersion = "1.80"
+    bouncyCastleVersion = "1.82"
 
     caffeineVersion = "3.2.0"
 
