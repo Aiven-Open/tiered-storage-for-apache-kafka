@@ -30,7 +30,7 @@ ext {
 
     icebergVersion = "1.10.0"
 
-    parquetVersion = "1.15.2"
+    parquetVersion = "1.16.0"
 
     hadoopVersion = "3.4.1"
 }
