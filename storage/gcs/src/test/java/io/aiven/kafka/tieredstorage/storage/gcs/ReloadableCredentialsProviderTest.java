@@ -41,11 +41,11 @@ class ReloadableCredentialsProviderTest {
         + "  \"project_id\": \"test-project\",\n"
         + "  \"private_key_id\": \"test-key-id\",\n"
         + "  \"private_key\": \"-----BEGIN PRIVATE KEY-----\\n"
-        + "MIIBUwIBADANBgkqhkiG9w0BAQEFAASCAT0wggE5AgEAAkEAwyPCXjWv30y+ZGJH\njKGsIem4OlXEwsgsl6bJr0vKga/GYEVZXsKz/1Uv"
-        + "KArCQNLOfJh/CpUE+cSLn+H7\ngZ1uSwIDAQABAkAF1H2sHuKAQ2S0zxLgKrxfzwHIDGPyhdR/O2ZvLE6CjVZ0J4PD\n+Gt3nJQUcELCEj"
-        + "c3y3RnlOsGd7TTPsZHP7CRAiEA8f75YoDbDcPpd6SK4/PoWmTD\nBBprsvsQbWL5Vpx0AH8CIQDObqMNKTCtz64tDULI0JSECu7RniRFyQ"
-        + "CQ6H/ZMLys\nNQIgM68eOjCFGGqIOXpWA5t7O5sbn4u5Bs/iUUp7MElX6ScCIHJBOAvDvYamCOA0\nk78z+s9ugaoRXkAltSN/G6vpVrP1"
-        + "AiBhNDs+MZSYh92/A8j/GC/I8yvlkOSFo/ME\n/Va0X/P2Ng==\\n-----END PRIVATE KEY-----\\n\",\n"
+        + "MIIBUwIBADANBgkqhkiG9w0BAQEFAASCAT0wggE5AgEAAkEAwyPCXjWv30y+ZGJH\\njKGsIem4OlXEwsgsl6bJr0vKga/GYEVZXsKz/1U"
+        + "vKArCQNLOfJh/CpUE+cSLn+H7\\ngZ1uSwIDAQABAkAF1H2sHuKAQ2S0zxLgKrxfzwHIDGPyhdR/O2ZvLE6CjVZ0J4PD\\n+Gt3nJQUcEL"
+        + "CEjc3y3RnlOsGd7TTPsZHP7CRAiEA8f75YoDbDcPpd6SK4/PoWmTD\\nBBprsvsQbWL5Vpx0AH8CIQDObqMNKTCtz64tDULI0JSECu7Rni"
+        + "RFyQCQ6H/ZMLys\\nNQIgM68eOjCFGGqIOXpWA5t7O5sbn4u5Bs/iUUp7MElX6ScCIHJBOAvDvYamCOA0\\nk78z+s9ugaoRXkAltSN/G6"
+        + "vpVrP1AiBhNDs+MZSYh92/A8j/GC/I8yvlkOSFo/ME\\n/Va0X/P2Ng==\\n-----END PRIVATE KEY-----\\n\",\n"
         + "  \"client_email\": \"test@test-project.iam.gserviceaccount.com\",\n"
         + "  \"client_id\": \"123456789012345678901\",\n"
         + "  \"auth_uri\": \"https://accounts.google.com/o/oauth2/auth\",\n"
@@ -57,15 +57,19 @@ class ReloadableCredentialsProviderTest {
         + "  \"project_id\": \"updated-project\",\n"
         + "  \"private_key_id\": \"updated-key-id\",\n"
         + "  \"private_key\": \"-----BEGIN PRIVATE KEY-----\\n"
-        + "MIIBUwIBADANBgkqhkiG9w0BAQEFAASCAT0wggE5AgEAAkEAwyPCXjWv30y+ZGJH\njKGsIem4OlXEwsgsl6bJr0vKga/GYEVZXsKz/1Uv"
-        + "KArCQNLOfJh/CpUE+cSLn+H7\ngZ1uSwIDAQABAkAF1H2sHuKAQ2S0zxLgKrxfzwHIDGPyhdR/O2ZvLE6CjVZ0J4PD\n+Gt3nJQUcELCEj"
-        + "c3y3RnlOsGd7TTPsZHP7CRAiEA8f75YoDbDcPpd6SK4/PoWmTD\nBBprsvsQbWL5Vpx0AH8CIQDObqMNKTCtz64tDULI0JSECu7RniRFyQ"
-        + "CQ6H/ZMLys\nNQIgM68eOjCFGGqIOXpWA5t7O5sbn4u5Bs/iUUp7MElX6ScCIHJBOAvDvYamCOA0\nk78z+s9ugaoRXkAltSN/G6vpVrP1"
-        + "AiBhNDs+MZSYh92/A8j/GC/I8yvlkOSFo/ME\n/Va0X/P2Ng==\\n-----END PRIVATE KEY-----\\n\",\n"
+        + "MIIBUwIBADANBgkqhkiG9w0BAQEFAASCAT0wggE5AgEAAkEAwyPCXjWv30y+ZGJH\\njKGsIem4OlXEwsgsl6bJr0vKga/GYEVZXsKz/1Uv"
+        + "KArCQNLOfJh/CpUE+cSLn+H7\\ngZ1uSwIDAQABAkAF1H2sHuKAQ2S0zxLgKrxfzwHIDGPyhdR/O2ZvLE6CjVZ0J4PD\\n+Gt3nJQUcELCEj"
+        + "c3y3RnlOsGd7TTPsZHP7CRAiEA8f75YoDbDcPpd6SK4/PoWmTD\\nBBprsvsQbWL5Vpx0AH8CIQDObqMNKTCtz64tDULI0JSECu7RniRFyQ"
+        + "CQ6H/ZMLys\\nNQIgM68eOjCFGGqIOXpWA5t7O5sbn4u5Bs/iUUp7MElX6ScCIHJBOAvDvYamCOA0\\nk78z+s9ugaoRXkAltSN/G6vpVrP1"
+        + "AiBhNDs+MZSYh92/A8j/GC/I8yvlkOSFo/ME\\n/Va0X/P2Ng==\\n-----END PRIVATE KEY-----\\n\",\n"
         + "  \"client_email\": \"updated@updated-project.iam.gserviceaccount.com\",\n"
         + "  \"client_id\": \"123456789012345678902\",\n"
         + "  \"auth_uri\": \"https://accounts.google.com/o/oauth2/auth\",\n"
         + "  \"token_uri\": \"https://oauth2.googleapis.com/token\"\n"
+        + "}";
+
+    private static final String ACCESS_TOKEN_CREDENTIALS_JSON = "{\n"
+        + "  \"access_token\": \"ya29.a0AfH6SMC...\"\n"
         + "}";
 
     @Test
@@ -85,6 +89,18 @@ class ReloadableCredentialsProviderTest {
 
             final Credentials credentials = provider.getCredentials();
             assertTrue(credentials instanceof NoCredentials);
+        }
+    }
+
+    @Test
+    void testAccessTokenCredentials() throws IOException {
+        try (final ReloadableCredentialsProvider provider = new ReloadableCredentialsProvider(
+            null, ACCESS_TOKEN_CREDENTIALS_JSON, null)) {
+
+            final Credentials credentials = provider.getCredentials();
+            assertNotNull(credentials);
+            assertEquals("OAuth2", credentials.getAuthenticationType());
+            assertEquals("Bearer ya29.a0AfH6SMC...", credentials.getRequestMetadata().get("Authorization").get(0));
         }
     }
 
