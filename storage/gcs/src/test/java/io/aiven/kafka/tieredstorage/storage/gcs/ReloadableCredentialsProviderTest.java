@@ -69,8 +69,17 @@ class ReloadableCredentialsProviderTest {
         + "}";
 
     private static final String ACCESS_TOKEN_CREDENTIALS_JSON = "{\n"
-        + "  \"access_token\": \"ya29.a0AfH6SMC...\"\n"
+        + "  \"access_token\": \"ya29...token1\"\n"
         + "}";
+
+    private static final String ACCESS_TOKEN_CREDENTIALS2_JSON = "{\n"
+        + "  \"access_token\": \"ya29...token2\"\n"
+        + "}";
+
+    private static final String ACCESS_TOKEN_CREDENTIALS3_JSON = "{\n"
+        + "  \"access_token\": \"ya29...token3\"\n"
+        + "}";
+
 
     @Test
     void testJsonCredentials() throws IOException {
@@ -100,7 +109,7 @@ class ReloadableCredentialsProviderTest {
             final Credentials credentials = provider.getCredentials();
             assertNotNull(credentials);
             assertEquals("OAuth2", credentials.getAuthenticationType());
-            assertEquals("Bearer ya29.a0AfH6SMC...", credentials.getRequestMetadata().get("Authorization").get(0));
+            assertEquals("Bearer ya29...token1", credentials.getRequestMetadata().get("Authorization").get(0));
         }
     }
 
@@ -153,8 +162,59 @@ class ReloadableCredentialsProviderTest {
                         StandardOpenOption.TRUNCATE_EXISTING);
 
             Thread.sleep(2000);
+            assertEquals(2, callbackCount.get());
+            assertNotNull(latestCredentials.get());
+        }
+    }
+
+    @Test
+    void testPathCredentialsWithAutoReloadDetectionToken(@TempDir final Path tempDir)
+        throws IOException, InterruptedException {
+        final Path credentialsFile = tempDir.resolve("credentials.json");
+        Files.write(credentialsFile, ACCESS_TOKEN_CREDENTIALS_JSON.getBytes());
+
+        final AtomicInteger callbackCount = new AtomicInteger(0);
+        final AtomicReference<Credentials> latestCredentials = new AtomicReference<>();
+        final CountDownLatch callbackLatch = new CountDownLatch(1);
+
+        try (final ReloadableCredentialsProvider provider = new ReloadableCredentialsProvider(
+            null, null, credentialsFile.toString(), 1)) {
+
+            provider.setCredentialsUpdateCallback(credentials -> {
+                callbackCount.incrementAndGet();
+                latestCredentials.set(credentials);
+                callbackLatch.countDown();
+            });
+
+            final Credentials initialCredentials = provider.getCredentials();
+            assertNotNull(initialCredentials);
+
+            // Update the credentials file
+            Files.write(credentialsFile, ACCESS_TOKEN_CREDENTIALS2_JSON.getBytes(),
+                StandardOpenOption.TRUNCATE_EXISTING);
+
+            // Wait for the callback to be called
+            assertTrue(callbackLatch.await(5, TimeUnit.SECONDS), "Callback should be called within 5 seconds");
+
             assertEquals(1, callbackCount.get());
             assertNotNull(latestCredentials.get());
+            Credentials credentials = provider.getCredentials();
+            assertNotNull(credentials);
+            assertEquals("OAuth2", credentials.getAuthenticationType());
+            assertEquals("Bearer ya29...token2", credentials.getRequestMetadata().get("Authorization").get(0));
+
+            // Update the credentials file again
+            Files.write(credentialsFile, ACCESS_TOKEN_CREDENTIALS3_JSON.getBytes(),
+                        StandardOpenOption.TRUNCATE_EXISTING);
+
+            Thread.sleep(2000);
+            assertEquals(2, callbackCount.get());
+            assertNotNull(latestCredentials.get());
+
+            credentials = provider.getCredentials();
+            assertNotNull(credentials);
+            assertEquals("OAuth2", credentials.getAuthenticationType());
+            assertEquals("Bearer ya29...token3", credentials.getRequestMetadata().get("Authorization").get(0));
         }
     }
 

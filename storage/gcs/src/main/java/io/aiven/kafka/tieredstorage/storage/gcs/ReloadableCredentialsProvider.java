@@ -41,7 +41,7 @@ import org.slf4j.LoggerFactory;
 public class ReloadableCredentialsProvider implements AutoCloseable {
     private static final Logger LOGGER = LoggerFactory.getLogger(ReloadableCredentialsProvider.class);
 
-    private final AtomicReference<Credentials> currentCredentials = new AtomicReference<>();
+    private Credentials currentCredentials;
     private final String credentialsPath;
     private final File credentialsFile;
     private final String credentialsJson;
@@ -96,7 +96,7 @@ public class ReloadableCredentialsProvider implements AutoCloseable {
      * @return current credentials
      */
     public Credentials getCredentials() {
-        return currentCredentials.get();
+        return currentCredentials;
     }
 
     /**
@@ -116,19 +116,15 @@ public class ReloadableCredentialsProvider implements AutoCloseable {
      */
     public void reloadCredentials() throws IOException {
         LOGGER.debug("Reloading GCS credentials");
-        final Credentials newCredentials = CredentialsBuilder.build(
-            defaultCredentials, credentialsJson, credentialsPath);
+        currentCredentials = CredentialsBuilder.build(
+                defaultCredentials, credentialsJson, credentialsPath);
+        LOGGER.info("GCS credentials have been reloaded successfully");
 
-        final Credentials oldCredentials = currentCredentials.getAndSet(newCredentials);
-
-        if (oldCredentials == null || !oldCredentials.equals(newCredentials)) {
-            LOGGER.info("GCS credentials have been reloaded successfully");
-            if (credentialsUpdateCallback != null) {
-                try {
-                    credentialsUpdateCallback.accept(newCredentials);
-                } catch (final Exception e) {
-                    LOGGER.warn("Error in credentials update callback", e);
-                }
+        if (credentialsUpdateCallback != null) {
+            try {
+                credentialsUpdateCallback.accept(currentCredentials);
+            } catch (final Exception e) {
+                LOGGER.warn("Error in credentials update callback", e);
             }
         }
     }
