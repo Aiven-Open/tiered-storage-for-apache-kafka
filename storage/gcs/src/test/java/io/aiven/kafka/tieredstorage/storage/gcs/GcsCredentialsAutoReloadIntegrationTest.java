@@ -100,7 +100,7 @@ class GcsCredentialsAutoReloadIntegrationTest {
 
             // Wait for the auto-reload to trigger
             assertTrue(updateLatch.await(11, TimeUnit.SECONDS),
-                "Credentials should be reloaded within 15 seconds");
+                "Credentials should be reloaded within 11 seconds");
 
             // Verify that credentials were updated
             assertEquals(1, credentialsUpdateCount.get());
@@ -109,8 +109,8 @@ class GcsCredentialsAutoReloadIntegrationTest {
             Files.write(credentialsFile, (UPDATED_CREDENTIALS_JSON + " ").getBytes(),
                         StandardOpenOption.TRUNCATE_EXISTING);
 
-            Thread.sleep(11000); // Wait to ensure no further callbacks happen
-            assertEquals(1, credentialsUpdateCount.get(), "Credentials should not have been reloaded");
+            Thread.sleep(11000);
+            assertEquals(2, credentialsUpdateCount.get(), "Credentials are always reloaded if file is changed");
 
         } finally {
             testableStorage.close();
