@@ -29,7 +29,7 @@ import io.aiven.kafka.tieredstorage.iceberg.data.RowSchema;
 import org.apache.avro.generic.GenericData;
 
 /**
- * Groups records in batches based on the {@code kafka.batch_byte_offset} field.
+ * Groups records in batches based on batch identity (base offset, producer ID, and base sequence).
  */
 public class RecordBatchGrouper implements Closeable {
     private final MultiFileReader reader;
@@ -48,17 +48,31 @@ public class RecordBatchGrouper implements Closeable {
         final GenericData.Record first = takeNext();
         result.add(first);
 
-        final int currentBatchOffset = batchByteOffset(first);
-        while (peekNext() != null && batchByteOffset(peekNext()) == currentBatchOffset) {
+        final BatchIdentity currentBatch = batchIdentity(first);
+        while (peekNext() != null && batchIdentity(peekNext()).equals(currentBatch)) {
             result.add(takeNext());
         }
 
         return result;
     }
 
-    private int batchByteOffset(final GenericData.Record record) {
-        return (int) ((GenericData.Record) record.get(RowSchema.Fields.KAFKA)).get(RowSchema.Fields.BATCH_BYTE_OFFSET);
+    /**
+     * Extracts the unique identity of a batch from a record.
+     * A batch is uniquely identified by its base offset, producer ID, and base sequence.
+     */
+    private BatchIdentity batchIdentity(final GenericData.Record record) {
+        final GenericData.Record kafkaMetadata = (GenericData.Record) record.get(RowSchema.Fields.KAFKA);
+        return new BatchIdentity(
+            (long) kafkaMetadata.get(RowSchema.Fields.BATCH_BASE_OFFSET),
+            (long) kafkaMetadata.get(RowSchema.Fields.BATCH_PRODUCER_ID),
+            (int) kafkaMetadata.get(RowSchema.Fields.BATCH_BASE_SEQUENCE)
+        );
     }
+
+    /**
+     * Represents the unique identity of a Kafka record batch.
+     */
+    private record BatchIdentity(long baseOffset, long producerId, int baseSequence) {}
 
     GenericData.Record peekNext() throws IOException {
         if (nextRecordBuffer == null) {
