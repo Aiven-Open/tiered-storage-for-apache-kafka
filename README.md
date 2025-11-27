@@ -95,7 +95,7 @@ However, you probably don't need to change this in production setups.
 bin/kafka-topics.sh --bootstrap-server localhost:9092 \
     --create --topic topic1 \
     --config remote.storage.enable=true \
-    --config segment.bytes=512000 \
+    --config segment.bytes=1048576 \
     --config local.retention.bytes=1 \
     --config retention.bytes=10000000000000
    
