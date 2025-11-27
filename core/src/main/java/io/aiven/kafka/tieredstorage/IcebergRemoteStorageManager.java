@@ -303,7 +303,7 @@ public class IcebergRemoteStorageManager extends InternalRemoteStorageManager {
             remoteLogSegmentMetadata.topicIdPartition().topicPartition().partition());
         kafkaPart.put(RowSchema.Fields.OFFSET, parsedRecord.recordOffset());
         kafkaPart.put(RowSchema.Fields.TIMESTAMP, parsedRecord.recordTimestamp());
-        kafkaPart.put(RowSchema.Fields.BATCH_BYTE_OFFSET, offsetIndex.lookup(parsedRecord.recordOffset()).position);
+        kafkaPart.put(RowSchema.Fields.BATCH_BYTE_OFFSET, offsetIndex.lookup(batch.baseOffset()).position);
         kafkaPart.put(RowSchema.Fields.BATCH_BASE_OFFSET, batch.baseOffset());
         kafkaPart.put(RowSchema.Fields.BATCH_PARTITION_LEADER_EPOCH, batch.partitionLeaderEpoch());
         kafkaPart.put(RowSchema.Fields.BATCH_MAGIC, batch.magic());
@@ -396,8 +396,7 @@ public class IcebergRemoteStorageManager extends InternalRemoteStorageManager {
                     return Parquet.read(io.newInputFile(dataFileMetadata.location()))
                         .project(table.schema())
                         .createReaderFunc((s, mt) -> ParquetAvroValueReaders.buildReader(s, mt, recordSchema))
-                        .filter(Expressions.greaterThanOrEqual("kafka.batch_byte_offset",
-                            remoteLogSegmentMetadata.startOffset()))
+                        .filter(Expressions.greaterThanOrEqual("kafka.batch_byte_offset", startPosition))
                         .build();
                 }));
             return new LazySequenceInputStream(new BatchEnumeration(recordBatchGrouper, this.structureProvider, topic));
