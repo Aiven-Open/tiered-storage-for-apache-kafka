@@ -115,7 +115,7 @@ subprojects {
 
         mockitoVersion = "5.20.0"
 
-        slf4jVersion = "2.0.13"
+        slf4jVersion = "1.7.36"
 
         kafkaVersion = "3.8.0"
 
@@ -193,6 +193,13 @@ subprojects {
     configurations {
         integrationTestImplementation.extendsFrom testImplementation
         integrationTestRuntime.extendsFrom testRuntimeClasspath
+        
+        // Force slf4j version to 1.7.36 for Kafka compatibility
+        configureEach {
+            resolutionStrategy {
+                force "org.slf4j:slf4j-api:$slf4jVersion"
+            }
+        }
     }
 
     tasks.register('integrationTest', Test) {
@@ -223,7 +230,9 @@ subprojects {
             contents {
                 from jar
                 from sourcesJar
-                from configurations.runtimeClasspath
+                from configurations.runtimeClasspath.filter { file ->
+                    !file.name.contains('slf4j-api')
+                }
             }
         }
     }
@@ -329,11 +338,17 @@ distributions {
     main {
         contents {
             from(project(":core").jar)
-            from(project(":core").configurations.runtimeClasspath)
+            from(project(":core").configurations.runtimeClasspath.filter { file ->
+                !file.name.contains('slf4j-api')
+            })
             from(project(":storage:core").jar)
-            from(project(":storage:core").configurations.runtimeClasspath)
+            from(project(":storage:core").configurations.runtimeClasspath.filter { file ->
+                !file.name.contains('slf4j-api')
+            })
             from(project(":storage:filesystem").jar)
-            from(project(":storage:filesystem").configurations.runtimeClasspath)
+            from(project(":storage:filesystem").configurations.runtimeClasspath.filter { file ->
+                !file.name.contains('slf4j-api')
+            })
         }
     }
 }
