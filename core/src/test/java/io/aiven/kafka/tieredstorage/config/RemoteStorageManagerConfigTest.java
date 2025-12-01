@@ -26,6 +26,7 @@ import java.util.stream.Stream;
 import org.apache.kafka.common.config.ConfigException;
 import org.apache.kafka.common.header.Headers;
 
+import io.aiven.kafka.tieredstorage.iceberg.NamespaceAwareCachingCatalog;
 import io.aiven.kafka.tieredstorage.iceberg.StructureProvider;
 import io.aiven.kafka.tieredstorage.manifest.SegmentFormat;
 import io.aiven.kafka.tieredstorage.metadata.SegmentCustomMetadataField;
@@ -477,7 +478,7 @@ class RemoteStorageManagerConfigTest {
         }
 
         @Test
-        void catalogInitialized() {
+        void catalogInitializedWithDefaultCaching() {
             final var config = new RemoteStorageManagerConfig(
                 Map.of(
                     "storage.backend.class", NoopStorageBackend.class.getCanonicalName(),
@@ -489,8 +490,12 @@ class RemoteStorageManagerConfigTest {
                 )
             );
             final Catalog catalog = config.icebergCatalog();
-            assertThat(catalog).isInstanceOf(TestIcebergCatalog.class);
-            assertThat(catalog)
+            assertThat(catalog).isInstanceOf(NamespaceAwareCachingCatalog.class);
+            
+            final Catalog originalCatalog = ((NamespaceAwareCachingCatalog) catalog).getOriginalCatalog();
+            
+            assertThat(originalCatalog).isInstanceOf(TestIcebergCatalog.class);
+            assertThat(originalCatalog)
                 .extracting(o -> ((TestIcebergCatalog) o).configs)
                 .isEqualTo(Map.of(
                     "class", TestIcebergCatalog.class.getTypeName(),
@@ -498,6 +503,57 @@ class RemoteStorageManagerConfigTest {
                     "a.b", "123",
                     "a.b.c", "true"
                 ));
+        }
+
+        @Test
+        void catalogInitializedWithCachingDisabled() {
+            final var config = new RemoteStorageManagerConfig(
+                Map.of(
+                    "storage.backend.class", NoopStorageBackend.class.getCanonicalName(),
+                    "chunk.size", "123",
+                    "iceberg.catalog.class", TestIcebergCatalog.class.getTypeName(),
+                    "iceberg.catalog.cache.enabled", "false",
+                    "iceberg.catalog.a", "aaa",
+                    "iceberg.catalog.a.b", "123",
+                    "iceberg.catalog.a.b.c", "true"
+                )
+            );
+            final Catalog catalog = config.icebergCatalog();
+            assertThat(catalog).isInstanceOf(TestIcebergCatalog.class);
+
+            assertThat(catalog)
+                .extracting(o -> ((TestIcebergCatalog) o).configs)
+                .isEqualTo(Map.of(
+                    "class", TestIcebergCatalog.class.getTypeName(),
+                    "cache.enabled", "false",
+                    "a", "aaa",
+                    "a.b", "123",
+                    "a.b.c", "true"
+                ));
+        }
+
+        @Test
+        void catalogInitializedWithCustomCacheSettings() {
+            final var config = new RemoteStorageManagerConfig(
+                Map.of(
+                    "storage.backend.class", NoopStorageBackend.class.getCanonicalName(),
+                    "chunk.size", "123",
+                    "iceberg.catalog.class", TestIcebergCatalog.class.getTypeName(),
+                    "iceberg.catalog.cache.enabled", "true",
+                    "iceberg.catalog.cache.expiration.ms", "300000",  // 5 minutes
+                    "iceberg.catalog.a", "aaa"
+                )
+            );
+            final Catalog catalog = config.icebergCatalog();
+            assertThat(catalog).isInstanceOf(NamespaceAwareCachingCatalog.class);
+            
+            final Catalog originalCatalog = ((NamespaceAwareCachingCatalog) catalog).getOriginalCatalog();
+            assertThat(originalCatalog).isInstanceOf(TestIcebergCatalog.class);
+            
+            assertThat(originalCatalog)
+                .extracting(o -> ((TestIcebergCatalog) o).configs)
+                .extracting(m -> m.get("cache.enabled"))
+                .isEqualTo("true");
         }
 
         public static class TestIcebergCatalog implements Catalog {

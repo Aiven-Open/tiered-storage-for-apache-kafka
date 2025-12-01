@@ -34,6 +34,7 @@ import org.apache.kafka.common.metrics.Sensor;
 import org.apache.kafka.common.utils.Utils;
 
 import io.aiven.kafka.tieredstorage.config.validators.Null;
+import io.aiven.kafka.tieredstorage.iceberg.NamespaceAwareCachingCatalog;
 import io.aiven.kafka.tieredstorage.iceberg.StructureProvider;
 import io.aiven.kafka.tieredstorage.manifest.SegmentFormat;
 import io.aiven.kafka.tieredstorage.metadata.SegmentCustomMetadataField;
@@ -114,6 +115,19 @@ public class RemoteStorageManagerConfig extends AbstractConfig {
 
     private static final String ICEBERG_CATALOG_CLASS_CONFIG = ICEBERG_CATALOG_PREFIX + "class";
     private static final String ICEBERG_CATALOG_CLASS_DOC = "The Iceberg catalog implementation class";
+
+    private static final String ICEBERG_CATALOG_CACHE_PREFIX = ICEBERG_CATALOG_PREFIX + "cache.";
+
+    private static final String ICEBERG_CATALOG_CACHE_ENABLED_CONFIG = ICEBERG_CATALOG_CACHE_PREFIX + "enabled";
+    private static final String ICEBERG_CATALOG_CACHE_ENABLED_DOC = "Whether to enable caching for Iceberg catalog "
+        + "table metadata. When disabled, all catalog operations bypass cache. Default is true.";
+
+    private static final String ICEBERG_CATALOG_CACHE_EXPIRATION_MS_CONFIG = ICEBERG_CATALOG_CACHE_PREFIX
+        + "expiration.ms";
+    private static final String ICEBERG_CATALOG_CACHE_EXPIRATION_MS_DOC = "Cache expiration time in milliseconds for "
+        + "Iceberg catalog table metadata. "
+        + "Default is 600000 (10 minutes). "
+        + "Higher values reduce catalog backend load but increase risk of stale metadata in multi-writer scenarios.";
 
     public static ConfigDef configDef() {
         final ConfigDef configDef = new ConfigDef();
@@ -248,6 +262,23 @@ public class RemoteStorageManagerConfig extends AbstractConfig {
             null,
             ConfigDef.Importance.MEDIUM,
             ICEBERG_CATALOG_CLASS_DOC
+        );
+
+        configDef.define(
+            ICEBERG_CATALOG_CACHE_ENABLED_CONFIG,
+            ConfigDef.Type.BOOLEAN,
+            true,
+            ConfigDef.Importance.MEDIUM,
+            ICEBERG_CATALOG_CACHE_ENABLED_DOC
+        );
+
+        configDef.define(
+            ICEBERG_CATALOG_CACHE_EXPIRATION_MS_CONFIG,
+            ConfigDef.Type.LONG,
+            600_000L,
+            ConfigDef.Range.atLeast(1L),
+            ConfigDef.Importance.MEDIUM,
+            ICEBERG_CATALOG_CACHE_EXPIRATION_MS_DOC
         );
 
         return configDef;
@@ -480,6 +511,13 @@ public class RemoteStorageManagerConfig extends AbstractConfig {
             }
         }
         catalog.initialize("catalog", configs);
-        return catalog;
+
+        final boolean cacheEnabled = getBoolean(ICEBERG_CATALOG_CACHE_ENABLED_CONFIG);
+        if (cacheEnabled) {
+            final long cacheExpirationMs = getLong(ICEBERG_CATALOG_CACHE_EXPIRATION_MS_CONFIG);
+            return NamespaceAwareCachingCatalog.wrap(catalog, cacheExpirationMs);
+        } else {
+            return catalog;
+        }
     }
 }
