@@ -24,7 +24,7 @@ ext {
 
     bouncyCastleVersion = "1.82"
 
-    caffeineVersion = "3.2.0"
+    caffeineVersion = "3.2.3"
 
     zstdVersion = "1.5.7-4"
 
