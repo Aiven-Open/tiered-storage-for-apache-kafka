@@ -137,7 +137,7 @@ subprojects {
 
         testcontainersFakeGcsServerVersion = "0.2.0"
 
-        bucket4jVersion = "8.14.0"
+        bucket4jVersion = "8.15.0"
     }
 
     dependencies {
