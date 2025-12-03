@@ -89,7 +89,7 @@ public class RemoteStorageManagerConfig extends AbstractConfig {
     private static final String UPLOAD_RATE_LIMIT_BYTES_CONFIG = "upload.rate.limit.bytes.per.second";
     private static final String UPLOAD_RATE_LIMIT_BYTES_DOC = "Upper bound on bytes to upload "
         + "(therefore read from disk) per second. Rate limit must be equal or larger than 1 MiB/sec "
-        + "as minimal upload throughput.";
+        + "and less than 953 Mib/sec (10^9 byte/sec).";
 
     public static final String METRICS_NUM_SAMPLES_CONFIG = CommonClientConfigs.METRICS_NUM_SAMPLES_CONFIG;
     private static final String METRICS_NUM_SAMPLES_DOC = CommonClientConfigs.METRICS_NUM_SAMPLES_DOC;
@@ -221,7 +221,9 @@ public class RemoteStorageManagerConfig extends AbstractConfig {
             ConfigDef.Type.INT,
             null,
             // at least 1MiB. Not hard-limit, but to avoid a rate too low that could affect other components.
-            Null.or(ConfigDef.Range.atLeast(1024 * 1024)),
+            // The maximum value is 10^9. Since the maximum permitted refill rate in Bucket4j is
+            // 1 token per nanosecond, this means at most 10^9 tokens per second.
+            Null.or(ConfigDef.Range.between(1024 * 1024, 1_000_000_000)),
             ConfigDef.Importance.MEDIUM,
             UPLOAD_RATE_LIMIT_BYTES_DOC
         );

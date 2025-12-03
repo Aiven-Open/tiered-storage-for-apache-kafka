@@ -78,11 +78,11 @@ RemoteStorageManagerConfig
   * Importance: medium
 
 ``upload.rate.limit.bytes.per.second``
-  Upper bound on bytes to upload (therefore read from disk) per second. Rate limit must be equal or larger than 1 MiB/sec as minimal upload throughput.
+  Upper bound on bytes to upload (therefore read from disk) per second. Rate limit must be equal or larger than 1 MiB/sec and less than 953 Mib/sec (10^9 byte/sec).
 
   * Type: int
   * Default: null
-  * Valid Values: null or [1048576,...]
+  * Valid Values: null or [1048576,...,1000000000]
   * Importance: medium
 
 ``custom.metadata.fields.include``
