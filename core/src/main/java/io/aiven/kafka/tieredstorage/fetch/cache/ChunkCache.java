@@ -83,24 +83,24 @@ public abstract class ChunkCache<T> implements ChunkManager, Configurable {
         try {
             return cache.asMap()
                 .compute(chunkKey, (key, val) -> CompletableFuture.supplyAsync(() -> {
-                    if (val == null) {
-                        statsCounter.recordMiss();
-                        try {
-                            final InputStream chunk =
-                                chunkManager.getChunk(objectKey, manifest, chunkId);
-                            final T t = this.cacheChunk(chunkKey, chunk);
-                            result.getAndSet(cachedChunkToInputStream(t));
-                            return t;
-                        } catch (final StorageBackendException | IOException e) {
-                            throw new CompletionException(e);
-                        }
-                    } else {
+                    if (val != null && !val.isCompletedExceptionally()) {
                         statsCounter.recordHit();
                         try {
                             final T cachedChunk = val.get();
                             result.getAndSet(cachedChunkToInputStream(cachedChunk));
                             return cachedChunk;
                         } catch (final InterruptedException | ExecutionException e) {
+                            throw new CompletionException(e);
+                        }
+                    } else {
+                        statsCounter.recordMiss();
+                        try {
+                            final InputStream chunk =
+                                    chunkManager.getChunk(objectKey, manifest, chunkId);
+                            final T t = this.cacheChunk(chunkKey, chunk);
+                            result.getAndSet(cachedChunkToInputStream(t));
+                            return t;
+                        } catch (final StorageBackendException | IOException e) {
                             throw new CompletionException(e);
                         }
                     }
