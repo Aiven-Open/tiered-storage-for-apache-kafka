@@ -48,6 +48,21 @@ RemoteStorageManagerConfig
   * Valid Values: non-null string
   * Importance: high
 
+``iceberg.catalog.cache.enabled``
+  Whether to enable caching for Iceberg catalog table metadata. When disabled, all catalog operations bypass cache. Default is true.
+
+  * Type: boolean
+  * Default: true
+  * Importance: medium
+
+``iceberg.catalog.cache.expiration.ms``
+  Cache expiration time in milliseconds for Iceberg catalog table metadata. Default is 600000 (10 minutes). Higher values reduce catalog backend load but increase risk of stale metadata in multi-writer scenarios.
+
+  * Type: long
+  * Default: 600000 (10 minutes)
+  * Valid Values: [1,...]
+  * Importance: medium
+
 ``iceberg.catalog.class``
   The Iceberg catalog implementation class
 
