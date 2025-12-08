@@ -68,7 +68,7 @@ public class S3StorageConfig extends AbstractConfig {
         + "The higher the part size, the more memory is needed to buffer the part. "
         + "Valid values: between 5MiB and 2GiB";
     static final int S3_MULTIPART_UPLOAD_PART_SIZE_MIN = 5 * 1024 * 1024; // 5MiB
-    static final int S3_MULTIPART_UPLOAD_PART_SIZE_MAX = Integer.MAX_VALUE;
+    static final int S3_MULTIPART_UPLOAD_PART_SIZE_MAX = Integer.MAX_VALUE - 8;
     static final int S3_MULTIPART_UPLOAD_PART_SIZE_DEFAULT = 25 * 1024 * 1024; // 25MiB
 
     private static final String S3_API_CALL_TIMEOUT_CONFIG = "s3.api.call.timeout";

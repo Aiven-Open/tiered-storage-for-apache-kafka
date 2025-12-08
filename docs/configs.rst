@@ -497,7 +497,7 @@ S3StorageConfig
 
   * Type: int
   * Default: 26214400
-  * Valid Values: [5242880,...,2147483647]
+  * Valid Values: [5242880,...,2147483639]
   * Importance: medium
 
 ``aws.certificate.check.enabled``
