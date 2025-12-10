@@ -70,6 +70,13 @@ RemoteStorageManagerConfig
   * Valid Values: [kafka, iceberg]
   * Importance: medium
 
+``iceberg.partition.spec``
+  The Iceberg partition specification. Defines custom partitioning scheme for the Iceberg table. Format: (col1, col2, ...) or (transform(col), ...). Supported transforms: year, month, day, hour, bucket, truncate. Example: (year(timestamp), user_id) or (day(created_at))
+
+  * Type: string
+  * Default: null
+  * Importance: low
+
 ``structure.provider.class``
   The structure provider implementation class
 

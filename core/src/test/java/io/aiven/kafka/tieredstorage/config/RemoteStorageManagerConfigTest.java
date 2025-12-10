@@ -551,5 +551,101 @@ class RemoteStorageManagerConfigTest {
                 Arguments.of(12.3)
             );
         }
+
+        @Test
+        void partitionSpecNotDefined() {
+            final var config = new RemoteStorageManagerConfig(
+                Map.of(
+                    "storage.backend.class", NoopStorageBackend.class.getCanonicalName(),
+                    "chunk.size", "123"
+                )
+            );
+            assertThat(config.icebergPartitionSpec()).isEmpty();
+        }
+
+        @Test
+        void partitionSpecWithSingleColumn() {
+            final var config = new RemoteStorageManagerConfig(
+                Map.of(
+                    "storage.backend.class", NoopStorageBackend.class.getCanonicalName(),
+                    "chunk.size", "123",
+                    "iceberg.partition.spec", "(user_id)"
+                )
+            );
+            assertThat(config.icebergPartitionSpec()).containsExactly("user_id");
+        }
+
+        @Test
+        void partitionSpecWithMultipleColumns() {
+            final var config = new RemoteStorageManagerConfig(
+                Map.of(
+                    "storage.backend.class", NoopStorageBackend.class.getCanonicalName(),
+                    "chunk.size", "123",
+                    "iceberg.partition.spec", "(col1, col2, col3)"
+                )
+            );
+            assertThat(config.icebergPartitionSpec()).containsExactly("col1", "col2", "col3");
+        }
+
+        @Test
+        void partitionSpecWithTransforms() {
+            final var config = new RemoteStorageManagerConfig(
+                Map.of(
+                    "storage.backend.class", NoopStorageBackend.class.getCanonicalName(),
+                    "chunk.size", "123",
+                    "iceberg.partition.spec", "(year(timestamp), user_id)"
+                )
+            );
+            assertThat(config.icebergPartitionSpec()).containsExactly("year(timestamp)", "user_id");
+        }
+
+        @Test
+        void partitionSpecWithComplexTransforms() {
+            final var config = new RemoteStorageManagerConfig(
+                Map.of(
+                    "storage.backend.class", NoopStorageBackend.class.getCanonicalName(),
+                    "chunk.size", "123",
+                    "iceberg.partition.spec", "(day(created_at), bucket(user_id, 10), region)"
+                )
+            );
+            assertThat(config.icebergPartitionSpec())
+                .containsExactly("day(created_at)", "bucket(user_id, 10)", "region");
+        }
+
+        @Test
+        void partitionSpecWithoutParentheses() {
+            final var config = new RemoteStorageManagerConfig(
+                Map.of(
+                    "storage.backend.class", NoopStorageBackend.class.getCanonicalName(),
+                    "chunk.size", "123",
+                    "iceberg.partition.spec", "col1, col2"
+                )
+            );
+            assertThat(config.icebergPartitionSpec()).containsExactly("col1", "col2");
+        }
+
+        @Test
+        void partitionSpecWithEmptyString() {
+            final var config = new RemoteStorageManagerConfig(
+                Map.of(
+                    "storage.backend.class", NoopStorageBackend.class.getCanonicalName(),
+                    "chunk.size", "123",
+                    "iceberg.partition.spec", ""
+                )
+            );
+            assertThat(config.icebergPartitionSpec()).isEmpty();
+        }
+
+        @Test
+        void partitionSpecWithEmptyParentheses() {
+            final var config = new RemoteStorageManagerConfig(
+                Map.of(
+                    "storage.backend.class", NoopStorageBackend.class.getCanonicalName(),
+                    "chunk.size", "123",
+                    "iceberg.partition.spec", "()"
+                )
+            );
+            assertThat(config.icebergPartitionSpec()).isEmpty();
+        }
     }
 }
