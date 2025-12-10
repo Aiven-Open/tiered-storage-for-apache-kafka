@@ -70,7 +70,7 @@ import static io.aiven.kafka.tieredstorage.iceberg.data.SchemaUpdate.UpdateType;
  * The structure, definitions and idea of these defines was taken from
  * <a href="https://github.com/apache/iceberg/blob/main/kafka-connect/kafka-connect/src/main/java/org/apache/iceberg/connect/data/SchemaUtils.java">SchemaUtils</a>
  */
-class SchemaUtils {
+public class SchemaUtils {
 
     private static final Logger LOG = LoggerFactory.getLogger(SchemaUtils.class);
 
@@ -155,7 +155,7 @@ class SchemaUtils {
         return field.isOptional();
     }
 
-    static PartitionSpec createPartitionSpec(
+    public static PartitionSpec createPartitionSpec(
         final org.apache.iceberg.Schema schema, final List<String> partitionBy) {
         if (partitionBy.isEmpty()) {
             return PartitionSpec.unpartitioned();

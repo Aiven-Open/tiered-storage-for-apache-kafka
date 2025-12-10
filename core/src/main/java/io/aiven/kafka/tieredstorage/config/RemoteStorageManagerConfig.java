@@ -115,6 +115,12 @@ public class RemoteStorageManagerConfig extends AbstractConfig {
     private static final String ICEBERG_CATALOG_CLASS_CONFIG = ICEBERG_CATALOG_PREFIX + "class";
     private static final String ICEBERG_CATALOG_CLASS_DOC = "The Iceberg catalog implementation class";
 
+    private static final String ICEBERG_PARTITION_SPEC_CONFIG = ICEBERG_PREFIX + "partition.spec";
+    private static final String ICEBERG_PARTITION_SPEC_DOC = "The Iceberg partition specification. "
+        + "Defines custom partitioning scheme for the Iceberg table. Format: (col1, col2, ...) or (transform(col), ...). "
+        + "Supported transforms: year, month, day, hour, bucket, truncate. "
+        + "Example: (year(timestamp), user_id) or (day(created_at))";
+
     public static ConfigDef configDef() {
         final ConfigDef configDef = new ConfigDef();
 
@@ -250,6 +256,14 @@ public class RemoteStorageManagerConfig extends AbstractConfig {
             null,
             ConfigDef.Importance.MEDIUM,
             ICEBERG_CATALOG_CLASS_DOC
+        );
+
+        configDef.define(
+            ICEBERG_PARTITION_SPEC_CONFIG,
+            ConfigDef.Type.STRING,
+            null,
+            ConfigDef.Importance.LOW,
+            ICEBERG_PARTITION_SPEC_DOC
         );
 
         return configDef;
@@ -483,5 +497,24 @@ public class RemoteStorageManagerConfig extends AbstractConfig {
         }
         catalog.initialize("catalog", configs);
         return catalog;
+    }
+
+    public List<String> icebergPartitionSpec() {
+        final String partitionSpec = getString(ICEBERG_PARTITION_SPEC_CONFIG);
+        if (partitionSpec == null || partitionSpec.trim().isEmpty()) {
+            return List.of();
+        }
+        // Parse partition spec format: (col1, col2, ...) or (transform(col), ...)
+        String spec = partitionSpec.trim();
+        if (spec.startsWith("(") && spec.endsWith(")")) {
+            spec = spec.substring(1, spec.length() - 1);
+        }
+        if (spec.isEmpty()) {
+            return List.of();
+        }
+        return Arrays.stream(spec.split(","))
+            .map(String::trim)
+            .filter(s -> !s.isEmpty())
+            .collect(Collectors.toList());
     }
 }

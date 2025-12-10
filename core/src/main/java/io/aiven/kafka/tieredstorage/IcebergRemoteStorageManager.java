@@ -102,7 +102,7 @@ public class IcebergRemoteStorageManager extends InternalRemoteStorageManager {
         this.objectKeyFactory = new ObjectKeyFactory(config.keyPrefix(), config.keyPrefixMask());
         this.catalog = config.icebergCatalog();
         this.structureProvider = config.structureProvider();
-        this.icebergTableManager = new IcebergTableManager(catalog);
+        this.icebergTableManager = new IcebergTableManager(catalog, config.icebergPartitionSpec());
         this.icebergNamespace = config.icebergNamespace();
         LOG.info("IcebergRemoteStorageManager initialized successfully");
     }

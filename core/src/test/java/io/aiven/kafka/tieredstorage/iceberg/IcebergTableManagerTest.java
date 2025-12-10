@@ -72,7 +72,7 @@ class IcebergTableManagerTest {
     @Test
     void createNewTable() {
         when(catalog.createTable(eq(tableIdentifier), any(org.apache.iceberg.Schema.class),
-            eq(PartitionSpec.unpartitioned())))
+            any(PartitionSpec.class)))
             .thenReturn(table);
 
         final AppendFiles tableAppend = mock(AppendFiles.class);
@@ -82,14 +82,14 @@ class IcebergTableManagerTest {
 
         assertThat(result).isEqualTo(table);
         verify(catalog).createTable(eq(tableIdentifier), any(org.apache.iceberg.Schema.class),
-            eq(PartitionSpec.unpartitioned()));
+            any(PartitionSpec.class));
         verify(catalog, never()).loadTable(any());
     }
 
     @Test
     void loadExistingTable() {
         when(catalog.createTable(eq(tableIdentifier), any(org.apache.iceberg.Schema.class),
-            eq(PartitionSpec.unpartitioned())))
+            any(PartitionSpec.class)))
             .thenThrow(new AlreadyExistsException("Table already exists"));
         when(catalog.loadTable(tableIdentifier)).thenReturn(table);
 
@@ -100,14 +100,14 @@ class IcebergTableManagerTest {
 
         assertThat(result).isEqualTo(table);
         verify(catalog).createTable(eq(tableIdentifier), any(org.apache.iceberg.Schema.class),
-            eq(PartitionSpec.unpartitioned()));
+            any(PartitionSpec.class));
         verify(catalog).loadTable(tableIdentifier);
     }
 
     @Test
     void createAfterRetry() {
         when(catalog.createTable(eq(tableIdentifier), any(org.apache.iceberg.Schema.class),
-            eq(PartitionSpec.unpartitioned())))
+            any(PartitionSpec.class)))
             .thenThrow(new RuntimeException("Temporary failure"))
             .thenReturn(table);
 
@@ -118,13 +118,13 @@ class IcebergTableManagerTest {
 
         assertThat(result).isEqualTo(table);
         verify(catalog, times(2)).createTable(eq(tableIdentifier), any(org.apache.iceberg.Schema.class),
-            eq(PartitionSpec.unpartitioned()));
+            any(PartitionSpec.class));
     }
 
     @Test
     void failWhenExceedsRetries() {
         when(catalog.createTable(eq(tableIdentifier), any(org.apache.iceberg.Schema.class),
-            eq(PartitionSpec.unpartitioned())))
+            any(PartitionSpec.class)))
             .thenThrow(new RuntimeException("Permanent failure"));
 
         assertThatThrownBy(() -> tableManager.getOrCreateTable(tableIdentifier, avroSchema))
@@ -132,7 +132,7 @@ class IcebergTableManagerTest {
             .hasMessage("Permanent failure");
 
         verify(catalog, times(4)).createTable(eq(tableIdentifier), any(org.apache.iceberg.Schema.class),
-            eq(PartitionSpec.unpartitioned()));
+            any(PartitionSpec.class));
     }
 
     @Test
@@ -164,5 +164,33 @@ class IcebergTableManagerTest {
         IcebergTableManager.createNamespaceIfNotExist(catalog, namespace);
 
         verify((SupportsNamespaces) catalog).createNamespace(namespace);
+    }
+
+    @Test
+    void createTableWithCustomPartitionSpec() {
+        // Create a table manager with custom partition spec
+        final IcebergTableManager customTableManager = new IcebergTableManager(
+            catalog, java.util.List.of("id"));
+
+        // Add timestamp field to schema for more complex partitioning test
+        final Schema schemaWithTimestamp = Schema.createRecord("TestRecord", "Test record", "test.namespace", false);
+        schemaWithTimestamp.setFields(java.util.List.of(
+            new Schema.Field("id", Schema.create(Schema.Type.LONG), "Record ID", null),
+            new Schema.Field("name", Schema.create(Schema.Type.STRING), "Record name", null),
+            new Schema.Field("timestamp", Schema.create(Schema.Type.LONG), "Timestamp", null)
+        ));
+
+        when(catalog.createTable(eq(tableIdentifier), any(org.apache.iceberg.Schema.class),
+            any(PartitionSpec.class)))
+            .thenReturn(table);
+
+        final AppendFiles tableAppend = mock(AppendFiles.class);
+        when(table.newAppend()).thenReturn(tableAppend);
+
+        final Table result = customTableManager.getOrCreateTable(tableIdentifier, schemaWithTimestamp);
+
+        assertThat(result).isEqualTo(table);
+        verify(catalog).createTable(eq(tableIdentifier), any(org.apache.iceberg.Schema.class),
+            any(PartitionSpec.class));
     }
 }

@@ -17,6 +17,7 @@
 package io.aiven.kafka.tieredstorage.iceberg;
 
 import java.util.Arrays;
+import java.util.List;
 import java.util.concurrent.atomic.AtomicReference;
 
 import org.apache.avro.Schema;
@@ -32,21 +33,30 @@ import org.apache.iceberg.exceptions.AlreadyExistsException;
 import org.apache.iceberg.exceptions.ForbiddenException;
 import org.apache.iceberg.util.Tasks;
 
+import io.aiven.kafka.tieredstorage.iceberg.data.SchemaUtils;
+
 /**
  * The structure, definitions and idea of these defines was taken from
  * <a href="https://github.com/apache/iceberg/blob/main/kafka-connect/kafka-connect/src/main/java/org/apache/iceberg/connect/data/IcebergWriterFactory.java">IcebergWriterFactory</a>
  */
 public class IcebergTableManager {
     private final Catalog catalog;
+    private final List<String> partitionSpec;
 
     public IcebergTableManager(final Catalog catalog) {
+        this(catalog, List.of());
+    }
+
+    public IcebergTableManager(final Catalog catalog, final List<String> partitionSpec) {
         this.catalog = catalog;
+        this.partitionSpec = partitionSpec != null ? partitionSpec : List.of();
     }
 
     public Table getOrCreateTable(final TableIdentifier identifier, final Schema schema) {
         createNamespaceIfNotExist(catalog, identifier.namespace());
 
         final org.apache.iceberg.Schema icebergSchema = AvroSchemaUtil.toIceberg(schema);
+        final PartitionSpec partitionSpecToUse = SchemaUtils.createPartitionSpec(icebergSchema, partitionSpec);
 
         final AtomicReference<Table> result = new AtomicReference<>();
         Tasks.range(1)
@@ -55,7 +65,7 @@ public class IcebergTableManager {
                 notUsed -> {
                     try {
                         final Table table =
-                            catalog.createTable(identifier, icebergSchema, PartitionSpec.unpartitioned());
+                            catalog.createTable(identifier, icebergSchema, partitionSpecToUse);
                         //Initial commit to get snapshotId and sequence number
                         addInitialCommit(table);
                         result.set(table);
