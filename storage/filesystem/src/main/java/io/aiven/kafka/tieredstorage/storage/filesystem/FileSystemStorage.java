@@ -113,6 +113,10 @@ public class FileSystemStorage implements StorageBackend {
     }
 
     @Override
+    public void close() throws IOException {
+    }
+
+    @Override
     public String toString() {
         return "FileSystemStorage{"
             + "fsRoot=" + fsRoot + '}';

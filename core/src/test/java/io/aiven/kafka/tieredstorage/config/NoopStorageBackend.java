@@ -16,6 +16,7 @@
 
 package io.aiven.kafka.tieredstorage.config;
 
+import java.io.IOException;
 import java.io.InputStream;
 import java.util.Map;
 
@@ -56,6 +57,9 @@ public class NoopStorageBackend implements StorageBackend {
     public void delete(final ObjectKey key) throws StorageBackendException {
     }
 
+    @Override
+    public void close() throws IOException {
+    }
 
     static class Config extends AbstractConfig {
 

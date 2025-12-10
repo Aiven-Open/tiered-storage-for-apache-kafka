@@ -41,9 +41,9 @@ class RecordBatchGrouperTest {
 
     @Test
     void singleBatch() throws IOException {
-        final GenericData.Record record1 = recordWithBatchByteOffset(1);
-        final GenericData.Record record2 = recordWithBatchByteOffset(1);
-        final GenericData.Record record3 = recordWithBatchByteOffset(1);
+        final GenericData.Record record1 = recordWithBatchIdentity(100L, 1L, 0);
+        final GenericData.Record record2 = recordWithBatchIdentity(100L, 1L, 0);
+        final GenericData.Record record3 = recordWithBatchIdentity(100L, 1L, 0);
 
         final MultiFileReader reader = mock(MultiFileReader.class);
         when(reader.read()).thenReturn(record1, record2, record3, null);
@@ -56,10 +56,10 @@ class RecordBatchGrouperTest {
 
     @Test
     void multipleBatches() throws IOException {
-        final GenericData.Record record1 = recordWithBatchByteOffset(1);
-        final GenericData.Record record2 = recordWithBatchByteOffset(1);
-        final GenericData.Record record3 = recordWithBatchByteOffset(2);
-        final GenericData.Record record4 = recordWithBatchByteOffset(3);
+        final GenericData.Record record1 = recordWithBatchIdentity(100L, 1L, 0);
+        final GenericData.Record record2 = recordWithBatchIdentity(100L, 1L, 0);
+        final GenericData.Record record3 = recordWithBatchIdentity(150L, 1L, 1);
+        final GenericData.Record record4 = recordWithBatchIdentity(200L, 1L, 2);
 
         final MultiFileReader reader = mock(MultiFileReader.class);
         when(reader.read()).thenReturn(record1, record2, record3, record4, null);
@@ -72,15 +72,15 @@ class RecordBatchGrouperTest {
     }
 
     /**
-     * Tests that if a previous batch reoccurs, we still return everthing correctly.
+     * Tests that if a previous batch reoccurs, we still return everything correctly.
      * Not expected to happen for real.
      */
     @Test
     void returningToPreviousBatches() throws IOException {
-        final GenericData.Record record1 = recordWithBatchByteOffset(1);
-        final GenericData.Record record2 = recordWithBatchByteOffset(2);
-        final GenericData.Record record3 = recordWithBatchByteOffset(2);
-        final GenericData.Record record4 = recordWithBatchByteOffset(1);
+        final GenericData.Record record1 = recordWithBatchIdentity(100L, 1L, 0);
+        final GenericData.Record record2 = recordWithBatchIdentity(150L, 1L, 1);
+        final GenericData.Record record3 = recordWithBatchIdentity(150L, 1L, 1);
+        final GenericData.Record record4 = recordWithBatchIdentity(100L, 1L, 0);
 
         final MultiFileReader reader = mock(MultiFileReader.class);
         when(reader.read()).thenReturn(record1, record2, record3, record4, null);
@@ -92,9 +92,15 @@ class RecordBatchGrouperTest {
         assertThat(grouper.nextBatch()).isNull();
     }
 
-    private GenericData.Record recordWithBatchByteOffset(final int batchByteOffset) {
+    private GenericData.Record recordWithBatchIdentity(
+        final long baseOffset,
+        final long producerId,
+        final int baseSequence
+    ) {
         final GenericData.Record kafka = mock(GenericData.Record.class);
-        when(kafka.get(eq(RowSchema.Fields.BATCH_BYTE_OFFSET))).thenReturn(batchByteOffset);
+        when(kafka.get(eq(RowSchema.Fields.BATCH_BASE_OFFSET))).thenReturn(baseOffset);
+        when(kafka.get(eq(RowSchema.Fields.BATCH_PRODUCER_ID))).thenReturn(producerId);
+        when(kafka.get(eq(RowSchema.Fields.BATCH_BASE_SEQUENCE))).thenReturn(baseSequence);
         final GenericData.Record record = mock(GenericData.Record.class);
         when(record.get(eq(RowSchema.Fields.KAFKA))).thenReturn(kafka);
         return record;

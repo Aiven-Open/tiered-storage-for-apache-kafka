@@ -207,6 +207,13 @@ public class AzureBlobStorage implements StorageBackend {
     }
 
     @Override
+    public void close() throws IOException {
+        if (metricsPolicy != null) {
+            metricsPolicy.close();
+        }
+    }
+
+    @Override
     public String toString() {
         return "AzureStorage{"
             + "containerName='" + config.containerName() + '\''

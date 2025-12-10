@@ -28,8 +28,6 @@ import io.aiven.kafka.tieredstorage.config.validators.NonEmptyPassword;
 import io.aiven.kafka.tieredstorage.config.validators.ValidUrl;
 import io.aiven.kafka.tieredstorage.storage.proxy.ProxyConfig;
 
-import com.google.auth.Credentials;
-
 public class GcsStorageConfig extends AbstractConfig {
     static final String GCS_BUCKET_NAME_CONFIG = "gcs.bucket.name";
     private static final String GCS_BUCKET_NAME_DOC = "GCS bucket to store log segments";
@@ -57,6 +55,7 @@ public class GcsStorageConfig extends AbstractConfig {
         + "Cannot be set together with \"" + GCP_CREDENTIALS_PATH_CONFIG + "\" "
         + "or \"" + GCP_CREDENTIALS_DEFAULT_CONFIG + "\"";
     private static final String GCP_CREDENTIALS_PATH_DOC = "The path to a GCP credentials file. "
+        + "This can be standard GCP credentials format, or JSON with a single `access_token` field. "
         + "Cannot be set together with \"" + GCP_CREDENTIALS_JSON_CONFIG + "\" "
         + "or \"" + GCP_CREDENTIALS_DEFAULT_CONFIG + "\"";
     private static final String GCP_CREDENTIALS_DEFAULT_DOC = "Use the default GCP credentials. "
@@ -156,13 +155,21 @@ public class GcsStorageConfig extends AbstractConfig {
         return getInt(GCS_RESUMABLE_UPLOAD_CHUNK_SIZE_CONFIG);
     }
 
-    Credentials credentials() {
+    /**
+     * Creates a reloadable credentials provider that automatically reloads credentials
+     * when the credentials file is modified during runtime (if using file-based credentials).
+     *
+     * @return a ReloadableCredentialsProvider instance
+     * @throws ConfigException if credentials cannot be created
+     */
+    ReloadableCredentialsProvider reloadableCredentials() {
         final Boolean defaultCredentials = getBoolean(GCP_CREDENTIALS_DEFAULT_CONFIG);
         final Password credentialsJsonPwd = getPassword(GCP_CREDENTIALS_JSON_CONFIG);
         final String credentialsJson = credentialsJsonPwd == null ? null : credentialsJsonPwd.value();
         final String credentialsPath = getString(GCP_CREDENTIALS_PATH_CONFIG);
+
         try {
-            return CredentialsBuilder.build(defaultCredentials, credentialsJson, credentialsPath);
+            return new ReloadableCredentialsProvider(defaultCredentials, credentialsJson, credentialsPath);
         } catch (final IOException e) {
             throw new ConfigException("Failed to create GCS credentials: " + e.getMessage());
         }

@@ -109,13 +109,13 @@ subprojects {
     ext {
         // Keep empty lines between versions to avoid conflicts on mass update (e.g. Dependabot).
 
-        junitVersion = "5.13.4"
+        junitVersion = "6.0.1"
 
         junitPlatformVersion = "6.0.0"
 
         mockitoVersion = "5.20.0"
 
-        slf4jVersion = "2.0.13"
+        slf4jVersion = "1.7.36"
 
         kafkaVersion = "3.8.0"
 
@@ -123,15 +123,15 @@ subprojects {
 
         apacheCommonsIOVersion = "2.19.0"
 
-        jacksonVersion = "2.20.0"
+        jacksonVersion = "2.20.1"
 
         awaitilityVersion = "4.3.0"
 
-        awsSdkVersion = "2.34.7"
+        awsSdkVersion = "2.37.3"
 
         oracleSdkVersion = "3.74.1"
 
-        gcpSdkVersion = "2.58.0"
+        gcpSdkVersion = "2.60.0"
 
         azureSdkVersion = "1.2.28"
 
@@ -139,7 +139,7 @@ subprojects {
 
         testcontainersFakeGcsServerVersion = "0.2.0"
 
-        bucket4jVersion = "8.14.0"
+        bucket4jVersion = "8.15.0"
     }
 
     dependencies {
@@ -195,6 +195,13 @@ subprojects {
     configurations {
         integrationTestImplementation.extendsFrom testImplementation
         integrationTestRuntime.extendsFrom testRuntimeClasspath
+        
+        // Force slf4j version to 1.7.36 for Kafka compatibility
+        configureEach {
+            resolutionStrategy {
+                force "org.slf4j:slf4j-api:$slf4jVersion"
+            }
+        }
     }
 
     tasks.register('integrationTest', Test) {
@@ -225,7 +232,9 @@ subprojects {
             contents {
                 from jar
                 from sourcesJar
-                from configurations.runtimeClasspath
+                from configurations.runtimeClasspath.filter { file ->
+                    !file.name.contains('slf4j-api')
+                }
             }
         }
     }
@@ -331,11 +340,17 @@ distributions {
     main {
         contents {
             from(project(":core").jar)
-            from(project(":core").configurations.runtimeClasspath)
+            from(project(":core").configurations.runtimeClasspath.filter { file ->
+                !file.name.contains('slf4j-api')
+            })
             from(project(":storage:core").jar)
-            from(project(":storage:core").configurations.runtimeClasspath)
+            from(project(":storage:core").configurations.runtimeClasspath.filter { file ->
+                !file.name.contains('slf4j-api')
+            })
             from(project(":storage:filesystem").jar)
-            from(project(":storage:filesystem").configurations.runtimeClasspath)
+            from(project(":storage:filesystem").configurations.runtimeClasspath.filter { file ->
+                !file.name.contains('slf4j-api')
+            })
         }
     }
 }

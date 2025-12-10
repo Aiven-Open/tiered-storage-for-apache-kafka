@@ -39,9 +39,12 @@ import com.google.cloud.storage.Storage;
 import com.google.cloud.storage.StorageOptions;
 
 public class GcsStorage implements StorageBackend {
-    private Storage storage;
+    private volatile Storage storage;
     private String bucketName;
+    private MetricCollector metricCollector;
     private Integer resumableUploadChunkSize;
+    private ReloadableCredentialsProvider credentialsProvider;
+    private StorageOptions.Builder storageOptionsBuilder;
 
     @Override
     public void configure(final Map<String, ?> configs) {
@@ -61,13 +64,23 @@ public class GcsStorage implements StorageBackend {
             }
         }
 
-        final StorageOptions.Builder builder = StorageOptions.newBuilder()
-            .setCredentials(config.credentials())
-            .setTransportOptions(new MetricCollector().httpTransportOptions(httpTransportOptionsBuilder));
+        metricCollector = new MetricCollector();
+
+        // Create reloadable credentials provider
+        this.credentialsProvider = config.reloadableCredentials();
+
+        // Store the builder template for recreating storage clients
+        this.storageOptionsBuilder = StorageOptions.newBuilder()
+            .setTransportOptions(metricCollector.httpTransportOptions(httpTransportOptionsBuilder));
         if (config.endpointUrl() != null) {
-            builder.setHost(config.endpointUrl());
+            this.storageOptionsBuilder.setHost(config.endpointUrl());
         }
-        storage = builder.build().getService();
+
+        // Set up credentials reload callback to recreate storage client
+        this.credentialsProvider.setCredentialsUpdateCallback(this::updateStorageClient);
+
+        // Create initial storage client
+        updateStorageClient(credentialsProvider.getCredentials());
 
         resumableUploadChunkSize = config.resumableUploadChunkSize();
     }
@@ -158,6 +171,31 @@ public class GcsStorage implements StorageBackend {
             throw new KeyNotFoundException(this, key);
         }
         return blob;
+    }
+
+    /**
+     * Updates the storage client with new credentials.
+     * This method is called when credentials are reloaded.
+     *
+     * @param credentials the new credentials to use
+     */
+    protected void updateStorageClient(final com.google.auth.Credentials credentials) {
+        synchronized (this) {
+            this.storage = storageOptionsBuilder
+                .setCredentials(credentials)
+                .build()
+                .getService();
+        }
+    }
+
+    @Override
+    public void close() throws IOException {
+        if (credentialsProvider != null) {
+            credentialsProvider.close();
+        }
+        if (metricCollector != null) {
+            metricCollector.close();
+        }
     }
 
     @Override

@@ -78,11 +78,11 @@ RemoteStorageManagerConfig
   * Importance: medium
 
 ``upload.rate.limit.bytes.per.second``
-  Upper bound on bytes to upload (therefore read from disk) per second. Rate limit must be equal or larger than 1 MiB/sec as minimal upload throughput.
+  Upper bound on bytes to upload (therefore read from disk) per second. Rate limit must be equal or larger than 1 MiB/sec and less than 953 Mib/sec (10^9 byte/sec).
 
   * Type: int
   * Default: null
-  * Valid Values: null or [1048576,...]
+  * Valid Values: null or [1048576,...,1000000000]
   * Importance: medium
 
 ``custom.metadata.fields.include``
@@ -321,7 +321,7 @@ Storage Backends
 Under ``storage.``
 
 -----------------
-AzureBlobStorageStorageConfig
+AzureBlobStorageConfig
 -----------------
 ``azure.container.name``
   Azure container to store log segments
@@ -381,7 +381,7 @@ AzureBlobStorageStorageConfig
 
 
 -----------------
-AzureBlobStorageStorageConfig
+GcsStorageConfig
 -----------------
 ``gcs.bucket.name``
   GCS bucket to store log segments
@@ -406,7 +406,7 @@ AzureBlobStorageStorageConfig
   * Importance: medium
 
 ``gcs.credentials.path``
-  The path to a GCP credentials file. Cannot be set together with "gcs.credentials.json" or "gcs.credentials.default"
+  The path to a GCP credentials file. This can be standard GCP credentials format, or JSON with a single `access_token` field. Cannot be set together with "gcs.credentials.json" or "gcs.credentials.default"
 
   * Type: string
   * Default: null
@@ -462,8 +462,23 @@ S3StorageConfig
   * Default: false
   * Importance: medium
 
+``aws.credentials.file``
+  This property is used to define a file where credentials are defined. The file might be updated during process life cycle, and the credentials will be reloaded from the file.
+
+  * Type: string
+  * Default: null
+  * Importance: medium
+
 ``aws.secret.access.key``
   AWS secret access key. To be used when static credentials are provided.
+
+  * Type: password
+  * Default: null
+  * Valid Values: Non-empty password text
+  * Importance: medium
+
+``aws.session.token``
+  The AWS session token. Retrieved from an AWS token service, used for authenticating that this user has received temporary permission to access some resource.
 
   * Type: password
   * Default: null

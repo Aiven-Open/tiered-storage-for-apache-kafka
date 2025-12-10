@@ -16,6 +16,8 @@
 
 package io.aiven.kafka.tieredstorage.storage.azure;
 
+import java.io.Closeable;
+import java.io.IOException;
 import java.util.List;
 import java.util.regex.Pattern;
 
@@ -55,7 +57,7 @@ import static io.aiven.kafka.tieredstorage.storage.azure.MetricRegistry.BLOCK_UP
 import static io.aiven.kafka.tieredstorage.storage.azure.MetricRegistry.BLOCK_UPLOAD_TOTAL_METRIC_NAME;
 import static io.aiven.kafka.tieredstorage.storage.azure.MetricRegistry.METRIC_CONTEXT;
 
-public class MetricCollector {
+public class MetricCollector implements Closeable {
 
     final AzureBlobStorageConfig config;
     final MetricsPolicy policy;
@@ -83,7 +85,7 @@ public class MetricCollector {
         return policy;
     }
 
-    static class MetricsPolicy implements HttpPipelinePolicy {
+    static class MetricsPolicy implements HttpPipelinePolicy, Closeable {
 
         static final Pattern UPLOAD_QUERY_PATTERN = Pattern.compile("comp=(?<comp>[^&]+)");
 
@@ -184,5 +186,15 @@ public class MetricCollector {
                 }
             }
         }
+
+        @Override
+        public void close() throws IOException {
+            metrics.close();
+        }
+    }
+
+    @Override
+    public void close() throws IOException {
+        policy.close();
     }
 }
