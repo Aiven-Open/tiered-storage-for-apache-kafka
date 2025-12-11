@@ -113,7 +113,7 @@ public class S3StorageTest extends BaseStorageTest {
     @Test
     void partSizePassedToStream() throws IOException {
         try (final var os = ((S3Storage) storage()).s3OutputStream(new TestObjectKey("test"))) {
-            assertThat(os.partSize).isEqualTo(PART_SIZE);
+            assertThat(os.partSize()).isEqualTo(PART_SIZE);
         }
     }
 
