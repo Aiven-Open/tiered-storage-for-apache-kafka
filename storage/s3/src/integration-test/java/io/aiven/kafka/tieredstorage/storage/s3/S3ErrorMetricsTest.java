@@ -49,6 +49,7 @@ import static com.github.tomakehurst.wiremock.client.WireMock.anyUrl;
 import static com.github.tomakehurst.wiremock.client.WireMock.delete;
 import static com.github.tomakehurst.wiremock.client.WireMock.post;
 import static com.github.tomakehurst.wiremock.client.WireMock.put;
+import static com.github.tomakehurst.wiremock.client.WireMock.reset;
 import static com.github.tomakehurst.wiremock.client.WireMock.stubFor;
 import static com.github.tomakehurst.wiremock.common.ContentTypes.CONTENT_TYPE;
 import static org.apache.http.entity.ContentType.APPLICATION_XML;
@@ -84,6 +85,7 @@ class S3ErrorMetricsTest {
                                 final int uploadFileSize,
                                 final String metricName,
                                 final WireMockRuntimeInfo wmRuntimeInfo) throws Exception {
+        reset();
         final Map<String, Object> configs = Map.of(
             "s3.bucket.name", BUCKET_NAME,
             "s3.region", Region.US_EAST_1.id(),
