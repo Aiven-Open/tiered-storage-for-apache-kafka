@@ -232,9 +232,9 @@ class BatchEnumerationTest {
         assertThat(record.sequence()).isEqualTo(sequence);
         assertThat(record.timestamp()).isEqualTo(timestamp);
         assertThat(record.hasKey()).isTrue();
-        assertThat(record.key()).isEqualByComparingTo(ByteBuffer.wrap(key(offset)));
+        assertThat(record.key()).isEqualByComparingTo(key(offset));
         assertThat(record.hasValue()).isTrue();
-        assertThat(record.value()).isEqualByComparingTo(ByteBuffer.wrap(value(offset)));
+        assertThat(record.value()).isEqualByComparingTo(value(offset));
         assertThat(record.headers()).containsExactly(
             new RecordHeader(HEADER1_KEY, header1Value(offset)),
             new RecordHeader(HEADER2_KEY, header2Value(offset))
@@ -251,11 +251,11 @@ class BatchEnumerationTest {
         return String.format("header2 value: %d", offset).getBytes();
     }
 
-    private static byte[] key(final long offset) {
-        return String.format("key %d", offset).getBytes();
+    private static ByteBuffer key(final long offset) {
+        return ByteBuffer.wrap(String.format("key %d", offset).getBytes());
     }
 
-    private static byte[] value(final long offset) {
-        return String.format("value %d", offset).getBytes();
+    private static ByteBuffer value(final long offset) {
+        return ByteBuffer.wrap(String.format("value %d", offset).getBytes());
     }
 }
