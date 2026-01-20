@@ -175,7 +175,7 @@ public class ParquetAvroValueReaders {
                 avroSchema = providedAvroSchema;
             } else {
                 final int fieldId = struct.getId().intValue();
-                avroSchema = avroSchemasByFieldId.get(fieldId);
+                avroSchema = avroSchemasByFieldId.getOrDefault(fieldId, null);
             }
 
             final Map<Integer, ParquetValueReader<?>> readersById = Maps.newHashMap();
@@ -223,8 +223,8 @@ public class ParquetAvroValueReaders {
             return new ListReader<>(
                 repeatedD, 
                 repeatedR, 
-                ParquetValueReaders.option(elementType, elementD, elementReader), 
-                avroSchemasByFieldId.get(array.getId().intValue()));
+                ParquetValueReaders.option(elementType, elementD, elementReader),
+                avroSchemasByFieldId.getOrDefault(array.getId().intValue(), null));
         }
 
         static class ListReader<E> extends ParquetValueReaders.ListReader<E> {
@@ -276,6 +276,9 @@ public class ParquetAvroValueReaders {
 
             final ColumnDescriptor desc = type.getColumnDescription(currentPath());
 
+            if (!avroSchemasByFieldId.containsKey(primitive.getId().intValue())) {
+                return ParquetValueReaders.nulls();
+            }
             if (primitive.getOriginalType() != null) {
                 switch (primitive.getOriginalType()) {
                     case ENUM:
