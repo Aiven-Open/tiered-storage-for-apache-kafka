@@ -119,7 +119,7 @@ subprojects {
 
         kafkaVersion = "3.8.0"
 
-        assertJVersion = "3.27.3"
+        assertJVersion = "3.27.7"
 
         apacheCommonsIOVersion = "2.19.0"
 
