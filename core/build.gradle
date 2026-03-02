@@ -66,7 +66,7 @@ dependencies {
     // ---
     // The following dependencies are needed only for the structure providers.
     // Keep this in mind when extracting them into a separate project.
-    implementation("io.confluent:kafka-avro-serializer:8.0.0") {
+    implementation("io.confluent:kafka-avro-serializer:8.1.1") {
         exclude group: "org.slf4j"
         exclude group: 'org.apache.kafka', module: 'kafka-clients'
         exclude group: 'com.fasterxml.jackson.core', module: 'jackson-databind'
