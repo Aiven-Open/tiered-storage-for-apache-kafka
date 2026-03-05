@@ -65,7 +65,7 @@ rsm.config.storage.backend.class=io.aiven.kafka.tieredstorage.storage.gcs.GcsSto
 rsm.config.storage.gcs.bucket.name=my-bucket
 rsm.config.storage.gcs.credentials.default=true
 # The prefix can be skipped:
-#rsm.config.storage.key.prefix: "some/prefix/"
+#rsm.config.key.prefix=some/prefix/
 
 # ----- Configure the fetch chunk cache -----
 
