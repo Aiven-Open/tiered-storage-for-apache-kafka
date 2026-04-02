@@ -121,7 +121,7 @@ subprojects {
 
         assertJVersion = "3.27.7"
 
-        apacheCommonsIOVersion = "2.19.0"
+        apacheCommonsIOVersion = "2.21.0"
 
         jacksonVersion = "2.21.1"
 
