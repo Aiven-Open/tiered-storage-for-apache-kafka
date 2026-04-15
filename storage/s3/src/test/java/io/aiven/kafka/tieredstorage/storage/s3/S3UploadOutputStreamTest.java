@@ -97,12 +97,12 @@ class S3UploadOutputStreamTest {
             .thenReturn(newUploadPartResponse("SOME_ETAG#1"));
         s3UploadOutputStream.write(1);
         verify(mockedS3).createMultipartUpload(createMultipartUploadRequest.capture());
-        assertCreateMultipartUploadRequest(createMultipartUploadRequest.getValue(), StorageClass.STANDARD);
+        assertCreateMultipartUploadRequest(createMultipartUploadRequest.getValue(), StorageClass.STANDARD.toString());
     }
 
     @Test
     void completeMultipartUploadWithNonDefaultStorageClass() throws IOException {
-        final StorageClass nonDefaultStorageClass = StorageClass.STANDARD_IA;
+        final String nonDefaultStorageClass = StorageClass.STANDARD_IA.toString();
         final S3UploadOutputStream s3UploadOutputStream = new S3UploadOutputStream(BUCKET_NAME, FILE_KEY,
             nonDefaultStorageClass, 1, mockedS3);
         when(mockedS3.uploadPart(any(UploadPartRequest.class), any(RequestBody.class)))
@@ -110,6 +110,19 @@ class S3UploadOutputStreamTest {
         s3UploadOutputStream.write(1);
         verify(mockedS3).createMultipartUpload(createMultipartUploadRequest.capture());
         assertCreateMultipartUploadRequest(createMultipartUploadRequest.getValue(), nonDefaultStorageClass);
+    }
+
+    @Test
+    void completeMultipartUploadWithCustomStorageClassString() throws IOException {
+        // Arbitrary storage class string (not in the AWS SDK enum) must be forwarded verbatim.
+        final String customStorageClass = "CUSTOM_STORAGE_CLASS";
+        final S3UploadOutputStream s3UploadOutputStream = new S3UploadOutputStream(BUCKET_NAME, FILE_KEY,
+            customStorageClass, 1, mockedS3);
+        when(mockedS3.uploadPart(any(UploadPartRequest.class), any(RequestBody.class)))
+            .thenReturn(newUploadPartResponse("SOME_ETAG#1"));
+        s3UploadOutputStream.write(1);
+        verify(mockedS3).createMultipartUpload(createMultipartUploadRequest.capture());
+        assertThat(createMultipartUploadRequest.getValue().storageClassAsString()).isEqualTo(customStorageClass);
     }
 
     @Test
@@ -505,10 +518,10 @@ class S3UploadOutputStreamTest {
     }
 
     private static void assertCreateMultipartUploadRequest(final CreateMultipartUploadRequest request,
-                                                           final StorageClass expectedStorageClass) {
+                                                           final String expectedStorageClass) {
         assertThat(request.bucket()).isEqualTo(BUCKET_NAME);
         assertThat(request.key()).isEqualTo(FILE_KEY.value());
-        assertThat(request.storageClass()).isEqualTo(expectedStorageClass);
+        assertThat(request.storageClassAsString()).isEqualTo(expectedStorageClass);
     }
 
     private static void assertUploadPartRequest(final UploadPartRequest uploadPartRequest,

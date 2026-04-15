@@ -496,11 +496,10 @@ S3StorageConfig
   * Importance: low
 
 ``s3.storage.class``
-  Defines which storage class to use when uploading objects
+  Defines which storage class to use when uploading objects. Any non-empty string is accepted and forwarded verbatim to the S3 API, so custom or newly introduced storage classes that are not yet modeled in the AWS SDK enum can also be configured. Examples of well-known values: STANDARD, REDUCED_REDUNDANCY, STANDARD_IA, ONEZONE_IA, INTELLIGENT_TIERING, GLACIER, DEEP_ARCHIVE, OUTPOSTS, GLACIER_IR, SNOW, EXPRESS_ONEZONE.
 
   * Type: string
   * Default: STANDARD
-  * Valid Values: [STANDARD, REDUCED_REDUNDANCY, STANDARD_IA, ONEZONE_IA, INTELLIGENT_TIERING, GLACIER, DEEP_ARCHIVE, OUTPOSTS, GLACIER_IR, SNOW, EXPRESS_ONEZONE]
   * Importance: low
 
 

@@ -40,7 +40,6 @@ import software.amazon.awssdk.services.s3.model.DeleteObjectsRequest;
 import software.amazon.awssdk.services.s3.model.DeleteObjectsResponse;
 import software.amazon.awssdk.services.s3.model.GetObjectRequest;
 import software.amazon.awssdk.services.s3.model.ObjectIdentifier;
-import software.amazon.awssdk.services.s3.model.StorageClass;
 
 public class S3Storage implements StorageBackend {
     private static final int MAX_DELETE_OBJECTS = 1000;
@@ -48,7 +47,7 @@ public class S3Storage implements StorageBackend {
     S3Client s3Client;
 
     private String bucketName;
-    private StorageClass storageClass;
+    private String storageClass;
     private int partSize;
 
     @Override

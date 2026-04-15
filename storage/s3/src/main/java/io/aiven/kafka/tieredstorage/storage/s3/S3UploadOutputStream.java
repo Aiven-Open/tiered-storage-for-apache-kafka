@@ -57,7 +57,7 @@ public class S3UploadOutputStream extends OutputStream {
     private final ByteBuffer partBuffer;
     private final String bucketName;
     private final ObjectKey key;
-    private final StorageClass storageClass;
+    private final String storageClass;
     final int partSize;
 
     private String uploadId;
@@ -70,12 +70,12 @@ public class S3UploadOutputStream extends OutputStream {
                                 final ObjectKey key,
                                 final int partSize,
                                 final S3Client client){
-        this(bucketName, key, StorageClass.STANDARD, partSize, client);
+        this(bucketName, key, StorageClass.STANDARD.toString(), partSize, client);
     }
 
     public S3UploadOutputStream(final String bucketName,
                                 final ObjectKey key,
-                                final StorageClass storageClass,
+                                final String storageClass,
                                 final int partSize,
                                 final S3Client client) {
         this.bucketName = bucketName;

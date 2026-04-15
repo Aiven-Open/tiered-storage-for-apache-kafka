@@ -51,7 +51,7 @@ class S3StorageConfigTest {
         assertThat(config.credentialsProvider()).isNull();
         assertThat(config.pathStyleAccessEnabled()).isNull();
         assertThat(config.uploadPartSize()).isEqualTo(25 * 1024 * 1024);
-        assertThat(config.storageClass()).isEqualTo(StorageClass.STANDARD);
+        assertThat(config.storageClass()).isEqualTo(StorageClass.STANDARD.toString());
         assertThat(config.certificateCheckEnabled()).isTrue();
         assertThat(config.checksumCheckEnabled()).isFalse();
         assertThat(config.region()).isEqualTo(TEST_REGION);
@@ -241,19 +241,32 @@ class S3StorageConfigTest {
             "s3.storage.class", StorageClass.STANDARD_IA.toString()
         );
         final var config = new S3StorageConfig(configs);
-        assertThat(config.storageClass()).isEqualTo(StorageClass.STANDARD_IA);
+        assertThat(config.storageClass()).isEqualTo(StorageClass.STANDARD_IA.toString());
     }
 
     @Test
-    void withRequireStorageClassInAllowList() {
+    void withCustomStorageClassString() {
+        // Arbitrary string not in the AWS SDK StorageClass enum should be accepted and preserved verbatim,
+        // so operators can use newly introduced or backend-specific storage classes.
+        final var customClass = "CUSTOM_STORAGE_CLASS";
+        final var configs = Map.of(
+            "s3.bucket.name", BUCKET_NAME,
+            "s3.region", TEST_REGION.id(),
+            "s3.storage.class", customClass
+        );
+        final var config = new S3StorageConfig(configs);
+        assertThat(config.storageClass()).isEqualTo(customClass);
+    }
+
+    @Test
+    void shouldRejectEmptyStorageClass() {
         assertThatThrownBy(() -> new S3StorageConfig(Map.of(
             "s3.bucket.name", BUCKET_NAME,
             "s3.region", TEST_REGION.id(),
-            "s3.storage.class", "WrongStorageClass"
+            "s3.storage.class", ""
         )))
                 .isInstanceOf(ConfigException.class)
-                .hasMessage("Invalid value WrongStorageClass for configuration s3.storage.class: "
-                        + "String must be one of: STANDARD, REDUCED_REDUNDANCY, STANDARD_IA, ONEZONE_IA, "
-                        + "INTELLIGENT_TIERING, GLACIER, DEEP_ARCHIVE, OUTPOSTS, GLACIER_IR, SNOW, EXPRESS_ONEZONE");
+                .hasMessageContaining("s3.storage.class")
+                .hasMessageContaining("String must be non-empty");
     }
 }
