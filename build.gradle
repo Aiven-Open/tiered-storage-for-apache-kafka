@@ -131,7 +131,7 @@ subprojects {
 
         gcpSdkVersion = "2.61.0"
 
-        azureSdkVersion = "1.3.3"
+        azureSdkVersion = "1.3.6"
 
         testcontainersVersion = "1.21.4"
 
