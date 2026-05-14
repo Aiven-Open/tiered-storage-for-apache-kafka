@@ -168,57 +168,65 @@ class KafkaRemoteStorageManager extends InternalRemoteStorageManager {
         final LogSegmentData logSegmentData,
         final UploadMetricReporter uploadMetricReporter
     ) throws RemoteStorageException {
-        final var customMetadataBuilder =
-            new SegmentCustomMetadataBuilder(customMetadataFields, objectKeyFactory, remoteLogSegmentMetadata);
-
+        log.debug("[logzio-rsm-trace] Entry: KafkaRemoteStorageManager.copyLogSegmentData id={}",
+            remoteLogSegmentMetadata.remoteLogSegmentId().id());
         try {
-            final boolean requiresCompression = requiresCompression(logSegmentData);
+            final var customMetadataBuilder =
+                new SegmentCustomMetadataBuilder(customMetadataFields, objectKeyFactory, remoteLogSegmentMetadata);
 
-            final DataKeyAndAAD maybeEncryptionKey;
-            if (encryptionEnabled) {
-                maybeEncryptionKey = aesEncryptionProvider.createDataKeyAndAAD();
-            } else {
-                maybeEncryptionKey = null;
-            }
-
-            final ChunkIndex chunkIndex = uploadSegmentLog(
-                remoteLogSegmentMetadata,
-                logSegmentData,
-                requiresCompression,
-                maybeEncryptionKey,
-                customMetadataBuilder,
-                uploadMetricReporter
-            );
-
-            final SegmentIndexesV1 segmentIndexes = uploadIndexes(
-                remoteLogSegmentMetadata,
-                logSegmentData,
-                maybeEncryptionKey,
-                customMetadataBuilder,
-                uploadMetricReporter
-            );
-
-            uploadManifest(
-                remoteLogSegmentMetadata,
-                chunkIndex,
-                segmentIndexes,
-                requiresCompression,
-                maybeEncryptionKey,
-                customMetadataBuilder,
-                uploadMetricReporter
-            );
-        } catch (final Exception e) {
             try {
-                // best effort on removing orphan files
-                deleteSegmentObjects(remoteLogSegmentMetadata);
-            } catch (final Exception ex) {
-                // ignore all exceptions
-                log.warn("Removing orphan files failed", ex);
-            }
-            throw new RemoteStorageException(e);
-        }
+                final boolean requiresCompression = requiresCompression(logSegmentData);
 
-        return buildCustomMetadata(customMetadataBuilder);
+                final DataKeyAndAAD maybeEncryptionKey;
+                if (encryptionEnabled) {
+                    maybeEncryptionKey = aesEncryptionProvider.createDataKeyAndAAD();
+                } else {
+                    maybeEncryptionKey = null;
+                }
+
+                final ChunkIndex chunkIndex = uploadSegmentLog(
+                    remoteLogSegmentMetadata,
+                    logSegmentData,
+                    requiresCompression,
+                    maybeEncryptionKey,
+                    customMetadataBuilder,
+                    uploadMetricReporter
+                );
+
+                final SegmentIndexesV1 segmentIndexes = uploadIndexes(
+                    remoteLogSegmentMetadata,
+                    logSegmentData,
+                    maybeEncryptionKey,
+                    customMetadataBuilder,
+                    uploadMetricReporter
+                );
+
+                uploadManifest(
+                    remoteLogSegmentMetadata,
+                    chunkIndex,
+                    segmentIndexes,
+                    requiresCompression,
+                    maybeEncryptionKey,
+                    customMetadataBuilder,
+                    uploadMetricReporter
+                );
+            } catch (final Exception e) {
+                try {
+                    // best effort on removing orphan files
+                    deleteSegmentObjects(remoteLogSegmentMetadata);
+                } catch (final Exception ex) {
+                    // ignore all exceptions
+                    log.warn("Removing orphan files failed", ex);
+                }
+                throw new RemoteStorageException(e);
+            }
+
+            return buildCustomMetadata(customMetadataBuilder);
+        } catch (final Error t) {
+            log.error("[logzio-rsm-trace] KafkaRemoteStorageManager.copyLogSegmentData ABORTED ABNORMALLY metadata={} cause={} message={}",
+                remoteLogSegmentMetadata, t.getClass().getName(), t.getMessage(), t);
+            throw t;
+        }
     }
 
     boolean requiresCompression(final LogSegmentData logSegmentData) {
@@ -248,6 +256,8 @@ class KafkaRemoteStorageManager extends InternalRemoteStorageManager {
         final SegmentCustomMetadataBuilder customMetadataBuilder,
         final UploadMetricReporter uploadMetricReporter
     ) throws IOException, StorageBackendException {
+        log.debug("[logzio-rsm-trace] Entry: KafkaRemoteStorageManager.uploadSegmentLog id={}",
+            remoteLogSegmentMetadata.remoteLogSegmentId().id());
         final var objectKey = objectKeyFactory.key(remoteLogSegmentMetadata, ObjectKeyFactory.Suffix.LOG);
 
         try (final var logSegmentInputStream = Files.newInputStream(logSegmentData.logSegment())) {
@@ -267,6 +277,8 @@ class KafkaRemoteStorageManager extends InternalRemoteStorageManager {
 
                 log.debug("Uploaded segment log for {}, size: {}", remoteLogSegmentMetadata, bytes);
             }
+            log.debug("[logzio-rsm-trace] Exit: KafkaRemoteStorageManager.uploadSegmentLog id={} outcome=completed",
+                remoteLogSegmentMetadata.remoteLogSegmentId().id());
             return transformFinisher.chunkIndex();
         }
     }
@@ -299,6 +311,8 @@ class KafkaRemoteStorageManager extends InternalRemoteStorageManager {
         final SegmentCustomMetadataBuilder customMetadataBuilder,
         final UploadMetricReporter uploadMetricReporter
     ) throws IOException, RemoteStorageException, StorageBackendException {
+        log.debug("[logzio-rsm-trace] Entry: KafkaRemoteStorageManager.uploadIndexes id={}",
+            remoteLogSegmentMetadata.remoteLogSegmentId().id());
         final List<InputStream> indexes = new ArrayList<>(RemoteStorageManager.IndexType.values().length);
         final SegmentIndexesV1Builder segmentIndexBuilder = new SegmentIndexesV1Builder();
 
@@ -355,6 +369,8 @@ class KafkaRemoteStorageManager extends InternalRemoteStorageManager {
                 log.debug("Uploaded indexes file for {}, size: {}", remoteLogSegmentMetadata, bytes);
             }
         }
+        log.debug("[logzio-rsm-trace] Exit: KafkaRemoteStorageManager.uploadIndexes id={} outcome=completed",
+            remoteLogSegmentMetadata.remoteLogSegmentId().id());
         return segmentIndexBuilder.build();
     }
 
@@ -418,6 +434,8 @@ class KafkaRemoteStorageManager extends InternalRemoteStorageManager {
                         final SegmentCustomMetadataBuilder customMetadataBuilder,
                         final UploadMetricReporter uploadMetricReporter
     ) throws StorageBackendException, IOException {
+        log.debug("[logzio-rsm-trace] Entry: KafkaRemoteStorageManager.uploadManifest id={}",
+            remoteLogSegmentMetadata.remoteLogSegmentId().id());
         final SegmentEncryptionMetadataV1 maybeEncryptionMetadata;
         if (maybeEncryptionKey != null) {
             maybeEncryptionMetadata = new SegmentEncryptionMetadataV1(maybeEncryptionKey);
@@ -442,6 +460,8 @@ class KafkaRemoteStorageManager extends InternalRemoteStorageManager {
 
             log.debug("Uploaded segment manifest for {}, size: {}", remoteLogSegmentMetadata, bytes);
         }
+        log.debug("[logzio-rsm-trace] Exit: KafkaRemoteStorageManager.uploadManifest id={} outcome=completed",
+            remoteLogSegmentMetadata.remoteLogSegmentId().id());
     }
 
     @Override

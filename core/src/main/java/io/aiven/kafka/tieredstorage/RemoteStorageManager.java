@@ -99,28 +99,34 @@ public class RemoteStorageManager implements org.apache.kafka.server.log.remote.
 
         log.info("Copying log segment data, metadata: {}", remoteLogSegmentMetadata);
 
-        final long startedMs = time.milliseconds();
+        try {
+            final long startedMs = time.milliseconds();
 
-        final UploadMetricReporter uploadMetricReporter = (suffix, bytes) -> {
-            metrics.recordObjectUpload(
+            final UploadMetricReporter uploadMetricReporter = (suffix, bytes) -> {
+                metrics.recordObjectUpload(
+                    remoteLogSegmentMetadata.remoteLogSegmentId().topicIdPartition().topicPartition(),
+                    suffix, bytes
+                );
+            };
+            final var customMetadata = switch (segmentFormat) {
+                case KAFKA ->
+                    kafkaRsm.copyLogSegmentData(remoteLogSegmentMetadata, logSegmentData, uploadMetricReporter);
+                case ICEBERG ->
+                    icebergRsm.copyLogSegmentData(remoteLogSegmentMetadata, logSegmentData, uploadMetricReporter);
+            };
+
+            metrics.recordSegmentCopyTime(
                 remoteLogSegmentMetadata.remoteLogSegmentId().topicIdPartition().topicPartition(),
-                suffix, bytes
-            );
-        };
-        final var customMetadata = switch (segmentFormat) {
-            case KAFKA ->
-                kafkaRsm.copyLogSegmentData(remoteLogSegmentMetadata, logSegmentData, uploadMetricReporter);
-            case ICEBERG ->
-                icebergRsm.copyLogSegmentData(remoteLogSegmentMetadata, logSegmentData, uploadMetricReporter);
-        };
+                startedMs, time.milliseconds());
 
-        metrics.recordSegmentCopyTime(
-            remoteLogSegmentMetadata.remoteLogSegmentId().topicIdPartition().topicPartition(),
-            startedMs, time.milliseconds());
+            log.info("Copying log segment data completed successfully, metadata: {}", remoteLogSegmentMetadata);
 
-        log.info("Copying log segment data completed successfully, metadata: {}", remoteLogSegmentMetadata);
-
-        return customMetadata;
+            return customMetadata;
+        } catch (final Error t) {
+            log.error("[logzio-rsm-trace] RemoteStorageManager.copyLogSegmentData ABORTED ABNORMALLY metadata={} cause={} message={}",
+                remoteLogSegmentMetadata, t.getClass().getName(), t.getMessage(), t);
+            throw t;
+        }
     }
 
     @Override

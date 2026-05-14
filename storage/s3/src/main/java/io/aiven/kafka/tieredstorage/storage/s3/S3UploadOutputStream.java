@@ -93,55 +93,65 @@ public class S3UploadOutputStream extends OutputStream {
 
     @Override
     public void write(final byte[] b, final int off, final int len) throws IOException {
-        if (isClosed()) {
-            throw new IllegalStateException("Already closed");
-        }
-        if (b.length == 0) {
-            return;
-        }
         try {
-            final ByteBuffer inputBuffer = ByteBuffer.wrap(b, off, len);
-            while (inputBuffer.hasRemaining()) {
-                // copy batch to part buffer
-                final int inputLimit = inputBuffer.limit();
-                final int toCopy = Math.min(partBuffer.remaining(), inputBuffer.remaining());
-                final int positionAfterCopying = inputBuffer.position() + toCopy;
-                inputBuffer.limit(positionAfterCopying);
-                partBuffer.put(inputBuffer.slice());
+            if (isClosed()) {
+                throw new IllegalStateException("Already closed");
+            }
+            if (b.length == 0) {
+                return;
+            }
+            try {
+                final ByteBuffer inputBuffer = ByteBuffer.wrap(b, off, len);
+                while (inputBuffer.hasRemaining()) {
+                    // copy batch to part buffer
+                    final int inputLimit = inputBuffer.limit();
+                    final int toCopy = Math.min(partBuffer.remaining(), inputBuffer.remaining());
+                    final int positionAfterCopying = inputBuffer.position() + toCopy;
+                    inputBuffer.limit(positionAfterCopying);
+                    partBuffer.put(inputBuffer.slice());
 
-                // prepare current batch for next part
-                inputBuffer.limit(inputLimit);
-                inputBuffer.position(positionAfterCopying);
+                    // prepare current batch for next part
+                    inputBuffer.limit(inputLimit);
+                    inputBuffer.position(positionAfterCopying);
 
-                if (!partBuffer.hasRemaining()) {
-                    if (uploadId == null){
-                        uploadId = createMultipartUploadRequest();
-                        // this is not expected (another exception should be thrown by S3) but adding for completeness
-                        if (uploadId == null || uploadId.isEmpty()) {
-                            throw new IOException("Failed to create multipart upload, uploadId is empty");
+                    if (!partBuffer.hasRemaining()) {
+                        if (uploadId == null){
+                            uploadId = createMultipartUploadRequest();
+                            // this is not expected (another exception should be thrown by S3) but adding for completeness
+                            if (uploadId == null || uploadId.isEmpty()) {
+                                throw new IOException("Failed to create multipart upload, uploadId is empty");
+                            }
                         }
+                        partBuffer.position(0);
+                        partBuffer.limit(partSize);
+                        flushBuffer(partBuffer.slice(), partSize, true);
                     }
-                    partBuffer.position(0);
-                    partBuffer.limit(partSize);
-                    flushBuffer(partBuffer.slice(), partSize, true);
                 }
+            } catch (final RuntimeException e) {
+                closed = true;
+                if (multiPartUploadStarted()) {
+                    log.error("Failed to write to stream on upload {}, aborting transaction", uploadId, e);
+                    abortUpload();
+                }
+                throw new IOException(e);
             }
-        } catch (final RuntimeException e) {
-            closed = true;
-            if (multiPartUploadStarted()) {
-                log.error("Failed to write to stream on upload {}, aborting transaction", uploadId, e);
-                abortUpload();
-            }
-            throw new IOException(e);
+        } catch (final Error t) {
+            log.error("[logzio-rsm-trace] S3UploadOutputStream.write ABORTED ABNORMALLY key={} uploadId={} cause={} message={}",
+                key.value(), uploadId, t.getClass().getName(), t.getMessage(), t);
+            throw t;
         }
     }
 
     private String createMultipartUploadRequest() {
+        log.debug("[logzio-rsm-trace] Entry: S3UploadOutputStream.createMultipartUploadRequest key={}",
+            key.value());
         final CreateMultipartUploadRequest initialRequest = CreateMultipartUploadRequest.builder().bucket(bucketName)
                 .storageClass(storageClass)
                 .key(key.value()).build();
         final CreateMultipartUploadResponse initiateResult = client.createMultipartUpload(initialRequest);
         log.debug("Create new multipart upload request: {}", initiateResult.uploadId());
+        log.debug("[logzio-rsm-trace] Exit: S3UploadOutputStream.createMultipartUploadRequest key={} uploadId={}",
+            key.value(), initiateResult.uploadId());
         return initiateResult.uploadId();
     }
 
@@ -151,42 +161,54 @@ public class S3UploadOutputStream extends OutputStream {
 
     @Override
     public void close() throws IOException {
-        if (!isClosed()) {
-            closed = true;
-            final int lastPosition = partBuffer.position();
-            if (lastPosition > 0) {
-                try {
-                    partBuffer.position(0);
-                    partBuffer.limit(lastPosition);
-                    flushBuffer(partBuffer.slice(), lastPosition, multiPartUploadStarted());
-                } catch (final RuntimeException e) {
-                    if (multiPartUploadStarted()) {
-                        log.error("Failed to upload last part {}, aborting transaction", uploadId, e);
-                        abortUpload();
-                    } else {
-                        log.error("Failed to upload the file {}", key, e);
+        try {
+            if (!isClosed()) {
+                closed = true;
+                final int lastPosition = partBuffer.position();
+                if (lastPosition > 0) {
+                    try {
+                        partBuffer.position(0);
+                        partBuffer.limit(lastPosition);
+                        flushBuffer(partBuffer.slice(), lastPosition, multiPartUploadStarted());
+                    } catch (final RuntimeException e) {
+                        if (multiPartUploadStarted()) {
+                            log.error("Failed to upload last part {}, aborting transaction", uploadId, e);
+                            abortUpload();
+                        } else {
+                            log.error("Failed to upload the file {}", key, e);
+                        }
+                        throw new IOException(e);
                     }
-                    throw new IOException(e);
+                }
+                if (multiPartUploadStarted()) {
+                    completeOrAbortMultiPartUpload();
                 }
             }
-            if (multiPartUploadStarted()) {
-                completeOrAbortMultiPartUpload();
-            }
+        } catch (final Error t) {
+            log.error("[logzio-rsm-trace] S3UploadOutputStream.close ABORTED ABNORMALLY key={} uploadId={} processedBytes={} cause={} message={}",
+                key.value(), uploadId, processedBytes, t.getClass().getName(), t.getMessage(), t);
+            throw t;
         }
     }
 
     private void completeOrAbortMultiPartUpload() throws IOException {
-        if (!completedParts.isEmpty()) {
-            try {
-                completeUpload();
-                log.debug("Completed multipart upload {}", uploadId);
-            } catch (final RuntimeException e) {
-                log.error("Failed to complete multipart upload {}, aborting transaction", uploadId, e);
+        try {
+            if (!completedParts.isEmpty()) {
+                try {
+                    completeUpload();
+                    log.debug("Completed multipart upload {}", uploadId);
+                } catch (final RuntimeException e) {
+                    log.error("Failed to complete multipart upload {}, aborting transaction", uploadId, e);
+                    abortUpload();
+                    throw new IOException(e);
+                }
+            } else {
                 abortUpload();
-                throw new IOException(e);
             }
-        } else {
-            abortUpload();
+        } catch (final Error t) {
+            log.error("[logzio-rsm-trace] S3UploadOutputStream.completeOrAbortMultiPartUpload ABORTED ABNORMALLY key={} uploadId={} cause={} message={}",
+                key.value(), uploadId, t.getClass().getName(), t.getMessage(), t);
+            throw t;
         }
     }
 
@@ -195,12 +217,16 @@ public class S3UploadOutputStream extends OutputStream {
      * The caller of this method should be responsible for closing the inputStream.
      */
     private void uploadAsSingleFile(final InputStream inputStream, final int size) {
+        log.debug("[logzio-rsm-trace] Entry: S3UploadOutputStream.uploadAsSingleFile key={} size={}",
+            key.value(), size);
         final PutObjectRequest putObjectRequest = PutObjectRequest.builder().bucket(bucketName)
             .storageClass(storageClass)
             .key(key.value())
             .build();
         final RequestBody requestBody = RequestBody.fromInputStream(inputStream, size);
         client.putObject(putObjectRequest, requestBody);
+        log.debug("[logzio-rsm-trace] Exit: S3UploadOutputStream.uploadAsSingleFile key={} size={}",
+            key.value(), size);
     }
 
     public boolean isClosed() {
@@ -208,25 +234,39 @@ public class S3UploadOutputStream extends OutputStream {
     }
 
     private void completeUpload() {
-        final CompletedMultipartUpload completedMultipartUpload = CompletedMultipartUpload.builder()
-            .parts(completedParts)
-            .build();
-        final var request = CompleteMultipartUploadRequest.builder()
-            .bucket(bucketName)
-            .key(key.value())
-            .uploadId(uploadId)
-            .multipartUpload(completedMultipartUpload)
-            .build();
-        client.completeMultipartUpload(request);
+        log.debug("[logzio-rsm-trace] Entry: S3UploadOutputStream.completeUpload key={} uploadId={} partCount={}",
+            key.value(), uploadId, completedParts.size());
+        try {
+            final CompletedMultipartUpload completedMultipartUpload = CompletedMultipartUpload.builder()
+                .parts(completedParts)
+                .build();
+            final var request = CompleteMultipartUploadRequest.builder()
+                .bucket(bucketName)
+                .key(key.value())
+                .uploadId(uploadId)
+                .multipartUpload(completedMultipartUpload)
+                .build();
+            client.completeMultipartUpload(request);
+            log.debug("[logzio-rsm-trace] Exit: S3UploadOutputStream.completeUpload key={} uploadId={} outcome=completed",
+                key.value(), uploadId);
+        } catch (final Error t) {
+            log.error("[logzio-rsm-trace] S3UploadOutputStream.completeUpload ABORTED ABNORMALLY key={} uploadId={} cause={} message={}",
+                key.value(), uploadId, t.getClass().getName(), t.getMessage(), t);
+            throw t;
+        }
     }
 
     private void abortUpload() {
+        log.debug("[logzio-rsm-trace] Entry: S3UploadOutputStream.abortUpload key={} uploadId={}",
+            key.value(), uploadId);
         final var request = AbortMultipartUploadRequest.builder()
             .bucket(bucketName)
             .key(key.value())
             .uploadId(uploadId)
             .build();
         client.abortMultipartUpload(request);
+        log.debug("[logzio-rsm-trace] Exit: S3UploadOutputStream.abortUpload key={} uploadId={}",
+            key.value(), uploadId);
     }
 
     private void flushBuffer(final ByteBuffer buffer,
@@ -248,6 +288,8 @@ public class S3UploadOutputStream extends OutputStream {
 
     private void uploadPart(final InputStream in, final int actualPartSize) {
         final int partNumber = completedParts.size() + 1;
+        log.debug("[logzio-rsm-trace] Entry: S3UploadOutputStream.uploadPart key={} uploadId={} partNumber={} partSize={}",
+            key.value(), uploadId, partNumber, actualPartSize);
         final UploadPartRequest uploadPartRequest =
             UploadPartRequest.builder()
                 .bucket(bucketName)
@@ -262,6 +304,8 @@ public class S3UploadOutputStream extends OutputStream {
             .eTag(uploadResult.eTag())
             .build();
         completedParts.add(completedPart);
+        log.debug("[logzio-rsm-trace] Exit: S3UploadOutputStream.uploadPart key={} uploadId={} partNumber={} eTag={}",
+            key.value(), uploadId, partNumber, uploadResult.eTag());
     }
 
     long processedBytes() {
