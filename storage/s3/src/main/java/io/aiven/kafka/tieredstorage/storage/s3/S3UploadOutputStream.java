@@ -66,6 +66,12 @@ public class S3UploadOutputStream extends OutputStream {
     // Toggle via JMX MBean io.aiven.kafka.tieredstorage:type=FaultInjection,name=S3UploadOom
     private static volatile boolean simulateOomOnNextConstruction = false;
 
+    // Operator-controlled sticky topic-scoped flag. When non-empty, every S3UploadOutputStream
+    // construction whose key.value() contains this substring throws OOM. Stays in effect until
+    // operator writes empty string (or null, which is coerced to ""). Designed for end-to-end
+    // bloat-reproduction on a dedicated test topic without affecting other partitions.
+    private static volatile String simulateOomForTopicSubstring = "";
+
     static {
         if (FAULT_INJECTION_ENABLED) {
             try {
@@ -84,6 +90,8 @@ public class S3UploadOutputStream extends OutputStream {
     public interface FaultInjectionMBean {
         void setSimulateOomOnNextConstruction(boolean enabled);
         boolean getSimulateOomOnNextConstruction();
+        void setSimulateOomForTopicSubstring(String substring);
+        String getSimulateOomForTopicSubstring();
     }
 
     static class FaultInjectionImpl implements FaultInjectionMBean {
@@ -96,10 +104,26 @@ public class S3UploadOutputStream extends OutputStream {
         public boolean getSimulateOomOnNextConstruction() {
             return simulateOomOnNextConstruction;
         }
+
+        @Override
+        public void setSimulateOomForTopicSubstring(final String substring) {
+            simulateOomForTopicSubstring = substring == null ? "" : substring;
+        }
+
+        @Override
+        public String getSimulateOomForTopicSubstring() {
+            return simulateOomForTopicSubstring;
+        }
     }
 
+    // Aiven #820 lazy-cache fix — see docs/kafka/tiered_storage/aiven-820-lazy-cache-fix-plan.md.
+    // Initial buffer size pre-sized from worst-case small-file uploads
+    // (segment.bytes=100M ⇒ indexes ≈ 300 KiB, manifest ≈ 3 KiB); 1 MiB covers both in a single
+    // allocation with no grow. Segment-log uploads grow on demand up to `partSize`.
+    private static final int INITIAL_BUFFER_SIZE = 1 * 1024 * 1024;
+
     private final S3Client client;
-    private final ByteBuffer partBuffer;
+    private ByteBuffer partBuffer;       // lazy, grow-on-demand up to partSize (Aiven #820 fix)
     private final String bucketName;
     private final ObjectKey key;
     private final StorageClass storageClass;
@@ -129,13 +153,48 @@ public class S3UploadOutputStream extends OutputStream {
         this.client = client;
         this.partSize = partSize;
         // FAULT INJECTION (staging-only): JIT eliminates this branch in prod.
-        // When flipped via JMX, throws OOM at the same site where ByteBuffer.allocate
-        // would naturally fail under heap pressure — same stack, same catch(Error t) chain.
-        if (FAULT_INJECTION_ENABLED && simulateOomOnNextConstruction) {
-            simulateOomOnNextConstruction = false;            // one-shot reset
-            throw new OutOfMemoryError("Java heap space");    // verbatim same msg as natural OOM
+        // Two trigger modes — boolean one-shot for quick smoke tests, topic-substring
+        // sticky for end-to-end bloat reproduction on a dedicated test topic.
+        // Both throw at the same site where ByteBuffer.allocate(partSize) would naturally
+        // fail under heap pressure — same stack, same outer catch(Error t) chain.
+        if (FAULT_INJECTION_ENABLED) {
+            if (simulateOomOnNextConstruction) {
+                simulateOomOnNextConstruction = false;        // one-shot reset
+                throw new OutOfMemoryError("Java heap space");
+            }
+            final String substring = simulateOomForTopicSubstring;   // volatile-read once
+            if (!substring.isEmpty() && key.value().contains(substring)) {
+                throw new OutOfMemoryError("Java heap space");       // sticky until flipped off
+            }
         }
-        this.partBuffer = ByteBuffer.allocate(partSize);
+        // Aiven #820 lazy-cache fix: partBuffer is lazy, grown on demand inside write().
+        // Constructor no longer allocates `partSize` (was the eager OOM site at the old line 86).
+    }
+
+    /**
+     * Grow {@link #partBuffer} so its capacity is at least {@code targetCapacity} bytes
+     * (clamped to {@link #partSize}). Lazy-init on first call. Preserves any previously
+     * written bytes (position is carried over to the new buffer). Old buffer is dropped for GC.
+     *
+     * <p>Aiven #820 lazy-cache fix: small-file uploads (indexes, manifest) typically cap at the
+     * initial 1 MiB allocation without ever growing; segment-log uploads grow by doubling up to
+     * {@code partSize}. Peak per-instance heap usage matches the previous eager allocation only
+     * for full multipart uploads; small-file uploads see ~96 % heap savings.
+     */
+    private void growBufferTo(final int targetCapacity) {
+        final int wanted = Math.min(partSize, Math.max(INITIAL_BUFFER_SIZE, targetCapacity));
+        if (partBuffer == null) {
+            partBuffer = ByteBuffer.allocate(wanted);
+            return;
+        }
+        if (partBuffer.capacity() >= wanted) {
+            return;
+        }
+        final int newCap = Math.min(partSize, Math.max(wanted, partBuffer.capacity() * 2));
+        final ByteBuffer larger = ByteBuffer.allocate(newCap);
+        partBuffer.flip();          // limit=position, position=0 (prepare for read)
+        larger.put(partBuffer);     // copies bytes; larger.position advances; partBuffer dropped after
+        partBuffer = larger;
     }
 
     @Override
@@ -155,6 +214,13 @@ public class S3UploadOutputStream extends OutputStream {
             try {
                 final ByteBuffer inputBuffer = ByteBuffer.wrap(b, off, len);
                 while (inputBuffer.hasRemaining()) {
+                    // Aiven #820 lazy-cache fix: lazy-init / grow-on-demand. Each iteration
+                    // ensures at least 1 byte of space; grow up to `partSize` cap as needed.
+                    if (partBuffer == null || (!partBuffer.hasRemaining() && partBuffer.capacity() < partSize)) {
+                        final int current = partBuffer == null ? 0 : partBuffer.position();
+                        growBufferTo(current + inputBuffer.remaining());
+                    }
+
                     // copy batch to part buffer
                     final int inputLimit = inputBuffer.limit();
                     final int toCopy = Math.min(partBuffer.remaining(), inputBuffer.remaining());
@@ -166,7 +232,8 @@ public class S3UploadOutputStream extends OutputStream {
                     inputBuffer.limit(inputLimit);
                     inputBuffer.position(positionAfterCopying);
 
-                    if (!partBuffer.hasRemaining()) {
+                    // Flush as a multipart part only when buffer reached `partSize` AND is full.
+                    if (!partBuffer.hasRemaining() && partBuffer.capacity() == partSize) {
                         if (uploadId == null){
                             uploadId = createMultipartUploadRequest();
                             // this is not expected (another exception should be thrown by S3) but adding for completeness
@@ -177,6 +244,7 @@ public class S3UploadOutputStream extends OutputStream {
                         partBuffer.position(0);
                         partBuffer.limit(partSize);
                         flushBuffer(partBuffer.slice(), partSize, true);
+                        partBuffer.clear();    // reset position=0, limit=capacity for the next part
                     }
                 }
             } catch (final RuntimeException e) {
@@ -216,7 +284,8 @@ public class S3UploadOutputStream extends OutputStream {
         try {
             if (!isClosed()) {
                 closed = true;
-                final int lastPosition = partBuffer.position();
+                // Aiven #820 lazy-cache fix: partBuffer may be null if write() was never called.
+                final int lastPosition = (partBuffer == null) ? 0 : partBuffer.position();
                 if (lastPosition > 0) {
                     try {
                         partBuffer.position(0);
