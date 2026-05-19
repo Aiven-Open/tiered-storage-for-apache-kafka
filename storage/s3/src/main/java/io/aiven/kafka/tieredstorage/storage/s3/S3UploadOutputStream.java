@@ -19,10 +19,13 @@ package io.aiven.kafka.tieredstorage.storage.s3;
 import java.io.IOException;
 import java.io.InputStream;
 import java.io.OutputStream;
+import java.lang.management.ManagementFactory;
 import java.nio.ByteBuffer;
 import java.util.ArrayList;
 import java.util.List;
 
+import javax.management.ObjectName;
+import javax.management.StandardMBean;
 
 import io.aiven.kafka.tieredstorage.storage.ObjectKey;
 
@@ -52,6 +55,48 @@ import software.amazon.awssdk.services.s3.model.UploadPartResponse;
 public class S3UploadOutputStream extends OutputStream {
 
     private static final Logger log = LoggerFactory.getLogger(S3UploadOutputStream.class);
+
+    // FAULT INJECTION — staging-only Aiven #820 reproduction trigger.
+    // Gated by -Dio.aiven.faultinjection.enabled=true; in prod (system property absent)
+    // this is `static final false` and JIT eliminates the dead branch in the constructor.
+    private static final boolean FAULT_INJECTION_ENABLED =
+        Boolean.parseBoolean(System.getProperty("io.aiven.faultinjection.enabled", "false"));
+
+    // Operator-controlled one-shot flag (auto-resets after firing once).
+    // Toggle via JMX MBean io.aiven.kafka.tieredstorage:type=FaultInjection,name=S3UploadOom
+    private static volatile boolean simulateOomOnNextConstruction = false;
+
+    static {
+        if (FAULT_INJECTION_ENABLED) {
+            try {
+                final ObjectName name = new ObjectName(
+                    "io.aiven.kafka.tieredstorage:type=FaultInjection,name=S3UploadOom");
+                ManagementFactory.getPlatformMBeanServer().registerMBean(
+                    new StandardMBean(new FaultInjectionImpl(), FaultInjectionMBean.class),
+                    name);
+                log.info("[logzio-rsm-trace] FAULT INJECTION MBean registered (staging-only)");
+            } catch (final Exception e) {
+                log.warn("[logzio-rsm-trace] Could not register fault injection MBean", e);
+            }
+        }
+    }
+
+    public interface FaultInjectionMBean {
+        void setSimulateOomOnNextConstruction(boolean enabled);
+        boolean getSimulateOomOnNextConstruction();
+    }
+
+    static class FaultInjectionImpl implements FaultInjectionMBean {
+        @Override
+        public void setSimulateOomOnNextConstruction(final boolean v) {
+            simulateOomOnNextConstruction = v;
+        }
+
+        @Override
+        public boolean getSimulateOomOnNextConstruction() {
+            return simulateOomOnNextConstruction;
+        }
+    }
 
     private final S3Client client;
     private final ByteBuffer partBuffer;
@@ -83,6 +128,13 @@ public class S3UploadOutputStream extends OutputStream {
         this.storageClass = storageClass;
         this.client = client;
         this.partSize = partSize;
+        // FAULT INJECTION (staging-only): JIT eliminates this branch in prod.
+        // When flipped via JMX, throws OOM at the same site where ByteBuffer.allocate
+        // would naturally fail under heap pressure — same stack, same catch(Error t) chain.
+        if (FAULT_INJECTION_ENABLED && simulateOomOnNextConstruction) {
+            simulateOomOnNextConstruction = false;            // one-shot reset
+            throw new OutOfMemoryError("Java heap space");    // verbatim same msg as natural OOM
+        }
         this.partBuffer = ByteBuffer.allocate(partSize);
     }
 
