@@ -153,19 +153,12 @@ public class S3UploadOutputStream extends OutputStream {
         this.client = client;
         this.partSize = partSize;
         // FAULT INJECTION (staging-only): JIT eliminates this branch in prod.
-        // Two trigger modes — boolean one-shot for quick smoke tests, topic-substring
-        // sticky for end-to-end bloat reproduction on a dedicated test topic.
-        // Both throw at the same site where ByteBuffer.allocate(partSize) would naturally
-        // fail under heap pressure — same stack, same outer catch(Error t) chain.
-        if (FAULT_INJECTION_ENABLED) {
-            if (simulateOomOnNextConstruction) {
-                simulateOomOnNextConstruction = false;        // one-shot reset
-                throw new OutOfMemoryError("Java heap space");
-            }
-            final String substring = simulateOomForTopicSubstring;   // volatile-read once
-            if (!substring.isEmpty() && key.value().contains(substring)) {
-                throw new OutOfMemoryError("Java heap space");       // sticky until flipped off
-            }
+        // Boolean one-shot stays at the constructor for the quick-smoke-test semantics it had
+        // before the lazy-cache fix. The topic-substring check moved to growBufferTo() to ride
+        // along with the new lazy-allocate site — proves the allocation moved correctly.
+        if (FAULT_INJECTION_ENABLED && simulateOomOnNextConstruction) {
+            simulateOomOnNextConstruction = false;        // one-shot reset
+            throw new OutOfMemoryError("Java heap space");
         }
         // Aiven #820 lazy-cache fix: partBuffer is lazy, grown on demand inside write().
         // Constructor no longer allocates `partSize` (was the eager OOM site at the old line 86).
@@ -183,6 +176,17 @@ public class S3UploadOutputStream extends OutputStream {
      */
     private void growBufferTo(final int targetCapacity) {
         final int wanted = Math.min(partSize, Math.max(INITIAL_BUFFER_SIZE, targetCapacity));
+        // FAULT INJECTION (staging-only): JIT eliminates this branch in prod.
+        // Topic-substring check at the NEW lazy-allocate site (moved here from the constructor
+        // by Experiment 3.5 to validate the allocation actually moved out of <init>).
+        // When flag set, throws OOM right before the real ByteBuffer.allocate below — same
+        // outer catch(Error t) chain still fires ABORTED ABNORMALLY in copyLogSegmentData.
+        if (FAULT_INJECTION_ENABLED) {
+            final String substring = simulateOomForTopicSubstring;   // volatile-read once
+            if (!substring.isEmpty() && key.value().contains(substring)) {
+                throw new OutOfMemoryError("Java heap space");
+            }
+        }
         if (partBuffer == null) {
             partBuffer = ByteBuffer.allocate(wanted);
             return;
