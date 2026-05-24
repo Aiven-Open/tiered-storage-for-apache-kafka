@@ -123,9 +123,9 @@ public class RemoteStorageManager implements org.apache.kafka.server.log.remote.
 
             return customMetadata;
         } catch (final OutOfMemoryError oom) {
-            log.error("[logzio-rsm-trace] RemoteStorageManager.copyLogSegmentData ABORTED ABNORMALLY metadata={} cause={} message={} — wrapping as RuntimeException so $RLMCopyTask retries on next cycle",
-                remoteLogSegmentMetadata, oom.getClass().getName(), oom.getMessage(), oom);
-            throw new RuntimeException("OOM during S3 upload; retryable on next $RLMCopyTask cycle", oom);
+            log.error("[logzio-rsm-trace] RemoteStorageManager.copyLogSegmentData OOM metadata={}",
+                remoteLogSegmentMetadata, oom);
+            throw new RemoteStorageException("OOM during S3 upload; retryable", oom);
         } catch (final Error t) {
             log.error("[logzio-rsm-trace] RemoteStorageManager.copyLogSegmentData ABORTED ABNORMALLY metadata={} cause={} message={}",
                 remoteLogSegmentMetadata, t.getClass().getName(), t.getMessage(), t);

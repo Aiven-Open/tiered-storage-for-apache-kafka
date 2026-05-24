@@ -223,9 +223,14 @@ class KafkaRemoteStorageManager extends InternalRemoteStorageManager {
 
             return buildCustomMetadata(customMetadataBuilder);
         } catch (final OutOfMemoryError oom) {
-            log.error("[logzio-rsm-trace] KafkaRemoteStorageManager.copyLogSegmentData ABORTED ABNORMALLY metadata={} cause={} message={} — wrapping as RuntimeException so $RLMCopyTask retries on next cycle",
-                remoteLogSegmentMetadata, oom.getClass().getName(), oom.getMessage(), oom);
-            throw new RuntimeException("OOM during S3 upload; retryable on next $RLMCopyTask cycle", oom);
+            log.error("[logzio-rsm-trace] KafkaRemoteStorageManager.copyLogSegmentData OOM metadata={}",
+                remoteLogSegmentMetadata, oom);
+            try {
+                deleteSegmentObjects(remoteLogSegmentMetadata);
+            } catch (final Exception ex) {
+                log.warn("Removing orphan files failed after OOM", ex);
+            }
+            throw new RemoteStorageException("OOM during S3 upload; retryable", oom);
         } catch (final Error t) {
             log.error("[logzio-rsm-trace] KafkaRemoteStorageManager.copyLogSegmentData ABORTED ABNORMALLY metadata={} cause={} message={}",
                 remoteLogSegmentMetadata, t.getClass().getName(), t.getMessage(), t);
