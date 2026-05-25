@@ -290,7 +290,7 @@ class S3StorageConfigTest {
                 .hasMessage("Invalid value WrongStorageClass for configuration s3.storage.class: "
                         + "String must be one of: STANDARD, REDUCED_REDUNDANCY, STANDARD_IA, ONEZONE_IA, "
                         + "INTELLIGENT_TIERING, GLACIER, DEEP_ARCHIVE, OUTPOSTS, GLACIER_IR, SNOW, EXPRESS_ONEZONE, "
-                        + "FSX_OPENZFS");
+                        + "FSX_OPENZFS, FSX_ONTAP");
     }
 
     @Test

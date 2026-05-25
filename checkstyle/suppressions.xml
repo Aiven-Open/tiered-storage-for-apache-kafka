@@ -70,4 +70,5 @@
     <suppress checks="ClassDataAbstractionCoupling" files="Run.java"/>
     <suppress checks="JavaNCSS" files="MultiFileReaderTest.java"/>
     <suppress checks="EmptyCatchBlock" files="IcebergRemoteStorageManager.java"/>
+    <suppress checks="MethodLength" files="RemoteStorageManagerConfig\.java"/>
 </suppressions>

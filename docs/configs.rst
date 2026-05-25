@@ -48,6 +48,21 @@ RemoteStorageManagerConfig
   * Valid Values: non-null string
   * Importance: high
 
+``iceberg.catalog.cache.enabled``
+  Whether to enable caching for Iceberg catalog table metadata. When disabled, all catalog operations bypass cache. Default is true.
+
+  * Type: boolean
+  * Default: true
+  * Importance: medium
+
+``iceberg.catalog.cache.expiration.ms``
+  Cache expiration time in milliseconds for Iceberg catalog table metadata. Default is 600000 (10 minutes). Higher values reduce catalog backend load but increase risk of stale metadata in multi-writer scenarios.
+
+  * Type: long
+  * Default: 600000 (10 minutes)
+  * Valid Values: [1,...]
+  * Importance: medium
+
 ``iceberg.catalog.class``
   The Iceberg catalog implementation class
 
@@ -497,7 +512,7 @@ S3StorageConfig
 
   * Type: int
   * Default: 26214400
-  * Valid Values: [5242880,...,2147483647]
+  * Valid Values: [5242880,...,2147483639]
   * Importance: medium
 
 ``aws.certificate.check.enabled``
@@ -551,7 +566,7 @@ S3StorageConfig
 
   * Type: string
   * Default: STANDARD
-  * Valid Values: [STANDARD, REDUCED_REDUNDANCY, STANDARD_IA, ONEZONE_IA, INTELLIGENT_TIERING, GLACIER, DEEP_ARCHIVE, OUTPOSTS, GLACIER_IR, SNOW, EXPRESS_ONEZONE, FSX_OPENZFS]
+  * Valid Values: [STANDARD, REDUCED_REDUNDANCY, STANDARD_IA, ONEZONE_IA, INTELLIGENT_TIERING, GLACIER, DEEP_ARCHIVE, OUTPOSTS, GLACIER_IR, SNOW, EXPRESS_ONEZONE, FSX_OPENZFS, FSX_ONTAP]
   * Importance: low
 
 
