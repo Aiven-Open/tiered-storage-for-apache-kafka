@@ -26,7 +26,7 @@ ext {
 
     caffeineVersion = "3.2.3"
 
-    zstdVersion = "1.5.7-4"
+    zstdVersion = "1.5.7-10"
 
     icebergVersion = "1.10.1"
 
