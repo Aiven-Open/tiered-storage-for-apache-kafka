@@ -28,7 +28,7 @@ ext {
 
     zstdVersion = "1.5.7-10"
 
-    icebergVersion = "1.10.1"
+    icebergVersion = "1.11.0"
 
     parquetVersion = "1.15.2"
 
