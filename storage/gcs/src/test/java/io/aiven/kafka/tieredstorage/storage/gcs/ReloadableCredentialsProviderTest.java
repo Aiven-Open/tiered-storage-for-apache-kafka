@@ -36,6 +36,13 @@ import static org.junit.jupiter.api.Assertions.assertTrue;
 
 class ReloadableCredentialsProviderTest {
 
+    // Auto-reload is observed via a WatchService. On Linux this is inotify (sub-second); on
+    // platforms without a native file watcher (e.g. macOS) the JDK falls back to a polling
+    // WatchService that re-scans on a coarse interval (on the order of seconds). Tests await the
+    // reload callback on this generous timeout rather than sleeping a fixed amount, so they are
+    // deterministic on both kinds of platform.
+    private static final int WATCH_TIMEOUT_SECONDS = 30;
+
     private static final String VALID_CREDENTIALS_JSON = "{\n"
         + "  \"type\": \"service_account\",\n"
         + "  \"project_id\": \"test-project\",\n"
@@ -134,7 +141,8 @@ class ReloadableCredentialsProviderTest {
 
         final AtomicInteger callbackCount = new AtomicInteger(0);
         final AtomicReference<Credentials> latestCredentials = new AtomicReference<>();
-        final CountDownLatch callbackLatch = new CountDownLatch(1);
+        // Re-armed between reloads so each phase awaits its own callback rather than sleeping.
+        final AtomicReference<CountDownLatch> reloadLatch = new AtomicReference<>(new CountDownLatch(1));
 
         try (final ReloadableCredentialsProvider provider = new ReloadableCredentialsProvider(
             null, null, credentialsFile.toString(), 1)) {
@@ -142,7 +150,7 @@ class ReloadableCredentialsProviderTest {
             provider.setCredentialsUpdateCallback(credentials -> {
                 callbackCount.incrementAndGet();
                 latestCredentials.set(credentials);
-                callbackLatch.countDown();
+                reloadLatch.get().countDown();
             });
 
             final Credentials initialCredentials = provider.getCredentials();
@@ -151,17 +159,19 @@ class ReloadableCredentialsProviderTest {
             // Update the credentials file
             Files.write(credentialsFile, UPDATED_CREDENTIALS_JSON.getBytes(), StandardOpenOption.TRUNCATE_EXISTING);
 
-            // Wait for the callback to be called
-            assertTrue(callbackLatch.await(5, TimeUnit.SECONDS), "Callback should be called within 5 seconds");
-
+            // Wait for the first reload to be detected.
+            assertTrue(reloadLatch.get().await(WATCH_TIMEOUT_SECONDS, TimeUnit.SECONDS),
+                "first reload not detected within " + WATCH_TIMEOUT_SECONDS + "s");
             assertEquals(1, callbackCount.get());
             assertNotNull(latestCredentials.get());
 
-            // Update the credentials file again with same semantical contents
+            // Arm a fresh latch, then update the credentials file again (same semantic contents).
+            reloadLatch.set(new CountDownLatch(1));
             Files.write(credentialsFile, (UPDATED_CREDENTIALS_JSON + " ").getBytes(),
                         StandardOpenOption.TRUNCATE_EXISTING);
 
-            Thread.sleep(2000);
+            assertTrue(reloadLatch.get().await(WATCH_TIMEOUT_SECONDS, TimeUnit.SECONDS),
+                "second reload not detected within " + WATCH_TIMEOUT_SECONDS + "s");
             assertEquals(2, callbackCount.get());
             assertNotNull(latestCredentials.get());
         }
@@ -175,7 +185,8 @@ class ReloadableCredentialsProviderTest {
 
         final AtomicInteger callbackCount = new AtomicInteger(0);
         final AtomicReference<Credentials> latestCredentials = new AtomicReference<>();
-        final CountDownLatch callbackLatch = new CountDownLatch(1);
+        // Re-armed between reloads so each phase awaits its own callback rather than sleeping.
+        final AtomicReference<CountDownLatch> reloadLatch = new AtomicReference<>(new CountDownLatch(1));
 
         try (final ReloadableCredentialsProvider provider = new ReloadableCredentialsProvider(
             null, null, credentialsFile.toString(), 1)) {
@@ -183,7 +194,7 @@ class ReloadableCredentialsProviderTest {
             provider.setCredentialsUpdateCallback(credentials -> {
                 callbackCount.incrementAndGet();
                 latestCredentials.set(credentials);
-                callbackLatch.countDown();
+                reloadLatch.get().countDown();
             });
 
             final Credentials initialCredentials = provider.getCredentials();
@@ -193,9 +204,9 @@ class ReloadableCredentialsProviderTest {
             Files.write(credentialsFile, ACCESS_TOKEN_CREDENTIALS2_JSON.getBytes(),
                 StandardOpenOption.TRUNCATE_EXISTING);
 
-            // Wait for the callback to be called
-            assertTrue(callbackLatch.await(5, TimeUnit.SECONDS), "Callback should be called within 5 seconds");
-
+            // Wait for the first reload to be detected.
+            assertTrue(reloadLatch.get().await(WATCH_TIMEOUT_SECONDS, TimeUnit.SECONDS),
+                "first reload not detected within " + WATCH_TIMEOUT_SECONDS + "s");
             assertEquals(1, callbackCount.get());
             assertNotNull(latestCredentials.get());
             Credentials credentials = provider.getCredentials();
@@ -203,11 +214,13 @@ class ReloadableCredentialsProviderTest {
             assertEquals("OAuth2", credentials.getAuthenticationType());
             assertEquals("Bearer ya29...token2", credentials.getRequestMetadata().get("Authorization").get(0));
 
-            // Update the credentials file again
+            // Arm a fresh latch, then update the credentials file again.
+            reloadLatch.set(new CountDownLatch(1));
             Files.write(credentialsFile, ACCESS_TOKEN_CREDENTIALS3_JSON.getBytes(),
                         StandardOpenOption.TRUNCATE_EXISTING);
 
-            Thread.sleep(2000);
+            assertTrue(reloadLatch.get().await(WATCH_TIMEOUT_SECONDS, TimeUnit.SECONDS),
+                "second reload not detected within " + WATCH_TIMEOUT_SECONDS + "s");
             assertEquals(2, callbackCount.get());
             assertNotNull(latestCredentials.get());
 
@@ -224,11 +237,15 @@ class ReloadableCredentialsProviderTest {
         Files.write(credentialsFile, VALID_CREDENTIALS_JSON.getBytes());
 
         final AtomicInteger successCallbackCount = new AtomicInteger(0);
+        final CountDownLatch validReload = new CountDownLatch(1);
 
         try (final ReloadableCredentialsProvider provider = new ReloadableCredentialsProvider(
             null, null, credentialsFile.toString(), 1)) {
 
-            provider.setCredentialsUpdateCallback(credentials -> successCallbackCount.incrementAndGet());
+            provider.setCredentialsUpdateCallback(credentials -> {
+                successCallbackCount.incrementAndGet();
+                validReload.countDown();
+            });
 
             final Credentials initialCredentials = provider.getCredentials();
             assertNotNull(initialCredentials);
@@ -236,19 +253,16 @@ class ReloadableCredentialsProviderTest {
             // Write invalid JSON to trigger an error
             Files.write(credentialsFile, "invalid json".getBytes(), StandardOpenOption.TRUNCATE_EXISTING);
 
-            // Give some time for the file watcher to process the change
+            // There is no successful callback to await here (the reload fails to parse), so a
+            // bounded settle is the only option for this negative assertion.
             Thread.sleep(2000);
+            assertEquals(0, successCallbackCount.get(), "invalid update must not trigger a reload");
 
-            // The callback should not have been called due to the error
-            assertEquals(0, successCallbackCount.get());
-
-            // Write valid JSON again
+            // Write valid JSON again — now a reload is expected.
             Files.write(credentialsFile, UPDATED_CREDENTIALS_JSON.getBytes(), StandardOpenOption.TRUNCATE_EXISTING);
 
-            // Give some time for the file watcher to process the change
-            Thread.sleep(2000);
-
-            // Now the callback should be called
+            assertTrue(validReload.await(WATCH_TIMEOUT_SECONDS, TimeUnit.SECONDS),
+                "valid update should trigger a reload within " + WATCH_TIMEOUT_SECONDS + "s");
             assertEquals(1, successCallbackCount.get());
         }
     }
