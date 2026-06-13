@@ -26,6 +26,8 @@ public class DirectByteBufferPool {
 
     private final ConcurrentLinkedQueue<ByteBuffer> pool = new ConcurrentLinkedQueue<>();
     private final AtomicLong poolCount = new AtomicLong(0);
+    private final AtomicLong activeCount = new AtomicLong(0);
+    private final AtomicLong totalAllocatedBytes = new AtomicLong(0);
 
     public DirectByteBufferPool(final int bufferSize, final long maxPoolSize) {
         this.bufferSize = bufferSize;
@@ -36,23 +38,36 @@ public class DirectByteBufferPool {
         return bufferSize;
     }
 
-    public ByteBuffer get(final int bufferSize) {
-        if (bufferSize != this.bufferSize) {
-            return ByteBuffer.allocateDirect(bufferSize);
+    /**
+     * Acquire a direct buffer of at least the requested size.
+     * Returns a result indicating whether the buffer was reused from the pool or freshly allocated.
+     */
+    public PoolGetResult get(final int requestedSize) {
+        activeCount.incrementAndGet();
+        if (requestedSize != this.bufferSize) {
+            totalAllocatedBytes.addAndGet(requestedSize);
+            return new PoolGetResult(ByteBuffer.allocateDirect(requestedSize), false);
         }
 
         final ByteBuffer buf = pool.poll();
         if (buf != null) {
             poolCount.decrementAndGet();
             buf.clear();
-            return buf;
+            return new PoolGetResult(buf, true);
         }
 
-        return ByteBuffer.allocateDirect(this.bufferSize);
+        totalAllocatedBytes.addAndGet(this.bufferSize);
+        return new PoolGetResult(ByteBuffer.allocateDirect(this.bufferSize), false);
     }
 
     public void returnBuffer(final ByteBuffer buf) {
-        if (buf == null || !buf.isDirect() || buf.capacity() != this.bufferSize) {
+        if (buf == null || !buf.isDirect()) {
+            return;
+        }
+
+        activeCount.decrementAndGet();
+
+        if (buf.capacity() != this.bufferSize) {
             return;
         }
 
@@ -70,5 +85,20 @@ public class DirectByteBufferPool {
 
     public long currentPoolSize() {
         return poolCount.get();
+    }
+
+    public long maxPoolSize() {
+        return maxPoolSize;
+    }
+
+    public long activeCount() {
+        return activeCount.get();
+    }
+
+    public long totalAllocatedBytes() {
+        return totalAllocatedBytes.get();
+    }
+
+    public record PoolGetResult(ByteBuffer buffer, boolean poolHit) {
     }
 }

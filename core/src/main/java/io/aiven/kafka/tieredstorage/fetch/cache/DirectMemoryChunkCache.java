@@ -37,6 +37,7 @@ public class DirectMemoryChunkCache extends ChunkCache<RefCountedByteBuffer> {
     private static final long DEFAULT_MAX_POOL_SIZE = 512;
 
     private DirectByteBufferPool bufferPool;
+    private DirectMemoryChunkCacheMetrics poolMetrics;
 
     public DirectMemoryChunkCache(final ChunkManager chunkManager) {
         super(chunkManager);
@@ -52,15 +53,12 @@ public class DirectMemoryChunkCache extends ChunkCache<RefCountedByteBuffer> {
     public RefCountedByteBuffer cacheChunk(final ChunkKey chunkKey, final InputStream chunk) throws IOException {
         try (chunk) {
             final byte[] bytes = chunk.readAllBytes();
-            final ByteBuffer directBuffer;
-            if (bytes.length <= bufferPool.getBufferSize()) {
-                directBuffer = bufferPool.get(bufferPool.getBufferSize());
-            } else {
-                directBuffer = bufferPool.get(bytes.length);
-            }
-            directBuffer.clear();
+            final int requestedSize = Math.max(bytes.length, bufferPool.getBufferSize());
+            final DirectByteBufferPool.PoolGetResult result = bufferPool.get(requestedSize);
+            final ByteBuffer directBuffer = result.buffer();
             directBuffer.put(bytes);
             directBuffer.flip();
+            poolMetrics.bufferAcquired(directBuffer.capacity(), result.poolHit());
             return new RefCountedByteBuffer(directBuffer, bufferPool);
         }
     }
@@ -98,6 +96,7 @@ public class DirectMemoryChunkCache extends ChunkCache<RefCountedByteBuffer> {
 
         this.bufferPool = new DirectByteBufferPool(bufferSize, maxPoolSize);
         this.cache = buildCache(config);
+        this.poolMetrics = new DirectMemoryChunkCacheMetrics(bufferPool);
     }
 
     public DirectByteBufferPool getBufferPool() {
