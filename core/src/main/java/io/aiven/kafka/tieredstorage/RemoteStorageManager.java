@@ -264,6 +264,19 @@ public class RemoteStorageManager implements org.apache.kafka.server.log.remote.
                 log.warn("Removing orphan files failed", ex);
             }
             throw new RemoteStorageException(e);
+        } catch (final Throwable t) {
+            // Convert any escaping Throwable to a RemoteStorageException so it cannot bypass
+            // Kafka's RLMTask catch (Exception) clause and trip
+            // ScheduledThreadPoolExecutor.scheduleWithFixedDelay's silent-suppression rule.
+            // RemoteStorageException extends Exception, so the existing Kafka catch will
+            // swallow it and the scheduled task continues to retry on the next tick. See #820 / PR #833.
+            log.error("Copying log segment data failed, metadata: {}", remoteLogSegmentMetadata, t);
+            try {
+                deleteSegmentObjects(remoteLogSegmentMetadata);
+            } catch (final Exception ex) {
+                log.warn("Removing orphan files failed after wrapping Throwable", ex);
+            }
+            throw new RemoteStorageException(t);
         }
 
         metrics.recordSegmentCopyTime(
