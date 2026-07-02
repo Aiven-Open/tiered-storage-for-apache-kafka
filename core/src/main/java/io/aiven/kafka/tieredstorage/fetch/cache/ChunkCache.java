@@ -45,6 +45,7 @@ import com.github.benmanes.caffeine.cache.Caffeine;
 import com.github.benmanes.caffeine.cache.RemovalListener;
 import com.github.benmanes.caffeine.cache.Scheduler;
 import com.github.benmanes.caffeine.cache.Weigher;
+import com.github.benmanes.caffeine.cache.stats.CacheStats;
 
 public abstract class ChunkCache<T> implements ChunkManager, Configurable {
     public static final String METRIC_GROUP = "chunk-cache-metrics";
@@ -80,33 +81,33 @@ public abstract class ChunkCache<T> implements ChunkManager, Configurable {
         startPrefetching(objectKey, manifest, currentChunk.originalPosition + currentChunk.originalSize);
         final ChunkKey chunkKey = new ChunkKey(objectKey.value(), chunkId);
         final AtomicReference<InputStream> result = new AtomicReference<>();
-        try {
-            return cache.asMap()
-                .compute(chunkKey, (key, val) -> CompletableFuture.supplyAsync(() -> {
-                    if (val != null && !val.isCompletedExceptionally()) {
-                        statsCounter.recordHit();
-                        try {
-                            final T cachedChunk = val.get();
-                            result.getAndSet(cachedChunkToInputStream(cachedChunk));
-                            return cachedChunk;
-                        } catch (final InterruptedException | ExecutionException e) {
-                            throw new CompletionException(e);
-                        }
-                    } else {
-                        statsCounter.recordMiss();
-                        try {
-                            final InputStream chunk =
-                                    chunkManager.getChunk(objectKey, manifest, chunkId);
-                            final T t = this.cacheChunk(chunkKey, chunk);
-                            result.getAndSet(cachedChunkToInputStream(t));
-                            return t;
-                        } catch (final StorageBackendException | IOException e) {
-                            throw new CompletionException(e);
-                        }
+        final CompletableFuture<InputStream> resultFuture = cache.asMap()
+            .compute(chunkKey, (key, val) -> CompletableFuture.supplyAsync(() -> {
+                if (val != null && !val.isCompletedExceptionally()) {
+                    statsCounter.recordHit();
+                    try {
+                        final T cachedChunk = val.get();
+                        result.getAndSet(cachedChunkToInputStream(cachedChunk));
+                        return cachedChunk;
+                    } catch (final InterruptedException | ExecutionException e) {
+                        throw new CompletionException(e);
                     }
-                }, executor))
-                .thenApplyAsync(t -> result.get())
-                .get(getTimeout.toMillis(), TimeUnit.MILLISECONDS);
+                } else {
+                    statsCounter.recordMiss();
+                    try {
+                        final InputStream chunk =
+                                chunkManager.getChunk(objectKey, manifest, chunkId);
+                        final T t = this.cacheChunk(chunkKey, chunk);
+                        result.getAndSet(cachedChunkToInputStream(t));
+                        return t;
+                    } catch (final StorageBackendException | IOException e) {
+                        throw new CompletionException(e);
+                    }
+                }
+            }, executor))
+            .thenApply(t -> result.get());
+        try {
+            return resultFuture.get(getTimeout.toMillis(), TimeUnit.MILLISECONDS);
         } catch (final ExecutionException e) {
             // Unwrap previously wrapped exceptions if possible.
             final Throwable cause = e.getCause();
@@ -124,7 +125,30 @@ public abstract class ChunkCache<T> implements ChunkManager, Configurable {
 
             throw new RuntimeException(e);
         } catch (final InterruptedException | TimeoutException e) {
+            closeResultWhenAvailable(e, resultFuture, result);
             throw new RuntimeException(e);
+        }
+    }
+
+    private void closeResultWhenAvailable(final Exception e,
+                                  final CompletableFuture<?> resultFuture,
+                                  final AtomicReference<InputStream> result) {
+        if (e instanceof InterruptedException) {
+            Thread.currentThread().interrupt();
+        }
+        // The worker may still be materialising the stream; close it once the future settles
+        // so the buffer it holds is released instead of leaked on an aborted get.
+        resultFuture.whenComplete((ignored, error) -> closeResult(result));
+    }
+
+    private void closeResult(final AtomicReference<InputStream> result) {
+        final InputStream stream = result.getAndSet(null);
+        if (stream != null) {
+            try {
+                stream.close();
+            } catch (final IOException ignored) {
+                // The stream was abandoned because getChunk failed before returning it to the caller.
+            }
         }
     }
 
@@ -154,6 +178,14 @@ public abstract class ChunkCache<T> implements ChunkManager, Configurable {
         statsCounter.registerSizeMetric(cache.synchronous()::estimatedSize);
 
         return cache;
+    }
+
+    public CacheStats cacheStats() {
+        return statsCounter.snapshot();
+    }
+
+    public long estimatedSize() {
+        return cache.synchronous().estimatedSize();
     }
 
     private void startPrefetching(final ObjectKey segmentKey,
