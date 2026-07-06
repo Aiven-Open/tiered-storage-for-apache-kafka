@@ -1,0 +1,49 @@
+/*
+ * Copyright 2023 Aiven Oy
+ *
+ * Licensed under the Apache License, Version 2.0 (the "License");
+ * you may not use this file except in compliance with the License.
+ * You may obtain a copy of the License at
+ *
+ * http://www.apache.org/licenses/LICENSE-2.0
+ *
+ * Unless required by applicable law or agreed to in writing, software
+ * distributed under the License is distributed on an "AS IS" BASIS,
+ * WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
+ * See the License for the specific language governing permissions and
+ * limitations under the License.
+ */
+
+archivesBaseName = "storage-oci"
+
+ext {
+    wireMockVersion = "3.13.1"
+}
+
+dependencies {
+    implementation project(":storage:core")
+
+    def excludeFromOracleDeps = { ModuleDependency dep ->
+        dep.exclude group: "org.slf4j"
+        //Exclude these to avoid conflicts with Kafka, which also depends on these jars
+        dep.exclude group: "org.glassfish.jersey.core"
+        dep.exclude group: "org.glassfish.jersey.media"
+        dep.exclude group: "org.glassfish.jersey.inject"
+        dep.exclude group: "org.glassfish.jersey.connectors"
+        dep.exclude group: "jakarta.ws.rs"
+    }
+    implementation ("com.oracle.oci.sdk:oci-java-sdk-objectstorage:$oracleSdkVersion") {excludeFromOracleDeps(it)}
+    implementation ("com.oracle.oci.sdk:oci-java-sdk-common-httpclient-jersey:$oracleSdkVersion") {excludeFromOracleDeps(it)}
+    implementation ("org.glassfish.jersey.media:jersey-media-json-jackson:2.39.1") {excludeFromOracleDeps(it)}
+
+    implementation project(':commons')
+
+    testImplementation(testFixtures(project(":storage:core")))
+
+    testImplementation "org.testcontainers:junit-jupiter:$testcontainersVersion"
+    testImplementation "org.testcontainers:localstack:$testcontainersVersion"
+
+    integrationTestImplementation("org.wiremock:wiremock:$wireMockVersion") {
+        exclude group: "org.slf4j"
+    }
+}

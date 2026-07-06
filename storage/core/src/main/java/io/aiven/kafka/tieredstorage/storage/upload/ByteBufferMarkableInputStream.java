@@ -15,7 +15,7 @@
  * limitations under the License.
  */
 
-package io.aiven.kafka.tieredstorage.storage.s3;
+package io.aiven.kafka.tieredstorage.storage.upload;
 
 import java.io.InputStream;
 import java.nio.ByteBuffer;
