@@ -212,7 +212,7 @@ public class BatchEnumeration implements Enumeration<InputStream>, Closeable {
         } else if (key != null) {
             return structureProvider.serializeKey(topic, null, key);
         } else {
-            return ByteBuffer.wrap((byte[]) rawKey);
+            return (ByteBuffer) rawKey;
         }
     }
 
@@ -224,7 +224,7 @@ public class BatchEnumeration implements Enumeration<InputStream>, Closeable {
         } else if (value != null) {
             return structureProvider.serializeValue(topic, null, value);
         } else {
-            return ByteBuffer.wrap((byte[]) rawValue);
+            return (ByteBuffer) rawValue;
         }
     }
 

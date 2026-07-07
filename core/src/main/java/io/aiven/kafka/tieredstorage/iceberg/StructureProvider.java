@@ -22,11 +22,8 @@ import java.nio.ByteBuffer;
 import org.apache.kafka.common.Configurable;
 import org.apache.kafka.common.header.Headers;
 
-import io.confluent.kafka.schemaregistry.ParsedSchema;
-import io.confluent.kafka.schemaregistry.client.rest.exceptions.RestClientException;
-
 public interface StructureProvider extends Configurable {
-    ParsedSchema getSchemaById(final int schemaId) throws RestClientException, IOException;
+    <T> SchemaAndId<T> getSchemaById(final Integer schemaId) throws IOException;
 
     ByteBuffer serializeKey(final String topic, final Headers headers, final Object value);
 
@@ -35,4 +32,6 @@ public interface StructureProvider extends Configurable {
     Object deserializeKey(final String topic, final Headers headers, final byte[] data);
 
     Object deserializeValue(final String topic, final Headers headers, final byte[] data);
+
+    record SchemaAndId<T>(T schema, Integer schemaId) { }
 }
