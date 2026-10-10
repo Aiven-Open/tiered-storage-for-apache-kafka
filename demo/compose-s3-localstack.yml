@@ -14,26 +14,31 @@
 # limitations under the License.
 ##
 services:
+  zookeeper:
+    image: "confluentinc/cp-zookeeper:7.3.3"
+    ports:
+      - "2181:2181"
+    environment:
+      ZOOKEEPER_CLIENT_PORT: 2181
+
   kafka:
-    build: ./kraft-s3-minio/
+    image: "aivenoy/kafka-with-ts-plugin"
     container_name: "kafka-ts"
     depends_on:
-      - minio
+      - zookeeper
+      - localstack
     ports:
       - "9092:9092"
+      - "7001:7001" #prometheus metrics
     environment:
-      CLUSTER_ID: "4L6g3nShT-eMCtK--X86sw"
-      KAFKA_PROCESS_ROLES: "broker,controller"
-      KAFKA_NODE_ID: 1
-      KAFKA_CONTROLLER_QUORUM_VOTERS: "1@kafka:29093"
-      KAFKA_LISTENER_SECURITY_PROTOCOL_MAP: "CONTROLLER:PLAINTEXT,PLAINTEXT:PLAINTEXT,PLAINTEXT_HOST:PLAINTEXT"
-      KAFKA_ADVERTISED_LISTENERS: "PLAINTEXT_HOST://localhost:9092,PLAINTEXT://kafka:29092"
-      KAFKA_LISTENERS: "CONTROLLER://:29093,PLAINTEXT_HOST://:9092,PLAINTEXT://:29092"
-      KAFKA_INTER_BROKER_LISTENER_NAME: "PLAINTEXT"
-      KAFKA_CONTROLLER_LISTENER_NAMES: "CONTROLLER"
+      KAFKA_BROKER_ID: 0
+      KAFKA_ZOOKEEPER_CONNECT: "zookeeper:2181"
+      KAFKA_LISTENERS: "PLAINTEXT://0.0.0.0:9092,BROKER://0.0.0.0:29092"
+      KAFKA_ADVERTISED_LISTENERS: "PLAINTEXT://localhost:9092,BROKER://kafka:29092"
+      KAFKA_LISTENER_SECURITY_PROTOCOL_MAP: "PLAINTEXT:PLAINTEXT,BROKER:PLAINTEXT"
+      KAFKA_INTER_BROKER_LISTENER_NAME: "BROKER"
       KAFKA_OFFSETS_TOPIC_REPLICATION_FACTOR: 1
       KAFKA_OFFSETS_TOPIC_NUM_PARTITIONS: 1
-      KAFKA_GROUP_INITIAL_REBALANCE_DELAY_MS: 0
       KAFKA_TRANSACTION_STATE_LOG_REPLICATION_FACTOR: 1
       KAFKA_TRANSACTION_STATE_LOG_MIN_ISR: 1
       KAFKA_AUTO_CREATE_TOPICS_ENABLE: false
@@ -46,14 +51,14 @@ services:
       KAFKA_REMOTE_LOG_MANAGER_TASK_INTERVAL_MS: 5000
       # Remote metadata manager
       KAFKA_REMOTE_LOG_METADATA_MANAGER_CLASS_NAME: "org.apache.kafka.server.log.remote.metadata.storage.TopicBasedRemoteLogMetadataManager"
-      KAFKA_REMOTE_LOG_METADATA_MANAGER_LISTENER_NAME: "PLAINTEXT"
+      KAFKA_REMOTE_LOG_METADATA_MANAGER_LISTENER_NAME: "BROKER"
       KAFKA_RLMM_CONFIG_REMOTE_LOG_METADATA_TOPIC_REPLICATION_FACTOR: 1
       # Remote storage manager
       KAFKA_REMOTE_LOG_STORAGE_MANAGER_CLASS_PATH: "/tiered-storage-for-apache-kafka/core/*:/tiered-storage-for-apache-kafka/s3/*"
       KAFKA_REMOTE_LOG_STORAGE_MANAGER_CLASS_NAME: "io.aiven.kafka.tieredstorage.RemoteStorageManager"
       KAFKA_RSM_CONFIG_CHUNK_SIZE: 4194304 # 4 MiB
       KAFKA_RSM_CONFIG_FETCH_CHUNK_CACHE_CLASS: "io.aiven.kafka.tieredstorage.fetch.cache.DiskChunkCache"
-      KAFKA_RSM_CONFIG_FETCH_CHUNK_CACHE_PATH: /var/lib/kafka/tiered-storage-cache
+      KAFKA_RSM_CONFIG_FETCH_CHUNK_CACHE_PATH: /home/appuser/kafka-tiered-storage-cache
       KAFKA_RSM_CONFIG_FETCH_CHUNK_CACHE_SIZE: 1073741824 # 1 GiB
       KAFKA_RSM_CONFIG_FETCH_CHUNK_CACHE_PREFETCH_MAX_SIZE: 16777216 # 16 MiB
       KAFKA_RSM_CONFIG_FETCH_CHUNK_CACHE_RETENTION_MS: 600000 # 600000 ms
@@ -61,34 +66,21 @@ services:
       # Storage backend
       KAFKA_RSM_CONFIG_KEY_PREFIX: "tiered-storage-demo/"
       KAFKA_RSM_CONFIG_STORAGE_BACKEND_CLASS: "io.aiven.kafka.tieredstorage.storage.s3.S3Storage"
-      KAFKA_RSM_CONFIG_STORAGE_S3_ENDPOINT_URL: "http://minio:9000"
+      KAFKA_RSM_CONFIG_STORAGE_S3_ENDPOINT_URL: "http://localstack:4566"
       KAFKA_RSM_CONFIG_STORAGE_S3_BUCKET_NAME: "test-bucket"
       KAFKA_RSM_CONFIG_STORAGE_S3_REGION: "us-east-1"
       KAFKA_RSM_CONFIG_STORAGE_S3_PATH_STYLE_ACCESS_ENABLED: true
-      KAFKA_RSM_CONFIG_STORAGE_AWS_ACCESS_KEY_ID: "minioadmin"
-      KAFKA_RSM_CONFIG_STORAGE_AWS_SECRET_ACCESS_KEY: "minioadmin"
-    volumes:
-      # These paths depend on gradle copyDistFiles task run on root directory
-      - ./../build/docker/tiered-storage-for-apache-kafka-0.0.1-SNAPSHOT:/tiered-storage-for-apache-kafka/core
-      - ./../storage/s3/build/docker/s3-0.0.1-SNAPSHOT:/tiered-storage-for-apache-kafka/s3
-      - ./../storage/s3/build/docker/gcs-0.0.1-SNAPSHOT:/tiered-storage-for-apache-kafka/gcs
-      - ./../storage/s3/build/docker/azure-0.0.1-SNAPSHOT:/tiered-storage-for-apache-kafka/azure
+      KAFKA_RSM_CONFIG_STORAGE_AWS_ACCESS_KEY_ID: "test"
+      KAFKA_RSM_CONFIG_STORAGE_AWS_SECRET_ACCESS_KEY: "test"
 
-  minio:
-    image: quay.io/minio/minio
+  localstack:
+    # The last LocalStack release that runs without an auth token.
+    image: localstack/localstack:4.14.0
+    container_name: "localstack"
     ports:
-      - "9000:9000"
-      - "9090:9090"
-    command: server /data --console-address ":9090"
-
-  minio-createbucket:
-    image: quay.io/minio/mc
-    restart: "no"
-    depends_on:
-      - minio
-    entrypoint: >
-      /bin/sh -c "
-      /usr/bin/mc alias set local http://minio:9000 minioadmin minioadmin;
-      /usr/bin/mc mb local/test-bucket;
-      exit 0;
-      "
+      - "4566:4566"
+    environment:
+      SERVICES: s3
+      BUCKET_NAME: test-bucket
+    volumes:
+      - ./localstack/create-bucket.sh:/etc/localstack/init/ready.d/create-bucket.sh

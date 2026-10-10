@@ -93,19 +93,19 @@ make consume
 
 You can also see the remote data in https://s3.console.aws.amazon.com/s3/buckets/<bucket_name>.
 
-### MinIO S3 as remote storage: `compose-s3-minio.yml`
+### LocalStack S3 as remote storage: `compose-s3-localstack.yml`
 
 > [!NOTE]
-> There is a KRaft version of this scenario in `compose-kraft-s3-minio.yml`.
-> The steps are the same, it just requires the binaries to placed at a different location.
+> There is a KRaft version of this scenario in `compose-kraft-s3-localstack.yml`.
+> The steps are the same, it just requires the binaries to be placed at a different location.
 > The `make` commands will take care of this.
 
-This scenario uses `S3Storage` with MinIO S3 as the remote storage.
+This scenario uses `S3Storage` with [LocalStack](https://github.com/localstack/localstack) S3 as the remote storage.
 
 ```bash
 # Start the compose
-make run_s3_minio
-# or make run_kraft_s3_minio
+make run_s3_localstack
+# or make run_kraft_s3_localstack
 
 # Create the topic with any variation
 make create_topic_by_size_ts
@@ -119,7 +119,7 @@ make fill_topic
 
 # See that segments are uploaded to the remote storage
 # (this may take several seconds)
-make show_remote_data_s3_minio
+make show_remote_data_s3_localstack
 
 # Check that early segments are deleted
 # (completely or renamed with `.deleted` suffix)
@@ -129,8 +129,6 @@ make show_local_data
 # Check the data is consumable
 make consume
 ```
-
-You can also see the remote data in http://localhost:9090/browser/test-bucket (login: `minioadmin`, password: `minioadmin`).
 
 ### fake-gcs-server as remote storage: `compose-gcs-fake-gcs-server.yml`
 

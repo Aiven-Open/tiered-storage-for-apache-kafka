@@ -30,7 +30,7 @@ import static org.assertj.core.api.Assertions.assertThat;
 
 class S3ClientBuilderTest {
     private static final Region TEST_REGION = Region.US_EAST_2;
-    private static final String MINIO_URL = "http://minio";
+    private static final String CUSTOM_ENDPOINT_URL = "http://seaweedfs";
 
     @Test
     void minimalConfig() {
@@ -57,14 +57,14 @@ class S3ClientBuilderTest {
         final Map<String, Object> configs = Map.of(
             "s3.bucket.name", "b",
             "s3.region", TEST_REGION.id(),
-            "s3.endpoint.url", MINIO_URL,
+            "s3.endpoint.url", CUSTOM_ENDPOINT_URL,
             "s3.path.style.access.enabled", true
         );
         final var config = new S3StorageConfig(configs);
         final var s3Client = S3ClientBuilder.build(config);
         final var clientConfiguration = s3Client.serviceClientConfiguration();
         assertThat(clientConfiguration.region()).isEqualTo(TEST_REGION);
-        assertThat(clientConfiguration.endpointOverride()).hasValue(URI.create("http://minio"));
+        assertThat(clientConfiguration.endpointOverride()).hasValue(URI.create(CUSTOM_ENDPOINT_URL));
         assertThat(clientConfiguration.overrideConfiguration().metricPublishers())
             .allSatisfy(metricPublisher -> assertThat(metricPublisher).isInstanceOf(MetricCollector.class));
         assertThat(clientConfiguration.overrideConfiguration().apiCallTimeout()).isEmpty();
@@ -78,7 +78,7 @@ class S3ClientBuilderTest {
         final Map<String, Object> configs = Map.of(
             "s3.bucket.name", "b",
             "s3.region", TEST_REGION.id(),
-            "s3.endpoint.url", MINIO_URL,
+            "s3.endpoint.url", CUSTOM_ENDPOINT_URL,
             "s3.path.style.access.enabled", false,
             "s3.multipart.upload.part.size", partSize,
             "aws.credentials.provider.class", customCredentialsProvider.getName());
@@ -87,7 +87,7 @@ class S3ClientBuilderTest {
         final var s3Client = S3ClientBuilder.build(config);
         final var clientConfiguration = s3Client.serviceClientConfiguration();
         assertThat(clientConfiguration.region()).isEqualTo(TEST_REGION);
-        assertThat(clientConfiguration.endpointOverride()).hasValue(URI.create("http://minio"));
+        assertThat(clientConfiguration.endpointOverride()).hasValue(URI.create(CUSTOM_ENDPOINT_URL));
         assertThat(clientConfiguration.overrideConfiguration().metricPublishers())
             .allSatisfy(metricPublisher -> assertThat(metricPublisher).isInstanceOf(MetricCollector.class));
         assertThat(clientConfiguration.overrideConfiguration().apiCallTimeout()).isEmpty();
@@ -102,7 +102,7 @@ class S3ClientBuilderTest {
         final Map<String, Object> configs = Map.of(
             "s3.bucket.name", "b",
             "s3.region", region.id(),
-            "s3.endpoint.url", MINIO_URL,
+            "s3.endpoint.url", CUSTOM_ENDPOINT_URL,
             "aws.access.key.id", username,
             "aws.secret.access.key", password,
             "aws.certificate.check.enabled", "false",
@@ -112,7 +112,7 @@ class S3ClientBuilderTest {
         final var s3Client = S3ClientBuilder.build(config);
         final var clientConfiguration = s3Client.serviceClientConfiguration();
         assertThat(clientConfiguration.region()).isEqualTo(TEST_REGION);
-        assertThat(clientConfiguration.endpointOverride()).hasValue(URI.create("http://minio"));
+        assertThat(clientConfiguration.endpointOverride()).hasValue(URI.create(CUSTOM_ENDPOINT_URL));
         assertThat(clientConfiguration.overrideConfiguration().metricPublishers())
             .allSatisfy(metricPublisher -> assertThat(metricPublisher).isInstanceOf(MetricCollector.class));
         assertThat(clientConfiguration.overrideConfiguration().apiCallTimeout()).isEmpty();
