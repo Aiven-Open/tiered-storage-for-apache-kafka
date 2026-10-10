@@ -16,6 +16,7 @@
 
 package io.aiven.kafka.tieredstorage;
 
+import java.io.ByteArrayInputStream;
 import java.io.File;
 import java.io.IOException;
 import java.io.InputStream;
@@ -33,7 +34,6 @@ import org.apache.kafka.common.header.Header;
 import org.apache.kafka.common.record.FileLogInputStream;
 import org.apache.kafka.common.record.Record;
 import org.apache.kafka.common.record.RecordBatch;
-import org.apache.kafka.common.utils.ByteBufferInputStream;
 import org.apache.kafka.common.utils.Time;
 import org.apache.kafka.server.log.remote.storage.LogSegmentData;
 import org.apache.kafka.server.log.remote.storage.RemoteLogSegmentMetadata;
@@ -464,7 +464,9 @@ public class IcebergRemoteStorageManager extends InternalRemoteStorageManager {
         if (buffer == null) {
             return InputStream.nullInputStream();
         } else {
-            return new ByteBufferInputStream(buffer);
+            final byte[] bytes = new byte[buffer.remaining()];
+            buffer.get(bytes);
+            return new ByteArrayInputStream(bytes);
         }
     }
 

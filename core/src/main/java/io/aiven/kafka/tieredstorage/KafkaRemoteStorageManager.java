@@ -32,7 +32,6 @@ import java.util.Optional;
 import java.util.Set;
 import java.util.stream.Collectors;
 
-import org.apache.kafka.common.utils.ByteBufferInputStream;
 import org.apache.kafka.common.utils.Time;
 import org.apache.kafka.server.log.remote.storage.LogSegmentData;
 import org.apache.kafka.server.log.remote.storage.RemoteLogSegmentMetadata;
@@ -328,10 +327,13 @@ class KafkaRemoteStorageManager extends InternalRemoteStorageManager {
                 segmentIndexBuilder
             );
             indexes.add(producerSnapshotIndex);
+            final var leaderEpochBuffer = segmentData.leaderEpochIndex();
+            final byte[] leaderEpochBytes = new byte[leaderEpochBuffer.remaining()];
+            leaderEpochBuffer.get(leaderEpochBytes);
             final var leaderEpoch = transformIndex(
                 RemoteStorageManager.IndexType.LEADER_EPOCH,
-                closableInputStreamHolder.add(new ByteBufferInputStream(segmentData.leaderEpochIndex())),
-                segmentData.leaderEpochIndex().remaining(),
+                closableInputStreamHolder.add(new ByteArrayInputStream(leaderEpochBytes)),
+                leaderEpochBytes.length,
                 maybeEncryptionKey,
                 segmentIndexBuilder
             );
