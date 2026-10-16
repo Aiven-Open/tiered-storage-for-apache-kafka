@@ -21,6 +21,7 @@ import java.io.IOException;
 import java.io.InputStream;
 import java.io.SequenceInputStream;
 import java.util.ArrayList;
+import java.util.Arrays;
 import java.util.List;
 import java.util.Random;
 
@@ -61,6 +62,7 @@ import static org.mockito.Mockito.when;
 @ExtendWith(MockitoExtension.class)
 class S3UploadOutputStreamTest {
     private static final String BUCKET_NAME = "some_bucket";
+
     private static final ObjectKey FILE_KEY = new TestObjectKey("some_key");
     private static final String UPLOAD_ID = "some_upload_id";
 
@@ -488,6 +490,69 @@ class S3UploadOutputStreamTest {
         assertThatThrownBy(() -> out.write(1))
             .isInstanceOf(IllegalStateException.class)
             .hasMessage("Already closed");
+    }
+
+    @Test
+    void logSegmentsStartWithWholePartAndOtherObjectsStartSmall() {
+        final int partSize = 64 * 1024 * 1024;
+        assertThat(S3Storage.initialBufferSize(new TestObjectKey("prefix/topic-0/00000000000000000000-id.log"),
+            partSize)).isEqualTo(partSize);
+        assertThat(S3Storage.initialBufferSize(new TestObjectKey("prefix/topic-0/00000000000000000000-id.indexes"),
+            partSize)).isEqualTo(S3UploadOutputStream.SMALL_OBJECT_BUFFER_SIZE);
+        assertThat(S3Storage.initialBufferSize(
+            new TestObjectKey("prefix/topic-0/00000000000000000000-id.rsm-manifest"), partSize))
+            .isEqualTo(S3UploadOutputStream.SMALL_OBJECT_BUFFER_SIZE);
+    }
+
+    @Test
+    void smallObjectDoesNotAllocateWholePart() throws IOException {
+        when(mockedS3.putObject(any(PutObjectRequest.class), any(RequestBody.class)))
+            .thenReturn(PutObjectResponse.builder().build());
+        final byte[] content = new byte[10];
+        random.nextBytes(content);
+        // A part of Integer.MAX_VALUE bytes cannot be allocated, so this passes only if the buffer starts small.
+        try (final var out = new S3UploadOutputStream(BUCKET_NAME, FILE_KEY, StorageClass.STANDARD,
+            Integer.MAX_VALUE, 16, mockedS3)) {
+            out.write(content);
+        }
+        verify(mockedS3).putObject(any(PutObjectRequest.class), requestBodyCaptor.capture());
+        try (final InputStream body = requestBodyCaptor.getValue().contentStreamProvider().newStream()) {
+            assertThat(body.readAllBytes()).isEqualTo(content);
+        }
+    }
+
+    @Test
+    void growingBufferUploadsTheSameParts() throws Exception {
+        final List<UploadPartRequest> uploadPartRequests = new ArrayList<>();
+        final List<RequestBody> requestBodies = new ArrayList<>();
+        when(mockedS3.uploadPart(any(UploadPartRequest.class), any(RequestBody.class)))
+            .thenAnswer(invocation -> {
+                final UploadPartRequest upload = invocation.getArgument(0);
+                final RequestBody originalBody = invocation.getArgument(1);
+                try (final InputStream inputStream = originalBody.contentStreamProvider().newStream()) {
+                    requestBodies.add(RequestBody.fromBytes(inputStream.readAllBytes()));
+                }
+                uploadPartRequests.add(upload);
+                return newUploadPartResponse("SOME_ETAG#" + upload.partNumber());
+            });
+        when(mockedS3.completeMultipartUpload(any(CompleteMultipartUploadRequest.class)))
+            .thenReturn(CompleteMultipartUploadResponse.builder().build());
+        final byte[] content = new byte[20];
+        random.nextBytes(content);
+
+        // starts at 3 bytes, grows to 6 and then to the part size of 8, and is reused for the next parts
+        final var out = new S3UploadOutputStream(BUCKET_NAME, FILE_KEY, StorageClass.STANDARD, 8, 3, mockedS3);
+        try (final var in = new ByteArrayInputStream(content); out) {
+            in.transferTo(out);
+        }
+
+        assertUploadPartRequest(uploadPartRequests.get(0), requestBodies.get(0), 8, 1,
+            Arrays.copyOfRange(content, 0, 8));
+        assertUploadPartRequest(uploadPartRequests.get(1), requestBodies.get(1), 8, 2,
+            Arrays.copyOfRange(content, 8, 16));
+        assertUploadPartRequest(uploadPartRequests.get(2), requestBodies.get(2), 4, 3,
+            Arrays.copyOfRange(content, 16, 20));
+        verify(mockedS3, times(3)).uploadPart(any(UploadPartRequest.class), any(RequestBody.class));
     }
 
     private static CreateMultipartUploadResponse newInitiateMultipartUploadResult() {

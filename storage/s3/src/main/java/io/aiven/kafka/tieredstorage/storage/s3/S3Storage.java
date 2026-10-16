@@ -73,7 +73,14 @@ public class S3Storage implements StorageBackend {
     }
 
     S3UploadOutputStream s3OutputStream(final ObjectKey key) {
-        return new S3UploadOutputStream(bucketName, key, storageClass, partSize, s3Client);
+        return new S3UploadOutputStream(bucketName, key, storageClass, partSize,
+            initialBufferSize(key, partSize), s3Client);
+    }
+
+    // Log segments fill whole parts; the other objects of a segment (indexes, manifest) are small.
+    // The suffix is the one ObjectKeyFactory gives log segments in core.
+    static int initialBufferSize(final ObjectKey key, final int partSize) {
+        return key.value().endsWith(".log") ? partSize : S3UploadOutputStream.SMALL_OBJECT_BUFFER_SIZE;
     }
 
     @Override

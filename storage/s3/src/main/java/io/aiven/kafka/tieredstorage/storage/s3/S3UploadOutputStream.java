@@ -53,8 +53,12 @@ public class S3UploadOutputStream extends OutputStream {
 
     private static final Logger log = LoggerFactory.getLogger(S3UploadOutputStream.class);
 
+    // Small objects (manifest, indexes) start with a small buffer that doubles up to partSize as data arrives, so they
+    // do not take a whole part. Log segments start at partSize, see S3Storage.
+    static final int SMALL_OBJECT_BUFFER_SIZE = 256 * 1024;
+
     private final S3Client client;
-    private final ByteBuffer partBuffer;
+    private ByteBuffer partBuffer;
     private final String bucketName;
     private final ObjectKey key;
     private final StorageClass storageClass;
@@ -78,12 +82,21 @@ public class S3UploadOutputStream extends OutputStream {
                                 final StorageClass storageClass,
                                 final int partSize,
                                 final S3Client client) {
+        this(bucketName, key, storageClass, partSize, partSize, client);
+    }
+
+    public S3UploadOutputStream(final String bucketName,
+                                final ObjectKey key,
+                                final StorageClass storageClass,
+                                final int partSize,
+                                final int initialBufferSize,
+                                final S3Client client) {
         this.bucketName = bucketName;
         this.key = key;
         this.storageClass = storageClass;
         this.client = client;
         this.partSize = partSize;
-        this.partBuffer = ByteBuffer.allocate(partSize);
+        this.partBuffer = ByteBuffer.allocate(Math.min(partSize, initialBufferSize));
     }
 
     @Override
@@ -102,6 +115,7 @@ public class S3UploadOutputStream extends OutputStream {
         try {
             final ByteBuffer inputBuffer = ByteBuffer.wrap(b, off, len);
             while (inputBuffer.hasRemaining()) {
+                ensureCapacity();
                 // copy batch to part buffer
                 final int inputLimit = inputBuffer.limit();
                 final int toCopy = Math.min(partBuffer.remaining(), inputBuffer.remaining());
@@ -113,7 +127,7 @@ public class S3UploadOutputStream extends OutputStream {
                 inputBuffer.limit(inputLimit);
                 inputBuffer.position(positionAfterCopying);
 
-                if (!partBuffer.hasRemaining()) {
+                if (partBuffer.position() == partSize) {
                     if (uploadId == null){
                         uploadId = createMultipartUploadRequest();
                         // this is not expected (another exception should be thrown by S3) but adding for completeness
@@ -134,6 +148,19 @@ public class S3UploadOutputStream extends OutputStream {
             }
             throw new IOException(e);
         }
+    }
+
+    private void ensureCapacity() {
+        if (!partBuffer.hasRemaining()) {
+            growBuffer();
+        }
+    }
+
+    private void growBuffer() {
+        final ByteBuffer grown = ByteBuffer.allocate((int) Math.min((long) partBuffer.capacity() * 2, partSize));
+        partBuffer.flip();
+        grown.put(partBuffer);
+        partBuffer = grown;
     }
 
     private String createMultipartUploadRequest() {
