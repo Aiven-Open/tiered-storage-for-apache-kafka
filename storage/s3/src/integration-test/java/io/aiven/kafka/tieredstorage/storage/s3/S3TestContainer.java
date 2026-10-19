@@ -21,8 +21,9 @@ import org.testcontainers.utility.DockerImageName;
 
 final class S3TestContainer {
     static LocalStackContainer container() {
+        // The last LocalStack release that runs without an auth token.
         return new LocalStackContainer(
-            DockerImageName.parse("localstack/localstack:2.2.0")
+            DockerImageName.parse("localstack/localstack:4.14.0")
         ).withServices(LocalStackContainer.Service.S3);
     }
 }

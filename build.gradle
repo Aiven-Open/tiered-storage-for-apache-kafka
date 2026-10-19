@@ -359,12 +359,24 @@ tasks.distTar {
 }
 
 tasks.register('copyDistFiles', Copy) {
-    from tarTree(tasks.distTar.outputs.files.singleFile)
+    def s3DistTar = project(':storage:s3').tasks.named('distTar')
     into layout.buildDirectory.dir('docker')
+    into('core') {
+        from { tarTree(tasks.distTar.archiveFile) }
+    }
+    into('s3') {
+        from { tarTree(s3DistTar.get().archiveFile) }
+    }
+    // Strip the versioned top-level directory of the archives.
+    eachFile { details ->
+        def segments = details.relativePath.segments.toList()
+        details.relativePath = new RelativePath(true, ([segments[0]] + segments.drop(2)) as String[])
+    }
+    includeEmptyDirs = false
     doFirst {
         delete layout.buildDirectory.dir('docker')
     }
-    dependsOn tasks.distTar
+    dependsOn tasks.distTar, s3DistTar
 }
 
 tasks.register('validateDependencies') {

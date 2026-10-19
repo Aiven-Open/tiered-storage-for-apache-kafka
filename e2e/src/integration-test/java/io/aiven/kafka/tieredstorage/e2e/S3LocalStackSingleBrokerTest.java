@@ -16,7 +16,6 @@
 
 package io.aiven.kafka.tieredstorage.e2e;
 
-import java.net.URI;
 import java.util.ArrayList;
 import java.util.List;
 import java.util.stream.Collectors;
@@ -26,9 +25,7 @@ import org.apache.kafka.common.Uuid;
 
 import org.junit.jupiter.api.AfterAll;
 import org.junit.jupiter.api.BeforeAll;
-import org.testcontainers.Testcontainers;
-import org.testcontainers.containers.GenericContainer;
-import org.testcontainers.containers.startupcheck.OneShotStartupCheckStrategy;
+import org.testcontainers.containers.localstack.LocalStackContainer;
 import org.testcontainers.utility.DockerImageName;
 import software.amazon.awssdk.auth.credentials.AwsBasicCredentials;
 import software.amazon.awssdk.auth.credentials.StaticCredentialsProvider;
@@ -38,81 +35,59 @@ import software.amazon.awssdk.services.s3.model.ListObjectsV2Request;
 import software.amazon.awssdk.services.s3.model.ListObjectsV2Response;
 import software.amazon.awssdk.services.s3.model.S3Object;
 
-public class S3MinioSingleBrokerTest extends SingleBrokerTest {
+public class S3LocalStackSingleBrokerTest extends SingleBrokerTest {
 
-    static final int MINIO_PORT = 9000;
-    static final GenericContainer<?> MINIO = new GenericContainer<>(DockerImageName.parse("minio/minio"))
-        .withCommand("server", "/data", "--console-address", ":9090")
-        .withExposedPorts(MINIO_PORT)
+    static final String LOCALSTACK_NETWORK_ALIAS = "localstack";
+    static final int LOCALSTACK_PORT = 4566;
+    // The last LocalStack release that runs without an auth token.
+    static final LocalStackContainer LOCALSTACK = new LocalStackContainer(
+        DockerImageName.parse("localstack/localstack:4.14.0"))
+        .withServices(LocalStackContainer.Service.S3)
         .withNetwork(NETWORK)
-        .withNetworkAliases("minio");
-    static final String ACCESS_KEY_ID = "minioadmin";
-    static final String SECRET_ACCESS_KEY = "minioadmin";
-    static final String REGION = "us-east-1";
+        .withNetworkAliases(LOCALSTACK_NETWORK_ALIAS);
     static final String BUCKET = "test-bucket";
 
     static S3Client s3Client;
 
     @BeforeAll
     static void init() throws Exception {
-        MINIO.start();
-
-        final String minioServerUrl = String.format("http://minio:%s", MINIO_PORT);
-
-        createBucket(minioServerUrl);
+        LOCALSTACK.start();
 
         initializeS3Client();
+        s3Client.createBucket(b -> b.bucket(BUCKET));
 
+        final String endpointUrl = String.format("http://%s:%s", LOCALSTACK_NETWORK_ALIAS, LOCALSTACK_PORT);
         setupKafka(kafka -> kafka.withEnv("KAFKA_RSM_CONFIG_STORAGE_BACKEND_CLASS",
                 "io.aiven.kafka.tieredstorage.storage.s3.S3Storage")
             .withEnv("KAFKA_REMOTE_LOG_STORAGE_MANAGER_CLASS_PATH",
                 "/tiered-storage-for-apache-kafka/core/*:/tiered-storage-for-apache-kafka/s3/*")
             .withEnv("KAFKA_RSM_CONFIG_STORAGE_S3_BUCKET_NAME", BUCKET)
-            .withEnv("KAFKA_RSM_CONFIG_STORAGE_S3_REGION", REGION)
+            .withEnv("KAFKA_RSM_CONFIG_STORAGE_S3_REGION", LOCALSTACK.getRegion())
             .withEnv("KAFKA_RSM_CONFIG_STORAGE_S3_PATH_STYLE_ACCESS_ENABLED", "true")
-            .withEnv("KAFKA_RSM_CONFIG_STORAGE_AWS_ACCESS_KEY_ID", ACCESS_KEY_ID)
-            .withEnv("KAFKA_RSM_CONFIG_STORAGE_AWS_SECRET_ACCESS_KEY", SECRET_ACCESS_KEY)
-            .withEnv("KAFKA_RSM_CONFIG_STORAGE_S3_ENDPOINT_URL", minioServerUrl)
-            .dependsOn(MINIO));
+            .withEnv("KAFKA_RSM_CONFIG_STORAGE_AWS_ACCESS_KEY_ID", LOCALSTACK.getAccessKey())
+            .withEnv("KAFKA_RSM_CONFIG_STORAGE_AWS_SECRET_ACCESS_KEY", LOCALSTACK.getSecretKey())
+            .withEnv("KAFKA_RSM_CONFIG_STORAGE_S3_ENDPOINT_URL", endpointUrl)
+            .dependsOn(LOCALSTACK));
     }
 
     private static void initializeS3Client() {
-        final Integer mappedPort = MINIO.getFirstMappedPort();
-        Testcontainers.exposeHostPorts(mappedPort);
         s3Client = S3Client.builder()
-            .region(Region.of(REGION))
-            .endpointOverride(URI.create("http://localhost:" + mappedPort))
+            .region(Region.of(LOCALSTACK.getRegion()))
+            .endpointOverride(LOCALSTACK.getEndpointOverride(LocalStackContainer.Service.S3))
             .credentialsProvider(
                 StaticCredentialsProvider.create(
-                    AwsBasicCredentials.create(ACCESS_KEY_ID, SECRET_ACCESS_KEY)
+                    AwsBasicCredentials.create(LOCALSTACK.getAccessKey(), LOCALSTACK.getSecretKey())
                 )
             )
             .forcePathStyle(true)
             .build();
-        s3Client.listBuckets().buckets()
-            .forEach(bucket -> LOG.info("S3 bucket: {}", bucket.name()));
-    }
-
-    private static void createBucket(final String minioServerUrl) {
-        final String cmd =
-            "/usr/bin/mc alias set local "
-                + minioServerUrl + " " + ACCESS_KEY_ID + " " + SECRET_ACCESS_KEY + " --api s3v4 &&"
-                + "/usr/bin/mc mb local/test-bucket;\n";
-
-        final GenericContainer<?> mcContainer = new GenericContainer<>("minio/mc")
-            .withNetwork(NETWORK)
-            .withStartupCheckStrategy(new OneShotStartupCheckStrategy())
-            .withCreateContainerCmdModifier(containerCommand -> containerCommand
-                .withTty(true)
-                .withEntrypoint("/bin/sh", "-c", cmd));
-        mcContainer.start();
     }
 
     @AfterAll
     static void cleanup() {
         stopKafka();
 
-        MINIO.stop();
+        LOCALSTACK.stop();
 
         cleanupStorage();
     }

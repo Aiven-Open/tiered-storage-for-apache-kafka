@@ -105,9 +105,9 @@ run_local_fs:
 run_s3_aws:
 	docker compose -f compose-s3-aws.yml up
 
-.PHONY: run_s3_minio
-run_s3_minio:
-	docker compose -f compose-s3-minio.yml up
+.PHONY: run_s3_localstack
+run_s3_localstack:
+	docker compose -f compose-s3-localstack.yml up
 
 .PHONY: run_gcs_fake_gcs_server
 run_gcs_fake_gcs_server:
@@ -120,18 +120,18 @@ run_azure_blob_azurite:
 docker_volume:
 	cd .. && ./gradlew copyDistFiles
 
-.PHONY: run_kraft_s3_minio
-run_kraft_s3_minio: docker_volume
-	docker compose -f compose-kraft-s3-minio.yml up
+.PHONY: run_kraft_s3_localstack
+run_kraft_s3_localstack: docker_volume
+	docker compose -f compose-kraft-s3-localstack.yml up
 
 .PHONY: clean
 clean:
 	docker compose -f compose-local-fs.yml down
 	docker compose -f compose-s3-aws.yml down
-	docker compose -f compose-s3-minio.yml down
+	docker compose -f compose-s3-localstack.yml down
 	docker compose -f compose-gcs-fake-gcs-server.yml down
 	docker compose -f compose-azure-blob-azurite.yml down
-	docker compose -f compose-kraft-s3-minio.yml down
+	docker compose -f compose-kraft-s3-localstack.yml down
 
 .PHONY: show_local_data
 show_local_data:
@@ -147,10 +147,9 @@ show_remote_data_fs:
 show_remote_data_s3_aws:
 	aws s3 ls s3://
 
-.PHONY: show_remote_data_s3_minio
-show_remote_data_s3_minio:
-	docker run --rm --network host --entrypoint /usr/bin/bash quay.io/minio/mc \
-		-c "mc alias set mycloud http://localhost:9000 minioadmin minioadmin && mc ls --recursive mycloud/test-bucket | grep $(topic)"
+.PHONY: show_remote_data_s3_localstack
+show_remote_data_s3_localstack:
+	docker exec localstack awslocal s3 ls --recursive s3://test-bucket | grep $(topic)
 
 .PHONY: show_remote_data_gcs_fake_gcs_server
 show_remote_data_gcs_fake_gcs_server:

@@ -547,7 +547,7 @@ S3StorageConfig
   * Importance: low
 
 ``s3.endpoint.url``
-  Custom S3 endpoint URL. To be used with custom S3-compatible backends (e.g. minio).
+  Custom S3 endpoint URL. To be used with custom S3-compatible backends (e.g. SeaweedFS).
 
   * Type: string
   * Default: null
@@ -555,7 +555,7 @@ S3StorageConfig
   * Importance: low
 
 ``s3.path.style.access.enabled``
-  Whether to use path style access or virtual hosts. By default, empty value means S3 library will auto-detect. Amazon S3 uses virtual hosts by default (true), but other S3-compatible backends may differ (e.g. minio).
+  Whether to use path style access or virtual hosts. By default, empty value means S3 library will auto-detect. Amazon S3 uses virtual hosts by default (true), but other S3-compatible backends may differ (e.g. SeaweedFS).
 
   * Type: boolean
   * Default: null

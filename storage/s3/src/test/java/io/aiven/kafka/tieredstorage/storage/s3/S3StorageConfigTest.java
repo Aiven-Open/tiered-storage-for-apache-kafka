@@ -40,7 +40,7 @@ import static org.assertj.core.api.Assertions.assertThatThrownBy;
 class S3StorageConfigTest {
     private static final String BUCKET_NAME = "b1";
     private static final Region TEST_REGION = Region.US_EAST_2;
-    private static final String MINIO_URL = "http://minio";
+    private static final String CUSTOM_ENDPOINT_URL = "http://seaweedfs";
 
     // Test scenarios
     // - Minimal config
@@ -73,7 +73,7 @@ class S3StorageConfigTest {
         final Map<String, Object> configs = Map.of(
             "s3.bucket.name", BUCKET_NAME,
             "s3.region", TEST_REGION.id(),
-            "s3.endpoint.url", MINIO_URL,
+            "s3.endpoint.url", CUSTOM_ENDPOINT_URL,
             "s3.path.style.access.enabled", true
         );
         final var config = new S3StorageConfig(configs);
@@ -82,7 +82,7 @@ class S3StorageConfigTest {
         assertThat(config.getBoolean(S3StorageConfig.S3_PATH_STYLE_ENABLED_CONFIG)).isTrue();
         assertThat(config.pathStyleAccessEnabled()).isTrue();
         assertThat(config.region()).isEqualTo(TEST_REGION);
-        assertThat(config.s3ServiceEndpoint()).extracting(URI::getHost).isEqualTo("minio");
+        assertThat(config.s3ServiceEndpoint()).extracting(URI::getHost).isEqualTo("seaweedfs");
         assertThat(config.apiCallTimeout()).isNull();
         assertThat(config.apiCallAttemptTimeout()).isNull();
     }
@@ -95,7 +95,7 @@ class S3StorageConfigTest {
         final Map<String, Object> configs = Map.of(
             "s3.bucket.name", BUCKET_NAME,
             "s3.region", TEST_REGION.id(),
-            "s3.endpoint.url", MINIO_URL,
+            "s3.endpoint.url", CUSTOM_ENDPOINT_URL,
             "s3.path.style.access.enabled", false,
             "s3.multipart.upload.part.size", partSize,
             "aws.credentials.provider.class", customCredentialsProvider.getName());
@@ -107,7 +107,7 @@ class S3StorageConfigTest {
         assertThat(config.uploadPartSize()).isEqualTo(partSize);
         assertThat(config.credentialsProvider()).isInstanceOf(customCredentialsProvider);
         assertThat(config.region()).isEqualTo(TEST_REGION);
-        assertThat(config.s3ServiceEndpoint()).extracting(URI::getHost).isEqualTo("minio");
+        assertThat(config.s3ServiceEndpoint()).extracting(URI::getHost).isEqualTo("seaweedfs");
         assertThat(config.apiCallTimeout()).isNull();
         assertThat(config.apiCallAttemptTimeout()).isNull();
     }
@@ -121,7 +121,7 @@ class S3StorageConfigTest {
         final Map<String, Object> configs = Map.of(
             "s3.bucket.name", BUCKET_NAME,
             "s3.region", region.id(),
-            "s3.endpoint.url", MINIO_URL,
+            "s3.endpoint.url", CUSTOM_ENDPOINT_URL,
             "aws.access.key.id", username,
             "aws.secret.access.key", password,
             "aws.certificate.check.enabled", "false",
@@ -131,7 +131,7 @@ class S3StorageConfigTest {
 
         assertThat(config.bucketName()).isEqualTo(BUCKET_NAME);
         assertThat(config.getString("s3.region")).isEqualTo(region.id());
-        assertThat(config.getString("s3.endpoint.url")).isEqualTo(MINIO_URL);
+        assertThat(config.getString("s3.endpoint.url")).isEqualTo(CUSTOM_ENDPOINT_URL);
         assertThat(config.getPassword("aws.access.key.id").value()).isEqualTo(username);
         assertThat(config.getPassword("aws.secret.access.key").value()).isEqualTo(password);
         assertThat(config.certificateCheckEnabled()).isFalse();
@@ -143,7 +143,7 @@ class S3StorageConfigTest {
         assertThat(awsCredentials.accessKeyId()).isEqualTo(username);
         assertThat(awsCredentials.secretAccessKey()).isEqualTo(password);
         assertThat(config.region()).isEqualTo(TEST_REGION);
-        assertThat(config.s3ServiceEndpoint()).extracting(URI::getHost).isEqualTo("minio");
+        assertThat(config.s3ServiceEndpoint()).extracting(URI::getHost).isEqualTo("seaweedfs");
         assertThat(config.apiCallTimeout()).isNull();
         assertThat(config.apiCallAttemptTimeout()).isNull();
     }
@@ -164,7 +164,7 @@ class S3StorageConfigTest {
         final Map<String, Object> configs = Map.of(
             "s3.bucket.name", BUCKET_NAME,
             "s3.region", region.id(),
-            "s3.endpoint.url", MINIO_URL,
+            "s3.endpoint.url", CUSTOM_ENDPOINT_URL,
             "aws.credentials.file", credentialsFile.getAbsolutePath());
 
         final var config = new S3StorageConfig(configs);
@@ -186,14 +186,14 @@ class S3StorageConfigTest {
         assertThatThrownBy(() -> new S3StorageConfig(Map.of(
             "s3.bucket.name", BUCKET_NAME,
             "s3.region", TEST_REGION.id(),
-            "s3.endpoint.url", MINIO_URL,
+            "s3.endpoint.url", CUSTOM_ENDPOINT_URL,
             "aws.access.key.id", username)))
             .isInstanceOf(ConfigException.class)
             .hasMessage("aws.access.key.id and aws.secret.access.key must be defined together");
         assertThatThrownBy(() -> new S3StorageConfig(Map.of(
             "s3.bucket.name", BUCKET_NAME,
             "s3.region", TEST_REGION.id(),
-            "s3.endpoint.url", MINIO_URL,
+            "s3.endpoint.url", CUSTOM_ENDPOINT_URL,
             "aws.secret.access.key", password)))
             .isInstanceOf(ConfigException.class)
             .hasMessage("aws.access.key.id and aws.secret.access.key must be defined together");
@@ -224,7 +224,7 @@ class S3StorageConfigTest {
         final Map<String, Object> configs = Map.of(
             "s3.bucket.name", BUCKET_NAME,
             "s3.region", TEST_REGION.id(),
-            "s3.endpoint.url", MINIO_URL,
+            "s3.endpoint.url", CUSTOM_ENDPOINT_URL,
             "aws.credentials.provider.class", EnvironmentVariableCredentialsProvider.class.getName(),
             "aws.access.key.id", username,
             "aws.secret.access.key", password);

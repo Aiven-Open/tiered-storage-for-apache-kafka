@@ -30,6 +30,7 @@ dependencies {
 
     integrationTestImplementation "org.testcontainers:junit-jupiter:$testcontainersVersion"
     integrationTestImplementation "org.testcontainers:kafka:$testcontainersVersion"
+    integrationTestImplementation "org.testcontainers:localstack:$testcontainersVersion"
 
     integrationTestImplementation "io.aiven:testcontainers-fake-gcs-server:$testcontainersFakeGcsServerVersion"
 
