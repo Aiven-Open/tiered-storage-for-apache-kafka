@@ -44,6 +44,8 @@ import software.amazon.awssdk.services.s3.model.StorageClass;
 
 public class S3Storage implements StorageBackend {
     private static final int MAX_DELETE_OBJECTS = 1000;
+    // The suffix ObjectKeyFactory gives log segments in core.
+    private static final String LOG_SEGMENT_SUFFIX = ".log";
 
     S3Client s3Client;
 
@@ -73,7 +75,13 @@ public class S3Storage implements StorageBackend {
     }
 
     S3UploadOutputStream s3OutputStream(final ObjectKey key) {
-        return new S3UploadOutputStream(bucketName, key, storageClass, partSize, s3Client);
+        return new S3UploadOutputStream(bucketName, key, storageClass, partSize,
+            initialBufferSize(key, partSize), s3Client);
+    }
+
+    // Log segments fill whole parts; the other objects of a segment (indexes, manifest) are small.
+    static int initialBufferSize(final ObjectKey key, final int partSize) {
+        return key.value().endsWith(LOG_SEGMENT_SUFFIX) ? partSize : S3UploadOutputStream.SMALL_OBJECT_BUFFER_SIZE;
     }
 
     @Override
