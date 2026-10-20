@@ -91,6 +91,9 @@ public class S3UploadOutputStream extends OutputStream {
                                 final int partSize,
                                 final int initialBufferSize,
                                 final S3Client client) {
+        if (initialBufferSize <= 0) {
+            throw new IllegalArgumentException("initialBufferSize must be positive, but was " + initialBufferSize);
+        }
         this.bucketName = bucketName;
         this.key = key;
         this.storageClass = storageClass;
@@ -148,6 +151,10 @@ public class S3UploadOutputStream extends OutputStream {
             }
             throw new IOException(e);
         }
+    }
+
+    int bufferCapacity() {
+        return partBuffer.capacity();
     }
 
     private void ensureCapacity() {

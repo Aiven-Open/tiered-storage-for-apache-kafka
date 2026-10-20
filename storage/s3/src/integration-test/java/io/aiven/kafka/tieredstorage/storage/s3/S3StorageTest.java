@@ -118,6 +118,24 @@ public class S3StorageTest extends BaseStorageTest {
     }
 
     @Test
+    void logSegmentStreamStartsWithWholePart() throws IOException {
+        final var key = new TestObjectKey("prefix/topic-0/00000000000000000000-id.log");
+        try (final var os = ((S3Storage) storage()).s3OutputStream(key)) {
+            assertThat(os.bufferCapacity()).isEqualTo(PART_SIZE);
+        }
+    }
+
+    @Test
+    void otherObjectStreamsStartSmall() throws IOException {
+        for (final String suffix : List.of("indexes", "rsm-manifest")) {
+            final var key = new TestObjectKey("prefix/topic-0/00000000000000000000-id." + suffix);
+            try (final var os = ((S3Storage) storage()).s3OutputStream(key)) {
+                assertThat(os.bufferCapacity()).isEqualTo(S3UploadOutputStream.SMALL_OBJECT_BUFFER_SIZE);
+            }
+        }
+    }
+
+    @Test
     void testUploadANewFileWithBigSize() throws StorageBackendException, IOException {
         final String content = generateFileContentWithSizeOverPartLimit();
         uploadContentAsFileAndVerify(content);

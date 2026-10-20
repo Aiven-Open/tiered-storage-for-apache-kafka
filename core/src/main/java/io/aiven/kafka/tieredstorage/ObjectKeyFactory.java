@@ -41,6 +41,7 @@ public final class ObjectKeyFactory {
      * @see org.apache.kafka.server.log.remote.storage.RemoteStorageManager.IndexType
      */
     public enum Suffix {
+        // S3Storage.initialBufferSize matches on this suffix to give log segments a whole part up front.
         LOG("log"),
         INDEXES("indexes"),
         MANIFEST("rsm-manifest");

@@ -62,7 +62,6 @@ import static org.mockito.Mockito.when;
 @ExtendWith(MockitoExtension.class)
 class S3UploadOutputStreamTest {
     private static final String BUCKET_NAME = "some_bucket";
-
     private static final ObjectKey FILE_KEY = new TestObjectKey("some_key");
     private static final String UPLOAD_ID = "some_upload_id";
 
@@ -493,15 +492,13 @@ class S3UploadOutputStreamTest {
     }
 
     @Test
-    void logSegmentsStartWithWholePartAndOtherObjectsStartSmall() {
-        final int partSize = 64 * 1024 * 1024;
-        assertThat(S3Storage.initialBufferSize(new TestObjectKey("prefix/topic-0/00000000000000000000-id.log"),
-            partSize)).isEqualTo(partSize);
-        assertThat(S3Storage.initialBufferSize(new TestObjectKey("prefix/topic-0/00000000000000000000-id.indexes"),
-            partSize)).isEqualTo(S3UploadOutputStream.SMALL_OBJECT_BUFFER_SIZE);
-        assertThat(S3Storage.initialBufferSize(
-            new TestObjectKey("prefix/topic-0/00000000000000000000-id.rsm-manifest"), partSize))
-            .isEqualTo(S3UploadOutputStream.SMALL_OBJECT_BUFFER_SIZE);
+    void rejectNonPositiveInitialBufferSize() {
+        for (final int initialBufferSize : new int[] {0, -1}) {
+            assertThatThrownBy(() -> new S3UploadOutputStream(BUCKET_NAME, FILE_KEY, StorageClass.STANDARD, 100,
+                initialBufferSize, mockedS3))
+                .isInstanceOf(IllegalArgumentException.class)
+                .hasMessage("initialBufferSize must be positive, but was " + initialBufferSize);
+        }
     }
 
     @Test
