@@ -66,7 +66,10 @@ class S3ErrorMetricsTest {
     private S3Storage storage;
     private ObjectName s3MetricsObjectName;
     private final Random random = new Random();
-    private static final int UPLOAD_PART_SIZE = 25 * 1024 * 1024;
+    // The minimum allowed part size. The tests only need payloads just below and just above it.
+    // A larger one makes WireMock hold hundreds of MB of request bodies (4 attempts per case),
+    // which can exhaust the default test heap and make the retry counts flaky.
+    private static final int UPLOAD_PART_SIZE = 5 * 1024 * 1024;
 
     @BeforeEach
     void setUp() throws MalformedObjectNameException {
@@ -135,7 +138,8 @@ class S3ErrorMetricsTest {
             "s3.region", Region.US_EAST_1.id(),
             "s3.endpoint.url", wmRuntimeInfo.getHttpBaseUrl(),
             "s3.path.style.access.enabled", "true",
-            "aws.credentials.provider.class", AnonymousCredentialsProvider.class.getName()
+            "aws.credentials.provider.class", AnonymousCredentialsProvider.class.getName(),
+            "s3.multipart.upload.part.size", UPLOAD_PART_SIZE
         );
         storage.configure(configs);
 
@@ -175,7 +179,8 @@ class S3ErrorMetricsTest {
             "s3.region", Region.US_EAST_1.id(),
             "s3.endpoint.url", wmRuntimeInfo.getHttpBaseUrl(),
             "s3.path.style.access.enabled", "true",
-            "aws.credentials.provider.class", AnonymousCredentialsProvider.class.getName()
+            "aws.credentials.provider.class", AnonymousCredentialsProvider.class.getName(),
+            "s3.multipart.upload.part.size", UPLOAD_PART_SIZE
         );
         storage.configure(configs);
 
