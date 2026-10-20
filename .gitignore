@@ -10,6 +10,5 @@ build/
 rpm/
 rpmbuild/
 *.sh
-!demo/localstack/*.sh
 # ignore benchmark outputs
 io.aiven.kafka.tieredstorage*/

@@ -28,6 +28,7 @@ import java.util.Set;
 
 import io.aiven.kafka.tieredstorage.storage.BytesRange;
 import io.aiven.kafka.tieredstorage.storage.ObjectKey;
+import io.aiven.kafka.tieredstorage.storage.S3Container;
 import io.aiven.kafka.tieredstorage.storage.TestObjectKey;
 
 import org.junit.jupiter.api.BeforeAll;
@@ -35,7 +36,6 @@ import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.Test;
 import org.junit.jupiter.api.extension.ExtendWith;
 import org.mockito.junit.jupiter.MockitoExtension;
-import org.testcontainers.containers.localstack.LocalStackContainer;
 import org.testcontainers.junit.jupiter.Container;
 import org.testcontainers.junit.jupiter.Testcontainers;
 import software.amazon.awssdk.auth.credentials.AwsBasicCredentials;
@@ -55,7 +55,7 @@ import static org.mockito.Mockito.when;
 @Testcontainers
 class S3StorageMetricsTest {
     @Container
-    private static final LocalStackContainer LOCALSTACK = S3TestContainer.container();
+    private static final S3Container S3 = new S3Container();
 
     private static final MBeanServer MBEAN_SERVER = ManagementFactory.getPlatformMBeanServer();
 
@@ -68,13 +68,14 @@ class S3StorageMetricsTest {
     @BeforeAll
     static void setupS3() {
         final var clientBuilder = S3Client.builder();
-        clientBuilder.region(Region.of(LOCALSTACK.getRegion()))
-            .endpointOverride(LOCALSTACK.getEndpointOverride(LocalStackContainer.Service.S3))
+        clientBuilder.forcePathStyle(true)
+            .region(Region.of(S3Container.REGION))
+            .endpointOverride(S3.endpoint())
             .credentialsProvider(
                 StaticCredentialsProvider.create(
                     AwsBasicCredentials.create(
-                        LOCALSTACK.getAccessKey(),
-                        LOCALSTACK.getSecretKey()
+                        S3Container.ACCESS_KEY,
+                        S3Container.SECRET_KEY
                     )
                 )
             );
@@ -88,10 +89,10 @@ class S3StorageMetricsTest {
         storage = new S3Storage();
         final Map<String, Object> configs = Map.of(
             "s3.bucket.name", BUCKET_NAME,
-            "s3.region", LOCALSTACK.getRegion(),
-            "s3.endpoint.url", LOCALSTACK.getEndpointOverride(LocalStackContainer.Service.S3).toString(),
-            "aws.access.key.id", LOCALSTACK.getAccessKey(),
-            "aws.secret.access.key", LOCALSTACK.getSecretKey(),
+            "s3.region", S3Container.REGION,
+            "s3.endpoint.url", S3.endpoint().toString(),
+            "aws.access.key.id", S3Container.ACCESS_KEY,
+            "aws.secret.access.key", S3Container.SECRET_KEY,
             "s3.path.style.access.enabled", true,
             "s3.multipart.upload.part.size", PART_SIZE
         );
