@@ -33,3 +33,8 @@ SELECT *
   FROM `rest`.`default`.`people`
  LIMIT 100
 ```
+
+To stop the demo and remove its containers and volumes:
+```shell
+docker compose -f docker-compose.yml down -v
+```
