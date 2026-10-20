@@ -43,7 +43,9 @@ public class S3Container extends GenericContainer<S3Container> {
         withEnv("RUSTFS_ACCESS_KEY", ACCESS_KEY);
         withEnv("RUSTFS_SECRET_KEY", SECRET_KEY);
         withExposedPorts(S3_PORT);
-        waitingFor(Wait.forListeningPort());
+        // The port opens before the store is ready to serve S3 requests. /health is only a liveness probe,
+        // /health/ready also waits for storage and IAM.
+        waitingFor(Wait.forHttp("/health/ready").forPort(S3_PORT).forStatusCode(200));
     }
 
     /**
