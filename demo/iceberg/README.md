@@ -26,7 +26,7 @@ It will create the `people` topic and fill it with some Avro records.
 
 Wait until the broker uploads some segments to the remote storage.
 
-Now you can explore and query the Iceberg table using the [Nimtable](http://localhost:3000/data/tables/table?catalog=rest&namespace=default&table=people) (admin:admin) and observe uploaded files in LocalStack S3 with `docker exec localstack awslocal s3 ls --recursive s3://warehouse`.
+Now you can explore and query the Iceberg table using the [Nimtable](http://localhost:3000/data/tables/table?catalog=rest&namespace=default&table=people) (admin:admin) and observe uploaded files in the S3 object storage web console at http://localhost:9001/rustfs/console/ (`admin`/`password`).
 
 ```sql
 SELECT * 

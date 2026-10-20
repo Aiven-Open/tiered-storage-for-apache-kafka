@@ -48,7 +48,7 @@ services:
       KAFKA_RSM_CONFIG_ICEBERG_CATALOG_URI: "http://rest:8181"
       "KAFKA_RSM_CONFIG_ICEBERG_CATALOG_IO-IMPL": "org.apache.iceberg.aws.s3.S3FileIO"
       KAFKA_RSM_CONFIG_ICEBERG_CATALOG_WAREHOUSE: "s3://warehouse/"
-      KAFKA_RSM_CONFIG_ICEBERG_CATALOG_S3_ENDPOINT: "http://localstack:4566"
+      KAFKA_RSM_CONFIG_ICEBERG_CATALOG_S3_ENDPOINT: "http://s3:9000"
       "KAFKA_RSM_CONFIG_ICEBERG_CATALOG_S3_PATH-STYLE-ACCESS": "true"
       "KAFKA_RSM_CONFIG_ICEBERG_CATALOG_S3_ACCESS-KEY-ID": "admin"
       "KAFKA_RSM_CONFIG_ICEBERG_CATALOG_S3_SECRET-ACCESS-KEY": "password"
@@ -84,20 +84,35 @@ services:
       KARAPACE_KAFKA_SCHEMA_READER_STRICT_MODE: false
       KARAPACE_KAFKA_RETRIABLE_ERRORS_SILENCED: true
 
-  # LocalStack as S3
-  localstack:
-    # The last LocalStack release that runs without an auth token.
-    image: localstack/localstack:4.14.0
-    container_name: localstack
+  # S3-compatible object storage; the web console is on port 9001.
+  s3:
+    image: rustfs/rustfs:1.0.3
+    container_name: s3
+    environment:
+      - RUSTFS_ACCESS_KEY=admin
+      - RUSTFS_SECRET_KEY=password
     networks:
       iceberg_demo:
     ports:
-      - 4566:4566
+      - 9001:9001
+      - 9000:9000
+  s3-create-bucket:
+    depends_on:
+      - s3
+    image: amazon/aws-cli:2.38.2
+    restart: "no"
+    networks:
+      iceberg_demo:
     environment:
-      - SERVICES=s3
-      - BUCKET_NAME=warehouse
-    volumes:
-      - ../localstack/create-bucket.sh:/etc/localstack/init/ready.d/create-bucket.sh
+      - AWS_ACCESS_KEY_ID=admin
+      - AWS_SECRET_ACCESS_KEY=password
+      - AWS_DEFAULT_REGION=us-east-1
+    entrypoint: /bin/sh
+    command: >
+      -c "until aws --endpoint-url http://s3:9000 s3api list-buckets >/dev/null 2>&1; do sleep 2; done;
+      aws --endpoint-url http://s3:9000 s3 mb s3://warehouse 2>/dev/null || true;
+      echo bucket warehouse ready"
+
 
   # Iceberg REST catalog
   rest:
@@ -112,7 +127,7 @@ services:
       - AWS_REGION=us-east-1
       - CATALOG_WAREHOUSE=s3://warehouse/
       - CATALOG_IO__IMPL=org.apache.iceberg.aws.s3.S3FileIO
-      - CATALOG_S3_ENDPOINT=http://localstack:4566
+      - CATALOG_S3_ENDPOINT=http://s3:9000
       - CATALOG_S3_PATH__STYLE__ACCESS=true
 
   # PostgreSQL for Nimtable
@@ -190,7 +205,7 @@ configs:
           uri: http://rest:8181
           warehouse: warehouse
           io-impl: org.apache.iceberg.aws.s3.S3FileIO
-          s3.endpoint: http://localstack:4566
+          s3.endpoint: http://s3:9000
           s3.access-key-id: admin
           s3.secret-access-key: password
           s3.region: us-east-1

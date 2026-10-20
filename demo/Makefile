@@ -105,9 +105,9 @@ run_local_fs:
 run_s3_aws:
 	docker compose -f compose-s3-aws.yml up
 
-.PHONY: run_s3_localstack
-run_s3_localstack:
-	docker compose -f compose-s3-localstack.yml up
+.PHONY: run_s3_local
+run_s3_local:
+	docker compose -f compose-s3-local.yml up
 
 .PHONY: run_gcs_fake_gcs_server
 run_gcs_fake_gcs_server:
@@ -120,18 +120,18 @@ run_azure_blob_azurite:
 docker_volume:
 	cd .. && ./gradlew copyDistFiles
 
-.PHONY: run_kraft_s3_localstack
-run_kraft_s3_localstack: docker_volume
-	docker compose -f compose-kraft-s3-localstack.yml up
+.PHONY: run_kraft_s3_local
+run_kraft_s3_local: docker_volume
+	docker compose -f compose-kraft-s3-local.yml up
 
 .PHONY: clean
 clean:
 	docker compose -f compose-local-fs.yml down -v
 	docker compose -f compose-s3-aws.yml down -v
-	docker compose -f compose-s3-localstack.yml down -v
+	docker compose -f compose-s3-local.yml down -v
 	docker compose -f compose-gcs-fake-gcs-server.yml down -v
 	docker compose -f compose-azure-blob-azurite.yml down -v
-	docker compose -f compose-kraft-s3-localstack.yml down -v
+	docker compose -f compose-kraft-s3-local.yml down -v
 
 .PHONY: show_local_data
 show_local_data:
@@ -147,9 +147,12 @@ show_remote_data_fs:
 show_remote_data_s3_aws:
 	aws s3 ls s3://
 
-.PHONY: show_remote_data_s3_localstack
-show_remote_data_s3_localstack:
-	docker exec localstack awslocal s3 ls --recursive s3://test-bucket | grep $(topic)
+.PHONY: show_remote_data_s3_local
+show_remote_data_s3_local:
+	docker run --rm --network container:s3 \
+		-e AWS_ACCESS_KEY_ID=admin -e AWS_SECRET_ACCESS_KEY=password -e AWS_DEFAULT_REGION=us-east-1 \
+		amazon/aws-cli:2.38.2 --endpoint-url http://localhost:9000 \
+		s3 ls --recursive s3://test-bucket | grep $(topic)
 
 .PHONY: show_remote_data_gcs_fake_gcs_server
 show_remote_data_gcs_fake_gcs_server:

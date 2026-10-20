@@ -26,7 +26,7 @@ services:
     container_name: "kafka-ts"
     depends_on:
       - zookeeper
-      - localstack
+      - s3
     ports:
       - "9092:9092"
       - "7001:7001" #prometheus metrics
@@ -66,21 +66,35 @@ services:
       # Storage backend
       KAFKA_RSM_CONFIG_KEY_PREFIX: "tiered-storage-demo/"
       KAFKA_RSM_CONFIG_STORAGE_BACKEND_CLASS: "io.aiven.kafka.tieredstorage.storage.s3.S3Storage"
-      KAFKA_RSM_CONFIG_STORAGE_S3_ENDPOINT_URL: "http://localstack:4566"
+      KAFKA_RSM_CONFIG_STORAGE_S3_ENDPOINT_URL: "http://s3:9000"
       KAFKA_RSM_CONFIG_STORAGE_S3_BUCKET_NAME: "test-bucket"
       KAFKA_RSM_CONFIG_STORAGE_S3_REGION: "us-east-1"
       KAFKA_RSM_CONFIG_STORAGE_S3_PATH_STYLE_ACCESS_ENABLED: true
-      KAFKA_RSM_CONFIG_STORAGE_AWS_ACCESS_KEY_ID: "test"
-      KAFKA_RSM_CONFIG_STORAGE_AWS_SECRET_ACCESS_KEY: "test"
+      KAFKA_RSM_CONFIG_STORAGE_AWS_ACCESS_KEY_ID: "admin"
+      KAFKA_RSM_CONFIG_STORAGE_AWS_SECRET_ACCESS_KEY: "password"
 
-  localstack:
-    # The last LocalStack release that runs without an auth token.
-    image: localstack/localstack:4.14.0
-    container_name: "localstack"
+  # S3-compatible object storage; the web console is on port 9001.
+  s3:
+    image: rustfs/rustfs:1.0.3
+    container_name: "s3"
     ports:
-      - "4566:4566"
+      - "9000:9000"
+      - "9001:9001"
     environment:
-      SERVICES: s3
-      BUCKET_NAME: test-bucket
-    volumes:
-      - ./localstack/create-bucket.sh:/etc/localstack/init/ready.d/create-bucket.sh
+      RUSTFS_ACCESS_KEY: admin
+      RUSTFS_SECRET_KEY: password
+
+  s3-create-bucket:
+    image: amazon/aws-cli:2.38.2
+    restart: "no"
+    depends_on:
+      - s3
+    environment:
+      AWS_ACCESS_KEY_ID: admin
+      AWS_SECRET_ACCESS_KEY: password
+      AWS_DEFAULT_REGION: us-east-1
+    entrypoint: /bin/sh
+    command: >
+      -c "until aws --endpoint-url http://s3:9000 s3api list-buckets >/dev/null 2>&1; do sleep 2; done;
+      aws --endpoint-url http://s3:9000 s3 mb s3://test-bucket 2>/dev/null || true;
+      echo bucket test-bucket ready"

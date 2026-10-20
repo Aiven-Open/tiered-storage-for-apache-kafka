@@ -232,7 +232,7 @@ rsm.config.iceberg.catalog.uri=http://rest:8181
 # Object storage
 rsm.config.iceberg.catalog.io-impl=org.apache.iceberg.aws.s3.S3FileIO
 rsm.config.iceberg.catalog.warehouse=s3://warehouse/
-rsm.config.iceberg.catalog.s3.endpoint=http://localstack:4566
+rsm.config.iceberg.catalog.s3.endpoint=http://s3:9000
 rsm.config.iceberg.catalog.s3.path-style-access=true
 rsm.config.iceberg.catalog.s3.access-key-id=admin
 rsm.config.iceberg.catalog.s3.secret-access-key=password

@@ -93,19 +93,22 @@ make consume
 
 You can also see the remote data in https://s3.console.aws.amazon.com/s3/buckets/<bucket_name>.
 
-### LocalStack S3 as remote storage: `compose-s3-localstack.yml`
+### Local S3 object storage as remote storage: `compose-s3-local.yml`
 
 > [!NOTE]
-> There is a KRaft version of this scenario in `compose-kraft-s3-localstack.yml`.
+> There is a KRaft version of this scenario in `compose-kraft-s3-local.yml`.
 > The steps are the same, it just requires the binaries to be placed at a different location.
 > The `make` commands will take care of this.
 
-This scenario uses `S3Storage` with [LocalStack](https://github.com/localstack/localstack) S3 as the remote storage.
+This scenario uses `S3Storage` with a local S3-compatible object storage as the remote storage
+(currently [RustFS](https://github.com/rustfs/rustfs)).
+The bucket contents can be browsed in the web console at http://localhost:9001/rustfs/console/
+(user `admin`, password `password`).
 
 ```bash
 # Start the compose
-make run_s3_localstack
-# or make run_kraft_s3_localstack
+make run_s3_local
+# or make run_kraft_s3_local
 
 # Create the topic with any variation
 make create_topic_by_size_ts
@@ -119,7 +122,7 @@ make fill_topic
 
 # See that segments are uploaded to the remote storage
 # (this may take several seconds)
-make show_remote_data_s3_localstack
+make show_remote_data_s3_local
 
 # Check that early segments are deleted
 # (completely or renamed with `.deleted` suffix)

@@ -29,8 +29,8 @@ dependencies {
     }
 
     integrationTestImplementation "org.testcontainers:junit-jupiter:$testcontainersVersion"
+    integrationTestImplementation testFixtures(project(":storage:core"))
     integrationTestImplementation "org.testcontainers:kafka:$testcontainersVersion"
-    integrationTestImplementation "org.testcontainers:localstack:$testcontainersVersion"
 
     integrationTestImplementation "io.aiven:testcontainers-fake-gcs-server:$testcontainersFakeGcsServerVersion"
 

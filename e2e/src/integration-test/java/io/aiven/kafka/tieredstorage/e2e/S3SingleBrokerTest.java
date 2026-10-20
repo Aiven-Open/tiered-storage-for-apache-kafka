@@ -23,10 +23,10 @@ import java.util.stream.Collectors;
 import org.apache.kafka.common.TopicIdPartition;
 import org.apache.kafka.common.Uuid;
 
+import io.aiven.kafka.tieredstorage.storage.S3Container;
+
 import org.junit.jupiter.api.AfterAll;
 import org.junit.jupiter.api.BeforeAll;
-import org.testcontainers.containers.localstack.LocalStackContainer;
-import org.testcontainers.utility.DockerImageName;
 import software.amazon.awssdk.auth.credentials.AwsBasicCredentials;
 import software.amazon.awssdk.auth.credentials.StaticCredentialsProvider;
 import software.amazon.awssdk.regions.Region;
@@ -35,48 +35,44 @@ import software.amazon.awssdk.services.s3.model.ListObjectsV2Request;
 import software.amazon.awssdk.services.s3.model.ListObjectsV2Response;
 import software.amazon.awssdk.services.s3.model.S3Object;
 
-public class S3LocalStackSingleBrokerTest extends SingleBrokerTest {
+public class S3SingleBrokerTest extends SingleBrokerTest {
 
-    static final String LOCALSTACK_NETWORK_ALIAS = "localstack";
-    static final int LOCALSTACK_PORT = 4566;
-    // The last LocalStack release that runs without an auth token.
-    static final LocalStackContainer LOCALSTACK = new LocalStackContainer(
-        DockerImageName.parse("localstack/localstack:4.14.0"))
-        .withServices(LocalStackContainer.Service.S3)
+    static final String S3_NETWORK_ALIAS = "s3";
+    static final S3Container S3 = new S3Container()
         .withNetwork(NETWORK)
-        .withNetworkAliases(LOCALSTACK_NETWORK_ALIAS);
+        .withNetworkAliases(S3_NETWORK_ALIAS);
     static final String BUCKET = "test-bucket";
 
     static S3Client s3Client;
 
     @BeforeAll
     static void init() throws Exception {
-        LOCALSTACK.start();
+        S3.start();
 
         initializeS3Client();
         s3Client.createBucket(b -> b.bucket(BUCKET));
 
-        final String endpointUrl = String.format("http://%s:%s", LOCALSTACK_NETWORK_ALIAS, LOCALSTACK_PORT);
+        final String endpointUrl = String.format("http://%s:%s", S3_NETWORK_ALIAS, S3Container.S3_PORT);
         setupKafka(kafka -> kafka.withEnv("KAFKA_RSM_CONFIG_STORAGE_BACKEND_CLASS",
                 "io.aiven.kafka.tieredstorage.storage.s3.S3Storage")
             .withEnv("KAFKA_REMOTE_LOG_STORAGE_MANAGER_CLASS_PATH",
                 "/tiered-storage-for-apache-kafka/core/*:/tiered-storage-for-apache-kafka/s3/*")
             .withEnv("KAFKA_RSM_CONFIG_STORAGE_S3_BUCKET_NAME", BUCKET)
-            .withEnv("KAFKA_RSM_CONFIG_STORAGE_S3_REGION", LOCALSTACK.getRegion())
+            .withEnv("KAFKA_RSM_CONFIG_STORAGE_S3_REGION", S3Container.REGION)
             .withEnv("KAFKA_RSM_CONFIG_STORAGE_S3_PATH_STYLE_ACCESS_ENABLED", "true")
-            .withEnv("KAFKA_RSM_CONFIG_STORAGE_AWS_ACCESS_KEY_ID", LOCALSTACK.getAccessKey())
-            .withEnv("KAFKA_RSM_CONFIG_STORAGE_AWS_SECRET_ACCESS_KEY", LOCALSTACK.getSecretKey())
+            .withEnv("KAFKA_RSM_CONFIG_STORAGE_AWS_ACCESS_KEY_ID", S3Container.ACCESS_KEY)
+            .withEnv("KAFKA_RSM_CONFIG_STORAGE_AWS_SECRET_ACCESS_KEY", S3Container.SECRET_KEY)
             .withEnv("KAFKA_RSM_CONFIG_STORAGE_S3_ENDPOINT_URL", endpointUrl)
-            .dependsOn(LOCALSTACK));
+            .dependsOn(S3));
     }
 
     private static void initializeS3Client() {
         s3Client = S3Client.builder()
-            .region(Region.of(LOCALSTACK.getRegion()))
-            .endpointOverride(LOCALSTACK.getEndpointOverride(LocalStackContainer.Service.S3))
+            .region(Region.of(S3Container.REGION))
+            .endpointOverride(S3.endpoint())
             .credentialsProvider(
                 StaticCredentialsProvider.create(
-                    AwsBasicCredentials.create(LOCALSTACK.getAccessKey(), LOCALSTACK.getSecretKey())
+                    AwsBasicCredentials.create(S3Container.ACCESS_KEY, S3Container.SECRET_KEY)
                 )
             )
             .forcePathStyle(true)
@@ -87,7 +83,7 @@ public class S3LocalStackSingleBrokerTest extends SingleBrokerTest {
     static void cleanup() {
         stopKafka();
 
-        LOCALSTACK.stop();
+        S3.stop();
 
         cleanupStorage();
     }
