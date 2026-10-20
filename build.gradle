@@ -113,7 +113,7 @@ subprojects {
 
         junitPlatformVersion = "6.0.3"
 
-        mockitoVersion = "5.22.0"
+        mockitoVersion = "5.23.0"
 
         slf4jVersion = "1.7.36"
 
