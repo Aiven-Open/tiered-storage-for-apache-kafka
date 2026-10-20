@@ -31,7 +31,7 @@ kafka_image=apache/kafka:3.9.0
 
 .PHONY: create_topic_by_size_ts
 create_topic_by_size_ts:
-	docker run --network host $(kafka_image) \
+	docker run --rm --network host $(kafka_image) \
 		/opt/kafka/bin/kafka-topics.sh \
 		--bootstrap-server $(bootstrap_server_host) \
 		--create \
@@ -46,7 +46,7 @@ create_topic_by_size_ts:
 
 .PHONY: create_topic_by_time_ts
 create_topic_by_time_ts:
-	docker run --network host $(kafka_image) \
+	docker run --rm --network host $(kafka_image) \
 		/opt/kafka/bin/kafka-topics.sh \
 		--bootstrap-server $(bootstrap_server_host) \
 		--create \
@@ -60,7 +60,7 @@ create_topic_by_time_ts:
 
 .PHONY: create_topic_by_size_no_ts
 create_topic_by_size_no_ts:
-	docker run --network host $(kafka_image) \
+	docker run --rm --network host $(kafka_image) \
 		/opt/kafka/bin/kafka-topics.sh \
 		--bootstrap-server $(bootstrap_server_host) \
 		--create \
@@ -73,7 +73,7 @@ create_topic_by_size_no_ts:
 
 .PHONY: create_topic_by_time_no_ts
 create_topic_by_time_no_ts:
-	docker run --network host $(kafka_image) \
+	docker run --rm --network host $(kafka_image) \
 		/opt/kafka/bin/kafka-topics.sh \
 		--bootstrap-server $(bootstrap_server_host) \
 		--create \
@@ -89,7 +89,7 @@ throughput = 1000
 
 .PHONY: fill_topic
 fill_topic:
-	docker run --network host $(kafka_image) \
+	docker run --rm --network host $(kafka_image) \
 		/opt/kafka/bin/kafka-producer-perf-test.sh \
 		--producer-props bootstrap.servers=$(bootstrap_server_host) \
 		--topic $(topic) \
@@ -126,12 +126,12 @@ run_kraft_s3_localstack: docker_volume
 
 .PHONY: clean
 clean:
-	docker compose -f compose-local-fs.yml down
-	docker compose -f compose-s3-aws.yml down
-	docker compose -f compose-s3-localstack.yml down
-	docker compose -f compose-gcs-fake-gcs-server.yml down
-	docker compose -f compose-azure-blob-azurite.yml down
-	docker compose -f compose-kraft-s3-localstack.yml down
+	docker compose -f compose-local-fs.yml down -v
+	docker compose -f compose-s3-aws.yml down -v
+	docker compose -f compose-s3-localstack.yml down -v
+	docker compose -f compose-gcs-fake-gcs-server.yml down -v
+	docker compose -f compose-azure-blob-azurite.yml down -v
+	docker compose -f compose-kraft-s3-localstack.yml down -v
 
 .PHONY: show_local_data
 show_local_data:
