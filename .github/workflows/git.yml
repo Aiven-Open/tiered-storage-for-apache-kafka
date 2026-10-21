@@ -8,8 +8,19 @@ jobs:
 
     steps:
     - uses: actions/checkout@v3
+      with:
+        fetch-depth: 0
     - name: Block Fixup Commit Merge
-      uses: alexkappa/block-fixup-merge-action@v2
+      env:
+        BASE_REF: ${{ github.base_ref }}
+        HEAD_SHA: ${{ github.event.pull_request.head.sha }}
+      run: |
+        # Do not pipe git log into grep: if git fails, the check would pass
+        subjects=$(git log --format=%s "origin/${BASE_REF}..${HEAD_SHA}")
+        if echo "$subjects" | grep -E '^(fixup|squash|amend)! '; then
+          echo "The commits above need to be squashed"
+          exit 1
+        fi
 
     - name: Gen docs
       run: make docs
