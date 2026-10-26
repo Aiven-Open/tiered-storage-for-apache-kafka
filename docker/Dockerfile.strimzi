@@ -21,8 +21,9 @@ RUN mkdir -p /opt/kafka/libs/tiered-storage-s3/core && \
     tar xf /opt/tiered-storage/tiered-storage-for-apache-kafka-*.tgz --strip-components=1 -C /opt/kafka/libs/tiered-storage-s3/core/ && \
     tar xf /opt/tiered-storage/s3-*.tgz --strip-components=1 -C /opt/kafka/libs/tiered-storage-s3/s3/ && \
     rm /opt/tiered-storage/tiered-storage-for-apache-kafka-*.tgz && \
-    rm /opt/tiered-storage/s3-*.tgz 
+    rm /opt/tiered-storage/s3-*.tgz && \
+    mkdir -p /home/kafka/kafka-tiered-storage-cache && \
+    chown -R 1001:0 /home/kafka && \
+    chmod -R g=u /home/kafka
 
 USER 1001
-
-RUN mkdir /home/kafka/kafka-tiered-storage-cache
