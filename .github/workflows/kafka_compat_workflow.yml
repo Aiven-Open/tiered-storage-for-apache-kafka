@@ -1,0 +1,54 @@
+# Checks that the code compiles and unit tests pass against each supported Apache Kafka version.
+name: Kafka compatibility
+on:
+  push:
+    branches: [ 'main' ]
+  pull_request:
+  schedule:
+    - cron: '0 4 * * *'
+jobs:
+  kafka_compat:
+    name: Kafka ${{ matrix.kafka-version }} on JDK ${{ matrix.java-version }}
+    runs-on: ubuntu-latest
+    # Versions marked experimental are reported but do not fail the workflow.
+    continue-on-error: ${{ matrix.experimental }}
+    strategy:
+      fail-fast: false
+      matrix:
+        # The JDK is the minimum for each Kafka version: 17 is the project's source level,
+        # and the Kafka 4.x storage jars are built for 17.
+        include:
+          - kafka-version: 3.9.0
+            java-version: 17
+            experimental: true
+          - kafka-version: 4.1.0
+            java-version: 17
+            experimental: true
+          - kafka-version: 4.2.0
+            java-version: 17
+            experimental: true
+          - kafka-version: 4.3.0
+            java-version: 17
+            experimental: true
+          - kafka-version: 4.4.0
+            java-version: 17
+            experimental: true
+    steps:
+      - name: Checkout code
+        uses: actions/checkout@v4
+
+      - name: Set up JDK ${{ matrix.java-version }}
+        uses: actions/setup-java@v4
+        with:
+          java-version: ${{ matrix.java-version }}
+          distribution: temurin
+
+      - name: Compile against Kafka ${{ matrix.kafka-version }}
+        run: >
+          ./gradlew -PkafkaVersion=${{ matrix.kafka-version }}
+          compileJava compileTestJava compileIntegrationTestJava --continue
+
+      - name: Run unit tests against Kafka ${{ matrix.kafka-version }}
+        run: >
+          ./gradlew -PkafkaVersion=${{ matrix.kafka-version }}
+          test --continue
