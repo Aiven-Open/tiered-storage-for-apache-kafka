@@ -56,6 +56,7 @@
     <suppress checks="CyclomaticComplexity" files="ParquetAvroValueReaders.java"/>
     <suppress checks="CyclomaticComplexity" files="RecordConverter.java"/>
     <suppress checks="CyclomaticComplexity" files="SchemaUtils.java"/>
+    <suppress checks="CyclomaticComplexity" files=".*Bench\.java"/>
     <suppress checks="NPathComplexity" files="SingleBrokerTest.java"/>
     <suppress checks="JavaNCSSCheck" files="MetricsRegistry.java"/>
     <suppress checks="JavaNCSSCheck" files="RemoteStorageManagerMetricsTest.java"/>
@@ -64,6 +65,7 @@
     <suppress checks="JavaNCSSCheck" files="ParquetAvroValueReaders.java"/>
     <suppress checks="JavaNCSSCheck" files=".*Docs\.java"/>
     <suppress checks="JavaNCSSCheck" files="BatchEnumerationTest.java"/>
+    <suppress checks="JavaNCSSCheck" files=".*Bench\.java"/>
     <suppress checks="ParameterNumber" files="BatchEnumerationTest.java"/>
     <suppress checks="NPathComplexity" files="CredentialsBuilder.java"/>
     <suppress checks="NPathComplexity" files="ParquetAvroValueReaders.java"/>
