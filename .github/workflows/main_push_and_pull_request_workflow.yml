@@ -50,6 +50,12 @@ jobs:
         with:
           fetch-depth: 0
 
+      - name: Set up JDK ${{ matrix.java-version }}
+        uses: actions/setup-java@v4
+        with:
+          java-version: ${{ matrix.java-version }}
+          distribution: temurin
+
       - name: Build Docker image
         run: make docker_image
 
