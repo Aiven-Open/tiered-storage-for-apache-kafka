@@ -25,6 +25,7 @@ import org.apache.kafka.common.Uuid;
 import org.apache.kafka.server.log.remote.storage.RemoteLogSegmentId;
 import org.apache.kafka.server.log.remote.storage.RemoteLogSegmentMetadata;
 
+import com.fasterxml.jackson.annotation.JsonAutoDetect;
 import com.fasterxml.jackson.annotation.JsonProperty;
 import com.fasterxml.jackson.annotation.JsonPropertyOrder;
 import com.fasterxml.jackson.core.JsonGenerator;
@@ -87,6 +88,13 @@ public class KafkaTypeSerdeModule {
         abstract Uuid id();
     }
 
+    // Only the properties below are written. Newer Kafka versions add getters (e.g. isTxnIdxEmpty)
+    // that auto-detection would otherwise write into the manifest.
+    @JsonAutoDetect(
+        fieldVisibility = JsonAutoDetect.Visibility.NONE,
+        getterVisibility = JsonAutoDetect.Visibility.NONE,
+        isGetterVisibility = JsonAutoDetect.Visibility.NONE
+    )
     @JsonPropertyOrder({
         "remoteLogSegmentId", "startOffset", "endOffset",
         "maxTimestampMs", "brokerId", "eventTimestampMs", "segmentLeaderEpochs"
