@@ -21,16 +21,12 @@ import java.io.File;
 import java.io.IOException;
 import java.io.InputStream;
 import java.nio.ByteBuffer;
+import java.nio.file.Files;
 import java.nio.file.Path;
 import java.util.HashMap;
 import java.util.Map;
 import java.util.Optional;
 
-import org.apache.kafka.common.compress.Compression;
-import org.apache.kafka.common.record.FileRecords;
-import org.apache.kafka.common.record.MemoryRecords;
-import org.apache.kafka.common.record.MemoryRecordsBuilder;
-import org.apache.kafka.common.record.TimestampType;
 import org.apache.kafka.common.utils.Time;
 import org.apache.kafka.server.log.remote.storage.LogSegmentData;
 import org.apache.kafka.server.log.remote.storage.RemoteStorageException;
@@ -66,14 +62,9 @@ class KafkaRemoteStorageManagerTest extends BaseRemoteStorageManagerTest {
         throws IOException {
         final Path logSegmentPath = targetDir.resolve("segment.log");
         final File logSegmentFile = logSegmentPath.toFile();
-        try (final FileRecords records = FileRecords.open(logSegmentFile, false, 100000, true);
-             final MemoryRecordsBuilder builder = MemoryRecords.builder(
-                 ByteBuffer.allocate(1024),
-                 Compression.of(compressionType).build(),
-                 TimestampType.CREATE_TIME,
-                 0)) {
-            builder.append(0L, "key-0".getBytes(), "value-0".getBytes());
-            records.append(builder.build());
+        try (final InputStream segment = KafkaRemoteStorageManagerTest.class
+            .getResourceAsStream("/segments/segment-v2-" + compressionType + ".log")) {
+            Files.copy(segment, logSegmentPath);
         }
 
         // Configure the RSM.
