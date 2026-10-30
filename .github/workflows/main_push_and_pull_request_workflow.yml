@@ -1,16 +1,31 @@
-# The workflow to check main after push.
+# The workflow to check main and the release branches after push.
+# The build and tests run against the default Kafka version. The extra legs check that the
+# same source compiles and passes the unit tests on older Kafka versions.
 name: Main checks after push and during pull requests
 on:
   push:
-    branches: [ 'main' ]
+    branches: [ 'main', 'release/**' ]
   pull_request:
 jobs:
   build:
     strategy:
       matrix:
         java-version: [ 17, 21 ]
-    name: Build on ${{ matrix.runs-on }} with jdk ${{ matrix.java-version }}
+        # Empty for the base legs. It makes each include below a new job.
+        kafka-version: [ '' ]
+        include:
+          - java-version: 17
+            kafka-version: 3.8.0
+          - java-version: 17
+            kafka-version: 3.9.0
+          - java-version: 17
+            kafka-version: 4.0.0
+    name: Build on ${{ matrix.runs-on }} with jdk ${{ matrix.java-version }}${{ matrix.kafka-version && format(' and Kafka {0}', matrix.kafka-version) || '' }}
     runs-on: ubuntu-latest
+    # Extra Kafka versions are reported but do not fail the workflow until they pass.
+    continue-on-error: ${{ matrix.kafka-version != '' }}
+    env:
+      ORG_GRADLE_PROJECT_kafkaVersion: ${{ matrix.kafka-version }}
     steps:
       - name: Checkout code
         uses: actions/checkout@v4
@@ -29,13 +44,14 @@ jobs:
         run: make test
 
       - name: Run integration tests
+        if: ${{ !matrix.kafka-version }}
         run: make integration_test
 
       - name: Upload build reports
         uses: actions/upload-artifact@v4
         if: always()
         with:
-          name: build-reports-${{ matrix.java-version }}
+          name: build-reports-${{ matrix.java-version }}${{ matrix.kafka-version && format('-kafka-{0}', matrix.kafka-version) || '' }}
           path: '**/build/reports/**'
   e2e_test:
     strategy:

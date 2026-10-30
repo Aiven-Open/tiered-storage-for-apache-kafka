@@ -124,7 +124,15 @@ RemoteStorageManagerConfig
   * Importance: low
 
 ``metrics.recording.level``
-  The highest recording level for metrics.
+  The highest recording level for metrics. It has three levels for recording metrics - info, debug, and trace.
+
+   
+
+  INFO level records only essential metrics necessary for monitoring system performance and health. It collects vital data without gathering too much detail, making it suitable for production environments where minimal overhead is desired.
+
+  DEBUG level records most metrics, providing more detailed information about the system's operation. It's useful for development and testing environments where you need deeper insights to debug and fine-tune the application.
+
+  TRACE level records all possible metrics, capturing every detail about the system's performance and operation. It's best for controlled environments where in-depth analysis is required, though it can introduce significant overhead.
 
   * Type: string
   * Default: INFO

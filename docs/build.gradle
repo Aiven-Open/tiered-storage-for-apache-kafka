@@ -55,3 +55,8 @@ tasks.register('genMetricsDocs', JavaExec) {
 tasks.named('compileJava') {
     finalizedBy 'genConfigsDocs', 'genMetricsDocs'
 }
+
+// The generated text depends on the Kafka version, so only the default version writes the committed files.
+tasks.matching { it.name in ['genConfigsDocs', 'genMetricsDocs'] }.configureEach {
+    onlyIf { !project.ext.kafkaVersionOverride }
+}
