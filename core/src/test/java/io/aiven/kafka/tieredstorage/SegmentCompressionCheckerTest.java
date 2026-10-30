@@ -18,16 +18,11 @@ package io.aiven.kafka.tieredstorage;
 
 import java.io.File;
 import java.io.IOException;
-import java.nio.ByteBuffer;
+import java.io.InputStream;
+import java.nio.file.Files;
 import java.nio.file.Path;
+import java.util.Arrays;
 
-import org.apache.kafka.common.compress.Compression;
-import org.apache.kafka.common.record.FileRecords;
-import org.apache.kafka.common.record.MemoryRecords;
-import org.apache.kafka.common.record.MemoryRecordsBuilder;
-import org.apache.kafka.common.record.TimestampType;
-
-import org.assertj.core.util.Files;
 import org.junit.jupiter.api.Test;
 import org.junit.jupiter.api.io.TempDir;
 import org.junit.jupiter.params.ParameterizedTest;
@@ -38,64 +33,72 @@ import static org.assertj.core.api.Assertions.assertThatThrownBy;
 
 class SegmentCompressionCheckerTest {
 
+    private static final int MAGIC_OFFSET = 16;
+
     @TempDir
     Path dir;
 
     @Test
-    void shouldFailWhenReadingEmptyFile() {
-        assertThatThrownBy(() -> SegmentCompressionChecker.check(Files.newTemporaryFile()))
+    void shouldFailWhenReadingEmptyFile() throws IOException {
+        final File file = Files.createFile(dir.resolve("empty.log")).toFile();
+        assertThatThrownBy(() -> SegmentCompressionChecker.check(file))
             .isInstanceOf(InvalidRecordBatchException.class)
             .hasMessage("Record batch is null");
     }
 
     @Test
     void shouldFailWhenReadingInvalidFile() throws IOException {
-        // Given a valid record batch
-        final Path path = dir.resolve("invalid.log");
-        final File file = Files.newFile(path.toString());
-        try (final FileRecords records = FileRecords.open(file, false, 100000, true);
-             final MemoryRecordsBuilder builder = MemoryRecords.builder(
-                 ByteBuffer.allocate(1024),
-                 Compression.NONE,
-                 TimestampType.CREATE_TIME,
-                 0)) {
-            builder.append(0L, "key-0".getBytes(), "value-0".getBytes());
-            records.append(builder.build());
-        }
-        // When messing with the record content
-        final byte[] bytes = java.nio.file.Files.readAllBytes(path);
-        final byte[] output = new byte[bytes.length];
+        final byte[] bytes = fixture("segment-v2-none.log");
         for (int i = 0; i < bytes.length; i++) {
-            if (bytes[i] == "0".getBytes()[0]) {
-                output[i] = "1".getBytes()[0];
-            } else {
-                output[i] = bytes[i];
+            if (bytes[i] == '0') {
+                bytes[i] = '1';
             }
         }
-        java.nio.file.Files.write(path, output);
-        // Then
+        final File file = write("invalid.log", bytes);
+
+        assertThatThrownBy(() -> SegmentCompressionChecker.check(file))
+            .isInstanceOf(InvalidRecordBatchException.class)
+            .hasMessage("Failed to read and validate first batch");
+    }
+
+    @Test
+    void shouldFailWhenFirstBatchIsTruncated() throws IOException {
+        final byte[] bytes = fixture("segment-v2-none.log");
+        final File file = write("truncated.log", Arrays.copyOf(bytes, bytes.length - 1));
+
+        assertThatThrownBy(() -> SegmentCompressionChecker.check(file))
+            .isInstanceOf(InvalidRecordBatchException.class)
+            .hasMessage("Record batch is null");
+    }
+
+    @Test
+    void shouldFailWhenMagicIsUnknown() throws IOException {
+        final byte[] bytes = fixture("segment-v2-none.log");
+        bytes[MAGIC_OFFSET] = 3;
+        final File file = write("unknown-magic.log", bytes);
+
         assertThatThrownBy(() -> SegmentCompressionChecker.check(file))
             .isInstanceOf(InvalidRecordBatchException.class)
             .hasMessage("Failed to read and validate first batch");
     }
 
     @ParameterizedTest
-    @CsvSource({"none,false", "zstd,true"})
-    void shouldReturnCompressedWhenEnabled(final String compressionType, final boolean result)
+    @CsvSource({
+        "segment-v2-none.log,false",
+        "segment-v2-gzip.log,true",
+        "segment-v2-snappy.log,true",
+        "segment-v2-lz4.log,true",
+        "segment-v2-zstd.log,true",
+        "segment-v1-none.log,false",
+        "segment-v1-gzip.log,true",
+        "segment-v0-none.log,false",
+        "segment-v0-gzip.log,true"
+    })
+    void shouldReturnCompressedWhenFirstBatchIsCompressed(final String fixture, final boolean result)
         throws InvalidRecordBatchException, IOException {
-        final File file = dir.resolve("segment.log").toFile();
-        try (final FileRecords records = FileRecords.open(file, false, 100000, true);
-             final MemoryRecordsBuilder builder = MemoryRecords.builder(
-                 ByteBuffer.allocate(1024),
-                 Compression.of(compressionType).build(),
-                 TimestampType.CREATE_TIME,
-                 0)) {
-            builder.append(0L, "key-0".getBytes(), "value-0".getBytes());
-            records.append(builder.build());
-        }
+        final File file = write("segment.log", fixture(fixture));
 
-        final boolean requires = SegmentCompressionChecker.check(file);
-        assertThat(requires).isEqualTo(result);
+        assertThat(SegmentCompressionChecker.check(file)).isEqualTo(result);
     }
 
     @ParameterizedTest
@@ -104,25 +107,23 @@ class SegmentCompressionCheckerTest {
                                                       final String nextCompressionType,
                                                       final boolean result)
         throws InvalidRecordBatchException, IOException {
-        final File file = dir.resolve("segment.log").toFile();
-        try (final FileRecords records = FileRecords.open(file, false, 100000, true);
-             final MemoryRecordsBuilder b1 = MemoryRecords.builder(
-                 ByteBuffer.allocate(1024),
-                 Compression.of(firstCompressionType).build(),
-                 TimestampType.CREATE_TIME,
-                 0);
-             final MemoryRecordsBuilder b2 = MemoryRecords.builder(
-                 ByteBuffer.allocate(1024),
-                 Compression.of(nextCompressionType).build(),
-                 TimestampType.CREATE_TIME,
-                 0)) {
-            b1.append(0L, "key-0".getBytes(), "value-0".getBytes());
-            records.append(b1.build());
-            b2.append(0L, "key-0".getBytes(), "value-0".getBytes());
-            records.append(b2.build());
-        }
+        final byte[] first = fixture("segment-v2-" + firstCompressionType + ".log");
+        final byte[] next = fixture("segment-v2-" + nextCompressionType + ".log");
+        final byte[] bytes = Arrays.copyOf(first, first.length + next.length);
+        System.arraycopy(next, 0, bytes, first.length, next.length);
+        final File file = write("segment.log", bytes);
 
-        final boolean requires = SegmentCompressionChecker.check(file);
-        assertThat(requires).isEqualTo(result);
+        assertThat(SegmentCompressionChecker.check(file)).isEqualTo(result);
+    }
+
+    private File write(final String name, final byte[] bytes) throws IOException {
+        return Files.write(dir.resolve(name), bytes).toFile();
+    }
+
+    private static byte[] fixture(final String name) throws IOException {
+        try (final InputStream in = SegmentCompressionCheckerTest.class.getResourceAsStream("/segments/" + name)) {
+            assertThat(in).as("fixture " + name).isNotNull();
+            return in.readAllBytes();
+        }
     }
 }
