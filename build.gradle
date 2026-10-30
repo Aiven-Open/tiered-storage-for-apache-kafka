@@ -117,7 +117,8 @@ subprojects {
 
         slf4jVersion = "1.7.36"
 
-        kafkaVersion = findProperty("kafkaVersion") ?: "4.1.0"
+        kafkaVersionOverride = findProperty("kafkaVersion")
+        kafkaVersion = kafkaVersionOverride ?: "4.1.0"
 
         assertJVersion = "3.27.7"
 
