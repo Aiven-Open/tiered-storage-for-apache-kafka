@@ -76,7 +76,7 @@ jobs:
           distribution: temurin
 
       - name: Build Docker image
-        run: make docker_image
+        run: make docker_image_e2e
 
       - name: Run E2E tests
         timeout-minutes: 30
