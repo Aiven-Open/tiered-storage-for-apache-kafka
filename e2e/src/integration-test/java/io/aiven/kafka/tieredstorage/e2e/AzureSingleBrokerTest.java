@@ -30,7 +30,7 @@ import com.azure.storage.blob.models.ListBlobsOptions;
 import org.junit.jupiter.api.AfterAll;
 import org.junit.jupiter.api.BeforeAll;
 import org.testcontainers.containers.GenericContainer;
-import org.testcontainers.containers.KafkaContainer;
+import org.testcontainers.kafka.KafkaContainer;
 import org.testcontainers.utility.DockerImageName;
 
 abstract class AzureSingleBrokerTest extends SingleBrokerTest {

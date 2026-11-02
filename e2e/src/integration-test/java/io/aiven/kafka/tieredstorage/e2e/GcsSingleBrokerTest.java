@@ -30,7 +30,7 @@ import com.google.cloud.storage.Storage;
 import com.google.cloud.storage.StorageOptions;
 import org.junit.jupiter.api.AfterAll;
 import org.junit.jupiter.api.BeforeAll;
-import org.testcontainers.containers.KafkaContainer;
+import org.testcontainers.kafka.KafkaContainer;
 
 abstract class GcsSingleBrokerTest extends SingleBrokerTest {
     static final String GCS_SERVER_NETWORK_ALIAS = "fake-gcs-server";

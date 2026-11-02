@@ -68,11 +68,11 @@ import org.junit.jupiter.api.extension.TestWatcher;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 import org.testcontainers.containers.GenericContainer;
-import org.testcontainers.containers.KafkaContainer;
 import org.testcontainers.containers.Network;
 import org.testcontainers.containers.output.Slf4jLogConsumer;
 import org.testcontainers.junit.jupiter.Container;
 import org.testcontainers.junit.jupiter.Testcontainers;
+import org.testcontainers.kafka.KafkaContainer;
 import org.testcontainers.utility.DockerImageName;
 
 import static java.util.stream.Collectors.groupingBy;
@@ -113,8 +113,8 @@ abstract class SingleBrokerTest {
 
     static final int CHUNK_SIZE = 1024;  // TODO something more reasonable?
     // segment sizes not aligned to chunk size
-    static final int SEGMENT_SIZE_T0 = 256 * CHUNK_SIZE + CHUNK_SIZE / 2;
-    static final int SEGMENT_SIZE_T1 = 123 * CHUNK_SIZE + 123;
+    static final int SEGMENT_SIZE_T0 = 1024 * CHUNK_SIZE + CHUNK_SIZE / 2;
+    static final int SEGMENT_SIZE_T1 = 1025 * CHUNK_SIZE + 123;
 
     static final Duration TOTAL_RETENTION = Duration.ofHours(1);
     static final Duration LOCAL_RETENTION = Duration.ofSeconds(5);
@@ -169,10 +169,11 @@ abstract class SingleBrokerTest {
             throw new RuntimeException(e);
         }
 
-        kafka = new KafkaContainer(DockerImageName.parse("aivenoy/kafka-with-ts-plugin")
-            .asCompatibleSubstituteFor("confluentinc/cp-kafka")
+        kafka = new KafkaContainer(DockerImageName.parse("aivenoy/kafka-with-ts-plugin:e2e")
+            .asCompatibleSubstituteFor("apache/kafka")
         )
             .withEnv("KAFKA_AUTO_CREATE_TOPICS_ENABLE", "false")
+            .withEnv("KAFKA_LOG_DIRS", KAFKA_DATA_DIR_CONTAINER)
             .withEnv("KAFKA_LOG_RETENTION_CHECK_INTERVAL_MS", "10000")
             // enable tiered storage
             .withEnv("KAFKA_REMOTE_LOG_STORAGE_SYSTEM_ENABLE", "true")
