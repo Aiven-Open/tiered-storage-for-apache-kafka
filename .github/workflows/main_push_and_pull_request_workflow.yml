@@ -22,8 +22,6 @@ jobs:
             kafka-version: 4.0.0
     name: Build with jdk ${{ matrix.java-version }} and Kafka ${{ matrix.kafka-version || 'default' }}
     runs-on: ubuntu-latest
-    # Extra Kafka versions are reported but do not fail the workflow until they pass.
-    continue-on-error: ${{ matrix.kafka-version != '' }}
     env:
       ORG_GRADLE_PROJECT_kafkaVersion: ${{ matrix.kafka-version }}
     steps:
