@@ -25,7 +25,7 @@ The workflow `main_push_and_pull_request_workflow.yml` is the same on every bran
 
 - The build version is the default of `kafkaVersion` in `build.gradle`. A leg overrides it with `ORG_GRADLE_PROJECT_kafkaVersion`.
 - The workflow runs on push to `main` and `release/**`, and on every pull request.
-- Default legs run the build, unit tests and integration tests. Extra legs run the build and unit tests only, and are experimental until they pass.
+- Default legs run the build, unit tests and integration tests. Extra legs run the build and unit tests only. A failed extra leg fails the workflow.
 - Compile against the newest version of the range. Do not use an API that the oldest version lacks. The extra legs fail if you do.
 - To adapt a branch, change the default in `build.gradle` and the `include` list. Change nothing else.
 

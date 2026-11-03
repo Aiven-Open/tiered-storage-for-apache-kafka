@@ -22,8 +22,6 @@ jobs:
             kafka-version: 4.0.0
     name: Build with jdk ${{ matrix.java-version }} and Kafka ${{ matrix.kafka-version || 'default' }}
     runs-on: ubuntu-latest
-    # Extra Kafka versions are reported but do not fail the workflow until they pass.
-    continue-on-error: ${{ matrix.kafka-version != '' }}
     env:
       ORG_GRADLE_PROJECT_kafkaVersion: ${{ matrix.kafka-version }}
     steps:
@@ -76,7 +74,7 @@ jobs:
           distribution: temurin
 
       - name: Build Docker image
-        run: make docker_image
+        run: make docker_image_e2e
 
       - name: Run E2E tests
         timeout-minutes: 30

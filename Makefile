@@ -17,8 +17,10 @@ VERSION := $(shell grep -o -E '^version=[0-9]+\.[0-9]+\.[0-9]+(-SNAPSHOT)?' grad
 IMAGE_NAME := aivenoy/kafka-with-ts-plugin
 IMAGE_VERSION := latest
 IMAGE_TAG := $(IMAGE_NAME):$(IMAGE_VERSION)
+E2E_KAFKA_IMAGE := docker.io/apache/kafka:4.1.0
+E2E_IMAGE_TAG := $(IMAGE_NAME):e2e
 
-.PHONY: all clean checkstyle build test integration_test e2e_test docker_image docker_push
+.PHONY: all clean checkstyle build test integration_test e2e_test docker_image docker_image_e2e docker_push
 
 all: clean build test
 
@@ -55,7 +57,7 @@ integration_test: build
 
 E2E_TEST=LocalSystem
 
-e2e_test: build
+e2e_test: docker_image_e2e
 	./gradlew :e2e:integrationTest --tests --info $(E2E_TEST)*
 
 .PHONY: docker_image
@@ -64,6 +66,14 @@ docker_image: build
 		-f docker/Dockerfile \
 		--build-arg _VERSION=$(VERSION) \
 		-t $(IMAGE_TAG)
+
+.PHONY: docker_image_e2e
+docker_image_e2e: build
+	docker build . \
+		-f docker/Dockerfile \
+		--build-arg _VERSION=$(VERSION) \
+		--build-arg KAFKA_IMAGE=$(E2E_KAFKA_IMAGE) \
+		-t $(E2E_IMAGE_TAG)
 
 .PHONY: docker_push
 docker_push:
