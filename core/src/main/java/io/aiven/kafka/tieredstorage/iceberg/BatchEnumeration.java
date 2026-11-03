@@ -34,7 +34,6 @@ import org.apache.kafka.common.record.MemoryRecordsBuilder;
 import org.apache.kafka.common.record.RecordBatch;
 import org.apache.kafka.common.record.SimpleRecord;
 import org.apache.kafka.common.record.TimestampType;
-import org.apache.kafka.common.utils.ByteBufferOutputStream;
 import org.apache.kafka.common.utils.Utils;
 
 import io.aiven.kafka.tieredstorage.iceberg.data.RowSchema;
@@ -88,37 +87,33 @@ public class BatchEnumeration implements Enumeration<InputStream>, Closeable {
 
         final GenericData.Record firstRecord = records.get(0);
 
-        try (final ByteBufferOutputStream os = new ByteBufferOutputStream(512 * 1024)) {
-            final MemoryRecordsBuilder builder = new MemoryRecordsBuilder(
-                os,
-                getBatchMagic(firstRecord),
-                getBatchCompressionType(firstRecord),
-                getBatchTimestampType(firstRecord),
-                getBatchBaseOffset(firstRecord),
-                getBatchMaxTimestamp(firstRecord),
-                getBatchProducerId(firstRecord),
-                getBatchProducerEpoch(firstRecord),
-                getBaseSequence(firstRecord),
-                false, false,  // TODO change when we support them
-                getBatchPartitionLeaderEpoch(firstRecord),
-                0  // doesn't matter
-            );
-            for (final GenericData.Record record : records) {
-                builder.append(new SimpleRecord(
-                    getKafkaTimestamp(record),
-                    getKafkaKey(record),
-                    getKafkaValue(record),
-                    getKafkaHeaders(record)
-                ));
-            }
-
-            final RecordBatch batch = builder.build().firstBatch();
-            final ByteBuffer buffer = ByteBuffer.allocate(batch.sizeInBytes());
-            batch.writeTo(buffer);
-            return new ByteArrayInputStream(buffer.array());
-        } catch (final IOException e) {
-            throw new RuntimeException(e);
+        final MemoryRecordsBuilder builder = new MemoryRecordsBuilder(
+            ByteBuffer.allocate(512 * 1024),
+            getBatchMagic(firstRecord),
+            getBatchCompressionType(firstRecord),
+            getBatchTimestampType(firstRecord),
+            getBatchBaseOffset(firstRecord),
+            getBatchMaxTimestamp(firstRecord),
+            getBatchProducerId(firstRecord),
+            getBatchProducerEpoch(firstRecord),
+            getBaseSequence(firstRecord),
+            false, false,  // TODO change when we support them
+            getBatchPartitionLeaderEpoch(firstRecord),
+            0  // doesn't matter
+        );
+        for (final GenericData.Record record : records) {
+            builder.append(new SimpleRecord(
+                getKafkaTimestamp(record),
+                getKafkaKey(record),
+                getKafkaValue(record),
+                getKafkaHeaders(record)
+            ));
         }
+
+        final RecordBatch batch = builder.build().firstBatch();
+        final ByteBuffer buffer = ByteBuffer.allocate(batch.sizeInBytes());
+        batch.writeTo(buffer);
+        return new ByteArrayInputStream(buffer.array());
     }
 
     private List<GenericData.Record> peekNextBatchRecords() throws IOException {

@@ -16,14 +16,16 @@
 
 package io.aiven.kafka.tieredstorage.misc;
 
+import javax.management.ObjectName;
+
 import java.util.LinkedHashMap;
 import java.util.Map;
 import java.util.TreeMap;
+import java.util.regex.Pattern;
 
 import org.apache.kafka.common.MetricName;
 import org.apache.kafka.common.MetricNameTemplate;
 import org.apache.kafka.common.metrics.Metrics;
-import org.apache.kafka.common.utils.Sanitizer;
 
 import io.aiven.kafka.tieredstorage.fetch.cache.ChunkCache;
 import io.aiven.kafka.tieredstorage.fetch.index.MemorySegmentIndexesCache;
@@ -35,6 +37,8 @@ import io.aiven.kafka.tieredstorage.metrics.ThreadPoolMonitorMetricsRegistry;
 import static java.lang.System.out;
 
 public class MetricsDocs {
+    private static final Pattern MBEAN_PATTERN = Pattern.compile("[\\w-%\\. \t]*");
+
     public static void main(final String[] args) {
         printSectionTitle("Core components metrics");
         out.println(".. Generated from MetricRegistry classes by " + MetricsDocs.class.getCanonicalName());
@@ -178,9 +182,13 @@ public class MetricsDocs {
             beanName.append(",");
             beanName.append(entry.getKey());
             beanName.append("=");
-            beanName.append(Sanitizer.jmxSanitize(entry.getValue()));
+            beanName.append(jmxSanitize(entry.getValue()));
         }
         return beanName.toString();
+    }
+
+    private static String jmxSanitize(final String name) {
+        return MBEAN_PATTERN.matcher(name).matches() ? name : ObjectName.quote(name);
     }
 
     static void printSectionTitle(final String title) {
