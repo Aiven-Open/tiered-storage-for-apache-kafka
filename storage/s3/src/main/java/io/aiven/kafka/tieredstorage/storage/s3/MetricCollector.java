@@ -112,150 +112,13 @@ import static software.amazon.awssdk.core.internal.metrics.SdkErrorType.THROTTLI
 
 public class MetricCollector implements MetricPublisher {
     private static final Logger log = LoggerFactory.getLogger(MetricCollector.class);
-
-    private final org.apache.kafka.common.metrics.Metrics metrics;
-
-    private final Map<String, Sensor> requestMetrics = new HashMap<>();
-    private final Map<String, Sensor> latencyMetrics = new HashMap<>();
-    private final Map<String, Sensor> errorMetrics = new HashMap<>();
+    private static final SharedMetrics SHARED = new SharedMetrics();
 
     public MetricCollector() {
-        final MetricsReporter reporter = new JmxReporter();
-
-        metrics = new org.apache.kafka.common.metrics.Metrics(
-            new MetricConfig(), List.of(reporter), Time.SYSTEM,
-            new KafkaMetricsContext(METRIC_CONTEXT)
-        );
-        final Sensor getObjectRequestsSensor = createRequestsSensor(
-            GET_OBJECT_REQUESTS,
-            GET_OBJECT_REQUESTS_RATE_METRIC_NAME,
-            GET_OBJECT_REQUESTS_TOTAL_METRIC_NAME
-        );
-        requestMetrics.put("GetObject", getObjectRequestsSensor);
-        final Sensor getObjectTimeSensor = createLatencySensor(
-            GET_OBJECT_TIME,
-            GET_OBJECT_TIME_AVG_METRIC_NAME,
-            GET_OBJECT_TIME_MAX_METRIC_NAME
-        );
-        latencyMetrics.put("GetObject", getObjectTimeSensor);
-        final Sensor uploadPartRequestsSensor = createRequestsSensor(
-            UPLOAD_PART_REQUESTS,
-            UPLOAD_PART_REQUESTS_RATE_METRIC_NAME,
-            UPLOAD_PART_REQUESTS_TOTAL_METRIC_NAME
-        );
-        requestMetrics.put("UploadPart", uploadPartRequestsSensor);
-        final Sensor uploadPartTimeSensor = createLatencySensor(
-            UPLOAD_PART_TIME,
-            UPLOAD_PART_TIME_AVG_METRIC_NAME,
-            UPLOAD_PART_TIME_MAX_METRIC_NAME
-        );
-        latencyMetrics.put("UploadPart", uploadPartTimeSensor);
-        final Sensor createMpuRequestsSensor = createRequestsSensor(
-            CREATE_MULTIPART_UPLOAD_REQUESTS,
-            CREATE_MULTIPART_UPLOAD_REQUESTS_RATE_METRIC_NAME,
-            CREATE_MULTIPART_UPLOAD_REQUESTS_TOTAL_METRIC_NAME
-        );
-        requestMetrics.put("CreateMultipartUpload", createMpuRequestsSensor);
-        final Sensor createMpuTimeSensor = createLatencySensor(
-            CREATE_MULTIPART_UPLOAD_TIME,
-            CREATE_MULTIPART_UPLOAD_TIME_AVG_METRIC_NAME,
-            CREATE_MULTIPART_UPLOAD_TIME_MAX_METRIC_NAME
-        );
-        latencyMetrics.put("CreateMultipartUpload", createMpuTimeSensor);
-        final Sensor completeMpuRequestsSensor = createRequestsSensor(
-            COMPLETE_MULTIPART_UPLOAD_REQUESTS,
-            COMPLETE_MULTIPART_UPLOAD_REQUESTS_RATE_METRIC_NAME,
-            COMPLETE_MULTIPART_UPLOAD_REQUESTS_TOTAL_METRIC_NAME
-        );
-        requestMetrics.put("CompleteMultipartUpload", completeMpuRequestsSensor);
-        final Sensor completeMpuTimeSensor = createLatencySensor(
-            COMPLETE_MULTIPART_UPLOAD_TIME,
-            COMPLETE_MULTIPART_UPLOAD_TIME_AVG_METRIC_NAME,
-            COMPLETE_MULTIPART_UPLOAD_TIME_MAX_METRIC_NAME
-        );
-        latencyMetrics.put("CompleteMultipartUpload", completeMpuTimeSensor);
-        final Sensor putObjectRequestsSensor = createRequestsSensor(
-            PUT_OBJECT_REQUESTS,
-            PUT_OBJECT_REQUESTS_RATE_METRIC_NAME,
-            PUT_OBJECT_REQUESTS_TOTAL_METRIC_NAME
-        );
-        requestMetrics.put("PutObject", putObjectRequestsSensor);
-        final Sensor putObjectTimeSensor = createLatencySensor(
-            PUT_OBJECT_TIME,
-            PUT_OBJECT_TIME_AVG_METRIC_NAME,
-            PUT_OBJECT_TIME_MAX_METRIC_NAME
-        );
-        latencyMetrics.put("PutObject", putObjectTimeSensor);
-        final Sensor deleteObjectRequestsSensor = createRequestsSensor(
-            DELETE_OBJECT_REQUESTS,
-            DELETE_OBJECT_REQUESTS_RATE_METRIC_NAME,
-            DELETE_OBJECT_REQUESTS_TOTAL_METRIC_NAME
-        );
-        requestMetrics.put("DeleteObject", deleteObjectRequestsSensor);
-        final Sensor deleteObjectTimeSensor = createLatencySensor(
-            DELETE_OBJECT_TIME,
-            DELETE_OBJECT_TIME_AVG_METRIC_NAME,
-            DELETE_OBJECT_TIME_MAX_METRIC_NAME
-        );
-        latencyMetrics.put("DeleteObject", deleteObjectTimeSensor);
-        final Sensor deleteObjectsRequestsSensor = createRequestsSensor(
-            DELETE_OBJECTS_REQUESTS,
-            DELETE_OBJECTS_REQUESTS_RATE_METRIC_NAME,
-            DELETE_OBJECTS_REQUESTS_TOTAL_METRIC_NAME
-        );
-        requestMetrics.put("DeleteObjects", deleteObjectsRequestsSensor);
-        final Sensor deleteObjectsTimeSensor = createLatencySensor(
-            DELETE_OBJECTS_TIME,
-            DELETE_OBJECTS_TIME_AVG_METRIC_NAME,
-            DELETE_OBJECTS_TIME_MAX_METRIC_NAME
-        );
-        latencyMetrics.put("DeleteObjects", deleteObjectsTimeSensor);
-        final Sensor abortMpuRequestsSensor = createRequestsSensor(
-            ABORT_MULTIPART_UPLOAD_REQUESTS,
-            ABORT_MULTIPART_UPLOAD_REQUESTS_RATE_METRIC_NAME,
-            ABORT_MULTIPART_UPLOAD_REQUESTS_TOTAL_METRIC_NAME
-        );
-        requestMetrics.put("AbortMultipartUpload", abortMpuRequestsSensor);
-        final Sensor abortMpuTimeSensor = createLatencySensor(
-            ABORT_MULTIPART_UPLOAD_TIME,
-            ABORT_MULTIPART_UPLOAD_TIME_AVG_METRIC_NAME,
-            ABORT_MULTIPART_UPLOAD_TIME_MAX_METRIC_NAME
-        );
-        latencyMetrics.put("AbortMultipartUpload", abortMpuTimeSensor);
-
-        final Sensor throttlingErrorsSensor = createRequestsSensor(
-            THROTTLING_ERRORS,
-            THROTTLING_ERRORS_RATE_METRIC_NAME,
-            THROTTLING_ERRORS_TOTAL_METRIC_NAME
-        );
-        errorMetrics.put(THROTTLING.toString(), throttlingErrorsSensor);
-        final Sensor serverErrorsSensor = createRequestsSensor(
-            SERVER_ERRORS,
-            SERVER_ERRORS_RATE_METRIC_NAME,
-            SERVER_ERRORS_TOTAL_METRIC_NAME
-        );
-        errorMetrics.put(SERVER_ERROR.toString(), serverErrorsSensor);
-        final Sensor configuredTimeoutErrorsSensor = createRequestsSensor(
-            CONFIGURED_TIMEOUT_ERRORS,
-            CONFIGURED_TIMEOUT_ERRORS_RATE_METRIC_NAME,
-            CONFIGURED_TIMEOUT_ERRORS_TOTAL_METRIC_NAME
-        );
-        errorMetrics.put(CONFIGURED_TIMEOUT.toString(), configuredTimeoutErrorsSensor);
-        final Sensor ioErrorsSensor = createRequestsSensor(
-            IO_ERRORS,
-            IO_ERRORS_RATE_METRIC_NAME,
-            IO_ERRORS_TOTAL_METRIC_NAME
-        );
-        errorMetrics.put(IO.toString(), ioErrorsSensor);
-        final Sensor otherErrorsSensor = createRequestsSensor(
-            OTHER_ERRORS,
-            OTHER_ERRORS_RATE_METRIC_NAME,
-            OTHER_ERRORS_TOTAL_METRIC_NAME
-        );
-        errorMetrics.put(OTHER.toString(), otherErrorsSensor);
     }
 
-    private Sensor createRequestsSensor(
+    private static Sensor createRequestsSensor(
+        final org.apache.kafka.common.metrics.Metrics metrics,
         final String name,
         final MetricNameTemplate rateMetricName,
         final MetricNameTemplate totalMetricName
@@ -266,7 +129,8 @@ public class MetricCollector implements MetricPublisher {
         return sensor;
     }
 
-    private Sensor createLatencySensor(
+    private static Sensor createLatencySensor(
+        final org.apache.kafka.common.metrics.Metrics metrics,
         final String name,
         final MetricNameTemplate avgMetricName,
         final MetricNameTemplate maxMetricName
@@ -283,14 +147,14 @@ public class MetricCollector implements MetricPublisher {
         // metrics are reported per request, so 1 value can be assumed.
         if (metricValues.size() == 1) {
             final var metricValue = metricValues.get(0);
-            final var requests = requestMetrics.get(metricValue);
+            final var requests = SHARED.requestMetrics.get(metricValue);
             if (requests != null) {
                 requests.record();
             }
 
             final var durations = metricCollection.metricValues(CoreMetric.API_CALL_DURATION);
             if (durations.size() == 1) {
-                final var latency = latencyMetrics.get(metricValue);
+                final var latency = SHARED.latencyMetrics.get(metricValue);
                 if (latency != null) {
                     latency.record(durations.get(0).toMillis());
                 }
@@ -312,7 +176,7 @@ public class MetricCollector implements MetricPublisher {
             .collect(Collectors.toList());
 
         for (final String errorValue : errorValues) {
-            final var sensor = errorMetrics.get(errorValue);
+            final var sensor = SHARED.errorMetrics.get(errorValue);
             if (sensor != null) {
                 sensor.record();
             }
@@ -321,6 +185,94 @@ public class MetricCollector implements MetricPublisher {
 
     @Override
     public void close() {
-        metrics.close();
+        // shared metrics should outlive individual MetricCollector instances
+    }
+
+    private static final class SharedMetrics {
+        private final org.apache.kafka.common.metrics.Metrics metrics;
+        private final Map<String, Sensor> requestMetrics = new HashMap<>();
+        private final Map<String, Sensor> latencyMetrics = new HashMap<>();
+        private final Map<String, Sensor> errorMetrics = new HashMap<>();
+
+        private SharedMetrics() {
+            final MetricsReporter reporter = new JmxReporter();
+
+            metrics = new org.apache.kafka.common.metrics.Metrics(
+                new MetricConfig(), List.of(reporter), Time.SYSTEM,
+                new KafkaMetricsContext(METRIC_CONTEXT)
+            );
+
+            requestMetrics.put("GetObject", createRequestsSensor(
+                metrics, GET_OBJECT_REQUESTS, GET_OBJECT_REQUESTS_RATE_METRIC_NAME, GET_OBJECT_REQUESTS_TOTAL_METRIC_NAME
+            ));
+            latencyMetrics.put("GetObject", createLatencySensor(
+                metrics, GET_OBJECT_TIME, GET_OBJECT_TIME_AVG_METRIC_NAME, GET_OBJECT_TIME_MAX_METRIC_NAME
+            ));
+            requestMetrics.put("UploadPart", createRequestsSensor(
+                metrics, UPLOAD_PART_REQUESTS, UPLOAD_PART_REQUESTS_RATE_METRIC_NAME, UPLOAD_PART_REQUESTS_TOTAL_METRIC_NAME
+            ));
+            latencyMetrics.put("UploadPart", createLatencySensor(
+                metrics, UPLOAD_PART_TIME, UPLOAD_PART_TIME_AVG_METRIC_NAME, UPLOAD_PART_TIME_MAX_METRIC_NAME
+            ));
+            requestMetrics.put("CreateMultipartUpload", createRequestsSensor(
+                metrics, CREATE_MULTIPART_UPLOAD_REQUESTS,
+                CREATE_MULTIPART_UPLOAD_REQUESTS_RATE_METRIC_NAME, CREATE_MULTIPART_UPLOAD_REQUESTS_TOTAL_METRIC_NAME
+            ));
+            latencyMetrics.put("CreateMultipartUpload", createLatencySensor(
+                metrics, CREATE_MULTIPART_UPLOAD_TIME,
+                CREATE_MULTIPART_UPLOAD_TIME_AVG_METRIC_NAME, CREATE_MULTIPART_UPLOAD_TIME_MAX_METRIC_NAME
+            ));
+            requestMetrics.put("CompleteMultipartUpload", createRequestsSensor(
+                metrics, COMPLETE_MULTIPART_UPLOAD_REQUESTS,
+                COMPLETE_MULTIPART_UPLOAD_REQUESTS_RATE_METRIC_NAME, COMPLETE_MULTIPART_UPLOAD_REQUESTS_TOTAL_METRIC_NAME
+            ));
+            latencyMetrics.put("CompleteMultipartUpload", createLatencySensor(
+                metrics, COMPLETE_MULTIPART_UPLOAD_TIME,
+                COMPLETE_MULTIPART_UPLOAD_TIME_AVG_METRIC_NAME, COMPLETE_MULTIPART_UPLOAD_TIME_MAX_METRIC_NAME
+            ));
+            requestMetrics.put("PutObject", createRequestsSensor(
+                metrics, PUT_OBJECT_REQUESTS, PUT_OBJECT_REQUESTS_RATE_METRIC_NAME, PUT_OBJECT_REQUESTS_TOTAL_METRIC_NAME
+            ));
+            latencyMetrics.put("PutObject", createLatencySensor(
+                metrics, PUT_OBJECT_TIME, PUT_OBJECT_TIME_AVG_METRIC_NAME, PUT_OBJECT_TIME_MAX_METRIC_NAME
+            ));
+            requestMetrics.put("DeleteObject", createRequestsSensor(
+                metrics, DELETE_OBJECT_REQUESTS, DELETE_OBJECT_REQUESTS_RATE_METRIC_NAME, DELETE_OBJECT_REQUESTS_TOTAL_METRIC_NAME
+            ));
+            latencyMetrics.put("DeleteObject", createLatencySensor(
+                metrics, DELETE_OBJECT_TIME, DELETE_OBJECT_TIME_AVG_METRIC_NAME, DELETE_OBJECT_TIME_MAX_METRIC_NAME
+            ));
+            requestMetrics.put("DeleteObjects", createRequestsSensor(
+                metrics, DELETE_OBJECTS_REQUESTS, DELETE_OBJECTS_REQUESTS_RATE_METRIC_NAME, DELETE_OBJECTS_REQUESTS_TOTAL_METRIC_NAME
+            ));
+            latencyMetrics.put("DeleteObjects", createLatencySensor(
+                metrics, DELETE_OBJECTS_TIME, DELETE_OBJECTS_TIME_AVG_METRIC_NAME, DELETE_OBJECTS_TIME_MAX_METRIC_NAME
+            ));
+            requestMetrics.put("AbortMultipartUpload", createRequestsSensor(
+                metrics, ABORT_MULTIPART_UPLOAD_REQUESTS,
+                ABORT_MULTIPART_UPLOAD_REQUESTS_RATE_METRIC_NAME, ABORT_MULTIPART_UPLOAD_REQUESTS_TOTAL_METRIC_NAME
+            ));
+            latencyMetrics.put("AbortMultipartUpload", createLatencySensor(
+                metrics, ABORT_MULTIPART_UPLOAD_TIME,
+                ABORT_MULTIPART_UPLOAD_TIME_AVG_METRIC_NAME, ABORT_MULTIPART_UPLOAD_TIME_MAX_METRIC_NAME
+            ));
+
+            errorMetrics.put(THROTTLING.toString(), createRequestsSensor(
+                metrics, THROTTLING_ERRORS, THROTTLING_ERRORS_RATE_METRIC_NAME, THROTTLING_ERRORS_TOTAL_METRIC_NAME
+            ));
+            errorMetrics.put(SERVER_ERROR.toString(), createRequestsSensor(
+                metrics, SERVER_ERRORS, SERVER_ERRORS_RATE_METRIC_NAME, SERVER_ERRORS_TOTAL_METRIC_NAME
+            ));
+            errorMetrics.put(CONFIGURED_TIMEOUT.toString(), createRequestsSensor(
+                metrics, CONFIGURED_TIMEOUT_ERRORS,
+                CONFIGURED_TIMEOUT_ERRORS_RATE_METRIC_NAME, CONFIGURED_TIMEOUT_ERRORS_TOTAL_METRIC_NAME
+            ));
+            errorMetrics.put(IO.toString(), createRequestsSensor(
+                metrics, IO_ERRORS, IO_ERRORS_RATE_METRIC_NAME, IO_ERRORS_TOTAL_METRIC_NAME
+            ));
+            errorMetrics.put(OTHER.toString(), createRequestsSensor(
+                metrics, OTHER_ERRORS, OTHER_ERRORS_RATE_METRIC_NAME, OTHER_ERRORS_TOTAL_METRIC_NAME
+            ));
+        }
     }
 }
