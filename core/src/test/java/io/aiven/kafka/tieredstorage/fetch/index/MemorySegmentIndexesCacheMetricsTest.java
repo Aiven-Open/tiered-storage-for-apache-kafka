@@ -76,9 +76,9 @@ class MemorySegmentIndexesCacheMetricsTest {
             .asInstanceOf(DOUBLE)
             .isGreaterThan(0);
 
-        // compute is considered as load success regardless if present or not
+        // compute returning the present value unchanged is not a load, so only the miss counts
         assertThat(MBEAN_SERVER.getAttribute(objectName, "cache-load-success-total"))
-            .isEqualTo(2.0);
+            .isEqualTo(1.0);
         assertThat(MBEAN_SERVER.getAttribute(objectName, "cache-load-failure-time-total"))
             .isEqualTo(0.0);
 
