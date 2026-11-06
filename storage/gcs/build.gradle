@@ -14,7 +14,7 @@
  * limitations under the License.
  */
 
-archivesBaseName = "storage-gcs"
+base.archivesName = "storage-gcs"
 
 dependencies {
     implementation project(":storage:core")
