@@ -27,6 +27,9 @@ ext {
     caffeineVersion = "3.2.3"
 
     zstdVersion = "1.5.7-10"
+    // Oldest versions that Kafka ships. The broker provides snappy and lz4 at runtime.
+    snappyVersion = "1.1.10.5"
+    lz4Version = "1.8.0"
 
     icebergVersion = "1.11.0"
 
@@ -46,6 +49,8 @@ dependencies {
     implementation "com.fasterxml.jackson.datatype:jackson-datatype-jdk8:$jacksonVersion"
 
     implementation "com.github.luben:zstd-jni:$zstdVersion"
+    compileOnly "org.xerial.snappy:snappy-java:$snappyVersion"
+    compileOnly "org.lz4:lz4-java:$lz4Version"
 
     implementation("com.github.ben-manes.caffeine:caffeine:$caffeineVersion") {
         exclude group: 'org.checkerframework', module: 'checker-qual'
