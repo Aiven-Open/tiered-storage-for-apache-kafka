@@ -15,6 +15,7 @@ The Iceberg mode was added recently. It's currenly in the "alpha" stage, but cou
 
 - [Configuration](./docs/configs.rst)
 - [Metrics](./docs/metrics.rst)
+- [Kafka compatibility and release policy](./RELEASES.md)
 
 ## Getting started
 
