@@ -36,6 +36,7 @@ import java.util.stream.Stream;
 import org.apache.kafka.clients.admin.AdminClient;
 import org.apache.kafka.clients.admin.AlterConfigOp;
 import org.apache.kafka.clients.admin.ConfigEntry;
+import org.apache.kafka.clients.admin.CreateTopicsResult;
 import org.apache.kafka.clients.admin.NewTopic;
 import org.apache.kafka.clients.admin.RecordsToDelete;
 import org.apache.kafka.clients.consumer.ConsumerRecord;
@@ -77,7 +78,6 @@ import org.testcontainers.utility.DockerImageName;
 
 import static java.util.stream.Collectors.groupingBy;
 import static org.assertj.core.api.Assertions.assertThat;
-import static org.assertj.core.api.Assertions.fail;
 import static org.awaitility.Awaitility.await;
 
 /**
@@ -251,24 +251,16 @@ abstract class SingleBrokerTest {
                 "local.retention.ms", Long.toString(LOCAL_RETENTION.toMillis())
             ));
         final var topicsToCreate = List.of(newTopic0, newTopic1);
-        adminClient.createTopics(topicsToCreate)
-            .all()
-            .get(30, TimeUnit.SECONDS);
+        // Topic IDs are taken from the create response: in KRaft, the broker metadata cache that serves
+        // describeTopics may not have caught up with the controller yet.
+        final CreateTopicsResult createTopicsResult = adminClient.createTopics(topicsToCreate);
+        createTopicsResult.all().get(30, TimeUnit.SECONDS);
+        final Uuid topic0Id = createTopicsResult.topicId(TOPIC_0).get();
+        final Uuid topic1Id = createTopicsResult.topicId(TOPIC_1).get();
 
-        adminClient.describeTopics(List.of(TOPIC_0, TOPIC_1))
-            .allTopicNames()
-            .get(30, TimeUnit.SECONDS)
-            .values()
-            .forEach(td -> {
-                if (td.name().equals(TOPIC_0)) {
-                    t0p0 = new TopicIdPartition(td.topicId(), TP_0_0);
-                    t0p1 = new TopicIdPartition(td.topicId(), TP_0_1);
-                } else if (td.name().equals(TOPIC_1)) {
-                    t1p0 = new TopicIdPartition(td.topicId(), TP_1_0);
-                } else {
-                    fail("Unknown topic %s", td);
-                }
-            });
+        t0p0 = new TopicIdPartition(topic0Id, TP_0_0);
+        t0p1 = new TopicIdPartition(topic0Id, TP_0_1);
+        t1p0 = new TopicIdPartition(topic1Id, TP_1_0);
         userTopicIdPartitions = List.of(t0p0, t0p1, t1p0);
 
         LOG.info("Topics {} created successfully", topicsToCreate);
