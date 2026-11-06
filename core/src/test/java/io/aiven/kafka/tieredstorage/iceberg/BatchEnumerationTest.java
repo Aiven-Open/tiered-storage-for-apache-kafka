@@ -18,26 +18,32 @@ package io.aiven.kafka.tieredstorage.iceberg;
 
 import java.io.IOException;
 import java.nio.ByteBuffer;
-import java.util.Iterator;
+import java.nio.file.Files;
+import java.nio.file.Path;
+import java.util.ArrayList;
 import java.util.List;
+import java.util.Random;
 
-import org.apache.kafka.common.header.internals.RecordHeader;
-import org.apache.kafka.common.record.CompressionType;
-import org.apache.kafka.common.record.MemoryRecords;
-import org.apache.kafka.common.record.MutableRecordBatch;
-import org.apache.kafka.common.record.Record;
-import org.apache.kafka.common.record.RecordBatch;
+import org.apache.kafka.common.header.Header;
 import org.apache.kafka.common.record.TimestampType;
 
 import io.aiven.kafka.tieredstorage.iceberg.data.RowSchema;
+import io.aiven.kafka.tieredstorage.iceberg.kafka.KafkaBatch;
+import io.aiven.kafka.tieredstorage.iceberg.kafka.KafkaHeader;
+import io.aiven.kafka.tieredstorage.iceberg.kafka.KafkaLogReader;
+import io.aiven.kafka.tieredstorage.iceberg.kafka.KafkaRecord;
 
 import org.apache.avro.Schema;
 import org.apache.avro.generic.GenericData;
 import org.junit.jupiter.api.Test;
 import org.junit.jupiter.api.extension.ExtendWith;
+import org.junit.jupiter.api.io.TempDir;
+import org.junit.jupiter.params.ParameterizedTest;
+import org.junit.jupiter.params.provider.ValueSource;
 import org.mockito.junit.jupiter.MockitoExtension;
 
 import static org.assertj.core.api.Assertions.assertThat;
+import static org.assertj.core.api.Assertions.assertThatThrownBy;
 import static org.mockito.Mockito.mock;
 import static org.mockito.Mockito.when;
 
@@ -46,6 +52,17 @@ class BatchEnumerationTest {
     static final String HEADER1_KEY = "header1";
     static final String HEADER2_KEY = "header2";
 
+    // Kafka's values, not taken from its record classes (not public API, they moved between versions)
+    static final byte MAGIC_V2 = 2;
+    static final int NO_COMPRESSION_ID = 0;
+    static final int GZIP_ID = 1;
+    static final int SNAPPY_ID = 2;
+    static final int LZ4_ID = 3;
+    static final int ZSTD_ID = 4;
+
+    @TempDir
+    Path dir;
+
     @Test
     void test() throws IOException {
         // TODO test nulls
@@ -53,9 +70,9 @@ class BatchEnumerationTest {
         // Records 0-2 (batch 0) are not "read".
 
         // Batch 1.
-        final byte batch1Magic = RecordBatch.MAGIC_VALUE_V2;
+        final byte batch1Magic = MAGIC_V2;
         final int batch1ByteOffset = 1;
-        final CompressionType batch1CompressionType = CompressionType.GZIP;
+        final int batch1CompressionType = GZIP_ID;
         final TimestampType batch1TimestampType = TimestampType.CREATE_TIME;
         final long batch1BaseOffset = 3L;
         final long batch1LogAppendTime = 1000L;
@@ -90,9 +107,9 @@ class BatchEnumerationTest {
         );
 
         // Batch 2.
-        final int batch2Magic = RecordBatch.MAGIC_VALUE_V2;
+        final int batch2Magic = MAGIC_V2;
         final int batch2ByteOffset = 2;
-        final CompressionType batch2CompressionType = CompressionType.SNAPPY;
+        final int batch2CompressionType = SNAPPY_ID;
         final TimestampType batch2TimestampType = TimestampType.LOG_APPEND_TIME;
         final long batch2BaseOffset = 6L;
         final long batch2LogAppendTime = 2000L;
@@ -108,7 +125,7 @@ class BatchEnumerationTest {
             batch2ProducerId,
             batch2ProducerEpoch,
             batch2BaseSequence
-            // doesn't matter, we use log append time
+            // doesn't matter, log append time is used
         );
         final GenericData.Record record7 = createRecord(
             7L, 0L, batch2ByteOffset, batch2BaseOffset, batch2PartitionLeaderEpoch, batch2Magic,
@@ -117,7 +134,7 @@ class BatchEnumerationTest {
             batch2ProducerId,
             batch2ProducerEpoch,
             batch2BaseSequence
-            // doesn't matter, we use log append time
+            // doesn't matter, log append time is used
         );
         final GenericData.Record record8 = createRecord(
             8L, 0L, batch2ByteOffset, batch2BaseOffset, batch2PartitionLeaderEpoch, batch2Magic,
@@ -126,7 +143,7 @@ class BatchEnumerationTest {
             batch2ProducerId,
             batch2ProducerEpoch,
             batch2BaseSequence
-            // doesn't matter, we use log append time
+            // doesn't matter, log append time is used
         );
 
         final var multiFileReader = mock(MultiFileReader.class);
@@ -140,37 +157,111 @@ class BatchEnumerationTest {
         try (final var batchEnumeration = new BatchEnumeration(recordBatchGrouper, structureProvider, "")) {
             // Batch 1.
             assertThat(batchEnumeration.hasMoreElements()).isTrue();
-            final var records1 = MemoryRecords.readableRecords(
-                ByteBuffer.wrap(batchEnumeration.nextElement().readAllBytes()));
-            final Iterator<MutableRecordBatch> batchIterator1 = records1.batches().iterator();
-            assertThat(batchIterator1.hasNext()).isTrue();
+            final var batches1 = batches(batchEnumeration.nextElement().readAllBytes());
+            assertThat(batches1).hasSize(1);
 
-            final MutableRecordBatch batch1 = batchIterator1.next();
-            assertThat(batchIterator1.hasNext()).isFalse();
+            final KafkaBatch batch1 = batches1.get(0);
+            assertThat(batch1.magic()).isEqualTo(batch1Magic);
+            assertThat((int) batch1.compressionTypeId()).isEqualTo(batch1CompressionType);
+            assertThat(batch1.timestampTypeId()).isEqualTo(batch1TimestampType.id);
+            assertThat(batch1.baseOffset()).isEqualTo(batch1BaseOffset);
+            assertThat(batch1.producerId()).isEqualTo(batch1ProducerId);
+            assertThat(batch1.producerEpoch()).isEqualTo(batch1ProducerEpoch);
+            assertThat(batch1.baseSequence()).isEqualTo(batch1BaseSequence);
+            assertThat(batch1.partitionLeaderEpoch()).isEqualTo(batch1PartitionLeaderEpoch);
 
-            final Iterator<Record> recordIterator1 = batch1.iterator();
-            checkRecord(recordIterator1, 3L, 1000000003L, 0);
-            checkRecord(recordIterator1, 4L, 1000000004L, 1);
-            checkRecord(recordIterator1, 5L, 1000000005L, 2);
-            assertThat(recordIterator1.hasNext()).isFalse();
+            assertThat(batch1.records())
+                .usingRecursiveComparison()
+                .withEqualsForType(ByteBuffer::equals, ByteBuffer.class)
+                .isEqualTo(List.of(
+                    expectedRecord(3L, 1000000003L),
+                    expectedRecord(4L, 1000000004L),
+                    expectedRecord(5L, 1000000005L)));
 
             // Batch 2.
             assertThat(batchEnumeration.hasMoreElements()).isTrue();
-            final var records2 = MemoryRecords.readableRecords(
-                ByteBuffer.wrap(batchEnumeration.nextElement().readAllBytes()));
-            final Iterator<MutableRecordBatch> batchIterator2 = records2.batches().iterator();
-            assertThat(batchIterator2.hasNext()).isTrue();
+            final var batches2 = batches(batchEnumeration.nextElement().readAllBytes());
+            assertThat(batches2).hasSize(1);
 
-            final MutableRecordBatch batch2 = batchIterator2.next();
-            assertThat(batchIterator2.hasNext()).isFalse();
+            final KafkaBatch batch2 = batches2.get(0);
+            assertThat(batch2.magic()).isEqualTo((byte) batch2Magic);
+            assertThat((int) batch2.compressionTypeId()).isEqualTo(batch2CompressionType);
+            assertThat(batch2.timestampTypeId()).isEqualTo(batch2TimestampType.id);
+            assertThat(batch2.baseOffset()).isEqualTo(batch2BaseOffset);
+            assertThat(batch2.producerId()).isEqualTo(batch2ProducerId);
+            assertThat(batch2.producerEpoch()).isEqualTo(batch2ProducerEpoch);
+            assertThat(batch2.baseSequence()).isEqualTo(batch2BaseSequence);
+            assertThat(batch2.partitionLeaderEpoch()).isEqualTo(batch2PartitionLeaderEpoch);
 
-            final Iterator<Record> recordIterator2 = batch2.iterator();
-            checkRecord(recordIterator2, 6L, batch2LogAppendTime, 4);
-            checkRecord(recordIterator2, 7L, batch2LogAppendTime, 5);
-            checkRecord(recordIterator2, 8L, batch2LogAppendTime, 6);
-            assertThat(recordIterator2.hasNext()).isFalse();
+            assertThat(batch2.records())
+                .usingRecursiveComparison()
+                .withEqualsForType(ByteBuffer::equals, ByteBuffer.class)
+                .isEqualTo(List.of(
+                    expectedRecord(6L, batch2LogAppendTime),
+                    expectedRecord(7L, batch2LogAppendTime),
+                    expectedRecord(8L, batch2LogAppendTime)));
 
             assertThat(batchEnumeration.hasMoreElements()).isFalse();
+        }
+    }
+
+    @Test
+    void batchLargerThanInitialBuffer() throws IOException {
+        // Bigger than the 512 KiB buffer that the Kafka-based builder used to start with.
+        final byte[] bigValue = new byte[700 * 1024];
+        new Random(1).nextBytes(bigValue);
+
+        final GenericData.Record record = singleRecord(NO_COMPRESSION_ID);
+        record.put(RowSchema.Fields.VALUE_RAW, bigValue);
+
+        final KafkaBatch batch = readSingleBatch(record);
+        assertThat((int) batch.compressionTypeId()).isEqualTo(NO_COMPRESSION_ID);
+        assertThat(batch.records()).hasSize(1);
+        assertThat(batch.records().get(0).offset()).isEqualTo(10L);
+        assertThat(batch.records().get(0).value()).isEqualByComparingTo(ByteBuffer.wrap(bigValue));
+    }
+
+    @ParameterizedTest
+    @ValueSource(ints = {NO_COMPRESSION_ID, GZIP_ID, SNAPPY_ID, LZ4_ID, ZSTD_ID})
+    void compressionTypeIsPreserved(final int compressionTypeId) throws IOException {
+        final KafkaBatch batch = readSingleBatch(singleRecord(compressionTypeId));
+        assertThat((int) batch.compressionTypeId()).isEqualTo(compressionTypeId);
+        assertThat(batch.records()).hasSize(1);
+        assertThat(batch.records().get(0).value()).isEqualByComparingTo(ByteBuffer.wrap(value(10L)));
+    }
+
+    @Test
+    void unknownCompressionTypeFails() throws IOException {
+        final var multiFileReader = mock(MultiFileReader.class);
+        when(multiFileReader.read()).thenReturn(singleRecord(9), (GenericData.Record) null);
+
+        try (final var batchEnumeration = new BatchEnumeration(
+            new RecordBatchGrouper(multiFileReader), mock(StructureProvider.class), "")) {
+            assertThat(batchEnumeration.hasMoreElements()).isTrue();
+            assertThatThrownBy(batchEnumeration::nextElement)
+                .isInstanceOf(RuntimeException.class)
+                .hasMessage("Unknown compression type 9");
+        }
+    }
+
+    private static GenericData.Record singleRecord(final int compressionTypeId) {
+        return createRecord(
+            10L, 1000L, 0, 10L, 0, MAGIC_V2,
+            TimestampType.CREATE_TIME, compressionTypeId,
+            1000L, -1L, -1, -1);
+    }
+
+    private KafkaBatch readSingleBatch(final GenericData.Record record) throws IOException {
+        final var multiFileReader = mock(MultiFileReader.class);
+        when(multiFileReader.read()).thenReturn(record, (GenericData.Record) null);
+
+        try (final var batchEnumeration = new BatchEnumeration(
+            new RecordBatchGrouper(multiFileReader), mock(StructureProvider.class), "")) {
+            assertThat(batchEnumeration.hasMoreElements()).isTrue();
+            final var batches = batches(batchEnumeration.nextElement().readAllBytes());
+            assertThat(batches).hasSize(1);
+            assertThat(batchEnumeration.hasMoreElements()).isFalse();
+            return batches.get(0);
         }
     }
 
@@ -182,7 +273,7 @@ class BatchEnumerationTest {
         final int batchPartitionLeaderEpoch,
         final int batchMagic,
         final TimestampType batchTimestampType,
-        final CompressionType batchCompressionType,
+        final int batchCompressionType,
         final long batchMaxTimestamp,
         final long batchProducerId,
         final int batchProducerEpoch,
@@ -201,7 +292,7 @@ class BatchEnumerationTest {
         kafkaPart.put(RowSchema.Fields.BATCH_PARTITION_LEADER_EPOCH, batchPartitionLeaderEpoch);
         kafkaPart.put(RowSchema.Fields.BATCH_MAGIC, batchMagic);
         kafkaPart.put(RowSchema.Fields.BATCH_TIMESTAMP_TYPE, batchTimestampType.id);
-        kafkaPart.put(RowSchema.Fields.BATCH_COMPRESSION_TYPE, (int) batchCompressionType.id);
+        kafkaPart.put(RowSchema.Fields.BATCH_COMPRESSION_TYPE, batchCompressionType);
         kafkaPart.put(RowSchema.Fields.BATCH_MAX_TIMESTAMP, batchMaxTimestamp);
         kafkaPart.put(RowSchema.Fields.BATCH_PRODUCER_ID, batchProducerId);
         kafkaPart.put(RowSchema.Fields.BATCH_PRODUCER_EPOCH, batchProducerEpoch);
@@ -222,25 +313,24 @@ class BatchEnumerationTest {
         return record;
     }
 
-    private void checkRecord(final Iterator<Record> recordIterator,
-                             final long offset,
-                             final long timestamp,
-                             final int sequence) {
-        assertThat(recordIterator.hasNext()).isTrue();
-        final Record record = recordIterator.next();
-        assertThat(record.offset()).isEqualTo(offset);
-        assertThat(record.sequence()).isEqualTo(sequence);
-        assertThat(record.timestamp()).isEqualTo(timestamp);
-        assertThat(record.hasKey()).isTrue();
-        assertThat(record.key()).isEqualByComparingTo(ByteBuffer.wrap(key(offset)));
-        assertThat(record.hasValue()).isTrue();
-        assertThat(record.value()).isEqualByComparingTo(ByteBuffer.wrap(value(offset)));
-        assertThat(record.headers()).containsExactly(
-            new RecordHeader(HEADER1_KEY, header1Value(offset)),
-            new RecordHeader(HEADER2_KEY, header2Value(offset))
-        );
+    private static KafkaRecord expectedRecord(final long offset, final long timestamp) {
+        final byte[] key = key(offset);
+        final byte[] value = value(offset);
+        return new KafkaRecord(offset, timestamp,
+            key.length, ByteBuffer.wrap(key),
+            value.length, ByteBuffer.wrap(value),
+            new Header[] {
+                new KafkaHeader(HEADER1_KEY, header1Value(offset)),
+                new KafkaHeader(HEADER2_KEY, header2Value(offset))});
+    }
 
-        // hasTimestampType, isCompressed, hasMagic aren't needed to be checked in modern records
+    private List<KafkaBatch> batches(final byte[] bytes) throws IOException {
+        final Path file = Files.write(Files.createTempFile(dir, "batches", ".log"), bytes);
+        final List<KafkaBatch> batches = new ArrayList<>();
+        try (final KafkaLogReader reader = KafkaLogReader.open(file)) {
+            reader.forEachRemaining(batches::add);
+        }
+        return batches;
     }
 
     private static byte[] header1Value(final long offset) {

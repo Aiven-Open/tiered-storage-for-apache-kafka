@@ -21,22 +21,18 @@ import java.io.Closeable;
 import java.io.IOException;
 import java.io.InputStream;
 import java.nio.ByteBuffer;
+import java.util.ArrayList;
 import java.util.Enumeration;
 import java.util.List;
 import java.util.NoSuchElementException;
 import java.util.Objects;
 
-import org.apache.kafka.common.compress.Compression;
 import org.apache.kafka.common.header.Header;
-import org.apache.kafka.common.header.internals.RecordHeader;
-import org.apache.kafka.common.record.CompressionType;
-import org.apache.kafka.common.record.MemoryRecordsBuilder;
-import org.apache.kafka.common.record.RecordBatch;
-import org.apache.kafka.common.record.SimpleRecord;
-import org.apache.kafka.common.record.TimestampType;
 import org.apache.kafka.common.utils.Utils;
 
 import io.aiven.kafka.tieredstorage.iceberg.data.RowSchema;
+import io.aiven.kafka.tieredstorage.iceberg.kafka.KafkaBatchWriter;
+import io.aiven.kafka.tieredstorage.iceberg.kafka.KafkaHeader;
 
 import org.apache.avro.generic.GenericData;
 import org.slf4j.Logger;
@@ -87,22 +83,20 @@ public class BatchEnumeration implements Enumeration<InputStream>, Closeable {
 
         final GenericData.Record firstRecord = records.get(0);
 
-        final MemoryRecordsBuilder builder = new MemoryRecordsBuilder(
-            ByteBuffer.allocate(512 * 1024),
+        final KafkaBatchWriter.BatchHeader header = new KafkaBatchWriter.BatchHeader(
             getBatchMagic(firstRecord),
-            getBatchCompressionType(firstRecord),
-            getBatchTimestampType(firstRecord),
+            getBatchCompressionTypeId(firstRecord),
+            getBatchTimestampTypeId(firstRecord),
             getBatchBaseOffset(firstRecord),
             getBatchMaxTimestamp(firstRecord),
             getBatchProducerId(firstRecord),
             getBatchProducerEpoch(firstRecord),
             getBaseSequence(firstRecord),
-            false, false,  // TODO change when we support them
-            getBatchPartitionLeaderEpoch(firstRecord),
-            0  // doesn't matter
+            getBatchPartitionLeaderEpoch(firstRecord)
         );
+        final List<KafkaBatchWriter.RecordData> batchRecords = new ArrayList<>(records.size());
         for (final GenericData.Record record : records) {
-            builder.append(new SimpleRecord(
+            batchRecords.add(new KafkaBatchWriter.RecordData(
                 getKafkaTimestamp(record),
                 getKafkaKey(record),
                 getKafkaValue(record),
@@ -110,10 +104,7 @@ public class BatchEnumeration implements Enumeration<InputStream>, Closeable {
             ));
         }
 
-        final RecordBatch batch = builder.build().firstBatch();
-        final ByteBuffer buffer = ByteBuffer.allocate(batch.sizeInBytes());
-        batch.writeTo(buffer);
-        return new ByteArrayInputStream(buffer.array());
+        return new ByteArrayInputStream(KafkaBatchWriter.write(header, batchRecords));
     }
 
     private List<GenericData.Record> peekNextBatchRecords() throws IOException {
@@ -144,21 +135,14 @@ public class BatchEnumeration implements Enumeration<InputStream>, Closeable {
             .get(RowSchema.Fields.BATCH_MAGIC)).byteValue();
     }
 
-    private TimestampType getBatchTimestampType(final GenericData.Record record) {
-        final int id = (int) ((GenericData.Record) record.get(RowSchema.Fields.KAFKA))
+    private int getBatchTimestampTypeId(final GenericData.Record record) {
+        return (int) ((GenericData.Record) record.get(RowSchema.Fields.KAFKA))
             .get(RowSchema.Fields.BATCH_TIMESTAMP_TYPE);
-        return switch (id) {
-            case -1 -> TimestampType.NO_TIMESTAMP_TYPE;
-            case 0 -> TimestampType.CREATE_TIME;
-            case 1 -> TimestampType.LOG_APPEND_TIME;
-            default -> throw new RuntimeException("Unknown timestamp type " + id);
-        };
     }
 
-    private Compression getBatchCompressionType(final GenericData.Record record) {
-        final int id = (int) ((GenericData.Record) record.get(RowSchema.Fields.KAFKA))
+    private int getBatchCompressionTypeId(final GenericData.Record record) {
+        return (int) ((GenericData.Record) record.get(RowSchema.Fields.KAFKA))
             .get(RowSchema.Fields.BATCH_COMPRESSION_TYPE);
-        return Compression.of(CompressionType.forId(id)).build();
     }
 
     private long getBatchMaxTimestamp(final GenericData.Record record) {
@@ -194,7 +178,7 @@ public class BatchEnumeration implements Enumeration<InputStream>, Closeable {
             final var r = headers.get(i);
             final String key = (String) r.get(RowSchema.Fields.HEADER_KEY);
             final byte[] value = (byte[]) r.get(RowSchema.Fields.HEADER_VALUE);
-            result[i] = new RecordHeader(key, value);
+            result[i] = new KafkaHeader(key, value);
         }
         return result;
     }

@@ -17,7 +17,6 @@
 package io.aiven.kafka.tieredstorage;
 
 import java.io.ByteArrayInputStream;
-import java.io.File;
 import java.io.IOException;
 import java.io.InputStream;
 import java.io.SequenceInputStream;
@@ -25,22 +24,16 @@ import java.nio.ByteBuffer;
 import java.nio.file.Files;
 import java.util.Arrays;
 import java.util.List;
-import java.util.Map;
 import java.util.Objects;
 import java.util.Optional;
 import java.util.Set;
 
 import org.apache.kafka.common.header.Header;
-import org.apache.kafka.common.record.FileLogInputStream;
-import org.apache.kafka.common.record.Record;
-import org.apache.kafka.common.record.RecordBatch;
 import org.apache.kafka.common.utils.Time;
 import org.apache.kafka.server.log.remote.storage.LogSegmentData;
 import org.apache.kafka.server.log.remote.storage.RemoteLogSegmentMetadata;
 import org.apache.kafka.server.log.remote.storage.RemoteStorageException;
 import org.apache.kafka.server.log.remote.storage.RemoteStorageManager;
-import org.apache.kafka.storage.internals.log.LogConfig;
-import org.apache.kafka.storage.internals.log.LogSegment;
 import org.apache.kafka.storage.internals.log.OffsetIndex;
 
 import io.aiven.kafka.tieredstorage.config.RemoteStorageManagerConfig;
@@ -52,6 +45,9 @@ import io.aiven.kafka.tieredstorage.iceberg.StructureProvider;
 import io.aiven.kafka.tieredstorage.iceberg.data.IcebergWriter;
 import io.aiven.kafka.tieredstorage.iceberg.data.ParquetAvroValueReaders;
 import io.aiven.kafka.tieredstorage.iceberg.data.RowSchema;
+import io.aiven.kafka.tieredstorage.iceberg.kafka.KafkaBatch;
+import io.aiven.kafka.tieredstorage.iceberg.kafka.KafkaLogReader;
+import io.aiven.kafka.tieredstorage.iceberg.kafka.KafkaRecord;
 import io.aiven.kafka.tieredstorage.iceberg.manifest.DataFileMetadata;
 import io.aiven.kafka.tieredstorage.iceberg.manifest.SegmentManifestReader;
 import io.aiven.kafka.tieredstorage.iceberg.manifest.SegmentManifestWriter;
@@ -178,8 +174,7 @@ public class IcebergRemoteStorageManager extends InternalRemoteStorageManager {
         final LogSegmentData logSegmentData,
         final String topicName) throws Exception {
 
-        final File inputFile = logSegmentData.logSegment().toFile().getParentFile();
-        LOG.debug("Converting segment file into Iceberg, path: {}", inputFile.getAbsolutePath());
+        LOG.debug("Converting segment file into Iceberg, path: {}", logSegmentData.logSegment());
 
         final OffsetIndex offsetIndex = new OffsetIndex(logSegmentData.offsetIndex().toFile(),
             remoteLogSegmentMetadata.startOffset());
@@ -193,12 +188,11 @@ public class IcebergRemoteStorageManager extends InternalRemoteStorageManager {
             table = catalog.loadTable(TableIdentifier.of(icebergNamespace, topicName));
         }
 
-        try (final LogSegment segment = LogSegment.open(inputFile, remoteLogSegmentMetadata.startOffset(),
-            new LogConfig(Map.of()), Time.SYSTEM, 0, false)) {
-
-            for (final var batch : segment.log().batches()) {
-                for (final Record record : batch) {
-                    final ParsedRecord parsedRecord = extractRecordData(batch, record, topicName);
+        try (final KafkaLogReader log = KafkaLogReader.open(logSegmentData.logSegment())) {
+            while (log.hasNext()) {
+                final KafkaBatch batch = log.next();
+                for (final KafkaRecord record : batch.records()) {
+                    final ParsedRecord parsedRecord = extractRecordData(record, topicName);
 
                     keySchemaId = parsedRecord.keySchemaId();
                     valueSchemaId = parsedRecord.valueSchemaId();
@@ -226,8 +220,7 @@ public class IcebergRemoteStorageManager extends InternalRemoteStorageManager {
     }
 
     private ParsedRecord extractRecordData(
-        final FileLogInputStream.FileChannelRecordBatch batch,
-        final Record record,
+        final KafkaRecord record,
         final String topicName) throws Exception {
 
         final byte[] rawKey = new byte[record.keySize()];
@@ -294,7 +287,7 @@ public class IcebergRemoteStorageManager extends InternalRemoteStorageManager {
     private void writeRecordToIceberg(
         final IcebergWriter writer,
         final RemoteLogSegmentMetadata remoteLogSegmentMetadata,
-        final RecordBatch batch,
+        final KafkaBatch batch,
         final ParsedRecord parsedRecord,
         final OffsetIndex offsetIndex
     ) throws Exception {
@@ -303,12 +296,13 @@ public class IcebergRemoteStorageManager extends InternalRemoteStorageManager {
             remoteLogSegmentMetadata.topicIdPartition().topicPartition().partition());
         kafkaPart.put(RowSchema.Fields.OFFSET, parsedRecord.recordOffset());
         kafkaPart.put(RowSchema.Fields.TIMESTAMP, parsedRecord.recordTimestamp());
-        kafkaPart.put(RowSchema.Fields.BATCH_BYTE_OFFSET, offsetIndex.lookup(batch.baseOffset()).position);
+        // indexValue() is the position; the field is private in newer Kafka versions
+        kafkaPart.put(RowSchema.Fields.BATCH_BYTE_OFFSET, (int) offsetIndex.lookup(batch.baseOffset()).indexValue());
         kafkaPart.put(RowSchema.Fields.BATCH_BASE_OFFSET, batch.baseOffset());
         kafkaPart.put(RowSchema.Fields.BATCH_PARTITION_LEADER_EPOCH, batch.partitionLeaderEpoch());
         kafkaPart.put(RowSchema.Fields.BATCH_MAGIC, batch.magic());
-        kafkaPart.put(RowSchema.Fields.BATCH_TIMESTAMP_TYPE, batch.timestampType().id);
-        kafkaPart.put(RowSchema.Fields.BATCH_COMPRESSION_TYPE, batch.compressionType().id);
+        kafkaPart.put(RowSchema.Fields.BATCH_TIMESTAMP_TYPE, batch.timestampTypeId());
+        kafkaPart.put(RowSchema.Fields.BATCH_COMPRESSION_TYPE, batch.compressionTypeId());
         kafkaPart.put(RowSchema.Fields.BATCH_MAX_TIMESTAMP, batch.maxTimestamp());
         kafkaPart.put(RowSchema.Fields.BATCH_PRODUCER_ID, batch.producerId());
         kafkaPart.put(RowSchema.Fields.BATCH_PRODUCER_EPOCH, batch.producerEpoch());
