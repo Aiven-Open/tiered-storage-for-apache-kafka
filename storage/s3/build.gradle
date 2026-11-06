@@ -14,7 +14,7 @@
  * limitations under the License.
  */
 
-archivesBaseName = "storage-s3"
+base.archivesName = "storage-s3"
 
 ext {
     wireMockVersion = "3.13.2"

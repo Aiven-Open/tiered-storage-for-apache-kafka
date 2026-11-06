@@ -14,7 +14,7 @@
  * limitations under the License.
  */
 
-archivesBaseName = "storage-azure"
+base.archivesName = "storage-azure"
 
 dependencies {
     implementation project(":storage:core")
