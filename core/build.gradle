@@ -24,7 +24,7 @@ ext {
 
     bouncyCastleVersion = "1.83"
 
-    caffeineVersion = "3.2.3"
+    caffeineVersion = "3.3.1"
 
     zstdVersion = "1.5.7-10"
     // Oldest versions that Kafka ships. The broker provides snappy and lz4 at runtime.
