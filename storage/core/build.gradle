@@ -31,5 +31,5 @@ dependencies {
 
     testFixturesImplementation "org.apache.kafka:kafka-clients:$kafkaVersion"
 
-    testFixturesImplementation "org.testcontainers:junit-jupiter:$testcontainersVersion"
+    testFixturesImplementation "org.testcontainers:testcontainers-junit-jupiter:$testcontainersVersion"
 }

@@ -35,7 +35,7 @@ dependencies {
 
     testImplementation(testFixtures(project(":storage:core")))
 
-    testImplementation "org.testcontainers:junit-jupiter:$testcontainersVersion"
+    testImplementation "org.testcontainers:testcontainers-junit-jupiter:$testcontainersVersion"
 
     integrationTestImplementation("org.wiremock:wiremock:$wireMockVersion") {
         exclude group: "org.slf4j"
