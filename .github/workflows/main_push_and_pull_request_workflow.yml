@@ -1,6 +1,6 @@
 # The workflow to check main and the release branches after push.
 # The build and tests run against the default Kafka version. The extra legs check that the
-# same source compiles and passes the unit tests on older Kafka versions.
+# same source compiles and passes the unit tests on other supported Kafka versions.
 name: Main checks after push and during pull requests
 on:
   push:
@@ -20,6 +20,20 @@ jobs:
             kafka-version: 3.9.0
           - java-version: 17
             kafka-version: 4.0.0
+          - java-version: 17
+            kafka-version: 4.2.0
+          - java-version: 21
+            kafka-version: 4.2.0
+          - java-version: 17
+            kafka-version: 4.3.0
+          - java-version: 21
+            kafka-version: 4.3.0
+          - java-version: 17
+            kafka-version: 4.4.0
+          - java-version: 21
+            kafka-version: 4.4.0
+          - java-version: 25
+            kafka-version: 4.4.0
     name: Build with jdk ${{ matrix.java-version }} and Kafka ${{ matrix.kafka-version || 'default' }}
     runs-on: ubuntu-latest
     env:
