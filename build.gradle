@@ -134,9 +134,9 @@ subprojects {
 
         azureSdkVersion = "1.3.3"
 
-        testcontainersVersion = "1.21.4"
+        testcontainersVersion = "2.0.5"
 
-        testcontainersFakeGcsServerVersion = "0.2.0"
+        testcontainersFakeGcsServerVersion = "0.3.0"
 
         bucket4jVersion = "8.15.0"
     }
