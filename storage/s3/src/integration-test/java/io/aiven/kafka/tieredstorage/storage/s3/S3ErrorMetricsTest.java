@@ -52,7 +52,6 @@ import static com.github.tomakehurst.wiremock.client.WireMock.put;
 import static com.github.tomakehurst.wiremock.client.WireMock.reset;
 import static com.github.tomakehurst.wiremock.client.WireMock.stubFor;
 import static com.github.tomakehurst.wiremock.common.ContentTypes.CONTENT_TYPE;
-import static org.apache.http.entity.ContentType.APPLICATION_XML;
 import static org.assertj.core.api.Assertions.assertThat;
 import static org.assertj.core.api.Assertions.assertThatThrownBy;
 import static org.assertj.core.api.Assertions.catchThrowableOfType;
@@ -61,6 +60,7 @@ import static org.assertj.core.api.InstanceOfAssertFactories.DOUBLE;
 @WireMockTest
 class S3ErrorMetricsTest {
     private static final String ERROR_RESPONSE_TEMPLATE = "<Error><Code>%s</Code></Error>";
+    private static final String APPLICATION_XML = "application/xml";
     private static final MBeanServer MBEAN_SERVER = ManagementFactory.getPlatformMBeanServer();
     private static final String BUCKET_NAME = "test-bucket";
     private S3Storage storage;
@@ -101,7 +101,7 @@ class S3ErrorMetricsTest {
 
         stubFor(any(anyUrl())
             .willReturn(aResponse().withStatus(statusCode)
-                .withHeader(CONTENT_TYPE, APPLICATION_XML.getMimeType())
+                .withHeader(CONTENT_TYPE, APPLICATION_XML)
                 .withBody(String.format(ERROR_RESPONSE_TEMPLATE, statusCode))));
 
         uploadAndVerifyResult(uploadFileSize, statusCode, metricName);
@@ -149,14 +149,14 @@ class S3ErrorMetricsTest {
                                     + "</InitiateMultipartUploadResult>";
         stubFor(post(anyUrl())
             .willReturn(aResponse().withStatus(HttpStatusCode.OK)
-                .withHeader(CONTENT_TYPE, APPLICATION_XML.getMimeType())
+                .withHeader(CONTENT_TYPE, APPLICATION_XML)
                 .withBody(responseString)));
 
         //stub with error for the UploadPart: PUT /{Key}?partNumber=PartNumber&uploadId={Upload}
         final int errorStatusCode = HttpStatusCode.INTERNAL_SERVER_ERROR;
         stubFor(put(anyUrl())
             .willReturn(aResponse().withStatus(errorStatusCode)
-                .withHeader(CONTENT_TYPE, APPLICATION_XML.getMimeType())
+                .withHeader(CONTENT_TYPE, APPLICATION_XML)
                 .withBody(String.format(ERROR_RESPONSE_TEMPLATE, errorStatusCode))));
 
         //stub with success response for the AbortMultipartUpload: DELETE /{Key}?uploadId={Upload}
@@ -189,7 +189,7 @@ class S3ErrorMetricsTest {
         stubFor(any(anyUrl())
             .willReturn(aResponse()
                 .withStatus(statusCode)
-                .withHeader(CONTENT_TYPE, APPLICATION_XML.getMimeType())
+                .withHeader(CONTENT_TYPE, APPLICATION_XML)
                 .withBody("unparsable_xml")));
 
         final ByteArrayInputStream inputStream = newInputStreamWithSize(UPLOAD_PART_SIZE + 1);
@@ -211,13 +211,15 @@ class S3ErrorMetricsTest {
             "s3.region", Region.US_EAST_1.id(),
             "s3.endpoint.url", wmRuntimeInfo.getHttpBaseUrl(),
             "s3.path.style.access.enabled", "true",
-            "s3.api.call.attempt.timeout", 1,
+            // The timeout must fire after the connection is leased from the pool:
+            // the Apache 5 HTTP client surfaces an interrupted lease as a raw CancellationException.
+            "s3.api.call.attempt.timeout", 100,
             "aws.credentials.provider.class", AnonymousCredentialsProvider.class.getName()
         );
         storage.configure(configs);
         final var metricName = "configured-timeout-errors";
 
-        stubFor(any(anyUrl()).willReturn(aResponse().withFixedDelay(100)));
+        stubFor(any(anyUrl()).willReturn(aResponse().withFixedDelay(1000)));
 
         assertThatThrownBy(() -> storage.fetch(new TestObjectKey("key")))
             .isExactlyInstanceOf(StorageBackendException.class)
@@ -225,7 +227,7 @@ class S3ErrorMetricsTest {
             .rootCause()
             .isInstanceOf(ApiCallAttemptTimeoutException.class)
             .hasMessageStartingWith(
-                "HTTP request execution did not complete before the specified timeout configuration: 1 millis");
+                "HTTP request execution did not complete before the specified timeout configuration: 100 millis");
 
         // Comparing to 4 since the SDK makes 3 retries by default.
         assertThat(MBEAN_SERVER.getAttribute(s3MetricsObjectName, metricName + "-total"))
@@ -258,7 +260,7 @@ class S3ErrorMetricsTest {
             .hasMessage("Failed to fetch key")
             .hasCauseExactlyInstanceOf(SdkClientException.class)
             .cause()
-            .hasMessageStartingWith("Unable to execute HTTP request: null");
+            .hasMessageStartingWith("Unable to execute HTTP request: The target server failed to respond");
 
         // Comparing to 4 since the SDK makes 3 retries by default.
         assertThat(MBEAN_SERVER.getAttribute(s3MetricsObjectName, metricName + "-total"))
