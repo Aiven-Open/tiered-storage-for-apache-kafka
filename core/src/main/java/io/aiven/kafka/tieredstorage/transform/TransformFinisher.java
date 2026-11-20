@@ -133,10 +133,10 @@ public class TransformFinisher implements Enumeration<InputStream> {
 
     public InputStream toInputStream() throws IOException {
         if (isBaseTransform() && originalFilePath != null) {
-            // close inner input stream (based on source file)
-            final var sequenceInputStream = new SequenceInputStream(this);
-            sequenceInputStream.close();
-
+            // No transformation: upload the original file directly. Do not consume this enumeration
+            // first (e.g. by closing a SequenceInputStream over it): that reads the whole source
+            // file and discards it, so every segment would be read from disk twice. The source
+            // stream is closed by its owner, and chunkIndex() calculates the index from the file size.
             return maybeToRateLimitedInputStream(Files.newInputStream(originalFilePath));
         } else {
             return maybeToRateLimitedInputStream(new SequenceInputStream(this));
