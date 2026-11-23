@@ -108,13 +108,7 @@ public class RemoteStorageManager implements org.apache.kafka.server.log.remote.
                 suffix, bytes
             );
         };
-        // Enforce the RemoteStorageManager SPI contract on every exit path: any escaping
-        // Throwable (e.g. OutOfMemoryError or a re-thrown Error from inside the upload
-        // orchestration) is converted to a RemoteStorageException. Without this guard,
-        // an Error can bypass Kafka's RLMTask catch (Exception) clause and trip
-        // ScheduledThreadPoolExecutor.scheduleWithFixedDelay's silent-suppression rule,
-        // which permanently stops further copy attempts for that partition until broker
-        // restart or a leader change. See #820.
+        // Convert any Throwable to RemoteStorageException so Kafka's copy task survives Errors, see #820.
         try {
             final var customMetadata = switch (segmentFormat) {
                 case KAFKA ->
@@ -133,7 +127,6 @@ public class RemoteStorageManager implements org.apache.kafka.server.log.remote.
         } catch (final RemoteStorageException e) {
             throw e;
         } catch (final Throwable t) {
-            log.error("Copying log segment data failed, metadata: {}", remoteLogSegmentMetadata, t);
             throw new RemoteStorageException(t);
         }
     }
