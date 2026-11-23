@@ -207,7 +207,7 @@ class KafkaRemoteStorageManager extends InternalRemoteStorageManager {
                 customMetadataBuilder,
                 uploadMetricReporter
             );
-        } catch (final Exception e) {
+        } catch (final Throwable e) {
             try {
                 // best effort on removing orphan files
                 deleteSegmentObjects(remoteLogSegmentMetadata);

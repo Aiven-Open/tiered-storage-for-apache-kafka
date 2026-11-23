@@ -157,6 +157,47 @@ public class KafkaRemoteStorageManagerTest extends BaseRemoteStorageManagerTest 
     }
 
     @Test
+    void deleteObjectsWhenUploadFailsWithError(
+        @TempDir final Path partitionDir
+    ) throws Exception {
+        final var segmentPath = Files.createFile(partitionDir.resolve("0000.log"));
+        Files.writeString(segmentPath, "test");
+        final var indexPath = Files.createFile(partitionDir.resolve("0000.index"));
+        final var timeIndexPath = Files.createFile(partitionDir.resolve("0000.timeindex"));
+        final var producerSnapshotPath = Files.createFile(partitionDir.resolve("0000.snapshot"));
+        final var logSegmentData = new LogSegmentData(
+            segmentPath,
+            indexPath,
+            timeIndexPath,
+            Optional.empty(),
+            producerSnapshotPath,
+            ByteBuffer.wrap("test".getBytes(StandardCharsets.UTF_8))
+        );
+        final var remoteLogSegmentMetadata = new RemoteLogSegmentMetadata(
+            REMOTE_SEGMENT_ID, 0, 1L,
+            0, 0, 0, 4, Map.of(0, 0L));
+        final var remotePartitionPath = targetDir.resolve(TOPIC_ID_PARTITION.topic() + "-" + TOPIC_ID)
+            .resolve(String.valueOf(TOPIC_ID_PARTITION.partition()));
+
+        final var config = new RemoteStorageManagerConfig(Map.of(
+            "chunk.size", "1",
+            "storage.backend.class", "io.aiven.kafka.tieredstorage.storage.filesystem.FileSystemStorage",
+            "storage.root", targetDir.toString()
+        ));
+        final KafkaRemoteStorageManager rsm = spy(new KafkaRemoteStorageManager(log, time, config));
+
+        // when the log is uploaded and the indexes upload fails with an Error
+        doThrow(OutOfMemoryError.class).when(rsm).uploadIndexes(any(), any(), any(), any(), any());
+
+        assertThatThrownBy(() -> rsm.copyLogSegmentData(remoteLogSegmentMetadata, logSegmentData, uploadMetricReporter))
+            .isInstanceOf(RemoteStorageException.class)
+            .hasRootCauseInstanceOf(OutOfMemoryError.class);
+
+        // then the uploaded log is removed
+        assertThat(remotePartitionPath).doesNotExist();
+    }
+
+    @Test
     void deleteObjectsWhenUploadFails(
         @TempDir final Path partitionDir
     ) throws IOException, StorageBackendException, RemoteStorageException {
