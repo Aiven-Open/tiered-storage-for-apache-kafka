@@ -1,5 +1,5 @@
 /*
- * Copyright 2024 Aiven Oy
+ * Copyright 2026 Aiven Oy
  *
  * Licensed under the Apache License, Version 2.0 (the "License");
  * you may not use this file except in compliance with the License.
@@ -134,19 +134,19 @@ class RemoteStorageManagerErrorHandlingTest {
         final RemoteStorageException original = new RemoteStorageException("already correct");
         try (MockedConstruction<KafkaRemoteStorageManager> ignored = mockConstruction(
                 KafkaRemoteStorageManager.class,
-                (mock, ctx) -> when(mock.copyLogSegmentData(any(), any(), any())).thenThrow(original))) {
-            final RemoteStorageManager rsm = new RemoteStorageManager(Time.SYSTEM);
+                (mock, ctx) -> when(mock.copyLogSegmentData(any(), any(), any())).thenThrow(original));
+             RemoteStorageManager rsm = new RemoteStorageManager(Time.SYSTEM)) {
             rsm.configure(configs);
             assertThatThrownBy(() -> rsm.copyLogSegmentData(REMOTE_LOG_SEGMENT_METADATA, logSegmentData))
                 .isSameAs(original);
         }
     }
 
-    private void assertWrappedAsRemoteStorageException(final Throwable injected) {
+    private void assertWrappedAsRemoteStorageException(final Throwable injected) throws Exception {
         try (MockedConstruction<KafkaRemoteStorageManager> ignored = mockConstruction(
                 KafkaRemoteStorageManager.class,
-                (mock, ctx) -> when(mock.copyLogSegmentData(any(), any(), any())).thenThrow(injected))) {
-            final RemoteStorageManager rsm = new RemoteStorageManager(Time.SYSTEM);
+                (mock, ctx) -> when(mock.copyLogSegmentData(any(), any(), any())).thenThrow(injected));
+             RemoteStorageManager rsm = new RemoteStorageManager(Time.SYSTEM)) {
             rsm.configure(configs);
             assertThatThrownBy(() -> rsm.copyLogSegmentData(REMOTE_LOG_SEGMENT_METADATA, logSegmentData))
                 .isInstanceOf(RemoteStorageException.class)
