@@ -108,20 +108,27 @@ public class RemoteStorageManager implements org.apache.kafka.server.log.remote.
                 suffix, bytes
             );
         };
-        final var customMetadata = switch (segmentFormat) {
-            case KAFKA ->
-                kafkaRsm.copyLogSegmentData(remoteLogSegmentMetadata, logSegmentData, uploadMetricReporter);
-            case ICEBERG ->
-                icebergRsm.copyLogSegmentData(remoteLogSegmentMetadata, logSegmentData, uploadMetricReporter);
-        };
+        // Convert any Throwable to RemoteStorageException so Kafka's copy task survives Errors, see #820.
+        try {
+            final var customMetadata = switch (segmentFormat) {
+                case KAFKA ->
+                    kafkaRsm.copyLogSegmentData(remoteLogSegmentMetadata, logSegmentData, uploadMetricReporter);
+                case ICEBERG ->
+                    icebergRsm.copyLogSegmentData(remoteLogSegmentMetadata, logSegmentData, uploadMetricReporter);
+            };
 
-        metrics.recordSegmentCopyTime(
-            remoteLogSegmentMetadata.remoteLogSegmentId().topicIdPartition().topicPartition(),
-            startedMs, time.milliseconds());
+            metrics.recordSegmentCopyTime(
+                remoteLogSegmentMetadata.remoteLogSegmentId().topicIdPartition().topicPartition(),
+                startedMs, time.milliseconds());
 
-        log.info("Copying log segment data completed successfully, metadata: {}", remoteLogSegmentMetadata);
+            log.info("Copying log segment data completed successfully, metadata: {}", remoteLogSegmentMetadata);
 
-        return customMetadata;
+            return customMetadata;
+        } catch (final RemoteStorageException e) {
+            throw e;
+        } catch (final Throwable t) {
+            throw new RemoteStorageException(t);
+        }
     }
 
     @Override
