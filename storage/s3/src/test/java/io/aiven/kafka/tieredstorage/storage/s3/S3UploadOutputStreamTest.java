@@ -31,6 +31,9 @@ import io.aiven.kafka.tieredstorage.storage.TestObjectKey;
 import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.Test;
 import org.junit.jupiter.api.extension.ExtendWith;
+import org.junit.jupiter.params.ParameterizedTest;
+import org.junit.jupiter.params.provider.NullAndEmptySource;
+import org.junit.jupiter.params.provider.ValueSource;
 import org.mockito.ArgumentCaptor;
 import org.mockito.Captor;
 import org.mockito.Mock;
@@ -98,12 +101,12 @@ class S3UploadOutputStreamTest {
             .thenReturn(newUploadPartResponse("SOME_ETAG#1"));
         s3UploadOutputStream.write(1);
         verify(mockedS3).createMultipartUpload(createMultipartUploadRequest.capture());
-        assertCreateMultipartUploadRequest(createMultipartUploadRequest.getValue(), StorageClass.STANDARD);
+        assertCreateMultipartUploadRequest(createMultipartUploadRequest.getValue(), null);
     }
 
     @Test
     void completeMultipartUploadWithNonDefaultStorageClass() throws IOException {
-        final StorageClass nonDefaultStorageClass = StorageClass.STANDARD_IA;
+        final String nonDefaultStorageClass = StorageClass.STANDARD_IA.toString();
         final S3UploadOutputStream s3UploadOutputStream = new S3UploadOutputStream(BUCKET_NAME, FILE_KEY,
             nonDefaultStorageClass, 1, mockedS3);
         when(mockedS3.uploadPart(any(UploadPartRequest.class), any(RequestBody.class)))
@@ -111,6 +114,31 @@ class S3UploadOutputStreamTest {
         s3UploadOutputStream.write(1);
         verify(mockedS3).createMultipartUpload(createMultipartUploadRequest.capture());
         assertCreateMultipartUploadRequest(createMultipartUploadRequest.getValue(), nonDefaultStorageClass);
+    }
+
+    @Test
+    void completeMultipartUploadWithCustomStorageClass() throws IOException {
+        final String customStorageClass = "MAZ_STANDARD";
+        final S3UploadOutputStream s3UploadOutputStream = new S3UploadOutputStream(BUCKET_NAME, FILE_KEY,
+            customStorageClass, 1, mockedS3);
+        when(mockedS3.uploadPart(any(UploadPartRequest.class), any(RequestBody.class)))
+            .thenReturn(newUploadPartResponse("SOME_ETAG#1"));
+        s3UploadOutputStream.write(1);
+        verify(mockedS3).createMultipartUpload(createMultipartUploadRequest.capture());
+        assertCreateMultipartUploadRequest(createMultipartUploadRequest.getValue(), customStorageClass);
+    }
+
+    @ParameterizedTest
+    @NullAndEmptySource
+    @ValueSource(strings = {"   ", "\t"})
+    void completeMultipartUploadWithEmptyOrBlankStorageClass(final String storageClass) throws IOException {
+        final S3UploadOutputStream s3UploadOutputStream = new S3UploadOutputStream(BUCKET_NAME, FILE_KEY,
+            storageClass, 1, mockedS3);
+        when(mockedS3.uploadPart(any(UploadPartRequest.class), any(RequestBody.class)))
+            .thenReturn(newUploadPartResponse("SOME_ETAG#1"));
+        s3UploadOutputStream.write(1);
+        verify(mockedS3).createMultipartUpload(createMultipartUploadRequest.capture());
+        assertCreateMultipartUploadRequest(createMultipartUploadRequest.getValue(), null);
     }
 
     @Test
@@ -233,9 +261,39 @@ class S3UploadOutputStreamTest {
         assertThatCode(out::close).doesNotThrowAnyException();
 
         verify(mockedS3).putObject(putObjectRequestCaptor.capture(), requestBodyCaptor.capture());
+        assertThat(putObjectRequestCaptor.getValue().storageClassAsString()).isNull();
         verify(mockedS3, never()).completeMultipartUpload(any(CompleteMultipartUploadRequest.class));
         verify(mockedS3, never()).createMultipartUpload(any(CreateMultipartUploadRequest.class));
         verify(mockedS3, never()).uploadPart(any(UploadPartRequest.class), any(RequestBody.class));
+    }
+
+    @Test
+    void writesSmallFileWithCustomStorageClass() throws Exception {
+        when(mockedS3.putObject(any(PutObjectRequest.class), any(RequestBody.class)))
+            .thenReturn(newPutObjectResponse("SOME_ETAG"));
+
+        final String customStorageClass = "MAZ_STANDARD";
+        try (final var out = new S3UploadOutputStream(BUCKET_NAME, FILE_KEY, customStorageClass, 2, mockedS3)) {
+            out.write(new byte[] {1});
+        }
+
+        verify(mockedS3).putObject(putObjectRequestCaptor.capture(), requestBodyCaptor.capture());
+        assertThat(putObjectRequestCaptor.getValue().storageClassAsString()).isEqualTo(customStorageClass);
+    }
+
+    @ParameterizedTest
+    @NullAndEmptySource
+    @ValueSource(strings = {"   ", "\t"})
+    void writesSmallFileWithEmptyOrBlankStorageClass(final String storageClass) throws Exception {
+        when(mockedS3.putObject(any(PutObjectRequest.class), any(RequestBody.class)))
+            .thenReturn(newPutObjectResponse("SOME_ETAG"));
+
+        try (final var out = new S3UploadOutputStream(BUCKET_NAME, FILE_KEY, storageClass, 2, mockedS3)) {
+            out.write(new byte[] {1});
+        }
+
+        verify(mockedS3).putObject(putObjectRequestCaptor.capture(), requestBodyCaptor.capture());
+        assertThat(putObjectRequestCaptor.getValue().storageClassAsString()).isNull();
     }
 
     @Test
@@ -494,7 +552,7 @@ class S3UploadOutputStreamTest {
     @Test
     void rejectNonPositiveInitialBufferSize() {
         for (final int initialBufferSize : new int[] {0, -1}) {
-            assertThatThrownBy(() -> new S3UploadOutputStream(BUCKET_NAME, FILE_KEY, StorageClass.STANDARD, 100,
+            assertThatThrownBy(() -> new S3UploadOutputStream(BUCKET_NAME, FILE_KEY, null, 100,
                 initialBufferSize, mockedS3))
                 .isInstanceOf(IllegalArgumentException.class)
                 .hasMessage("initialBufferSize must be positive, but was " + initialBufferSize);
@@ -508,7 +566,7 @@ class S3UploadOutputStreamTest {
         final byte[] content = new byte[10];
         random.nextBytes(content);
         // A part of Integer.MAX_VALUE bytes cannot be allocated, so this passes only if the buffer starts small.
-        try (final var out = new S3UploadOutputStream(BUCKET_NAME, FILE_KEY, StorageClass.STANDARD,
+        try (final var out = new S3UploadOutputStream(BUCKET_NAME, FILE_KEY, null,
             Integer.MAX_VALUE, 16, mockedS3)) {
             out.write(content);
         }
@@ -538,7 +596,7 @@ class S3UploadOutputStreamTest {
         random.nextBytes(content);
 
         // starts at 3 bytes, grows to 6 and then to the part size of 8, and is reused for the next parts
-        final var out = new S3UploadOutputStream(BUCKET_NAME, FILE_KEY, StorageClass.STANDARD, 8, 3, mockedS3);
+        final var out = new S3UploadOutputStream(BUCKET_NAME, FILE_KEY, null, 8, 3, mockedS3);
         try (final var in = new ByteArrayInputStream(content); out) {
             in.transferTo(out);
         }
@@ -567,10 +625,10 @@ class S3UploadOutputStreamTest {
     }
 
     private static void assertCreateMultipartUploadRequest(final CreateMultipartUploadRequest request,
-                                                           final StorageClass expectedStorageClass) {
+                                                           final String expectedStorageClass) {
         assertThat(request.bucket()).isEqualTo(BUCKET_NAME);
         assertThat(request.key()).isEqualTo(FILE_KEY.value());
-        assertThat(request.storageClass()).isEqualTo(expectedStorageClass);
+        assertThat(request.storageClassAsString()).isEqualTo(expectedStorageClass);
     }
 
     private static void assertUploadPartRequest(final UploadPartRequest uploadPartRequest,

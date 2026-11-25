@@ -570,11 +570,10 @@ S3StorageConfig
   * Importance: low
 
 ``s3.storage.class``
-  Defines which storage class to use when uploading objects
+  Defines which storage class to use when uploading objects. If not set or empty, the storage class header is omitted and the bucket default applies. Known AWS S3 values: STANDARD, REDUCED_REDUNDANCY, STANDARD_IA, ONEZONE_IA, INTELLIGENT_TIERING, GLACIER, DEEP_ARCHIVE, OUTPOSTS, GLACIER_IR, SNOW, EXPRESS_ONEZONE, FSX_OPENZFS, FSX_ONTAP, AWS_BACKUP_WARM, AWS_BACKUP_LOW_COST_WARM. Custom values supported by S3-compatible providers are also accepted.
 
   * Type: string
-  * Default: STANDARD
-  * Valid Values: [STANDARD, REDUCED_REDUNDANCY, STANDARD_IA, ONEZONE_IA, INTELLIGENT_TIERING, GLACIER, DEEP_ARCHIVE, OUTPOSTS, GLACIER_IR, SNOW, EXPRESS_ONEZONE, FSX_OPENZFS, FSX_ONTAP, AWS_BACKUP_WARM, AWS_BACKUP_LOW_COST_WARM]
+  * Default: null
   * Importance: low
 
 

@@ -37,7 +37,6 @@ import software.amazon.awssdk.services.s3.model.CompletedPart;
 import software.amazon.awssdk.services.s3.model.CreateMultipartUploadRequest;
 import software.amazon.awssdk.services.s3.model.CreateMultipartUploadResponse;
 import software.amazon.awssdk.services.s3.model.PutObjectRequest;
-import software.amazon.awssdk.services.s3.model.StorageClass;
 import software.amazon.awssdk.services.s3.model.UploadPartRequest;
 import software.amazon.awssdk.services.s3.model.UploadPartResponse;
 
@@ -61,7 +60,7 @@ public class S3UploadOutputStream extends OutputStream {
     private ByteBuffer partBuffer;
     private final String bucketName;
     private final ObjectKey key;
-    private final StorageClass storageClass;
+    private final String storageClass;
     final int partSize;
 
     private String uploadId;
@@ -74,12 +73,12 @@ public class S3UploadOutputStream extends OutputStream {
                                 final ObjectKey key,
                                 final int partSize,
                                 final S3Client client){
-        this(bucketName, key, StorageClass.STANDARD, partSize, client);
+        this(bucketName, key, null, partSize, client);
     }
 
     public S3UploadOutputStream(final String bucketName,
                                 final ObjectKey key,
-                                final StorageClass storageClass,
+                                final String storageClass,
                                 final int partSize,
                                 final S3Client client) {
         this(bucketName, key, storageClass, partSize, partSize, client);
@@ -87,7 +86,7 @@ public class S3UploadOutputStream extends OutputStream {
 
     public S3UploadOutputStream(final String bucketName,
                                 final ObjectKey key,
-                                final StorageClass storageClass,
+                                final String storageClass,
                                 final int partSize,
                                 final int initialBufferSize,
                                 final S3Client client) {
@@ -96,7 +95,7 @@ public class S3UploadOutputStream extends OutputStream {
         }
         this.bucketName = bucketName;
         this.key = key;
-        this.storageClass = storageClass;
+        this.storageClass = (storageClass == null || storageClass.isBlank()) ? null : storageClass;
         this.client = client;
         this.partSize = partSize;
         this.partBuffer = ByteBuffer.allocate(Math.min(partSize, initialBufferSize));

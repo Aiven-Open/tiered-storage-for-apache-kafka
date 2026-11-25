@@ -21,12 +21,16 @@ import java.io.FileWriter;
 import java.io.IOException;
 import java.net.URI;
 import java.time.Duration;
+import java.util.HashMap;
 import java.util.Map;
 
 import org.apache.kafka.common.config.ConfigException;
 
 import org.assertj.core.util.Files;
 import org.junit.jupiter.api.Test;
+import org.junit.jupiter.params.ParameterizedTest;
+import org.junit.jupiter.params.provider.NullAndEmptySource;
+import org.junit.jupiter.params.provider.ValueSource;
 import software.amazon.awssdk.auth.credentials.AwsCredentialsProvider;
 import software.amazon.awssdk.auth.credentials.AwsSessionCredentials;
 import software.amazon.awssdk.auth.credentials.EnvironmentVariableCredentialsProvider;
@@ -56,7 +60,7 @@ class S3StorageConfigTest {
         assertThat(config.credentialsProvider()).isNull();
         assertThat(config.pathStyleAccessEnabled()).isNull();
         assertThat(config.uploadPartSize()).isEqualTo(25 * 1024 * 1024);
-        assertThat(config.storageClass()).isEqualTo(StorageClass.STANDARD);
+        assertThat(config.storageClass()).isNull();
         assertThat(config.certificateCheckEnabled()).isTrue();
         assertThat(config.checksumCheckEnabled()).isFalse();
         assertThat(config.region()).isEqualTo(TEST_REGION);
@@ -276,21 +280,30 @@ class S3StorageConfigTest {
             "s3.storage.class", StorageClass.STANDARD_IA.toString()
         );
         final var config = new S3StorageConfig(configs);
-        assertThat(config.storageClass()).isEqualTo(StorageClass.STANDARD_IA);
+        assertThat(config.storageClass()).isEqualTo(StorageClass.STANDARD_IA.toString());
     }
 
     @Test
-    void withRequireStorageClassInAllowList() {
-        assertThatThrownBy(() -> new S3StorageConfig(Map.of(
+    void withCustomStorageClass() {
+        final var configs = Map.of(
             "s3.bucket.name", BUCKET_NAME,
             "s3.region", TEST_REGION.id(),
-            "s3.storage.class", "WrongStorageClass"
-        )))
-                .isInstanceOf(ConfigException.class)
-                .hasMessage("Invalid value WrongStorageClass for configuration s3.storage.class: "
-                        + "String must be one of: STANDARD, REDUCED_REDUNDANCY, STANDARD_IA, ONEZONE_IA, "
-                        + "INTELLIGENT_TIERING, GLACIER, DEEP_ARCHIVE, OUTPOSTS, GLACIER_IR, SNOW, EXPRESS_ONEZONE, "
-                        + "FSX_OPENZFS, FSX_ONTAP, AWS_BACKUP_WARM, AWS_BACKUP_LOW_COST_WARM");
+            "s3.storage.class", "MAZ_STANDARD"
+        );
+        final var config = new S3StorageConfig(configs);
+        assertThat(config.storageClass()).isEqualTo("MAZ_STANDARD");
+    }
+
+    @ParameterizedTest
+    @NullAndEmptySource
+    @ValueSource(strings = {"   ", "\t"})
+    void withEmptyOrBlankStorageClass(final String storageClass) {
+        final var configs = new HashMap<String, Object>();
+        configs.put("s3.bucket.name", BUCKET_NAME);
+        configs.put("s3.region", TEST_REGION.id());
+        configs.put("s3.storage.class", storageClass);
+        final var config = new S3StorageConfig(configs);
+        assertThat(config.storageClass()).isNull();
     }
 
     @Test
