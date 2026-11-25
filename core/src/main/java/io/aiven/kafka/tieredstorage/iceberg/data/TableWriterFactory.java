@@ -34,9 +34,9 @@ import com.google.common.primitives.Ints;
 import org.apache.iceberg.FileFormat;
 import org.apache.iceberg.Table;
 import org.apache.iceberg.TableProperties;
-import org.apache.iceberg.data.GenericAppenderFactory;
+import org.apache.iceberg.data.GenericFileWriterFactory;
 import org.apache.iceberg.data.Record;
-import org.apache.iceberg.io.FileAppenderFactory;
+import org.apache.iceberg.io.FileWriterFactory;
 import org.apache.iceberg.io.OutputFileFactory;
 import org.apache.iceberg.io.TaskWriter;
 import org.apache.iceberg.io.UnpartitionedWriter;
@@ -66,21 +66,20 @@ class TableWriterFactory {
 
         final Set<Integer> identifierFieldIds = table.schema().identifierFieldIds();
 
-        final FileAppenderFactory<Record> appenderFactory;
-        if (identifierFieldIds == null || identifierFieldIds.isEmpty()) {
-            appenderFactory =
-                new GenericAppenderFactory(table.schema(), table.spec(), null, null, null)
-                    .setAll(tableProps);
-        } else {
-            appenderFactory =
-                new GenericAppenderFactory(
-                    table.schema(),
-                    table.spec(),
-                    Ints.toArray(identifierFieldIds),
-                    TypeUtil.select(table.schema(), Sets.newHashSet(identifierFieldIds)),
-                    null)
-                    .setAll(tableProps);
+        final GenericFileWriterFactory.Builder writerFactoryBuilder =
+            new GenericFileWriterFactory.Builder(table)
+                .dataSchema(table.schema())
+                .dataFileFormat(format)
+                .writerProperties(tableProps);
+
+        if (identifierFieldIds != null && !identifierFieldIds.isEmpty()) {
+            writerFactoryBuilder
+                .equalityFieldIds(Ints.toArray(identifierFieldIds))
+                .equalityDeleteRowSchema(
+                    TypeUtil.select(table.schema(), Sets.newHashSet(identifierFieldIds)));
         }
+
+        final FileWriterFactory<Record> writerFactory = writerFactoryBuilder.build();
 
         // (partition ID + task ID + operation ID) must be unique
         final OutputFileFactory fileFactory =
@@ -91,7 +90,7 @@ class TableWriterFactory {
                 .build();
 
         return new UnpartitionedWriter<>(
-            table.spec(), format, appenderFactory, fileFactory, table.io(), targetFileSize);
+            table.spec(), format, writerFactory, fileFactory, table.io(), targetFileSize);
     }
 
     private TableWriterFactory() {
