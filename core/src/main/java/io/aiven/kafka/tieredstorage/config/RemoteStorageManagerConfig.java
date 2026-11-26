@@ -34,14 +34,9 @@ import org.apache.kafka.common.metrics.Sensor;
 import org.apache.kafka.common.utils.Utils;
 
 import io.aiven.kafka.tieredstorage.config.validators.Null;
-import io.aiven.kafka.tieredstorage.iceberg.NamespaceAwareCachingCatalog;
-import io.aiven.kafka.tieredstorage.iceberg.StructureProvider;
 import io.aiven.kafka.tieredstorage.manifest.SegmentFormat;
 import io.aiven.kafka.tieredstorage.metadata.SegmentCustomMetadataField;
 import io.aiven.kafka.tieredstorage.storage.StorageBackend;
-
-import org.apache.iceberg.catalog.Catalog;
-import org.apache.iceberg.catalog.Namespace;
 
 import static org.apache.kafka.common.config.ConfigDef.Range.atLeast;
 import static org.apache.kafka.common.config.ConfigDef.ValidString.in;
@@ -100,34 +95,6 @@ public class RemoteStorageManagerConfig extends AbstractConfig {
 
     public static final String METRICS_RECORDING_LEVEL_CONFIG = CommonClientConfigs.METRICS_RECORDING_LEVEL_CONFIG;
     private static final String METRICS_RECORDING_LEVEL_DOC = CommonClientConfigs.METRICS_RECORDING_LEVEL_DOC;
-
-    public static final String STRUCTURE_PROVIDER_PREFIX = "structure.provider.";
-
-    private static final String STRUCTURE_PROVIDER_CLASS_CONFIG = STRUCTURE_PROVIDER_PREFIX + "class";
-    private static final String STRUCTURE_PROVIDER_CLASS_DOC = "The structure provider implementation class";
-
-    public static final String ICEBERG_PREFIX = "iceberg.";
-
-    private static final String ICEBERG_NAMESPACE_CONFIG = ICEBERG_PREFIX + "namespace";
-    private static final String ICEBERG_NAMESPACE_DOC = "The Iceberg namespace";
-
-    public static final String ICEBERG_CATALOG_PREFIX = ICEBERG_PREFIX + "catalog.";
-
-    private static final String ICEBERG_CATALOG_CLASS_CONFIG = ICEBERG_CATALOG_PREFIX + "class";
-    private static final String ICEBERG_CATALOG_CLASS_DOC = "The Iceberg catalog implementation class";
-
-    private static final String ICEBERG_CATALOG_CACHE_PREFIX = ICEBERG_CATALOG_PREFIX + "cache.";
-
-    private static final String ICEBERG_CATALOG_CACHE_ENABLED_CONFIG = ICEBERG_CATALOG_CACHE_PREFIX + "enabled";
-    private static final String ICEBERG_CATALOG_CACHE_ENABLED_DOC = "Whether to enable caching for Iceberg catalog "
-        + "table metadata. When disabled, all catalog operations bypass cache. Default is true.";
-
-    private static final String ICEBERG_CATALOG_CACHE_EXPIRATION_MS_CONFIG = ICEBERG_CATALOG_CACHE_PREFIX
-        + "expiration.ms";
-    private static final String ICEBERG_CATALOG_CACHE_EXPIRATION_MS_DOC = "Cache expiration time in milliseconds for "
-        + "Iceberg catalog table metadata. "
-        + "Default is 600000 (10 minutes). "
-        + "Higher values reduce catalog backend load but increase risk of stale metadata in multi-writer scenarios.";
 
     public static ConfigDef configDef() {
         final ConfigDef configDef = new ConfigDef();
@@ -240,47 +207,6 @@ public class RemoteStorageManagerConfig extends AbstractConfig {
             Null.or(ConfigDef.Range.between(1024 * 1024, 1_000_000_000)),
             ConfigDef.Importance.MEDIUM,
             UPLOAD_RATE_LIMIT_BYTES_DOC
-        );
-
-        configDef.define(
-            STRUCTURE_PROVIDER_CLASS_CONFIG,
-            ConfigDef.Type.CLASS,
-            null,
-            ConfigDef.Importance.MEDIUM,
-            STRUCTURE_PROVIDER_CLASS_DOC
-        );
-
-        configDef.define(
-            ICEBERG_NAMESPACE_CONFIG,
-            ConfigDef.Type.STRING,
-            null,  // we want lazy non-null check
-            ConfigDef.Importance.MEDIUM,
-            ICEBERG_NAMESPACE_DOC
-        );
-
-        configDef.define(
-            ICEBERG_CATALOG_CLASS_CONFIG,
-            ConfigDef.Type.CLASS,
-            null,
-            ConfigDef.Importance.MEDIUM,
-            ICEBERG_CATALOG_CLASS_DOC
-        );
-
-        configDef.define(
-            ICEBERG_CATALOG_CACHE_ENABLED_CONFIG,
-            ConfigDef.Type.BOOLEAN,
-            true,
-            ConfigDef.Importance.MEDIUM,
-            ICEBERG_CATALOG_CACHE_ENABLED_DOC
-        );
-
-        configDef.define(
-            ICEBERG_CATALOG_CACHE_EXPIRATION_MS_CONFIG,
-            ConfigDef.Type.LONG,
-            600_000L,
-            ConfigDef.Range.atLeast(1L),
-            ConfigDef.Importance.MEDIUM,
-            ICEBERG_CATALOG_CACHE_EXPIRATION_MS_DOC
         );
 
         return configDef;
@@ -475,51 +401,5 @@ public class RemoteStorageManagerConfig extends AbstractConfig {
 
     public Map<String, ?> segmentManifestCacheConfigs() {
         return originalsWithPrefix(SEGMENT_MANIFEST_CACHE_PREFIX);
-    }
-
-    public StructureProvider structureProvider() {
-        final Class<?> storageClass = getClass(STRUCTURE_PROVIDER_CLASS_CONFIG);
-        if (storageClass == null) {
-            return null;
-        }
-        final StructureProvider structureProvider = Utils.newInstance(storageClass, StructureProvider.class);
-        structureProvider.configure(this.originalsWithPrefix(STRUCTURE_PROVIDER_PREFIX));
-        return structureProvider;
-    }
-
-    public Namespace icebergNamespace() {
-        final String value = getString(ICEBERG_NAMESPACE_CONFIG);
-        if (value == null) {
-            return Namespace.empty();
-        } else {
-            return Namespace.of(value);
-        }
-    }
-
-    public Catalog icebergCatalog() {
-        final Class<?> catalogClass = getClass(ICEBERG_CATALOG_CLASS_CONFIG);
-        if (catalogClass == null) {
-            return null;
-        }
-        final Catalog catalog = Utils.newInstance(catalogClass, Catalog.class);
-        final Map<String, String> configs = new HashMap<>();
-        for (final var entry : originalsWithPrefix(ICEBERG_CATALOG_PREFIX, true).entrySet()) {
-            if (entry.getValue() instanceof String) {
-                configs.put(entry.getKey(), (String) entry.getValue());
-            } else {
-                final String message = String.format(
-                    "Unknown type of a KV pair in Iceberg config: %s %s", entry.getKey(), entry.getValue());
-                throw new ConfigException(message);
-            }
-        }
-        catalog.initialize("catalog", configs);
-
-        final boolean cacheEnabled = getBoolean(ICEBERG_CATALOG_CACHE_ENABLED_CONFIG);
-        if (cacheEnabled) {
-            final long cacheExpirationMs = getLong(ICEBERG_CATALOG_CACHE_EXPIRATION_MS_CONFIG);
-            return NamespaceAwareCachingCatalog.wrap(catalog, cacheExpirationMs);
-        } else {
-            return catalog;
-        }
     }
 }

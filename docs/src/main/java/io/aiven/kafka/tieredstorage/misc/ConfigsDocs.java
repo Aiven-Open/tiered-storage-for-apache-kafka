@@ -24,6 +24,7 @@ import io.aiven.kafka.tieredstorage.config.DiskChunkCacheConfig;
 import io.aiven.kafka.tieredstorage.config.RemoteStorageManagerConfig;
 import io.aiven.kafka.tieredstorage.fetch.index.MemorySegmentIndexesCache;
 import io.aiven.kafka.tieredstorage.fetch.manifest.MemorySegmentManifestCache;
+import io.aiven.kafka.tieredstorage.iceberg.IcebergConfig;
 import io.aiven.kafka.tieredstorage.storage.azure.AzureBlobStorageConfig;
 import io.aiven.kafka.tieredstorage.storage.filesystem.FileSystemStorageConfig;
 import io.aiven.kafka.tieredstorage.storage.gcs.GcsStorageConfig;
@@ -47,6 +48,11 @@ public class ConfigsDocs {
         printSubsectionTitle("RemoteStorageManagerConfig");
         final var rsmConfigDef = RemoteStorageManagerConfig.configDef();
         out.println(rsmConfigDef.toEnrichedRst());
+        out.println();
+
+        printSubsectionTitle("IcebergConfig");
+        final var icebergConfigDef = IcebergConfig.configDef();
+        out.println(icebergConfigDef.toEnrichedRst());
         out.println();
 
         printSubsectionTitle("SegmentManifestCacheConfig");
