@@ -200,8 +200,13 @@ class MemorySegmentIndexesCacheTest {
             verifyNoMoreInteractions(timeIndexSupplier);
             assertThat(cache.cache.asMap()).isNotEmpty();
 
-            await().atMost(Duration.ofMillis(5000)).pollInterval(Duration.ofMillis(100))
-                .until(() -> !mockingDetails(removalListener).getInvocations().isEmpty());
+            await()
+                .atMost(Duration.ofSeconds(5))
+                .pollInterval(Duration.ofMillis(10))
+                .until(() -> {
+                    cache.cache.synchronous().cleanUp();
+                    return !mockingDetails(removalListener).getInvocations().isEmpty();
+                });
 
             assertThat(cache.cache.asMap()).hasSize(1);
             verify(removalListener)
@@ -254,10 +259,12 @@ class MemorySegmentIndexesCacheTest {
             assertThat(cache.cache.asMap()).isNotEmpty();
 
             await()
-                .atMost(Duration.ofSeconds(30)) // increase to reduce chance of flakiness
-                .pollDelay(Duration.ofSeconds(2))
+                .atMost(Duration.ofSeconds(5))
                 .pollInterval(Duration.ofMillis(10))
-                .until(() -> !mockingDetails(removalListener).getInvocations().isEmpty());
+                .until(() -> {
+                    cache.cache.synchronous().cleanUp();
+                    return !mockingDetails(removalListener).getInvocations().isEmpty();
+                });
 
             assertThat(cache.cache.asMap()).hasSize(1);
             verify(removalListener).onRemoval(any(SegmentIndexKey.class), any(), eq(RemovalCause.SIZE));

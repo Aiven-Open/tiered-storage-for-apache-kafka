@@ -169,8 +169,13 @@ class ChunkCacheTest {
                 .hasBinaryContent(CHUNK_1);
             verifyNoMoreInteractions(chunkManager);
 
-            await().atMost(Duration.ofMillis(5000)).pollInterval(Duration.ofMillis(100))
-                .until(() -> !mockingDetails(removalListener).getInvocations().isEmpty());
+            await()
+                .atMost(Duration.ofSeconds(5))
+                .pollInterval(Duration.ofMillis(10))
+                .until(() -> {
+                    chunkCache.cache.synchronous().cleanUp();
+                    return !mockingDetails(removalListener).getInvocations().isEmpty();
+                });
 
             verify(removalListener)
                 .onRemoval(
@@ -208,10 +213,12 @@ class ChunkCacheTest {
             verify(chunkManager).getChunk(SEGMENT_OBJECT_KEY, SEGMENT_MANIFEST, 1);
 
             await()
-                .atMost(Duration.ofSeconds(30)) // increase to reduce chance of flakiness
-                .pollDelay(Duration.ofSeconds(2))
+                .atMost(Duration.ofSeconds(5))
                 .pollInterval(Duration.ofMillis(10))
-                .until(() -> !mockingDetails(removalListener).getInvocations().isEmpty());
+                .until(() -> {
+                    chunkCache.cache.synchronous().cleanUp();
+                    return !mockingDetails(removalListener).getInvocations().isEmpty();
+                });
 
             verify(removalListener).onRemoval(any(ChunkKey.class), any(), eq(RemovalCause.SIZE));
 
