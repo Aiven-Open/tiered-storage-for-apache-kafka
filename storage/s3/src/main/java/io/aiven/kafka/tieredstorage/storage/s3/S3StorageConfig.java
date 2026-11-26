@@ -22,6 +22,7 @@ import java.net.URI;
 import java.time.Duration;
 import java.util.Map;
 import java.util.Objects;
+import java.util.stream.Collectors;
 
 import org.apache.kafka.common.config.AbstractConfig;
 import org.apache.kafka.common.config.ConfigDef;
@@ -52,7 +53,11 @@ public class S3StorageConfig extends AbstractConfig {
     private static final String S3_REGION_DOC = "AWS region where S3 bucket is placed";
 
     public static final String S3_STORAGE_CLASS_CONFIG = "s3.storage.class";
-    private static final String S3_STORAGE_CLASS_DOC = "Defines which storage class to use when uploading objects";
+    private static final String S3_STORAGE_CLASS_DOC = "Defines which storage class to use when uploading objects. "
+        + "If set to an empty value, the storage class header is omitted and the bucket default applies. "
+        + "Known AWS S3 values: "
+        + StorageClass.knownValues().stream().map(Object::toString).collect(Collectors.joining(", "))
+        + ". Custom values supported by S3-compatible providers are also accepted.";
     static final String S3_STORAGE_CLASS_DEFAULT = StorageClass.STANDARD.toString();
 
     static final String S3_PATH_STYLE_ENABLED_CONFIG = "s3.path.style.access.enabled";
@@ -146,8 +151,6 @@ public class S3StorageConfig extends AbstractConfig {
                 S3_STORAGE_CLASS_CONFIG,
                 ConfigDef.Type.STRING,
                 S3_STORAGE_CLASS_DEFAULT,
-                ConfigDef.ValidString.in(StorageClass.knownValues()
-                        .stream().map(Object::toString).toArray(String[]::new)),
                 ConfigDef.Importance.LOW,
                 S3_STORAGE_CLASS_DOC)
             .define(
@@ -337,8 +340,12 @@ public class S3StorageConfig extends AbstractConfig {
         return getString(S3_BUCKET_NAME_CONFIG);
     }
 
-    public StorageClass storageClass() {
-        return StorageClass.valueOf(getString(S3_STORAGE_CLASS_CONFIG));
+    public String storageClass() {
+        final String storageClass = getString(S3_STORAGE_CLASS_CONFIG);
+        if (storageClass == null || storageClass.isBlank()) {
+            return null;
+        }
+        return storageClass;
     }
 
     public Boolean pathStyleAccessEnabled() {
