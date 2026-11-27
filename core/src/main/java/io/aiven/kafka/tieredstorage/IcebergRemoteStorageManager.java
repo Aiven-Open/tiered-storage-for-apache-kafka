@@ -38,6 +38,7 @@ import org.apache.kafka.storage.internals.log.OffsetIndex;
 
 import io.aiven.kafka.tieredstorage.config.RemoteStorageManagerConfig;
 import io.aiven.kafka.tieredstorage.iceberg.BatchEnumeration;
+import io.aiven.kafka.tieredstorage.iceberg.IcebergConfig;
 import io.aiven.kafka.tieredstorage.iceberg.IcebergTableManager;
 import io.aiven.kafka.tieredstorage.iceberg.MultiFileReader;
 import io.aiven.kafka.tieredstorage.iceberg.RecordBatchGrouper;
@@ -96,10 +97,11 @@ public class IcebergRemoteStorageManager extends InternalRemoteStorageManager {
         this.customMetadataSerde = new SegmentCustomMetadataSerde();
 
         this.objectKeyFactory = new ObjectKeyFactory(config.keyPrefix(), config.keyPrefixMask());
-        this.catalog = config.icebergCatalog();
-        this.structureProvider = config.structureProvider();
+        final IcebergConfig icebergConfig = new IcebergConfig(config.originals());
+        this.catalog = icebergConfig.icebergCatalog();
+        this.structureProvider = icebergConfig.structureProvider();
         this.icebergTableManager = new IcebergTableManager(catalog);
-        this.icebergNamespace = config.icebergNamespace();
+        this.icebergNamespace = icebergConfig.icebergNamespace();
         LOG.info("IcebergRemoteStorageManager initialized successfully");
     }
 
