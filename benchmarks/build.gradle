@@ -30,6 +30,8 @@ ext {
 
 dependencies {
     implementation project(':core')
+    implementation project(':storage:core')
+    implementation "com.github.ben-manes.caffeine:caffeine:3.2.3"
     implementation group: "org.apache.kafka", name: "kafka-storage-api", version: kafkaVersion
     implementation group: "org.apache.kafka", name: "kafka-clients", version: kafkaVersion
 
