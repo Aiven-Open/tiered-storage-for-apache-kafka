@@ -16,7 +16,9 @@
 
 package io.aiven.kafka.tieredstorage.transform;
 
+import java.io.FilterInputStream;
 import java.io.IOException;
+import java.io.InputStream;
 import java.nio.file.Files;
 import java.nio.file.Path;
 import java.util.Iterator;
@@ -117,6 +119,36 @@ class TransformFinisherTest {
         );
     }
 
+    @Test
+    void baseTransformReadsOriginalFileOnlyOnce(@TempDir final Path tmpDir) throws IOException {
+        final byte[] data = new byte[] {0, 1, 2, 3, 4, 5, 6};
+        final Path originalFilePath = tmpDir.resolve("segment.log");
+        Files.write(originalFilePath, data);
+
+        try (final var sourceInputStream = new CountingInputStream(Files.newInputStream(originalFilePath))) {
+            final TransformFinisher finisher = TransformFinisher.newBuilder(
+                    new BaseTransformChunkEnumeration(sourceInputStream, 3),
+                    data.length
+                )
+                .withOriginalFilePath(originalFilePath)
+                .build();
+
+            try (final InputStream uploadInputStream = finisher.toInputStream()) {
+                assertThat(uploadInputStream.readAllBytes()).isEqualTo(data);
+            }
+            // The upload stream reads the original file itself, so the source stream must not be read as well.
+            assertThat(sourceInputStream.bytesRead).isZero();
+
+            final ChunkIndex chunkIndex = finisher.chunkIndex();
+            assertThat(chunkIndex).isInstanceOf(FixedSizeChunkIndex.class);
+            assertThat(chunkIndex.chunks()).containsExactly(
+                new Chunk(0, 0, 3, 0, 3),
+                new Chunk(1, 3, 3, 3, 3),
+                new Chunk(2, 6, 1, 6, 1)
+            );
+        }
+    }
+
     static Object[][] provideForBuildIndexAndReturnCorrectInputStreams() {
         return new Object[][] {
             new Object[] {3, FixedSizeChunkIndex.class},
@@ -155,6 +187,32 @@ class TransformFinisherTest {
         @Override
         public byte[] nextElement() {
             return iter.next();
+        }
+    }
+
+    private static class CountingInputStream extends FilterInputStream {
+        private long bytesRead = 0;
+
+        private CountingInputStream(final InputStream in) {
+            super(in);
+        }
+
+        @Override
+        public int read() throws IOException {
+            final int b = super.read();
+            if (b >= 0) {
+                bytesRead++;
+            }
+            return b;
+        }
+
+        @Override
+        public int read(final byte[] b, final int off, final int len) throws IOException {
+            final int n = super.read(b, off, len);
+            if (n > 0) {
+                bytesRead += n;
+            }
+            return n;
         }
     }
 }
