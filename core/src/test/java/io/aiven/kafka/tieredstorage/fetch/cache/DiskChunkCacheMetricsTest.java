@@ -27,6 +27,7 @@ import java.nio.file.Path;
 import java.time.Duration;
 import java.util.Map;
 import java.util.concurrent.TimeUnit;
+import java.util.function.Supplier;
 
 import org.apache.kafka.common.metrics.MetricConfig;
 import org.apache.kafka.common.utils.Time;
@@ -74,8 +75,7 @@ class DiskChunkCacheMetricsTest {
 
     @Test
     void metrics() throws IOException, JMException, StorageBackendException {
-        final Time time = mock(Time.class);
-        when(time.milliseconds()).thenReturn(0L);
+        final Time time = fixedTime(0L);
 
         final int size1 = 1024;
         final int size2 = 10;
@@ -119,10 +119,12 @@ class DiskChunkCacheMetricsTest {
             .isEqualTo(((double) (size1 + size2)) / METRIC_TIME_WINDOW_SEC);
 
         await("Deletion happens")
-            .atMost(Duration.ofSeconds(30)) // increase to reduce chance of flakiness
-            .pollDelay(Duration.ofMillis(100))
-            .pollInterval(Duration.ofMillis(100))
-            .until(() -> (double) MBEAN_SERVER.getAttribute(objectName, "delete-total") > 0);
+            .atMost(Duration.ofSeconds(5))
+            .pollInterval(Duration.ofMillis(10))
+            .until(() -> {
+                diskChunkCache.cache.synchronous().cleanUp();
+                return (double) MBEAN_SERVER.getAttribute(objectName, "delete-total") > 0;
+            });
 
         assertThat(MBEAN_SERVER.getAttribute(objectName, "delete-total"))
             .isEqualTo(1.0);
@@ -141,5 +143,30 @@ class DiskChunkCacheMetricsTest {
                 deleteBytesRate -> assertThat(deleteBytesRate)
                     .isEqualTo((double) size2 / METRIC_TIME_WINDOW_SEC)
             );
+    }
+
+    private static Time fixedTime(final long millis) {
+        return new Time() {
+            @Override
+            public long milliseconds() {
+                return millis;
+            }
+
+            @Override
+            public long nanoseconds() {
+                return TimeUnit.MILLISECONDS.toNanos(millis);
+            }
+
+            @Override
+            public void sleep(final long ms) {
+                Time.SYSTEM.sleep(ms);
+            }
+
+            @Override
+            public void waitObject(final Object obj, final Supplier<Boolean> condition, final long deadlineMs)
+                throws InterruptedException {
+                Time.SYSTEM.waitObject(obj, condition, deadlineMs);
+            }
+        };
     }
 }
